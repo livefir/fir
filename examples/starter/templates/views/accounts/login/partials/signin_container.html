@@ -1,0 +1,9 @@
+{{ define "signin_container" }}
+    <div id="signin_container">
+        {{ if .sent_magic_link }}
+            {{template "sent_magic_link" .}}
+        {{else}}
+            {{template "signin_form" .}}
+        {{end}}
+    </div>
+{{ end }}

@@ -1,0 +1,6 @@
+{{ define "loading_modal" }}
+    <div id="loading-modal" class="modal" :class="$store.pineview.show_loading_modal && 'is-active'">
+        <div class="modal-background"></div>
+        <button class="button is-text is-loading is-large" disabled></button>
+    </div>
+{{ end }}

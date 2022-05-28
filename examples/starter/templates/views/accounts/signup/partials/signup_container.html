@@ -1,0 +1,9 @@
+{{ define "signup_container" }}
+    <div id="signup_container">
+        {{ if .sent_confirmation }}
+            {{template "sent_confirmation"}}
+        {{else}}
+            {{template "signup_form" .}}
+        {{end}}
+    </div>
+{{ end }}

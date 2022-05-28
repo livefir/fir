@@ -1,0 +1,30 @@
+{{define "content"}}
+<div x-data="{email: ''}" x-pineview-store="{forgot: {recovery_sent: false}}"
+    class="columns is-mobile is-centered mt-6">
+    <div class="column is-one-third-desktop">
+        {{ template "loading_modal" .}}
+        <box id="recovery_sent" class="box has-background-warning"
+            :class="$store.forgot.recovery_sent ? '':'is-hidden'">
+            A password recovery link has been sent to your inbox.
+        </box>
+        <div id="input_email" :class="$store.forgot.recovery_sent ? 'is-hidden':''">
+            <form @submit.prevent="$pineview.dispatch('account/forgot',$data)">
+                <div class="field">
+                    <label class="label">Email</label>
+                    <input name="email" x-model="email" data-rules='["required","email"]'
+                        pattern="[^@\s]+@[^@\s]+\.[^@\s]+" class="input" type="email" placeholder="your@email.com"
+                        aria-label="Email">
+
+                </div>
+                <div class="field is-grouped">
+                    <div class="control is-expanded">
+                        <button class="button is-primary is-fullwidth" type="submit">
+                            Request Password Reset
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}

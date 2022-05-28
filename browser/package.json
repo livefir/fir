@@ -1,0 +1,18 @@
+{
+  "name": "goliveview",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.min.js && ./node_modules/.bin/esbuild index.js --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js",
+    "watch": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js --watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.14.39"
+  },
+  "dependencies": {
+    "morphdom": "^2.6.1"
+  }
+}

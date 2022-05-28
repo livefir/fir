@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>{{.app_name}}</title>
+    <meta charset="UTF-8">
+    <meta name="description" content="A goliveview autocomplete app">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
+    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"
+        integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
+        crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+    <script defer src="http://localhost:8000/cdn.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body>
+    <div class="my-6" style="height: 500px">
+        <div class="columns is-mobile is-centered is-vcentered">
+            <div class="column is-one-third-desktop has-text-centered is-narrow">
+                <div x-data class="py-5">
+                    <input name="query" class="input" list="list_cities" type="search" placeholder="Search Cities"
+                        aria-label="Search Cities" autocomplete="off" autofocus
+                        @input="$pineview.dispatch('query',{query: $event.target.value})">
+                </div>
+                {{template "cities" .}}
+            </div>
+        </div>
+    </div>
+    </div>
+    <footer class="footer">
+        <div class="content has-text-centered">
+            <p>
+                {{.app_name}}, 2022
+            </p>
+        </div>
+    </footer>
+</body>
+
+</html>

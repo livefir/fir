@@ -1,0 +1,37 @@
+{{define "content"}}
+    <div class="columns is-multiline is-mobile is-centered"
+         data-controller="glv tabs"
+         data-tabs-active-class="is-active"
+         data-tabs-hidden-class="is-hidden"
+         data-tabs-default-tabkey-value="profile">
+        <div class="column is-one-fifth-desktop is-four-fifths-mobile">
+            <aside class="menu">
+                <p class="menu-label">
+                    Account
+                </p>
+                <ul class="menu-list">
+                    <li>
+                        <a data-tabkey="profile"
+                           data-tabs-target="tab"
+                           data-action="tabs#activate">
+                            My profile
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/logout">
+                            Log out
+                        </a>
+                    </li>
+                </ul>
+                </ul>
+            </aside>
+        </div>
+        <div class="column is-two-fifths-desktop is-four-fifths-mobile has-background-white-bis px-5 py-5">
+            <div class="is-hidden"
+                 data-tabkey="profile"
+                 data-tabs-target="tabPanel">
+                {{template "profile" .}}
+            </div>
+        </div>
+    </div>
+{{end}}

@@ -1,0 +1,27 @@
+{{define "modal"}}
+    <div class="modal"
+         id="{{.id}}"
+         data-util-target="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <form action="{{.action}}" method="POST" data-turbo-frame="_top">
+                <header class="modal-card-head">
+                    <p class="modal-card-title">Are you sure ?</p>
+                    <button class="delete"
+                            data-modal-target-id="{{.id}}"
+                            data-action="click->util#closeModal"
+                            aria-label="close">
+                    </button>
+                </header>
+                <footer class="modal-card-foot is-justify-content-flex-end">
+                    <button class="button is-danger" type="submit">Yes</button>
+                    <button class="button"
+                            data-modal-target-id="{{.id}}"
+                            data-action="click->util#closeModal">
+                        Cancel
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+{{end}}

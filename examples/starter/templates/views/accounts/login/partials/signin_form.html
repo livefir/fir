@@ -1,0 +1,101 @@
+{{ define "signin_form" }}
+    <div id="signin_form">
+        {{ template "loading_modal" .}}
+        <p class="title is-3 has-text-centered">Sign into {{.app_name}}</p>
+        <div data-controller="toggle"
+             data-toggle-toggle-class-value="is-hidden">
+            <div id="magic-login" class="is-hidden" data-toggle-target="toggled">
+                <div class="columns is-mobile is-centered py-5">
+                    <button id="btn-magic-login"
+                            class="button is-primary is-rounded"
+                            type="button"
+                            data-action="click->toggle#it">
+                        Use Password instead
+                    </button>
+                </div>
+                <form data-action="glv#event"
+                      data-glv-event-id-param="auth/magic-login">
+                    <div class="field">
+                        <label class="label">Email</label>
+                        <input name="Email"
+                               pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                               class="input"
+                               type="email"
+                               placeholder="your@email.com"
+                               aria-label="Email">
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control is-expanded">
+                            <button class="button is-primary is-fullwidth"
+                                    type="submit">
+                                Sign in with Magic Link
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="password-login" data-toggle-target="toggled">
+                <div class="columns is-mobile is-centered py-5">
+                    <button id="btn-password-login" type="button"
+                            class="button is-primary is-rounded"
+                            data-action="click->toggle#it">
+                        Use Magic Link instead
+                    </button>
+                </div>
+                <form method="post" action="/login">
+                    <div class="field">
+                        <label class="label">Email</label>
+                        <input name="email"
+                               pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                               class="input"
+                               type="email"
+                               placeholder="your@email.com"
+                               aria-label="Email">
+                    </div>
+                    <div class="field">
+                        <label class="label">Password</label>
+                        <input name="password"
+                               class="input"
+                               type="password"
+                               aria-label="Password">
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control is-expanded">
+                            <button class="button is-primary is-fullwidth"
+                                    type="submit">
+                                Sign in
+                            </button>
+                        </div>
+                        <div class="control is-expanded">
+                            <button class="button is-primary is-outlined is-fullwidth"
+                                    data-action="glv#navigate"
+                                    data-glv-route-param="/signup"
+                                    type="button">
+                                Sign up
+                            </button>
+                        </div>
+                    </div>
+                    <a class="is-primary is-outlined is-fullwidth"
+                       data-action="glv#navigate"
+                       data-glv-route-param="/forgot"
+                       type="button">
+                        Forgot Password ?
+                    </a>
+                </form>
+            </div>
+        </div>
+        <hr>
+        <div class="control is-expanded">
+            <button class="button is-primary is-outlined is-fullwidth"
+                    data-action="glv#navigate"
+                    data-glv-route-param="/auth?provider=google"
+                    type="button">
+                        <span class="icon has-text-info">
+                          <i class="fab fa-google"></i>
+                        </span>
+                <span>Sign in with Google</span>
+            </button>
+        </div>
+    </div>
+{{ end }}

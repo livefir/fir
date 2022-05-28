@@ -1,0 +1,15 @@
+{{define "navbar"}}
+    <div class="tabs is-centered">
+        <ul>
+            <li class="{{if eq "/" .url_path}} is-active {{end}}">
+                <a href="/">home</a>
+            </li>
+            <li class="{{if hasPrefix "/help" .url_path}} is-active {{end}}">
+                <a href="/help">help</a>
+            </li>
+            <li class="{{if hasPrefix "/settings" .url_path}} is-active {{end}}">
+                <a href="/settings">settings</a>
+            </li>
+        </ul>
+    </div>
+{{end}}

@@ -1,0 +1,41 @@
+{{ define "navbar" }}
+<nav x-data="{mobileOpen: false}" class="navbar has-shadow" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand px-4 py-2">
+        <a class="navbar-item" href="/">
+            <!--                <img src="/static/images/logo.svg" alt="logo">-->
+            <strong>{{.pwc.Name}}</strong>
+        </a>
+
+        <a role="button" id="navbar-burger" class="navbar-burger" aria-label="menu" aria-expanded="false"
+            @click="mobileOpen = !mobileOpen">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+    </div>
+
+    <div id="navbar-menu" class="navbar-menu" :class="mobileOpen && 'is-active'">
+        <div class="navbar-end">
+            <div class="navbar-item">
+                <div class="buttons">
+                    {{if .is_logged_in}}
+                    <a class='button {{.pwc.ActiveRoute "/app" "is-primary"}}' href="/app">
+                        App
+                    </a>
+                    <a class='button {{.pwc.ActiveRoute "/account" "is-primary"}}' href="/account">
+                        Account
+                    </a>
+                    {{else }}
+                    <a class='button {{.pwc.ActiveRoute "/login" "is-primary"}}' href="/login">
+                        Sign in
+                    </a>
+                    <a class='button {{.pwc.ActiveRoute "/signup" "is-primary"}}' href="/signup">
+                        Sign up
+                    </a>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+{{ end }}

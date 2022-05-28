@@ -1,0 +1,72 @@
+{{define "profile"}}
+    <div>
+        <box id="change_email" class="box has-background-warning is-hidden">
+            A verification link has been sent to your inbox for confirming your new
+            email address. Please verify to complete the request.
+        </box>
+        <nav class="level">
+            <!-- Left side -->
+            <div class="level-left">
+                <div class="level-item">
+                    <h4 class="title is-4">Profile</h4>
+                </div>
+            </div>
+
+            <!-- Right side -->
+            <div class="level-right">
+                <p class="level-item">
+                    <span id="profile-loading"
+                            class="button is-link is-outlined is-loading is-small is-hidden is-rounded is-static">
+                    </span>
+                </p>
+            </div>
+        </nav>
+
+        <hr/>
+        {{template "account_form" .}}
+    </div>
+    <br/>
+    <div class="py-5">
+        <h4 class="title is-4">Delete account</h4>
+        <hr/>
+        <p>All data related to your account will be completely removed and unrecoverable.</p>
+        <button class="button is-danger mt-5"
+                data-emitter-event-id-param="modal"
+                data-emitter-modal-id-param="deleteAccount"
+                data-action="click->emitter#event">
+            Delete your account
+        </button>
+        <div class="modal"
+             id="deleteAccount"
+             data-controller="modal"
+             data-modal-id-value="deleteAccount"
+             data-action="emitter:modal@window->modal#open keydown@window->modal#keyDown click@window->modal#keyDown">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+                <form data-action="glv#event" data-glv-event-id-param="account/delete">
+                    <header class="modal-card-head">
+                        <p class="modal-card-title">Are you sure ?</p>
+                        <button class="delete"
+                                aria-label="close"
+                                data-action="click->modal#close">
+                        </button>
+                    </header>
+                    <section class="modal-card-body">
+                        <p class="has-text-weight-semibold">
+                            Deleting your account is permanent and removes all account data forever.
+                        </p>
+                    </section>
+                    <footer class="modal-card-foot is-justify-content-flex-end">
+                        <button class="button is-danger" type="submit">Yes</button>
+                        <button class="button"
+                                type="button"
+                                aria-label="close"
+                                data-action="click->modal#close">
+                            Cancel
+                        </button>
+                    </footer>
+                </form>
+            </div>
+        </div>
+    </div>
+{{end}}

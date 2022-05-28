@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <title>{{.app_name}}</title>
+    {{template "header" .}}
+</head>
+<body data-controller="util emitter routes"
+      data-action="keydown@window->util#keyDown "
+      data-util-active-class="is-active">
+{{template "navbar" .}}
+<div class="h-full">
+    {{template "glv-error" .}}
+    {{template "content" .}}
+</div>
+{{template "footer" .}}
+</body>
+</html>
