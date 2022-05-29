@@ -53,19 +53,18 @@ document.addEventListener('alpine:init', () => {
                 });
 
                 const formName = el.getAttribute("name")
-                if (Object.keys(formErrors.errors).length !== 0) {
-                    // update form errors store
-                    const prevStore = Object.assign({}, Alpine.store(formName))
-                    const nextStore = { ...prevStore, ...formErrors }
-                    Alpine.store(formName, nextStore)
+                // update form errors store
+                const prevStore = Object.assign({}, Alpine.store(formName))
+                const nextStore = { ...prevStore, ...formErrors }
+                Alpine.store(formName, nextStore)
+                if (Object.keys(formErrors.errors).length == 0) {
+                    let formData = new FormData(el);
+                    let params = {};
+                    formData.forEach((value, key) => params[key] = value);
+                    params["formName"] = formName;
+                    dispatch(eventID, params)
                     return;
                 }
-
-                let formData = new FormData(el);
-                let params = {};
-                formData.forEach((value, key) => params[key] = value);
-                params["formName"] = formName;
-                dispatch(eventID, params)
             }
         }
     })
