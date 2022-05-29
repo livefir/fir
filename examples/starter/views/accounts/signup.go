@@ -70,7 +70,7 @@ func (s *SignupView) Signup(ctx pwc.Context) error {
 	attributes["name"] = req.Name
 
 	if err := s.Auth.Signup(ctx.Request().Context(), req.Email, req.Password, attributes); err != nil {
-		return fmt.Errorf("%v %w", err, errors.New("unknown signup error"))
+		return err
 	}
 	ctx.Morph("#signup_container", "signup_container", pwc.M{
 		"sent_confirmation": true,

@@ -34,7 +34,6 @@ func main() {
 	projectRootUsage := "project root directory that contains the template files."
 	flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
 	flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
-	flag.Parse()
 	// load config
 	configFile := flag.String("config", "env.local", "path to config file")
 	envPrefix := os.Getenv("ENV_PREFIX")
