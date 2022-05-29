@@ -1,11 +1,11 @@
 # Create a new view
 
-Assuming that you have already [setup the controller](./01_create_new_controller.md), we know that the goliveview controller
+Assuming that you have already [setup the controller](./01_create_new_controller.md), we know that the pineview controller
 exposes a [Handler](https://pkg.go.dev/github.com/adnaan/pineview/controller#Controller) api which accepts a type which satisfies
 the [View](https://pkg.go.dev/github.com/adnaan/pineview/controller#View) interface.
 
 ```go
-glvc := pwc.Websocket("goliveview-starter", pwc.DevelopmentMode(mode))
+glvc := pwc.Websocket("pineview-starter", pwc.DevelopmentMode(mode))
 r := chi.NewRouter()
 ...
 r.NotFound(glvc.Handler(&views.NotfoundView{}))

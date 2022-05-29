@@ -40,7 +40,7 @@ func (h *SettingsView) Content() string {
 }
 
 func main() {
-	glvc := pwc.Websocket("goliveview-layout", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-layout", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&HomeView{}))
 	http.Handle("/help", glvc.Handler(&HelpView{}))
 	http.Handle("/settings", glvc.Handler(&SettingsView{}))

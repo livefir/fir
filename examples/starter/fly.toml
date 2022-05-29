@@ -1,15 +1,15 @@
-# fly.toml file generated for goliveview-starter on 2021-11-06T13:26:45+05:30
+# fly.toml file generated for pineview-starter on 2021-11-06T13:26:45+05:30
 
-app = "goliveview-starter"
+app = "pineview-starter"
 
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
 
 [env]
-    APP_DOMAIN = "https://goliveview-starter.fly.dev"
+    APP_DOMAIN = "https://pineview-starter.fly.dev"
     APP_LOG_LEVEL = "error"
-    APP_DATASOURCE = "file:goliveview-starter.db?cache=shared&_fk=1"
+    APP_DATASOURCE = "file:pineview-starter.db?cache=shared&_fk=1"
 [experimental]
   allowed_public_ports = []
   auto_rollback = true

@@ -19,7 +19,7 @@ func (s *SimpleView) Layout() string {
 }
 
 func main() {
-	glvc := pwc.Websocket("goliveview-simple", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-simple", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&SimpleView{}))
 	http.ListenAndServe(":9867", nil)
 }

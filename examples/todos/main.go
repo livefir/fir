@@ -83,7 +83,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	glvc := pwc.Websocket("goliveview-todos", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-todos", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(NewTodosView(db)))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

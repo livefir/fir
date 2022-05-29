@@ -49,7 +49,7 @@ func (c *Counter) OnLiveEvent(ctx pwc.Context) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("goliveview-counter", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-counter", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Counter{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

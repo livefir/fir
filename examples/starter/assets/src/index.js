@@ -1,6 +1,6 @@
-import {Application} from "@hotwired/stimulus"
-import {definitionsFromContext} from "@hotwired/stimulus-webpack-helpers"
-import {Dispatcher} from 'goliveview';
+import { Application } from "@hotwired/stimulus"
+import { definitionsFromContext } from "@hotwired/stimulus-webpack-helpers"
+import { Dispatcher } from 'pineview';
 import "./styles.scss";
 
 const application = Application.start()

@@ -71,7 +71,7 @@ func (s *Search) OnLiveEvent(ctx pwc.Context) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("goliveview-autocomplete", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-autocomplete", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Search{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

@@ -45,7 +45,7 @@ func (r *Range) OnLiveEvent(ctx pwc.Context) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("goliveview-range", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-range", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Range{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

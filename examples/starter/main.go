@@ -75,7 +75,7 @@ func main() {
 	if cfg.Env != "production" {
 		mode = true
 	}
-	glvc := pwc.Websocket("goliveview-starter", pwc.DevelopmentMode(mode), pwc.ProjectRoot(projectRoot))
+	glvc := pwc.Websocket("pineview-starter", pwc.DevelopmentMode(mode), pwc.ProjectRoot(projectRoot))
 
 	// unauthenticated
 	// 404 and /

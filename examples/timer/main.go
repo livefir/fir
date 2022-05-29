@@ -50,7 +50,7 @@ func (t *Timer) LiveEventReceiver() <-chan pwc.Event {
 }
 
 func main() {
-	glvc := pwc.Websocket("goliveview-timer", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("pineview-timer", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(NewTimer()))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

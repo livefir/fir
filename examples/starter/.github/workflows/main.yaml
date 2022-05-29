@@ -4,11 +4,11 @@ on:
     types: [published, edited]
 jobs:
   deploy:
-    name: Deploys goliveview-starter on fly.dev
+    name: Deploys pineview-starter on fly.dev
     runs-on: ubuntu-latest
     environment:
       name: fly.dev
-      url: https://goliveview-starter.fly.dev
+      url: https://pineview-starter.fly.dev
     steps:
       - uses: actions/checkout@v2
       - uses: superfly/flyctl-actions@1.1

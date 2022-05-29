@@ -2,13 +2,13 @@
 
 ```bash
 brew install gh
-gh repo create myapp --template goliveview/starter
+gh repo create myapp --template pineview/starter
 cd myapp
 make install
-# replace goliveview-starter with your app name
+# replace pineview-starter with your app name
 go get github.com/piranha/goreplace
-$(go env GOPATH)/bin/goreplace goliveview-starter -r myapp
-git add . && git commit -m "replace goliveview-starter"
+$(go env GOPATH)/bin/goreplace pineview-starter -r myapp
+git add . && git commit -m "replace pineview-starter"
 cp env.dev env.local
 make watch
 ```
