@@ -5,20 +5,21 @@
     <form name="signupForm" method="post" @submit.prevent="$pineview.submit('auth/signup')">
         <div class="field">
             <label class="label">Name</label>
-            <input name="name" class="input" type="text" placeholder="First Last" aria-label="Name" required>
-            <!-- data-rules='["required","min:5"]' -->
-            <!-- <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.name"></p> -->
+            <input name="name" class="input" type="text" data-rules='["required","minLength:3"]'
+                placeholder="First Last" aria-label="Name" required>
+            <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.name"></p>
         </div>
         <div class="field">
             <label class="label">Email</label>
-            <input name="email" class="input" type="email" pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
-                placeholder="your@email.com" aria-label="Email" required>
-            <!-- data-rules='["required","email"]' -->
-            <!-- <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.email"></p> -->
+            <input name="email" class="input" type="email" data-rules='["required","email"]'
+                pattern="[^@\s]+@[^@\s]+\.[^@\s]+" placeholder="your@email.com" aria-label="Email" required>
+            <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.email"></p>
         </div>
         <div class="field">
             <label class="label">Password</label>
-            <input name="password" class="input" type="password" aria-label="Password" required>
+            <input name="password" class="input" type="password" data-rules='["required","minLength:6"]'
+                aria-label="Password" required>
+            <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.password"></p>
         </div>
         <div class="field is-grouped">
             <div class="control is-expanded">

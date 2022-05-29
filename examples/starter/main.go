@@ -29,6 +29,12 @@ import (
 
 func main() {
 	ctx := context.Background()
+	// project root for reloading template files on file change during development
+	var projectRoot string
+	projectRootUsage := "project root directory that contains the template files."
+	flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
+	flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
+	flag.Parse()
 	// load config
 	configFile := flag.String("config", "env.local", "path to config file")
 	envPrefix := os.Getenv("ENV_PREFIX")
@@ -70,7 +76,7 @@ func main() {
 	if cfg.Env != "production" {
 		mode = true
 	}
-	glvc := pwc.Websocket("goliveview-starter", pwc.DevelopmentMode(mode))
+	glvc := pwc.Websocket("goliveview-starter", pwc.DevelopmentMode(mode), pwc.ProjectRoot(projectRoot))
 
 	// unauthenticated
 	// 404 and /
@@ -139,6 +145,9 @@ func main() {
 
 	// setup static assets handler
 	workDir, _ := os.Getwd()
+	if projectRoot != "" {
+		workDir = projectRoot
+	}
 	public := http.Dir(filepath.Join(workDir, "./", "public", "assets"))
 	staticHandler(r, "/static", public)
 

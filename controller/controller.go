@@ -87,16 +87,17 @@ func DevelopmentMode(enable bool) Option {
 	}
 }
 
+// ProjectRoot is for reloading template files on file change during development
+func ProjectRoot(projectRoot string) Option {
+	return func(o *controlOpt) {
+		o.projectRoot = projectRoot
+	}
+}
+
 func Websocket(name string, options ...Option) Controller {
 	if name == "" {
 		panic("controller name is required")
 	}
-
-	var projectRoot string
-	projectRootUsage := "project root directory that contains the template files."
-	flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
-	flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
-	flag.Parse()
 
 	o := &controlOpt{
 		subscribeTopicFunc: func(r *http.Request) *string {
@@ -108,14 +109,21 @@ func Websocket(name string, options ...Option) Controller {
 			log.Println("client subscribed to topic: ", topic)
 			return &topic
 		},
-		upgrader:    websocket.Upgrader{EnableCompression: true},
-		watchExts:   DefaultWatchExtensions,
-		projectRoot: projectRoot,
-		errorView:   &DefaultErrorView{},
+		upgrader:  websocket.Upgrader{EnableCompression: true},
+		watchExts: DefaultWatchExtensions,
+		errorView: &DefaultErrorView{},
 	}
 
 	for _, option := range options {
 		option(o)
+	}
+
+	if o.projectRoot == "" {
+		var projectRoot string
+		projectRootUsage := "project root directory that contains the template files."
+		flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
+		flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
+		flag.Parse()
 	}
 
 	wc := &websocketController{
