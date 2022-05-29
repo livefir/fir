@@ -13,6 +13,7 @@
     "esbuild": "^0.14.39"
   },
   "dependencies": {
+    "@kingshott/iodine": "^7.0.1",
     "morphdom": "^2.6.1"
   }
 }

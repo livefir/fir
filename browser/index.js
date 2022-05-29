@@ -1,4 +1,8 @@
 import operations from "./operations";
+import { Iodine } from '@kingshott/iodine';
+
+const iodine = new Iodine();
+
 const isObject = (obj) => {
     return Object.prototype.toString.call(obj) === '[object Object]';
 };
@@ -9,8 +13,8 @@ document.addEventListener('alpine:init', () => {
     }
     Alpine.store("pineview", {})
     const updateStore = (storeName, data) => {
-        if (!isObject(data)){
-            Alpine.store(storeName,data)
+        if (!isObject(data)) {
+            Alpine.store(storeName, data)
             return
         }
         const prevStore = Object.assign({}, Alpine.store(storeName))
@@ -20,20 +24,49 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.directive('pineview-store', (el, { expression }, { evaluate }) => {
         const val = evaluate(expression)
-        if (isObject(val)){
+        if (isObject(val)) {
             for (const [key, value] of Object.entries(val)) {
-                Alpine.store(key,value)
+                Alpine.store(key, value)
             }
-            return  
-        } 
+            return
+        }
     })
-    
+
     const dispatch = eventDispatcher(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
     dispatch("init", {})
 
-    Alpine.magic('pineview', () => {
+    Alpine.magic('pineview', (el, { Alpine }) => {
         return {
             dispatch: dispatch,
+            submit(eventID) {
+
+                let inputs = [...el.querySelectorAll("input[data-rules]")];
+                let formErrors = { errors: {} }
+                inputs.map((input) => {
+                    const rules = JSON.parse(input.dataset.rules);
+                    const isValid = iodine.is(input.value, rules);
+                    console.log(input.value, rules, isValid)
+                    if (isValid !== true) {
+                        console.log("invalid", input.getAttribute("name"))
+                        formErrors.errors[input.getAttribute("name")] = iodine.getErrorMessage(isValid)
+                    }
+                });
+
+                const formName = el.getAttribute("name")
+                if (Object.keys(formErrors.errors).length !== 0) {
+                    // update form errors store
+                    const prevStore = Object.assign({}, Alpine.store(formName))
+                    const nextStore = { ...prevStore, ...formErrors }
+                    Alpine.store(formName, nextStore)
+                    return;
+                }
+
+                let formData = new FormData(el);
+                let params = {};
+                formData.forEach((value, key) => params[key] = value);
+                params["formName"] = formName;
+                dispatch(eventID, params)
+            }
         }
     })
 })
@@ -74,7 +107,7 @@ const eventDispatcher = (
         closeSocket();
         reopenTimeoutHandler = setTimeout(() => {
             openSocket().then(() => {
-                console.log("socket connected");
+                //console.log("socket connected");
                 // location.reload(true)
             }).catch(e => {
                 console.error(e)
@@ -97,7 +130,7 @@ const eventDispatcher = (
         try {
             socket = new WebSocket(url, socketOptions);
         } catch (e) {
-            console.log("socket disconnected")
+            // console.log("socket disconnected")
         }
 
 

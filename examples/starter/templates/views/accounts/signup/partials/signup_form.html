@@ -1,66 +1,49 @@
 {{ define "signup_form"}}
-    <div id="signup_form">
-        <p class="title is-3 has-text-centered">Sign up with {{.app_name}}</p>
-        {{ template "loading_modal" .}}
-        <form data-action="glv#event"
-              data-glv-event-id-param="auth/signup">
-            <div class="field">
-                <label class="label">Name</label>
-                <input name="name"
-                       class="input"
-                       type="text"
-                       placeholder="First Last"
-                       aria-label="Name" required>
-
-            </div>
-            <div class="field">
-                <label class="label">Email</label>
-                <input name="email"
-                       pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
-                       class="input"
-                       type="email"
-                       placeholder="your@email.com"
-                       aria-label="Email" required>
-
-            </div>
-            <div class="field">
-                <label class="label">Password</label>
-                <input name="password"
-                       class="input"
-                       type="password"
-                       aria-label="Password" required>
-
-            </div>
-            <div class="field is-grouped">
-                <div class="control is-expanded">
-                    <button class="button is-primary is-fullwidth"
-                            type="submit">
-                        Sign up
-                    </button>
-                </div>
-                <div class="control is-expanded">
-                    <button class="button is-primary is-outlined is-fullwidth"
-                            data-action="glv#navigate"
-                            data-glv-route-param="/login"
-                            type="button">
-                        Sign in
-                    </button>
-                </div>
-            </div>
-
-            <hr>
+<div x-data id="signup_form">
+    <p class="title is-3 has-text-centered">Sign up with {{.pwc.Name}}</p>
+    {{ template "loading_modal" .}}
+    <form name="signupForm" method="post" @submit.prevent="$pineview.submit('auth/signup')">
+        <div class="field">
+            <label class="label">Name</label>
+            <input name="name" class="input" type="text" placeholder="First Last" aria-label="Name" required>
+            <!-- data-rules='["required","min:5"]' -->
+            <!-- <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.name"></p> -->
+        </div>
+        <div class="field">
+            <label class="label">Email</label>
+            <input name="email" class="input" type="email" pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                placeholder="your@email.com" aria-label="Email" required>
+            <!-- data-rules='["required","email"]' -->
+            <!-- <p class="help is-danger" x-text="$store.signupForm && $store.signupForm.errors.email"></p> -->
+        </div>
+        <div class="field">
+            <label class="label">Password</label>
+            <input name="password" class="input" type="password" aria-label="Password" required>
+        </div>
+        <div class="field is-grouped">
             <div class="control is-expanded">
-                <button id="signup-btn"
-                        class="button is-primary is-outlined is-fullwidth"
-                        data-action="glv#navigate"
-                        data-glv-route-param="/auth?provider=google"
-                        type="button">
-                        <span class="icon has-text-info">
-                          <i class="fab fa-google"></i>
-                        </span>
-                    <span>Sign in with Google</span>
+                <button class="button is-primary is-fullwidth" type="submit">
+                    Sign up
                 </button>
             </div>
-        </form>
-    </div>
+            <div class="control is-expanded">
+                <button class="button is-primary is-outlined is-fullwidth" data-action="glv#navigate"
+                    data-glv-route-param="/login" type="button">
+                    Sign in
+                </button>
+            </div>
+        </div>
+
+        <hr>
+        <div class="control is-expanded">
+            <button id="signup-btn" class="button is-primary is-outlined is-fullwidth" data-action="glv#navigate"
+                data-glv-route-param="/auth?provider=google" type="button">
+                <span class="icon has-text-info">
+                    <i class="fab fa-google"></i>
+                </span>
+                <span>Sign in with Google</span>
+            </button>
+        </div>
+    </form>
+</div>
 {{ end }}
