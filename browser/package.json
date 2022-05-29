@@ -3,14 +3,17 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "build": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.min.js && ./node_modules/.bin/esbuild index.js --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js",
-    "watch": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js --watch"
+    "watch": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js --watch",
+    "watch-serve": "node esbuild.config.js -w"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "esbuild": "^0.14.39"
+    "esbuild": "^0.14.39",
+    "esbuild-serve": "^1.0.1"
   },
   "dependencies": {
     "@kingshott/iodine": "^7.0.1",
