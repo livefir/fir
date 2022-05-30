@@ -134,7 +134,7 @@ func (s sessionContext) ResponseWriter() http.ResponseWriter {
 
 func (s sessionContext) Store(names ...string) Storer {
 	if len(names) == 0 {
-		names = append(names, "pineview")
+		names = append(names, "fir")
 	}
 	return &store{names: names, wc: s.wc, topic: s.topic}
 }

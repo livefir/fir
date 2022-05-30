@@ -1,6 +1,5 @@
 {{define "content"}}
-<div x-data="{email: ''}" x-pineview-store="{forgot: {recovery_sent: false}}"
-    class="columns is-mobile is-centered mt-6">
+<div x-data="{email: ''}" x-fir-store="{forgot: {recovery_sent: false}}" class="columns is-mobile is-centered mt-6">
     <div class="column is-one-third-desktop">
         {{ template "loading_modal" .}}
         <box id="recovery_sent" class="box has-background-warning"
@@ -8,7 +7,7 @@
             A password recovery link has been sent to your inbox.
         </box>
         <div id="input_email" :class="$store.forgot.recovery_sent ? 'is-hidden':''">
-            <form @submit.prevent="$pineview.dispatch('account/forgot',$data)">
+            <form @submit.prevent="$fir.dispatch('account/forgot',$data)">
                 <div class="field">
                     <label class="label">Email</label>
                     <input name="email" x-model="email" data-rules='["required","email"]'

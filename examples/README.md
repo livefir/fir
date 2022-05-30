@@ -1,3 +1,3 @@
 # examples
 
-pineview examples
+fir examples

@@ -4,7 +4,7 @@
 <head>
     <title>{{.app_name}}</title>
     <meta charset="UTF-8" />
-    <meta name="description" content="A pineview app" />
+    <meta name="description" content="A fir app" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=" />
@@ -15,7 +15,7 @@
     <script defer src="http://localhost:8000/cdn.js"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
-        function todoForm(pineview) {
+        function todoForm(fir) {
             let obj = {
                 formData: {
                     text: '',
@@ -28,29 +28,29 @@
                         this.formData.textError = "Minimum length 3 is required"
                         return
                     }
-                    pineview.dispatch("todos/new", this.formData)
+                    fir.dispatch("todos/new", this.formData)
                     this.formData.text = ""
                 }
             }
             return obj
         }
     </script>
-</head> 
+</head>
 
 <body>
     <div class="my-6" style="height: 500px">
         <div class="columns is-mobile is-centered is-vcentered">
             <div class="column has-text-centered is-one-third">
                 <div>
-                    <form x-data="todoForm($pineview)" x-pineview-store="{formData:{}}" @submit.prevent="submit">
+                    <form x-data="todoForm($fir)" x-fir-store="{formData:{}}" @submit.prevent="submit">
                         <div class="field">
                             <label class="label">Todos</label>
                             <input name="text" class="input" type="text" placeholder="A thing to do" aria-label="Todo"
                                 required x-model="formData.text" />
-                            <p id="text-error" class="help is-danger"
-                                x-show="formData.textError" x-text="formData.textError"></p>
-                            <p id="text-server-error" class="help is-danger"
-                                x-show="$store.formData.textError" x-text="$store.formData.textError"></p>
+                            <p id="text-error" class="help is-danger" x-show="formData.textError"
+                                x-text="formData.textError"></p>
+                            <p id="text-server-error" class="help is-danger" x-show="$store.formData.textError"
+                                x-text="$store.formData.textError"></p>
                         </div>
                     </form>
                     <div x-data class="my-5">{{template "todos" .}}</div>

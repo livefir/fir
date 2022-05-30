@@ -2,7 +2,7 @@ package accounts
 
 import (
 	"github.com/adnaan/authn"
-	"github.com/adnaan/pineview/controller"
+	"github.com/adnaan/fir/controller"
 )
 
 type Views struct {

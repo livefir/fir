@@ -4,7 +4,7 @@
 <head>
     <title>{{.app_name}}</title>
     <meta charset="UTF-8">
-    <meta name="description" content="A pineview autocomplete app">
+    <meta name="description" content="A fir autocomplete app">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
@@ -23,7 +23,7 @@
                 <div x-data class="py-5">
                     <input name="query" class="input" list="list_cities" type="search" placeholder="Search Cities"
                         aria-label="Search Cities" autocomplete="off" autofocus
-                        @input="$pineview.dispatch('query',{query: $event.target.value})">
+                        @input="$fir.dispatch('query',{query: $event.target.value})">
                 </div>
                 {{template "cities" .}}
             </div>

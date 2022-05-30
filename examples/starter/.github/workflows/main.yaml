@@ -4,11 +4,11 @@ on:
     types: [published, edited]
 jobs:
   deploy:
-    name: Deploys pineview-starter on fly.dev
+    name: Deploys fir-starter on fly.dev
     runs-on: ubuntu-latest
     environment:
       name: fly.dev
-      url: https://pineview-starter.fly.dev
+      url: https://fir-starter.fly.dev
     steps:
       - uses: actions/checkout@v2
       - uses: superfly/flyctl-actions@1.1

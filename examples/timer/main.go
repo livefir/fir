@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 func NewTimer() *Timer {
@@ -50,7 +50,7 @@ func (t *Timer) LiveEventReceiver() <-chan pwc.Event {
 }
 
 func main() {
-	glvc := pwc.Websocket("pineview-timer", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("fir-timer", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(NewTimer()))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

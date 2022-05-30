@@ -1,4 +1,4 @@
-module github.com/adnaan/pineview
+module github.com/adnaan/fir
 
 go 1.18
 

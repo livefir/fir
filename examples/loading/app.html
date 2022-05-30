@@ -4,7 +4,7 @@
 <head>
     <title>{{.app_name}}</title>
     <meta charset="UTF-8">
-    <meta name="description" content="A pineview counter app">
+    <meta name="description" content="A fir counter app">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
@@ -19,14 +19,13 @@
 <body>
     <div class="my-6" style="height: 500px">
         <div class="columns is-mobile is-centered is-vcentered">
-            <div x-data x-pineview-store="{loader: false}"
-                class="column is-one-third-desktop has-text-centered is-narrow">
+            <div x-data x-fir-store="{loader: false}" class="column is-one-third-desktop has-text-centered is-narrow">
                 <div id="loading-modal" class="modal" :class="$store.loader && 'is-active'">
                     <div class="modal-background"></div>
                     <button class="button is-text is-loading is-large" disabled></button>
                 </div>
 
-                <button class="button has-background-primary" @click="$pineview.dispatch('loading')">Show loading !
+                <button class="button has-background-primary" @click="$fir.dispatch('loading')">Show loading !
                 </button>
 
             </div>

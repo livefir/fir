@@ -10,8 +10,8 @@ import (
 type Config struct {
 	// app
 	Env              string `json:"env" envconfig:"env" default:"production"`
-	Name             string `json:"name" envconfig:"name" default:"pineview-starter"`
-	Domain           string `json:"domain" envconfig:"domain" default:"https://pineview-starter.xyz"`
+	Name             string `json:"name" envconfig:"name" default:"fir-starter"`
+	Domain           string `json:"domain" envconfig:"domain" default:"https://fir-starter.xyz"`
 	Port             int    `json:"port" envconfig:"port" default:"8080"`
 	HealthPath       string `json:"health_path" envconfig:"health_path" default:"/healthz"`
 	ReadTimeoutSecs  int    `json:"read_timeout_secs" envconfig:"read_timeout_secs" default:"5"`
@@ -23,14 +23,14 @@ type Config struct {
 
 	// datasource
 	Driver     string `json:"driver" envconfig:"driver" default:"sqlite3"`
-	DataSource string `json:"datasource" envconfig:"datasource" default:"file:pineview-starter.db?mode=memory&cache=shared&_fk=1"`
+	DataSource string `json:"datasource" envconfig:"datasource" default:"file:fir-starter.db?mode=memory&cache=shared&_fk=1"`
 
 	// smtp
 	SMTPHost       string `json:"smtp_host" envconfig:"smtp_host" default:"0.0.0.0"`
 	SMTPPort       int    `json:"smtp_port,omitempty" envconfig:"smtp_port" default:"1025"`
 	SMTPUser       string `json:"smtp_user" envconfig:"smtp_user" default:"myuser" `
 	SMTPPass       string `json:"smtp_pass,omitempty" envconfig:"smtp_pass" default:"mypass"`
-	SMTPAdminEmail string `json:"smtp_admin_email" envconfig:"smtp_admin_email" default:"noreply@pineview-starter.xyz"`
+	SMTPAdminEmail string `json:"smtp_admin_email" envconfig:"smtp_admin_email" default:"noreply@fir-starter.xyz"`
 	SMTPDebug      bool   `json:"smtp_debug" envconfig:"smtp_debug" default:"true"`
 
 	// goth

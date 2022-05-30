@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/adnaan/authn"
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type DashboardView struct {

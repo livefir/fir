@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 	"github.com/timshannon/bolthold"
 )
 
@@ -83,7 +83,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	glvc := pwc.Websocket("pineview-todos", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("fir-todos", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(NewTodosView(db)))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

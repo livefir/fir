@@ -4,7 +4,7 @@
 <head>
     <title>{{.app_name}}</title>
     <meta charset="UTF-8">
-    <meta name="description" content="A pineview counter app">
+    <meta name="description" content="A fir counter app">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
@@ -22,8 +22,8 @@
             <div x-data="{count: 0}" class="column is-one-third-desktop has-text-centered is-narrow">
                 <div>You have selected <span x-text="count || 0"></span> items</div>
                 <input type="range" min="1" max="10" name="count" x-model="count" value="0"
-                    @input="$pineview.dispatch('update',{count: $event.target.value})" />
-                <div id="total" x-text="$store.pineview.total || '{{.total}}'">{{.total}}</div>
+                    @input="$fir.dispatch('update',{count: $event.target.value})" />
+                <div id="total" x-text="$store.fir.total || '{{.total}}'">{{.total}}</div>
             </div>
         </div>
     </div>
@@ -34,11 +34,11 @@
             </p>
         </div>
     </footer>
-    <script src="https://unpkg.com/pineview@latest/dist/index.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/fir@latest/dist/index.js" crossorigin="anonymous"></script>
     <script type="module">
         import { Application } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
         window.Stimulus = Application.start()
-        Stimulus.register("glv", pineview.Dispatcher)
+        Stimulus.register("glv", fir.Dispatcher)
     </script>
 </body>
 

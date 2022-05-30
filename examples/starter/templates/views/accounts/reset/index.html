@@ -1,42 +1,33 @@
 {{define "content"}}
-    <div x-data x-pineview-store="{reset: {password_reset: false}}" class="columns is-mobile is-centered mt-6">
-        <div data-controller="glv" class="column is-one-third-desktop">
-            <box id="password_reset" class="box has-background-warning is-hidden">
-                Password was reset. Please signin.
-            </box>
-            <div id="new_password   ">
-                <h1 class="box has-background-info-light has-text-weight-semibold">Change to a new pasword</h1>
-                <br>
-                <form data-action="glv#event"
-                      data-glv-event-id-param="account/reset">
-                    <div class="field">
-                        <label class="label">Password</label>
-                        <input type="hidden" name="token" value="{{.token}}">
-                        <input id="password"
-                               name="password"
-                               class="input"
-                               type="password"
-                               aria-label="Password" required>
+<div x-data x-fir-store="{reset: {password_reset: false}}" class="columns is-mobile is-centered mt-6">
+    <div data-controller="glv" class="column is-one-third-desktop">
+        <box id="password_reset" class="box has-background-warning is-hidden">
+            Password was reset. Please signin.
+        </box>
+        <div id="new_password   ">
+            <h1 class="box has-background-info-light has-text-weight-semibold">Change to a new pasword</h1>
+            <br>
+            <form data-action="glv#event" data-glv-event-id-param="account/reset">
+                <div class="field">
+                    <label class="label">Password</label>
+                    <input type="hidden" name="token" value="{{.token}}">
+                    <input id="password" name="password" class="input" type="password" aria-label="Password" required>
 
+                </div>
+                <div class="field">
+                    <label class="label">Confirm Password</label>
+                    <input id="confirm_password" name="confirm_password" class="input" type="password"
+                        aria-label="Confirm Password" required>
+                </div>
+                <div class="field is-grouped">
+                    <div class="control is-expanded">
+                        <button class="button is-primary is-fullwidth" type="submit">
+                            Reset Password
+                        </button>
                     </div>
-                    <div class="field">
-                        <label class="label">Confirm Password</label>
-                        <input id="confirm_password"
-                               name="confirm_password"
-                               class="input"
-                               type="password"
-                               aria-label="Confirm Password" required>
-                    </div>
-                    <div class="field is-grouped">
-                        <div class="control is-expanded">
-                            <button class="button is-primary is-fullwidth"
-                                    type="submit">
-                                Reset Password
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 {{end}}

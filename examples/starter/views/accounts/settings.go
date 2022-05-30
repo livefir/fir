@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/adnaan/authn"
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type SettingsView struct {

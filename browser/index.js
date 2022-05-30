@@ -11,7 +11,7 @@ document.addEventListener('alpine:init', () => {
     if (window.location.protocol === "https:") {
         connectURL = `wss://${window.location.host}${window.location.pathname}`
     }
-    Alpine.store("pineview", {})
+    Alpine.store("fir", {})
     const updateStore = (storeName, data) => {
         if (!isObject(data)) {
             Alpine.store(storeName, data)
@@ -22,7 +22,7 @@ document.addEventListener('alpine:init', () => {
         Alpine.store(storeName, nextStore)
     }
 
-    Alpine.directive('pineview-store', (el, { expression }, { evaluate }) => {
+    Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
         const val = evaluate(expression)
         if (isObject(val)) {
             for (const [key, value] of Object.entries(val)) {
@@ -35,7 +35,7 @@ document.addEventListener('alpine:init', () => {
     const dispatch = eventDispatcher(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
     dispatch("init", {})
 
-    Alpine.magic('pineview', (el, { Alpine }) => {
+    Alpine.magic('fir', (el, { Alpine }) => {
         return {
             dispatch: dispatch,
             submit(eventID) {

@@ -1,11 +1,11 @@
 # Create a new view
 
-Assuming that you have already [setup the controller](./01_create_new_controller.md), we know that the pineview controller
-exposes a [Handler](https://pkg.go.dev/github.com/adnaan/pineview/controller#Controller) api which accepts a type which satisfies
-the [View](https://pkg.go.dev/github.com/adnaan/pineview/controller#View) interface.
+Assuming that you have already [setup the controller](./01_create_new_controller.md), we know that the fir controller
+exposes a [Handler](https://pkg.go.dev/github.com/adnaan/fir/controller#Controller) api which accepts a type which satisfies
+the [View](https://pkg.go.dev/github.com/adnaan/fir/controller#View) interface.
 
 ```go
-glvc := pwc.Websocket("pineview-starter", pwc.DevelopmentMode(mode))
+glvc := pwc.Websocket("fir-starter", pwc.DevelopmentMode(mode))
 r := chi.NewRouter()
 ...
 r.NotFound(glvc.Handler(&views.NotfoundView{}))
@@ -27,7 +27,7 @@ type View interface {
 }
 ```
 
-To keep the boilerplate to the minimum, the `controller` package exposes a [DefaultView](https://pkg.go.dev/github.com/adnaan/pineview/controller#DefaultView)
+To keep the boilerplate to the minimum, the `controller` package exposes a [DefaultView](https://pkg.go.dev/github.com/adnaan/fir/controller#DefaultView)
 The `DefaultView` implements the `View` interface using sane defaults. A new view can satisfy the `View` interface by
 simply embedding the `DefaultView`.
 
@@ -35,7 +35,7 @@ simply embedding the `DefaultView`.
 package views
 
 import (
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type NotfoundView struct {
@@ -62,7 +62,7 @@ Here we want to show a custom 404 page, so we should override the `Content` and 
 package views
 
 import (
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type NotfoundView struct {

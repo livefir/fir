@@ -1,7 +1,7 @@
 package views
 
 import (
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type NotfoundView struct {

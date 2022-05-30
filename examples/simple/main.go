@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type SimpleView struct {
@@ -19,7 +19,7 @@ func (s *SimpleView) Layout() string {
 }
 
 func main() {
-	glvc := pwc.Websocket("pineview-simple", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("fir-simple", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&SimpleView{}))
 	http.ListenAndServe(":9867", nil)
 }

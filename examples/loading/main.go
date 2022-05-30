@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 )
 
 type Loading struct {
@@ -19,7 +19,7 @@ func (l *Loading) Content() string {
 func (l *Loading) OnLiveEvent(ctx pwc.Context) error {
 	switch ctx.Event().ID {
 	case "loading":
-		// "" defaults to "pineview" store
+		// "" defaults to "fir" store
 		ctx.Store("loader").Update(true)
 		defer func() {
 			ctx.Store("loader").Update(false)
@@ -34,7 +34,7 @@ func (l *Loading) OnLiveEvent(ctx pwc.Context) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("pineview-counter", pwc.DevelopmentMode(true))
+	glvc := pwc.Websocket("fir-counter", pwc.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Loading{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

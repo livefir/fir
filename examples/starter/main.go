@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adnaan/pineview/examples/starter/config"
-	"github.com/adnaan/pineview/examples/starter/views"
-	"github.com/adnaan/pineview/examples/starter/views/accounts"
-	"github.com/adnaan/pineview/examples/starter/views/app"
+	"github.com/adnaan/fir/examples/starter/config"
+	"github.com/adnaan/fir/examples/starter/views"
+	"github.com/adnaan/fir/examples/starter/views/accounts"
+	"github.com/adnaan/fir/examples/starter/views/app"
 
 	"github.com/davecgh/go-spew/spew"
 
@@ -21,7 +21,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/google"
 
-	pwc "github.com/adnaan/pineview/controller"
+	pwc "github.com/adnaan/fir/controller"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	_ "github.com/mattn/go-sqlite3"
@@ -75,7 +75,7 @@ func main() {
 	if cfg.Env != "production" {
 		mode = true
 	}
-	glvc := pwc.Websocket("pineview-starter", pwc.DevelopmentMode(mode), pwc.ProjectRoot(projectRoot))
+	glvc := pwc.Websocket("fir-starter", pwc.DevelopmentMode(mode), pwc.ProjectRoot(projectRoot))
 
 	// unauthenticated
 	// 404 and /
