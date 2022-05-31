@@ -28,8 +28,8 @@
                 </button>
             </div>
             <div class="control is-expanded">
-                <button class="button is-primary is-outlined is-fullwidth" data-action="glv#navigate"
-                    data-glv-route-param="/login" type="button">
+                <button @click="$fir.navigate('/login')" class="button is-primary is-outlined is-fullwidth"
+                    type="button">
                     Sign in
                 </button>
             </div>
@@ -37,8 +37,8 @@
 
         <hr>
         <div class="control is-expanded">
-            <button id="signup-btn" class="button is-primary is-outlined is-fullwidth" data-action="glv#navigate"
-                data-glv-route-param="/auth?provider=google" type="button">
+            <button id="signup-btn" @click="$fir.navigate('/auth?provider=google')"
+                class="button is-primary is-outlined is-fullwidth" type="button">
                 <span class="icon has-text-info">
                     <i class="fab fa-google"></i>
                 </span>
