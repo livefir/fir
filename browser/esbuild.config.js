@@ -7,7 +7,6 @@ esbuildServe(
     bundle: true,
     outfile: "dist/cdn.js",
     platform: "browser",
-    define: { CDN: true }
   },
   { root: "dist", port: 8000 }
 );

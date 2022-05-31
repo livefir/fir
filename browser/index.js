@@ -38,6 +38,12 @@ document.addEventListener('alpine:init', () => {
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
             dispatch: dispatch,
+            navigate(to) {
+                if (!to) {
+                    return
+                }
+                window.location.href = to;
+            },
             submit(eventID) {
 
                 let inputs = [...el.querySelectorAll("input[data-rules]")];
