@@ -1,42 +1,30 @@
 {{define "account_form"}}
-    <div id="account_form">
-        <form data-action="glv#event"
-              data-glv-event-id-param="account/update">
-            <div class="field">
-                <label class="label">Name</label>
-                <div class="control">
-                    <input id="profile_inputs"
-                           maxlength="30"
-                           class="input"
-                           name="Name"
-                           type="text"
-                           placeholder="e.g Alex Smith"
-                           value="{{.name}}">
-                </div>
+<div id="account_form">
+    <form>
+        <div class="field">
+            <label class="label">Name</label>
+            <div class="control">
+                <input id="profile_inputs" maxlength="30" class="input" name="Name" type="text"
+                    placeholder="e.g Alex Smith" value="{{.name}}">
             </div>
-            {{if .email}}
-                <div class="field">
-                    <label class="label">Email</label>
-                    <div class="control">
-                        <input class="input"
-                               id="profile_inputs"
-                               name="Email"
-                               type="email"
-                               aria-label="Email"
-                               pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
-                               placeholder="e.g. alexsmith@gmail.com"
-                               value="{{.email}}">
-                    </div>
-                </div>
-            {{end}}
+        </div>
+        {{if .email}}
+        <div class="field">
+            <label class="label">Email</label>
+            <div class="control">
+                <input class="input" id="profile_inputs" name="Email" type="email" aria-label="Email"
+                    pattern="[^@\s]+@[^@\s]+\.[^@\s]+" placeholder="e.g. alexsmith@gmail.com" value="{{.email}}">
+            </div>
+        </div>
+        {{end}}
 
-            <div class="field">
-                <p class="control">
-                    <button id="profile_inputs" class="button is-link" type="submit">
-                        Update
-                    </button>
-                </p>
-            </div>
-        </form>
-    </div>
+        <div class="field">
+            <p class="control">
+                <button id="profile_inputs" class="button is-link" type="submit">
+                    Update
+                </button>
+            </p>
+        </div>
+    </form>
+</div>
 {{end}}
