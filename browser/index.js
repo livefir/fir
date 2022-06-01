@@ -51,9 +51,7 @@ document.addEventListener('alpine:init', () => {
                 inputs.map((input) => {
                     const rules = JSON.parse(input.dataset.rules);
                     const isValid = iodine.is(input.value, rules);
-                    console.log(input.value, rules, isValid)
                     if (isValid !== true) {
-                        console.log("invalid", input.getAttribute("name"))
                         formErrors.errors[input.getAttribute("name")] = iodine.getErrorMessage(isValid)
                     }
                 });
