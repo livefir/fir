@@ -1,6 +1,6 @@
 {
-  "name": "@adnaan/fir",
-  "version": "0.0.1",
+  "name": "@adnaanx/fir",
+  "version": "0.0.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/adnaan/fir"
@@ -12,8 +12,7 @@
     "alpinejs"
   ],
   "description": "Client library for Fir: A reactive view library built in Go and Alpine.js",
-  "main": "index.js",
-  "type": "module",
+  "main": "dist/cdn.min.js",
   "scripts": {
     "build": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.min.js && ./node_modules/.bin/esbuild index.js --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js",
     "watch": "./node_modules/.bin/esbuild index.js --minify --bundle --platform=browser --define:CDN=true --outfile=./dist/cdn.js --watch",
