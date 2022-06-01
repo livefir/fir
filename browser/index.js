@@ -32,12 +32,12 @@ document.addEventListener('alpine:init', () => {
         }
     })
 
-    const dispatch = eventDispatcher(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
-    dispatch("init", {})
+    const emit = eventEmitter(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
+    emit("init", {})
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            dispatch: dispatch,
+            emit: emit,
             navigate(to) {
                 if (!to) {
                     return
@@ -68,7 +68,7 @@ document.addEventListener('alpine:init', () => {
                     let params = {};
                     formData.forEach((value, key) => params[key] = value);
                     params["formName"] = formName;
-                    dispatch(eventID, params)
+                    emit(eventID, params)
                     return;
                 }
             }
@@ -78,7 +78,7 @@ document.addEventListener('alpine:init', () => {
 
 const reopenTimeouts = [2000, 5000, 10000, 30000, 60000];
 
-const eventDispatcher = (
+const eventEmitter = (
     url,
     socketOptions,
     invokeOp,

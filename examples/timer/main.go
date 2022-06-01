@@ -28,24 +28,24 @@ func (t *Timer) Content() string {
 	return "app.html"
 }
 
-func (t *Timer) OnMount(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.M) {
-	return pwc.Status{Code: 200}, pwc.M{
+func (t *Timer) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
+	return pwc.Status{Code: 200}, pwc.Data{
 		"ts": time.Now().String(),
 	}
 }
 
-func (t *Timer) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (t *Timer) OnEvent(s pwc.Socket) error {
+	switch s.Event().ID {
 	case "tick":
-		ctx.Store("").UpdateProp("ts", time.Now().String())
+		s.Store("").UpdateProp("ts", time.Now().String())
 		return nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }
 
-func (t *Timer) LiveEventReceiver() <-chan pwc.Event {
+func (t *Timer) EventReceiver() <-chan pwc.Event {
 	return t.ch
 }
 

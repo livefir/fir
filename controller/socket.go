@@ -34,13 +34,13 @@ func (m *Operation) Bytes() []byte {
 	return b
 }
 
-type M map[string]any
+type Data map[string]any
 
-type Context interface {
+type Socket interface {
 	Event() Event
 	Request() *http.Request
 	ResponseWriter() http.ResponseWriter
-	Morph(selector, template string, data M)
+	Morph(selector, template string, data Data)
 	Store(...string) Storer
 	Reload()
 }
@@ -84,23 +84,22 @@ func (e Event) String() string {
 	return string(data)
 }
 
-type EventHandler func(ctx Context) error
+type EventHandler func(s Socket) error
 
 func (e Event) DecodeParams(v any) error {
 	return json.NewDecoder(bytes.NewReader(e.Params)).Decode(v)
 }
 
-type sessionContext struct {
+type socket struct {
 	event        Event
 	r            *http.Request
 	w            http.ResponseWriter
 	rootTemplate *template.Template
 	topic        string
 	wc           *websocketController
-	store        *store
 }
 
-func (s sessionContext) setError(userMessage string, errs ...error) {
+func (s socket) setError(userMessage string, errs ...error) {
 	if len(errs) != 0 {
 		var errstrs []string
 		for _, err := range errs {
@@ -112,34 +111,34 @@ func (s sessionContext) setError(userMessage string, errs ...error) {
 		log.Printf("err: %v, errors: %v\n", userMessage, strings.Join(errstrs, ","))
 	}
 
-	s.Morph("#glv-error", "glv-error", M{"error": userMessage})
+	s.Morph("#glv-error", "glv-error", Data{"error": userMessage})
 
 }
 
-func (s sessionContext) unsetError() {
+func (s socket) unsetError() {
 	s.Morph("#glv-error", "glv-error", nil)
 }
 
-func (s sessionContext) Event() Event {
+func (s socket) Event() Event {
 	return s.event
 }
 
-func (s sessionContext) Request() *http.Request {
+func (s socket) Request() *http.Request {
 	return s.r
 }
 
-func (s sessionContext) ResponseWriter() http.ResponseWriter {
+func (s socket) ResponseWriter() http.ResponseWriter {
 	return s.w
 }
 
-func (s sessionContext) Store(names ...string) Storer {
+func (s socket) Store(names ...string) Storer {
 	if len(names) == 0 {
 		names = append(names, "fir")
 	}
 	return &store{names: names, wc: s.wc, topic: s.topic}
 }
 
-func (s sessionContext) Morph(selector, template string, data M) {
+func (s socket) Morph(selector, template string, data Data) {
 	var buf bytes.Buffer
 	err := s.rootTemplate.ExecuteTemplate(&buf, template, data)
 	if err != nil {
@@ -163,14 +162,14 @@ func (s sessionContext) Morph(selector, template string, data M) {
 	s.wc.message(s.topic, m.Bytes())
 }
 
-func (s sessionContext) Reload() {
+func (s socket) Reload() {
 	m := &Operation{
 		Op: Reload,
 	}
 	s.wc.message(s.topic, m.Bytes())
 }
 
-func getJSON(data M) string {
+func getJSON(data Data) string {
 	b, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
 		return err.Error()

@@ -23,7 +23,7 @@
                 <div x-data class="py-5">
                     <input name="query" class="input" list="list_cities" type="search" placeholder="Search Cities"
                         aria-label="Search Cities" autocomplete="off" autofocus
-                        @input="$fir.dispatch('query',{query: $event.target.value})">
+                        @input="$fir.emit('query',{query: $event.target.value})">
                 </div>
                 {{template "cities" .}}
             </div>

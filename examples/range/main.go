@@ -20,26 +20,26 @@ func (r *Range) Content() string {
 	return "app.html"
 }
 
-func (r *Range) OnMount(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.M) {
-	return pwc.Status{Code: 200}, pwc.M{
+func (r *Range) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
+	return pwc.Status{Code: 200}, pwc.Data{
 		"total": 0,
 	}
 }
 
-func (r *Range) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (r *Range) OnEvent(s pwc.Socket) error {
+	switch s.Event().ID {
 	case "update":
 		req := new(CountRequest)
-		if err := ctx.Event().DecodeParams(req); err != nil {
+		if err := s.Event().DecodeParams(req); err != nil {
 			return err
 		}
 		count, err := strconv.Atoi(req.Count)
 		if err != nil {
 			return err
 		}
-		ctx.Store().UpdateProp("total", count*10)
+		s.Store().UpdateProp("total", count*10)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }

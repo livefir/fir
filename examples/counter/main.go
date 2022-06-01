@@ -30,20 +30,20 @@ func (c *Counter) Content() string {
 	return "app.html"
 }
 
-func (c *Counter) OnMount(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.M) {
-	return pwc.Status{Code: 200}, pwc.M{
+func (c *Counter) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
+	return pwc.Status{Code: 200}, pwc.Data{
 		"count": c.Value(),
 	}
 }
 
-func (c *Counter) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (c *Counter) OnEvent(s pwc.Socket) error {
+	switch s.Event().ID {
 	case "inc":
-		ctx.Store().UpdateProp("count", c.Inc())
+		s.Store().UpdateProp("count", c.Inc())
 	case "dec":
-		ctx.Store().UpdateProp("count", c.Dec())
+		s.Store().UpdateProp("count", c.Dec())
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }

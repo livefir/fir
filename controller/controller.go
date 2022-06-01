@@ -124,6 +124,7 @@ func Websocket(name string, options ...Option) Controller {
 		flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
 		flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
 		flag.Parse()
+		o.projectRoot = projectRoot
 	}
 
 	wc := &websocketController{
@@ -296,7 +297,7 @@ func (wc *websocketController) Handler(view View) http.HandlerFunc {
 		panic(err)
 	}
 
-	mountData := make(M)
+	mountData := make(Data)
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, err := wc.getUser(w, r)
 		if err != nil {
@@ -314,9 +315,9 @@ func (wc *websocketController) Handler(view View) http.HandlerFunc {
 		}
 		if r.Header.Get("Connection") == "Upgrade" &&
 			r.Header.Get("Upgrade") == "websocket" {
-			onLiveEvent(w, r, v)
+			OnEvent(w, r, v)
 		} else {
-			onMount(w, r, v)
+			OnRequest(w, r, v)
 		}
 	}
 }

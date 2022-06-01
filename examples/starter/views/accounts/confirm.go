@@ -23,14 +23,14 @@ func (h *ConfirmView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (h *ConfirmView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (h *ConfirmView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	token := chi.URLParam(r, "token")
 	err := h.Auth.ConfirmSignupEmail(r.Context(), token)
 	if err != nil {
-		log.Println("err confirm.onmount", err)
+		log.Println("err confirm.OnRequest", err)
 		return pwc.Status{Code: 200}, nil
 	}
-	return pwc.Status{Code: 200}, pwc.M{
+	return pwc.Status{Code: 200}, pwc.Data{
 		"confirmed": true,
 	}
 }

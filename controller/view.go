@@ -41,9 +41,9 @@ type View interface {
 	Partials() []string
 	Extensions() []string
 	FuncMap() template.FuncMap
-	OnMount(http.ResponseWriter, *http.Request) (Status, M)
-	OnLiveEvent(ctx Context) error
-	LiveEventReceiver() <-chan Event
+	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
+	OnEvent(s Socket) error
+	EventReceiver() <-chan Event
 }
 
 type DefaultView struct{}
@@ -111,23 +111,23 @@ func (d DefaultView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-// OnMount is called when the page is first loaded for the http route.
-func (d DefaultView) OnMount(w http.ResponseWriter, r *http.Request) (Status, M) {
-	return Status{Code: 200, Message: "ok"}, M{}
+// OnRequest is called when the page is first loaded for the http route.
+func (d DefaultView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, Data) {
+	return Status{Code: 200, Message: "ok"}, Data{}
 }
 
-// OnLiveEvent handles the events sent from the browser or received on the LiveEventReceiver channel
-func (d DefaultView) OnLiveEvent(ctx Context) error {
-	switch ctx.Event().ID {
+// OnEvent handles the events sent from the browser or received on the EventReceiver channel
+func (d DefaultView) OnEvent(s Socket) error {
+	switch s.Event().ID {
 	default:
-		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }
 
-// LiveEventReceiver is used to configure a receive only channel for receiving events from concurrent goroutines.
-// e.g. a concurrent goroutine sends a tick event every second to the returned channel which is then handled in OnLiveEvent.
-func (d DefaultView) LiveEventReceiver() <-chan Event {
+// EventReceiver is used to configure a receive only channel for receiving events from concurrent goroutines.
+// e.g. a concurrent goroutine sends a tick event every second to the returned channel which is then handled in OnEvent.
+func (d DefaultView) EventReceiver() <-chan Event {
 	return nil
 }
 
@@ -162,19 +162,19 @@ func (d DefaultErrorView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-func (d DefaultErrorView) OnMount(w http.ResponseWriter, r *http.Request) (Status, M) {
-	return Status{Code: 500, Message: "Internal Error"}, M{}
+func (d DefaultErrorView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, Data) {
+	return Status{Code: 500, Message: "Internal Error"}, Data{}
 }
 
-func (d DefaultErrorView) OnLiveEvent(ctx Context) error {
-	switch ctx.Event().ID {
+func (d DefaultErrorView) OnEvent(s Socket) error {
+	switch s.Event().ID {
 	default:
-		log.Printf("[DefaultErrorView] warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("[DefaultErrorView] warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }
 
-func (d DefaultErrorView) LiveEventReceiver() <-chan Event {
+func (d DefaultErrorView) EventReceiver() <-chan Event {
 	return nil
 }
 
@@ -183,7 +183,7 @@ type viewHandler struct {
 	errorView         View
 	viewTemplate      *template.Template
 	errorViewTemplate *template.Template
-	mountData         M
+	mountData         Data
 	user              int
 	wc                *websocketController
 }
@@ -204,15 +204,15 @@ func (v *viewHandler) reloadTemplates() {
 	}
 }
 
-func onMount(w http.ResponseWriter, r *http.Request, v *viewHandler) {
+func OnRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	v.reloadTemplates()
 
 	var err error
 	var status Status
 
-	status, v.mountData = v.view.OnMount(w, r)
+	status, v.mountData = v.view.OnRequest(w, r)
 	if v.mountData == nil {
-		v.mountData = make(M)
+		v.mountData = make(Data)
 	}
 	v.mountData["app_name"] = v.wc.name
 	v.mountData["pwc"] = &AppContext{
@@ -222,27 +222,27 @@ func onMount(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	w.WriteHeader(status.Code)
 	if status.Code > 299 {
-		onMountError(w, r, v, &status)
+		OnRequestError(w, r, v, &status)
 		return
 	}
 	v.viewTemplate.Option("missingkey=zero")
 	err = v.viewTemplate.Execute(w, v.mountData)
 	if err != nil {
-		log.Printf("onMount viewTemplate.Execute error:  %v", err)
-		onMountError(w, r, v, nil)
+		log.Printf("OnRequest viewTemplate.Execute error:  %v", err)
+		OnRequestError(w, r, v, nil)
 	}
 	if v.wc.debugLog {
-		log.Printf("onMount render view %+v, with data => \n %+v\n",
+		log.Printf("OnRequest render view %+v, with data => \n %+v\n",
 			v.view.Content(), getJSON(v.mountData))
 	}
 
 }
 
-func onMountError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
+func OnRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
 	var errorStatus Status
-	errorStatus, v.mountData = v.errorView.OnMount(w, r)
+	errorStatus, v.mountData = v.errorView.OnRequest(w, r)
 	if v.mountData == nil {
-		v.mountData = make(M)
+		v.mountData = make(Data)
 	}
 	if status == nil {
 		status = &errorStatus
@@ -259,7 +259,7 @@ func onMountError(w http.ResponseWriter, r *http.Request, v *viewHandler, status
 	}
 }
 
-func onLiveEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
+func OnEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	var topic *string
 	if v.wc.subscribeTopicFunc != nil {
 		topic = v.wc.subscribeTopicFunc(r)
@@ -281,7 +281,7 @@ func onLiveEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		topicVal = *topic
 	}
 
-	sessCtx := sessionContext{
+	st := socket{
 		w:            w,
 		r:            r,
 		topic:        topicVal,
@@ -289,13 +289,13 @@ func onLiveEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		rootTemplate: v.viewTemplate,
 	}
 	done := make(chan struct{})
-	if v.view.LiveEventReceiver() != nil {
+	if v.view.EventReceiver() != nil {
 		go func() {
 			for {
 				select {
-				case event := <-v.view.LiveEventReceiver():
-					sessCtx.event = event
-					err := v.view.OnLiveEvent(sessCtx)
+				case event := <-v.view.EventReceiver():
+					st.event = event
+					err := v.view.OnEvent(st)
 					if err != nil {
 						log.Printf("[error] \n event => %+v, \n err: %v\n", event, err)
 					}
@@ -328,21 +328,21 @@ loop:
 		}
 
 		v.reloadTemplates()
-		sessCtx.event = *event
-		sessCtx.unsetError()
+		st.event = *event
+		st.unsetError()
 
 		var eventHandlerErr error
 		if v.wc.debugLog {
-			log.Printf("[controller] received event %+v \n", sessCtx.event)
+			log.Printf("[controller] received event %+v \n", st.event)
 		}
-		eventHandlerErr = v.view.OnLiveEvent(sessCtx)
+		eventHandlerErr = v.view.OnEvent(st)
 
 		if eventHandlerErr != nil {
 			log.Printf("[error] \n event => %+v, \n err: %v\n", event, eventHandlerErr)
-			sessCtx.setError(UserError(eventHandlerErr), eventHandlerErr)
+			st.setError(UserError(eventHandlerErr), eventHandlerErr)
 		}
 	}
-	if v.view.LiveEventReceiver() != nil {
+	if v.view.EventReceiver() != nil {
 		done <- struct{}{}
 	}
 	if topic != nil {

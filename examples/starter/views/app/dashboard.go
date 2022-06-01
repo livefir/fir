@@ -21,16 +21,16 @@ func (d *DashboardView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (d *DashboardView) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (d *DashboardView) OnEvent(s pwc.Socket) error {
+	switch s.Event().ID {
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }
 
-func (d *DashboardView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
-	return pwc.Status{Code: 200}, pwc.M{
+func (d *DashboardView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
+	return pwc.Status{Code: 200}, pwc.Data{
 		"is_logged_in": true,
 	}
 }

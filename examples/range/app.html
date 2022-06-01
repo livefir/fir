@@ -22,7 +22,7 @@
             <div x-data="{count: 0}" class="column is-one-third-desktop has-text-centered is-narrow">
                 <div>You have selected <span x-text="count || 0"></span> items</div>
                 <input type="range" min="1" max="10" name="count" x-model="count" value="0"
-                    @input="$fir.dispatch('update',{count: $event.target.value})" />
+                    @input="$fir.emit('update',{count: $event.target.value})" />
                 <div id="total" x-text="$store.fir.total || '{{.total}}'">{{.total}}</div>
             </div>
         </div>

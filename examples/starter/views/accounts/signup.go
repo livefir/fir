@@ -23,22 +23,22 @@ func (s *SignupView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (s *SignupView) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (s *SignupView) OnEvent(st pwc.Socket) error {
+	switch st.Event().ID {
 	case "auth/signup":
-		return s.Signup(ctx)
+		return s.Signup(st)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
 	}
 	return nil
 }
 
-func (s *SignupView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (s *SignupView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
 		return pwc.Status{Code: 200}, nil
 	}
 
-	return pwc.Status{Code: 200}, pwc.M{
+	return pwc.Status{Code: 200}, pwc.Data{
 		"is_logged_in": true,
 	}
 }
@@ -49,13 +49,13 @@ type ProfileRequest struct {
 	Password string `json:"password"`
 }
 
-func (s *SignupView) Signup(ctx pwc.Context) error {
-	ctx.Store().UpdateProp("show_loading_modal", true)
+func (s *SignupView) Signup(st pwc.Socket) error {
+	st.Store().UpdateProp("show_loading_modal", true)
 	defer func() {
-		ctx.Store().UpdateProp("show_loading_modal", false)
+		st.Store().UpdateProp("show_loading_modal", false)
 	}()
 	req := new(ProfileRequest)
-	if err := ctx.Event().DecodeParams(req); err != nil {
+	if err := st.Event().DecodeParams(req); err != nil {
 		return err
 	}
 
@@ -69,10 +69,10 @@ func (s *SignupView) Signup(ctx pwc.Context) error {
 	attributes := make(map[string]interface{})
 	attributes["name"] = req.Name
 
-	if err := s.Auth.Signup(ctx.Request().Context(), req.Email, req.Password, attributes); err != nil {
+	if err := s.Auth.Signup(st.Request().Context(), req.Email, req.Password, attributes); err != nil {
 		return err
 	}
-	ctx.Morph("#signup_container", "signup_container", pwc.M{
+	st.Morph("#signup_container", "signup_container", pwc.Data{
 		"sent_confirmation": true,
 	})
 	return nil

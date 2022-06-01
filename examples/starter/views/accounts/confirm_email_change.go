@@ -23,7 +23,7 @@ func (c *ConfirmEmailChangeView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (c *ConfirmEmailChangeView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (c *ConfirmEmailChangeView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	if r.Method != "GET" {
 		return pwc.Status{Code: 405}, nil
 	}

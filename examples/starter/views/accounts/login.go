@@ -23,21 +23,21 @@ func (l *LoginView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (l *LoginView) OnLiveEvent(ctx pwc.Context) error {
-	ctx.Store().UpdateProp("show_loading_modal", true)
+func (l *LoginView) OnEvent(s pwc.Socket) error {
+	s.Store().UpdateProp("show_loading_modal", true)
 	defer func() {
-		ctx.Store().UpdateProp("show_loading_modal", false)
+		s.Store().UpdateProp("show_loading_modal", false)
 	}()
-	switch ctx.Event().ID {
+	switch s.Event().ID {
 	case "auth/magic-login":
-		return l.MagicLogin(ctx)
+		return l.MagicLogin(s)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }
 
-func (l *LoginView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (l *LoginView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	if r.Method == "POST" {
 		return l.LoginSubmit(w, r)
 	}
@@ -46,23 +46,23 @@ func (l *LoginView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status,
 		return pwc.Status{Code: 200}, nil
 	}
 
-	return pwc.Status{Code: 200}, pwc.M{
+	return pwc.Status{Code: 200}, pwc.Data{
 		"is_logged_in": true,
 	}
 }
 
-func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	var email, password string
 	_ = r.ParseForm()
 	for k, v := range r.Form {
 		if k == "email" && len(v) == 0 {
-			return pwc.Status{Code: 200}, pwc.M{
+			return pwc.Status{Code: 200}, pwc.Data{
 				"error": "email is required",
 			}
 		}
 
 		if k == "password" && len(v) == 0 {
-			return pwc.Status{Code: 200}, pwc.M{
+			return pwc.Status{Code: 200}, pwc.Data{
 				"error": "password is required",
 			}
 		}
@@ -82,7 +82,7 @@ func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (pwc.Sta
 		}
 	}
 	if err := l.Auth.Login(w, r, email, password); err != nil {
-		return pwc.Status{Code: 200}, pwc.M{
+		return pwc.Status{Code: 200}, pwc.Data{
 			"error": pwc.UserError(err),
 		}
 	}
@@ -94,20 +94,20 @@ func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (pwc.Sta
 
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 
-	return pwc.Status{Code: 200}, pwc.M{}
+	return pwc.Status{Code: 200}, pwc.Data{}
 }
 
-func (l *LoginView) MagicLogin(ctx pwc.Context) error {
+func (l *LoginView) MagicLogin(s pwc.Socket) error {
 	r := new(ProfileRequest)
-	if err := ctx.Event().DecodeParams(r); err != nil {
+	if err := s.Event().DecodeParams(r); err != nil {
 		return err
 	}
 	if r.Email == "" {
 		return fmt.Errorf("%w", errors.New("email is required"))
 	}
-	if err := l.Auth.SendPasswordlessToken(ctx.Request().Context(), r.Email); err != nil {
+	if err := l.Auth.SendPasswordlessToken(s.Request().Context(), r.Email); err != nil {
 		return err
 	}
-	ctx.Morph("#signin_container", "signin_container", pwc.M{"sent_magic_link": true})
+	s.Morph("#signin_container", "signin_container", pwc.Data{"sent_magic_link": true})
 	return nil
 }

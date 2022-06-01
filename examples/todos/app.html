@@ -28,7 +28,7 @@
                         this.formData.textError = "Minimum length 3 is required"
                         return
                     }
-                    fir.dispatch("todos/new", this.formData)
+                    fir.emit("todos/new", this.formData)
                     this.formData.text = ""
                 }
             }

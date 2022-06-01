@@ -22,7 +22,7 @@ func (c *ConfirmMagicView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (c *ConfirmMagicView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (c *ConfirmMagicView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	if r.Method != "GET" {
 		return pwc.Status{Code: 405}, nil
 	}

@@ -16,19 +16,19 @@ func (l *Loading) Content() string {
 	return "app.html"
 }
 
-func (l *Loading) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (l *Loading) OnEvent(s pwc.Socket) error {
+	switch s.Event().ID {
 	case "loading":
 		// "" defaults to "fir" store
-		ctx.Store("loader").Update(true)
+		s.Store("loader").Update(true)
 		defer func() {
-			ctx.Store("loader").Update(false)
+			s.Store("loader").Update(false)
 		}()
 
 		// some work
 		time.Sleep(time.Second * 2)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	return nil
 }

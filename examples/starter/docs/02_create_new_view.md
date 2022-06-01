@@ -21,9 +21,9 @@ type View interface {
 	Partials() []string
 	Extensions() []string
 	FuncMap() template.FuncMap
-	OnMount(ctx Context) (Status, M)
-	OnLiveEvent(ctx Context) error
-	LiveEventReceiver() <-chan Event
+	OnRequest(ctx Context) (Status, M)
+	OnEvent(ctx Context) error
+	EventReceiver() <-chan Event
 }
 ```
 

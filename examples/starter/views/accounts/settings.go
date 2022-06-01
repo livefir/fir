@@ -22,24 +22,24 @@ func (s *SettingsView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (s *SettingsView) OnLiveEvent(ctx pwc.Context) error {
-	ctx.Store("settings").UpdateProp("profile_loading", true)
+func (s *SettingsView) OnEvent(st pwc.Socket) error {
+	st.Store("settings").UpdateProp("profile_loading", true)
 	defer func() {
 		time.Sleep(1 * time.Second)
-		ctx.Store("settings").UpdateProp("profile_loading", true)
+		st.Store("settings").UpdateProp("profile_loading", true)
 	}()
-	switch ctx.Event().ID {
+	switch st.Event().ID {
 	case "account/update":
-		return s.UpdateProfile(ctx)
+		return s.UpdateProfile(st)
 	case "account/delete":
-		return s.DeleteAccount(ctx)
+		return s.DeleteAccount(st)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
 	}
 	return nil
 }
 
-func (s *SettingsView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.M) {
+func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
 	if r.Method != "GET" {
 		return pwc.Status{Code: 405}, nil
 	}
@@ -55,19 +55,19 @@ func (s *SettingsView) OnMount(w http.ResponseWriter, r *http.Request) (pwc.Stat
 		name, _ = m.String("name")
 	}
 
-	return pwc.Status{Code: 200}, pwc.M{
+	return pwc.Status{Code: 200}, pwc.Data{
 		"is_logged_in": true,
 		"email":        acc.Email(),
 		"name":         name,
 	}
 }
 
-func (s *SettingsView) UpdateProfile(ctx pwc.Context) error {
+func (s *SettingsView) UpdateProfile(st pwc.Socket) error {
 	req := new(ProfileRequest)
-	if err := ctx.Event().DecodeParams(req); err != nil {
+	if err := st.Event().DecodeParams(req); err != nil {
 		return err
 	}
-	rCtx := ctx.Request().Context()
+	rCtx := st.Request().Context()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)
 	if err != nil {
@@ -80,10 +80,10 @@ func (s *SettingsView) UpdateProfile(ctx pwc.Context) error {
 		if err := acc.ChangeEmail(rCtx, req.Email); err != nil {
 			return err
 		}
-		ctx.Store("settings").UpdateProp("change_email", true)
+		st.Store("settings").UpdateProp("change_email", true)
 	}
 
-	ctx.Morph("#account_form", "account_form", pwc.M{
+	st.Morph("#account_form", "account_form", pwc.Data{
 		"name":  req.Name,
 		"email": acc.Email(),
 	})
@@ -91,8 +91,8 @@ func (s *SettingsView) UpdateProfile(ctx pwc.Context) error {
 	return nil
 }
 
-func (s *SettingsView) DeleteAccount(ctx pwc.Context) error {
-	rCtx := ctx.Request().Context()
+func (s *SettingsView) DeleteAccount(st pwc.Socket) error {
+	rCtx := st.Request().Context()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)
 	if err != nil {
@@ -101,6 +101,6 @@ func (s *SettingsView) DeleteAccount(ctx pwc.Context) error {
 	if err := acc.Delete(rCtx); err != nil {
 		return err
 	}
-	ctx.Reload()
+	st.Reload()
 	return nil
 }

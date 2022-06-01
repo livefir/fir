@@ -50,22 +50,22 @@ func (s *Search) Partials() []string {
 	return []string{"cities.html"}
 }
 
-func (s *Search) OnMount(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.M) {
+func (s *Search) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
 	return pwc.Status{Code: 200}, nil
 }
 
-func (s *Search) OnLiveEvent(ctx pwc.Context) error {
-	switch ctx.Event().ID {
+func (s *Search) OnEvent(st pwc.Socket) error {
+	switch st.Event().ID {
 	case "search":
 		req := new(QueryRequest)
-		if err := ctx.Event().DecodeParams(req); err != nil {
+		if err := st.Event().DecodeParams(req); err != nil {
 			return err
 		}
-		ctx.Morph("#cities", "cities", pwc.M{
+		st.Morph("#cities", "cities", pwc.Data{
 			"cities": getCities(req.Query),
 		})
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
 	}
 	return nil
 }

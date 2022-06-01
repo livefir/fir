@@ -35,30 +35,30 @@ func (t *TodosView) Partials() []string {
 	return []string{"todos.html"}
 }
 
-func (t *TodosView) OnMount(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.M) {
+func (t *TodosView) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
 		return pwc.Status{
 			Code: 200,
 		}, nil
 	}
-	return pwc.Status{Code: 200}, pwc.M{"todos": todos}
+	return pwc.Status{Code: 200}, pwc.Data{"todos": todos}
 }
 
-func (t *TodosView) OnLiveEvent(ctx pwc.Context) error {
+func (t *TodosView) OnEvent(s pwc.Socket) error {
 	var todo Todo
-	if err := ctx.Event().DecodeParams(&todo); err != nil {
+	if err := s.Event().DecodeParams(&todo); err != nil {
 		return err
 	}
 
-	switch ctx.Event().ID {
+	switch s.Event().ID {
 
 	case "todos/new":
 		if len(todo.Text) < 4 {
-			ctx.Store("formData").UpdateProp("textError", "Min length is 4")
+			s.Store("formData").UpdateProp("textError", "Min length is 4")
 			return nil
 		}
-		ctx.Store("formData").UpdateProp("textError", "")
+		s.Store("formData").UpdateProp("textError", "")
 		if err := t.db.Insert(bolthold.NextSequence(), &todo); err != nil {
 			return err
 		}
@@ -67,14 +67,14 @@ func (t *TodosView) OnLiveEvent(ctx pwc.Context) error {
 			return err
 		}
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", ctx.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
 	}
 	// list updated todos
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
 		return err
 	}
-	ctx.Morph("#todos", "todos", pwc.M{"todos": todos})
+	s.Morph("#todos", "todos", pwc.Data{"todos": todos})
 	return nil
 }
 
