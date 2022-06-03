@@ -71,8 +71,8 @@ func (s *Search) OnEvent(st fir.Socket) error {
 }
 
 func main() {
-	glvc := fir.Websocket("fir-search", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(&Search{}))
+	c := fir.NewController("fir-search", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(&Search{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

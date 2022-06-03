@@ -5,10 +5,10 @@ exposes a [Handler](https://pkg.go.dev/github.com/adnaan/fir/controller#Controll
 the [View](https://pkg.go.dev/github.com/adnaan/fir/controller#View) interface.
 
 ```go
-glvc := fir.Websocket("fir-starter", fir.DevelopmentMode(mode))
+c := fir.Websocket("fir-starter", fir.DevelopmentMode(mode))
 r := chi.NewRouter()
 ...
-r.NotFound(glvc.Handler(&views.NotfoundView{}))
+r.NotFound(c.Handler(&views.NotfoundView{}))
 ```
 
 The `View` interface:
@@ -43,7 +43,7 @@ type NotfoundView struct {
 }
 ```
 
-When the above view is rendered by `r.NotFound(glvc.Handler(&views.NotfoundView{}))`, the default layout and content
+When the above view is rendered by `r.NotFound(c.Handler(&views.NotfoundView{}))`, the default layout and content
 are used.
 
 ```go
@@ -78,5 +78,5 @@ func (n *NotfoundView) Layout() string {
 }
 ```
 
-Now when the view is rendered by `r.NotFound(glvc.Handler(&views.NotfoundView{}))`, it displays `./templates/404.html`
+Now when the view is rendered by `r.NotFound(c.Handler(&views.NotfoundView{}))`, it displays `./templates/404.html`
 within the layout`./templates/layouts/error.html`.

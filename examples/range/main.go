@@ -45,8 +45,8 @@ func (r *Range) OnEvent(s fir.Socket) error {
 }
 
 func main() {
-	glvc := fir.Websocket("fir-range", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(&Range{}))
+	c := fir.NewController("fir-range", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(&Range{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

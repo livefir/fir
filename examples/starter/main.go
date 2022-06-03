@@ -75,19 +75,19 @@ func main() {
 	if cfg.Env != "production" {
 		mode = true
 	}
-	glvc := fir.Websocket("fir-starter", fir.DevelopmentMode(mode), fir.ProjectRoot(projectRoot))
+	c := fir.NewController("fir-starter", fir.DevelopmentMode(mode), fir.ProjectRoot(projectRoot))
 
 	// unauthenticated
 	// 404 and /
-	r.NotFound(glvc.Handler(&views.NotfoundView{}))
-	r.Handle("/", glvc.Handler(&views.LandingView{Auth: authnAPI}))
+	r.NotFound(c.Handler(&views.NotfoundView{}))
+	r.Handle("/", c.Handler(&views.LandingView{Auth: authnAPI}))
 	accountViews := accounts.Views{Auth: authnAPI}
-	r.Handle("/signup", glvc.Handler(accountViews.Signup()))
-	r.Handle("/confirm/{token}", glvc.Handler(accountViews.Confirm()))
-	r.Handle("/login", glvc.Handler(accountViews.Login()))
-	r.Handle("/magic-login/{token}", glvc.Handler(accountViews.ConfirmMagic()))
-	r.Handle("/forgot", glvc.Handler(accountViews.Forgot()))
-	r.Handle("/reset/{token}", glvc.Handler(accountViews.Reset()))
+	r.Handle("/signup", c.Handler(accountViews.Signup()))
+	r.Handle("/confirm/{token}", c.Handler(accountViews.Confirm()))
+	r.Handle("/login", c.Handler(accountViews.Login()))
+	r.Handle("/magic-login/{token}", c.Handler(accountViews.ConfirmMagic()))
+	r.Handle("/forgot", c.Handler(accountViews.Forgot()))
+	r.Handle("/reset/{token}", c.Handler(accountViews.Reset()))
 	// third party auth provider routes
 	r.Get("/auth", func(w http.ResponseWriter, r *http.Request) {
 		err := authnAPI.LoginWithProvider(w, r)
@@ -133,13 +133,13 @@ func main() {
 	// authenticated
 	r.Route("/account", func(r chi.Router) {
 		r.Use(authnAPI.IsAuthenticated)
-		r.Handle("/", glvc.Handler(accountViews.Settings()))
-		r.Handle("/email/change/{token}", glvc.Handler(accountViews.ConfirmEmailChange()))
+		r.Handle("/", c.Handler(accountViews.Settings()))
+		r.Handle("/email/change/{token}", c.Handler(accountViews.ConfirmEmailChange()))
 	})
 
 	r.Route("/app", func(r chi.Router) {
 		r.Use(authnAPI.IsAuthenticated)
-		r.Handle("/", glvc.Handler(&app.DashboardView{Auth: authnAPI}))
+		r.Handle("/", c.Handler(&app.DashboardView{Auth: authnAPI}))
 	})
 
 	// setup static assets handler

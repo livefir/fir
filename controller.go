@@ -94,7 +94,7 @@ func ProjectRoot(projectRoot string) Option {
 	}
 }
 
-func Websocket(name string, options ...Option) Controller {
+func NewController(name string, options ...Option) Controller {
 	if name == "" {
 		panic("controller name is required")
 	}

@@ -49,8 +49,8 @@ func (c *Counter) OnEvent(s fir.Socket) error {
 }
 
 func main() {
-	glvc := fir.Websocket("fir-counter", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(&Counter{}))
+	c := fir.NewController("fir-counter", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(&Counter{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

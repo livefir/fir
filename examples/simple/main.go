@@ -19,7 +19,7 @@ func (s *SimpleView) Layout() string {
 }
 
 func main() {
-	glvc := fir.Websocket("fir-simple", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(&SimpleView{}))
+	c := fir.NewController("fir-simple", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(&SimpleView{}))
 	http.ListenAndServe(":9867", nil)
 }

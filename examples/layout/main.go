@@ -40,10 +40,10 @@ func (h *SettingsView) Content() string {
 }
 
 func main() {
-	glvc := fir.Websocket("fir-layout", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(&HomeView{}))
-	http.Handle("/help", glvc.Handler(&HelpView{}))
-	http.Handle("/settings", glvc.Handler(&SettingsView{}))
+	c := fir.NewController("fir-layout", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(&HomeView{}))
+	http.Handle("/help", c.Handler(&HelpView{}))
+	http.Handle("/settings", c.Handler(&SettingsView{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

@@ -83,8 +83,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	glvc := fir.Websocket("fir-todos", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(NewTodosView(db)))
+	c := fir.NewController("fir-todos", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(NewTodosView(db)))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

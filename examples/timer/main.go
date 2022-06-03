@@ -50,8 +50,8 @@ func (t *Timer) EventReceiver() <-chan fir.Event {
 }
 
 func main() {
-	glvc := fir.Websocket("fir-timer", fir.DevelopmentMode(true))
-	http.Handle("/", glvc.Handler(NewTimer()))
+	c := fir.NewController("fir-timer", fir.DevelopmentMode(true))
+	http.Handle("/", c.Handler(NewTimer()))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }
