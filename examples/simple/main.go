@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type SimpleView struct {

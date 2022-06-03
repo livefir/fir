@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/adnaan/authn"
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type LoginView struct {

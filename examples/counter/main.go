@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type Counter struct {

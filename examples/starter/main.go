@@ -21,7 +21,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/google"
 
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	_ "github.com/mattn/go-sqlite3"

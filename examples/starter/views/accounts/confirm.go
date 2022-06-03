@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi"
 
 	"github.com/adnaan/authn"
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type ConfirmView struct {

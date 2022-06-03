@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type LayoutView struct {

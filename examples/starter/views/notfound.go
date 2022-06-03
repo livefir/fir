@@ -1,7 +1,7 @@
 package views
 
 import (
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type NotfoundView struct {

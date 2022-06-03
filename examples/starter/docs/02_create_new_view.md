@@ -35,7 +35,7 @@ simply embedding the `DefaultView`.
 package views
 
 import (
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type NotfoundView struct {
@@ -62,7 +62,7 @@ Here we want to show a custom 404 page, so we should override the `Content` and 
 package views
 
 import (
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type NotfoundView struct {

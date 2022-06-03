@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 type Loading struct {

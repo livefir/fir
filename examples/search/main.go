@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	fir "github.com/adnaan/fir/controller"
+	"github.com/adnaan/fir"
 )
 
 var cities = []string{
