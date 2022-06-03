@@ -5,7 +5,7 @@ exposes a [Handler](https://pkg.go.dev/github.com/adnaan/fir/controller#Controll
 the [View](https://pkg.go.dev/github.com/adnaan/fir/controller#View) interface.
 
 ```go
-glvc := pwc.Websocket("fir-starter", pwc.DevelopmentMode(mode))
+glvc := fir.Websocket("fir-starter", fir.DevelopmentMode(mode))
 r := chi.NewRouter()
 ...
 r.NotFound(glvc.Handler(&views.NotfoundView{}))
@@ -35,11 +35,11 @@ simply embedding the `DefaultView`.
 package views
 
 import (
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type NotfoundView struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 ```
 
@@ -62,11 +62,11 @@ Here we want to show a custom 404 page, so we should override the `Content` and 
 package views
 
 import (
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type NotfoundView struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (n *NotfoundView) Content() string {

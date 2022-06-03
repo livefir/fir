@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type LayoutView struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (l *LayoutView) Layout() string {
@@ -40,7 +40,7 @@ func (h *SettingsView) Content() string {
 }
 
 func main() {
-	glvc := pwc.Websocket("fir-layout", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-layout", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&HomeView{}))
 	http.Handle("/help", glvc.Handler(&HelpView{}))
 	http.Handle("/settings", glvc.Handler(&SettingsView{}))

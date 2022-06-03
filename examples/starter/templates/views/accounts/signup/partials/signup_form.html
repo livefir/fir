@@ -1,6 +1,6 @@
 {{ define "signup_form"}}
 <div x-data id="signup_form">
-    <p class="title is-3 has-text-centered">Sign up with {{.pwc.Name}}</p>
+    <p class="title is-3 has-text-centered">Sign up with {{.fir.Name}}</p>
     {{ template "loading_modal" .}}
     <form name="signupForm" method="post" @submit.prevent="$fir.submit('auth/signup')">
         <div class="field">

@@ -21,7 +21,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/google"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	_ "github.com/mattn/go-sqlite3"
@@ -75,7 +75,7 @@ func main() {
 	if cfg.Env != "production" {
 		mode = true
 	}
-	glvc := pwc.Websocket("fir-starter", pwc.DevelopmentMode(mode), pwc.ProjectRoot(projectRoot))
+	glvc := fir.Websocket("fir-starter", fir.DevelopmentMode(mode), fir.ProjectRoot(projectRoot))
 
 	// unauthenticated
 	// 404 and /

@@ -5,36 +5,36 @@ import (
 	"net/http"
 	"time"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 func NewTimer() *Timer {
-	timerCh := make(chan pwc.Event)
+	timerCh := make(chan fir.Event)
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for ; true; <-ticker.C {
-			timerCh <- pwc.Event{ID: "tick"}
+			timerCh <- fir.Event{ID: "tick"}
 		}
 	}()
 	return &Timer{ch: timerCh}
 }
 
 type Timer struct {
-	pwc.DefaultView
-	ch chan pwc.Event
+	fir.DefaultView
+	ch chan fir.Event
 }
 
 func (t *Timer) Content() string {
 	return "app.html"
 }
 
-func (t *Timer) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
-	return pwc.Status{Code: 200}, pwc.Data{
+func (t *Timer) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
 		"ts": time.Now().String(),
 	}
 }
 
-func (t *Timer) OnEvent(s pwc.Socket) error {
+func (t *Timer) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	case "tick":
 		s.Store("").UpdateProp("ts", time.Now().String())
@@ -45,12 +45,12 @@ func (t *Timer) OnEvent(s pwc.Socket) error {
 	return nil
 }
 
-func (t *Timer) EventReceiver() <-chan pwc.Event {
+func (t *Timer) EventReceiver() <-chan fir.Event {
 	return t.ch
 }
 
 func main() {
-	glvc := pwc.Websocket("fir-timer", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-timer", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(NewTimer()))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

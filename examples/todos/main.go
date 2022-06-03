@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 	"github.com/timshannon/bolthold"
 )
 
@@ -23,7 +23,7 @@ func NewTodosView(db *bolthold.Store) *TodosView {
 }
 
 type TodosView struct {
-	pwc.DefaultView
+	fir.DefaultView
 	db *bolthold.Store
 }
 
@@ -35,17 +35,17 @@ func (t *TodosView) Partials() []string {
 	return []string{"todos.html"}
 }
 
-func (t *TodosView) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
+func (t *TodosView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return pwc.Status{
+		return fir.Status{
 			Code: 200,
 		}, nil
 	}
-	return pwc.Status{Code: 200}, pwc.Data{"todos": todos}
+	return fir.Status{Code: 200}, fir.Data{"todos": todos}
 }
 
-func (t *TodosView) OnEvent(s pwc.Socket) error {
+func (t *TodosView) OnEvent(s fir.Socket) error {
 	var todo Todo
 	if err := s.Event().DecodeParams(&todo); err != nil {
 		return err
@@ -74,7 +74,7 @@ func (t *TodosView) OnEvent(s pwc.Socket) error {
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
 		return err
 	}
-	s.Morph("#todos", "todos", pwc.Data{"todos": todos})
+	s.Morph("#todos", "todos", fir.Data{"todos": todos})
 	return nil
 }
 
@@ -83,7 +83,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	glvc := pwc.Websocket("fir-todos", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-todos", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(NewTodosView(db)))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

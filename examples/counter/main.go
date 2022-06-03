@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type Counter struct {
-	pwc.DefaultView
+	fir.DefaultView
 	count int32
 }
 
@@ -30,13 +30,13 @@ func (c *Counter) Content() string {
 	return "app.html"
 }
 
-func (c *Counter) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
-	return pwc.Status{Code: 200}, pwc.Data{
+func (c *Counter) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
 		"count": c.Value(),
 	}
 }
 
-func (c *Counter) OnEvent(s pwc.Socket) error {
+func (c *Counter) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	case "inc":
 		s.Store().UpdateProp("count", c.Inc())
@@ -49,7 +49,7 @@ func (c *Counter) OnEvent(s pwc.Socket) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("fir-counter", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-counter", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Counter{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

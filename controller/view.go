@@ -81,7 +81,7 @@ func (d DefaultView) Layout() string {
 /*
 e.g.
 type SimpleView struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (s *SimpleView) Content() string {
@@ -215,7 +215,7 @@ func OnRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		v.mountData = make(Data)
 	}
 	v.mountData["app_name"] = v.wc.name
-	v.mountData["pwc"] = &AppContext{
+	v.mountData["fir"] = &AppContext{
 		Name:    v.wc.name,
 		URLPath: r.URL.Path,
 	}

@@ -7,11 +7,11 @@ import (
 	"net/http"
 
 	"github.com/adnaan/authn"
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type SignupView struct {
-	pwc.DefaultView
+	fir.DefaultView
 	Auth *authn.API
 }
 
@@ -23,7 +23,7 @@ func (s *SignupView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (s *SignupView) OnEvent(st pwc.Socket) error {
+func (s *SignupView) OnEvent(st fir.Socket) error {
 	switch st.Event().ID {
 	case "auth/signup":
 		return s.Signup(st)
@@ -33,12 +33,12 @@ func (s *SignupView) OnEvent(st pwc.Socket) error {
 	return nil
 }
 
-func (s *SignupView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
+func (s *SignupView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return pwc.Status{Code: 200}, nil
+		return fir.Status{Code: 200}, nil
 	}
 
-	return pwc.Status{Code: 200}, pwc.Data{
+	return fir.Status{Code: 200}, fir.Data{
 		"is_logged_in": true,
 	}
 }
@@ -49,7 +49,7 @@ type ProfileRequest struct {
 	Password string `json:"password"`
 }
 
-func (s *SignupView) Signup(st pwc.Socket) error {
+func (s *SignupView) Signup(st fir.Socket) error {
 	st.Store().UpdateProp("show_loading_modal", true)
 	defer func() {
 		st.Store().UpdateProp("show_loading_modal", false)
@@ -72,7 +72,7 @@ func (s *SignupView) Signup(st pwc.Socket) error {
 	if err := s.Auth.Signup(st.Request().Context(), req.Email, req.Password, attributes); err != nil {
 		return err
 	}
-	st.Morph("#signup_container", "signup_container", pwc.Data{
+	st.Morph("#signup_container", "signup_container", fir.Data{
 		"sent_confirmation": true,
 	})
 	return nil

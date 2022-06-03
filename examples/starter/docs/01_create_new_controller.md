@@ -10,7 +10,7 @@ For the purposes of this walkthrough, we will focus on a single controller.
 Creating a fir controller is easy:
 
 ```go
-glvc := pwc.Websocket("fir-starter", pwc.DevelopmentMode(mode))
+glvc := fir.Websocket("fir-starter", fir.DevelopmentMode(mode))
 ```
 
 Were fir-starter is the controller name and the second argument takes functional options. For a full list please

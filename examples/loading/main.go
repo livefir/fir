@@ -5,18 +5,18 @@ import (
 	"net/http"
 	"time"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type Loading struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (l *Loading) Content() string {
 	return "app.html"
 }
 
-func (l *Loading) OnEvent(s pwc.Socket) error {
+func (l *Loading) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	case "loading":
 		// "" defaults to "fir" store
@@ -34,7 +34,7 @@ func (l *Loading) OnEvent(s pwc.Socket) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("fir-counter", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-counter", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Loading{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

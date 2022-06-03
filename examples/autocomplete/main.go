@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 var cities = []string{
@@ -39,7 +39,7 @@ type QueryRequest struct {
 }
 
 type Search struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (s *Search) Content() string {
@@ -50,18 +50,18 @@ func (s *Search) Partials() []string {
 	return []string{"cities.html"}
 }
 
-func (s *Search) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
-	return pwc.Status{Code: 200}, nil
+func (s *Search) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, nil
 }
 
-func (s *Search) OnEvent(st pwc.Socket) error {
+func (s *Search) OnEvent(st fir.Socket) error {
 	switch st.Event().ID {
 	case "query":
 		req := new(QueryRequest)
 		if err := st.Event().DecodeParams(req); err != nil {
 			return err
 		}
-		st.Morph("#list_cities", "cities", pwc.Data{
+		st.Morph("#list_cities", "cities", fir.Data{
 			"cities": getCities(req.Query),
 		})
 	default:
@@ -71,7 +71,7 @@ func (s *Search) OnEvent(st pwc.Socket) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("fir-autocomplete", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-autocomplete", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Search{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

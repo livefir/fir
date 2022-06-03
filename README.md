@@ -15,7 +15,7 @@ See full example in [examples/counter](./examples/counter)
 ```go
 ...
 
-func (c *Counter) OnEvent(s pwc.Socket) error {
+func (c *Counter) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	case "inc":
 		s.Store().UpdateProp("count", c.Inc())

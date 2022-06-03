@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type CountRequest struct {
@@ -13,20 +13,20 @@ type CountRequest struct {
 }
 
 type Range struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (r *Range) Content() string {
 	return "app.html"
 }
 
-func (r *Range) OnRequest(_ http.ResponseWriter, _ *http.Request) (pwc.Status, pwc.Data) {
-	return pwc.Status{Code: 200}, pwc.Data{
+func (r *Range) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
 		"total": 0,
 	}
 }
 
-func (r *Range) OnEvent(s pwc.Socket) error {
+func (r *Range) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	case "update":
 		req := new(CountRequest)
@@ -45,7 +45,7 @@ func (r *Range) OnEvent(s pwc.Socket) error {
 }
 
 func main() {
-	glvc := pwc.Websocket("fir-range", pwc.DevelopmentMode(true))
+	glvc := fir.Websocket("fir-range", fir.DevelopmentMode(true))
 	http.Handle("/", glvc.Handler(&Range{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)

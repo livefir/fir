@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/adnaan/authn"
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type SettingsView struct {
-	pwc.DefaultView
+	fir.DefaultView
 	Auth *authn.API
 }
 
@@ -22,7 +22,7 @@ func (s *SettingsView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (s *SettingsView) OnEvent(st pwc.Socket) error {
+func (s *SettingsView) OnEvent(st fir.Socket) error {
 	st.Store("settings").UpdateProp("profile_loading", true)
 	defer func() {
 		time.Sleep(1 * time.Second)
@@ -39,14 +39,14 @@ func (s *SettingsView) OnEvent(st pwc.Socket) error {
 	return nil
 }
 
-func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
+func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	if r.Method != "GET" {
-		return pwc.Status{Code: 405}, nil
+		return fir.Status{Code: 405}, nil
 	}
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(r.Context(), userID)
 	if err != nil {
-		return pwc.Status{Code: 200}, nil
+		return fir.Status{Code: 200}, nil
 	}
 
 	name := ""
@@ -55,14 +55,14 @@ func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.St
 		name, _ = m.String("name")
 	}
 
-	return pwc.Status{Code: 200}, pwc.Data{
+	return fir.Status{Code: 200}, fir.Data{
 		"is_logged_in": true,
 		"email":        acc.Email(),
 		"name":         name,
 	}
 }
 
-func (s *SettingsView) UpdateProfile(st pwc.Socket) error {
+func (s *SettingsView) UpdateProfile(st fir.Socket) error {
 	req := new(ProfileRequest)
 	if err := st.Event().DecodeParams(req); err != nil {
 		return err
@@ -83,7 +83,7 @@ func (s *SettingsView) UpdateProfile(st pwc.Socket) error {
 		st.Store("settings").UpdateProp("change_email", true)
 	}
 
-	st.Morph("#account_form", "account_form", pwc.Data{
+	st.Morph("#account_form", "account_form", fir.Data{
 		"name":  req.Name,
 		"email": acc.Email(),
 	})
@@ -91,7 +91,7 @@ func (s *SettingsView) UpdateProfile(st pwc.Socket) error {
 	return nil
 }
 
-func (s *SettingsView) DeleteAccount(st pwc.Socket) error {
+func (s *SettingsView) DeleteAccount(st fir.Socket) error {
 	rCtx := st.Request().Context()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)

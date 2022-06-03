@@ -1,11 +1,11 @@
 package views
 
 import (
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type NotfoundView struct {
-	pwc.DefaultView
+	fir.DefaultView
 }
 
 func (n *NotfoundView) Content() string {

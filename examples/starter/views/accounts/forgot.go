@@ -4,11 +4,11 @@ import (
 	"log"
 
 	"github.com/adnaan/authn"
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type ForgotView struct {
-	pwc.DefaultView
+	fir.DefaultView
 	Auth *authn.API
 }
 
@@ -20,7 +20,7 @@ func (f *ForgotView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (f *ForgotView) OnEvent(s pwc.Socket) error {
+func (f *ForgotView) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	case "account/forgot":
 		return f.SendRecovery(s)
@@ -30,7 +30,7 @@ func (f *ForgotView) OnEvent(s pwc.Socket) error {
 	return nil
 }
 
-func (f *ForgotView) SendRecovery(s pwc.Socket) error {
+func (f *ForgotView) SendRecovery(s fir.Socket) error {
 	s.Store().UpdateProp("show_loading_modal", true)
 	defer func() {
 		s.Store().UpdateProp("show_loading_modal", false)

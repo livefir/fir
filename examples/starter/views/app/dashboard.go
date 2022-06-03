@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/adnaan/authn"
-	pwc "github.com/adnaan/fir/controller"
+	fir "github.com/adnaan/fir/controller"
 )
 
 type DashboardView struct {
-	pwc.DefaultView
+	fir.DefaultView
 	Auth *authn.API
 }
 
@@ -21,7 +21,7 @@ func (d *DashboardView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (d *DashboardView) OnEvent(s pwc.Socket) error {
+func (d *DashboardView) OnEvent(s fir.Socket) error {
 	switch s.Event().ID {
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
@@ -29,8 +29,8 @@ func (d *DashboardView) OnEvent(s pwc.Socket) error {
 	return nil
 }
 
-func (d *DashboardView) OnRequest(w http.ResponseWriter, r *http.Request) (pwc.Status, pwc.Data) {
-	return pwc.Status{Code: 200}, pwc.Data{
+func (d *DashboardView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
 		"is_logged_in": true,
 	}
 }
