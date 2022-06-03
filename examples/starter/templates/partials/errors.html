@@ -1,25 +1,25 @@
 {{define "errors"}}
-    {{if .errors}}
-        <div class="columns is-mobile is-centered">
-            <div class="column is-two-thirds-desktop">
-                <div class="notification is-small is-danger is-light">
-                    {{ range .errors }}
-                        <li>{{.}}</li>
-                    {{end}}
-                </div>
-            </div>
-        </div>
-    {{end}}
-{{end}}
-
-{{define "glv-error"}}
-    <div id="glv-error" class="mt-5 columns is-mobile is-centered {{ if not .error}}is-hidden{{end}}">
-        <div class="column is-half">
-            <div class="notification is-small is-danger is-light has-text-centered">
-                {{ with .error }}
-                    <p>{{.}}</p>
-                {{ end }}
-            </div>
+{{if .errors}}
+<div class="columns is-mobile is-centered">
+    <div class="column is-two-thirds-desktop">
+        <div class="notification is-small is-danger is-light">
+            {{ range .errors }}
+            <li>{{.}}</li>
+            {{end}}
         </div>
     </div>
+</div>
+{{end}}
+{{end}}
+
+{{define "fir-error"}}
+<div id="fir-error" class="mt-5 columns is-mobile is-centered {{ if not .error}}is-hidden{{end}}">
+    <div class="column is-half">
+        <div class="notification is-small is-danger is-light has-text-centered">
+            {{ with .error }}
+            <p>{{.}}</p>
+            {{ end }}
+        </div>
+    </div>
+</div>
 {{end}}

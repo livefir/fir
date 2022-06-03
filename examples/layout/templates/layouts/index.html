@@ -12,12 +12,6 @@
         {{template "content" .}}
     </div>
     {{template "footer" .}}
-    <script src="https://unpkg.com/fir@latest/dist/index.js" crossorigin="anonymous"></script>
-    <script type="module">
-        import { Application } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
-        window.Stimulus = Application.start()
-        Stimulus.register("glv", fir.Dispatcher)
-    </script>
 </body>
 
 </html>

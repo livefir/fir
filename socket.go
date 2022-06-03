@@ -111,12 +111,12 @@ func (s socket) setError(userMessage string, errs ...error) {
 		log.Printf("err: %v, errors: %v\n", userMessage, strings.Join(errstrs, ","))
 	}
 
-	s.Morph("#glv-error", "glv-error", Data{"error": userMessage})
+	s.Morph("#fir-error", "fir-error", Data{"error": userMessage})
 
 }
 
 func (s socket) unsetError() {
-	s.Morph("#glv-error", "glv-error", nil)
+	s.Morph("#fir-error", "fir-error", nil)
 }
 
 func (s socket) Event() Event {

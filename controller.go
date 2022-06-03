@@ -270,7 +270,7 @@ func (wc *websocketController) messageAll(message []byte) {
 func (wc *websocketController) getUser(w http.ResponseWriter, r *http.Request) (int, error) {
 	name := strings.TrimSpace(wc.name)
 	wc.cookieStore.MaxAge(0)
-	cookieSession, _ := wc.cookieStore.Get(r, fmt.Sprintf("_glv_key_%s", name))
+	cookieSession, _ := wc.cookieStore.Get(r, fmt.Sprintf("_fir_key_%s", name))
 	user := cookieSession.Values["user"]
 	if user == nil {
 		c := wc.userCount.incr()
