@@ -23,3 +23,15 @@
     </div>
 </div>
 {{end}}
+
+{{define "fir-event-error"}}
+<div id="fir-event-error" class="mt-5 columns is-mobile is-centered {{ if not .eventError}}is-hidden{{end}}">
+    <div class="column is-half">
+        <div class="notification is-small is-danger is-light has-text-centered">
+            {{ with .eventError }}
+            <p>{{.}}</p>
+            {{ end }}
+        </div>
+    </div>
+</div>
+{{end}}

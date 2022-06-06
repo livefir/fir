@@ -99,7 +99,7 @@ type socket struct {
 	wc           *websocketController
 }
 
-func (s socket) setError(userMessage string, errs ...error) {
+func (s socket) setEventError(userMessage string, errs ...error) {
 	if len(errs) != 0 {
 		var errstrs []string
 		for _, err := range errs {
@@ -111,12 +111,12 @@ func (s socket) setError(userMessage string, errs ...error) {
 		log.Printf("err: %v, errors: %v\n", userMessage, strings.Join(errstrs, ","))
 	}
 
-	s.Morph("#fir-error", "fir-error", Data{"error": userMessage})
+	s.Morph("#fir-event-error", "fir-event-error", Data{"eventError": userMessage})
 
 }
 
-func (s socket) unsetError() {
-	s.Morph("#fir-error", "fir-error", nil)
+func (s socket) unsetEventError() {
+	s.Morph("#fir-event-error", "fir-event-error", Data{"eventError": nil})
 }
 
 func (s socket) Event() Event {

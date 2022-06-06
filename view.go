@@ -329,7 +329,7 @@ loop:
 
 		v.reloadTemplates()
 		st.event = *event
-		st.unsetError()
+		st.unsetEventError()
 
 		var eventHandlerErr error
 		if v.wc.debugLog {
@@ -339,7 +339,7 @@ loop:
 
 		if eventHandlerErr != nil {
 			log.Printf("[error] \n event => %+v, \n err: %v\n", event, eventHandlerErr)
-			st.setError(UserError(eventHandlerErr), eventHandlerErr)
+			st.setEventError(UserError(eventHandlerErr), eventHandlerErr)
 		}
 	}
 	if v.view.EventReceiver() != nil {

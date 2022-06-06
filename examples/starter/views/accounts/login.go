@@ -82,7 +82,6 @@ func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Sta
 		}
 	}
 	if err := l.Auth.Login(w, r, email, password); err != nil {
-		fmt.Println("error =>", err)
 		return fir.Status{Code: 200}, fir.Data{
 			"error": fir.UserError(err),
 		}
