@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 
 <html lang="en">
+
 <head>
     <title>{{.app_name}}</title>
     {{template "header" .}}
 </head>
+
 <body>
-<div class="h-full">
-    {{template "content" .}}
-</div>
-{{template "footer" .}}
+    <div style="min-height: 101vh !important;">
+        {{template "content" .}}
+    </div>
+    {{template "footer" .}}
 </body>
+
 </html>
