@@ -23,7 +23,6 @@ type controlOpt struct {
 	subscribeTopicFunc func(r *http.Request) *string
 	upgrader           websocket.Upgrader
 
-	enableHTMLFormatting bool
 	disableTemplateCache bool
 	debugLog             bool
 	enableWatch          bool
@@ -50,12 +49,6 @@ func WithUpgrader(upgrader websocket.Upgrader) Option {
 func WithErrorView(view View) Option {
 	return func(o *controlOpt) {
 		o.errorView = view
-	}
-}
-
-func EnableHTMLFormatting() Option {
-	return func(o *controlOpt) {
-		o.enableHTMLFormatting = true
 	}
 }
 
@@ -137,7 +130,6 @@ func NewController(name string, options ...Option) Controller {
 	if wc.developmentMode {
 		wc.debugLog = true
 		wc.enableWatch = true
-		wc.enableHTMLFormatting = true
 		wc.disableTemplateCache = true
 	}
 

@@ -7,8 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/yosssi/gohtml"
 )
 
 type Op string
@@ -149,9 +147,6 @@ func (s socket) Morph(selector, template string, data Data) {
 		log.Printf("rendered template %+v, with data => \n %+v\n", template, getJSON(data))
 	}
 	html := buf.String()
-	if s.wc.enableHTMLFormatting {
-		html = gohtml.Format(html)
-	}
 	buf.Reset()
 
 	m := &Operation{
