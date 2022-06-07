@@ -5,6 +5,7 @@
     "type": "git",
     "url": "https://github.com/adnaan/fir"
   },
+  "type": "module",
   "keywords": [
     "reactive",
     "view",
