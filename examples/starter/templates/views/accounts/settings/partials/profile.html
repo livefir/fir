@@ -26,20 +26,20 @@
     {{template "account_form" .}}
 </div>
 <br />
-<div class="py-5">
+<div x-data="{show: false, toggle(){this.show = !this.show}}" class="py-5">
     <h4 class="title is-4">Delete account</h4>
     <hr />
     <p>All data related to your account will be completely removed and unrecoverable.</p>
-    <button class="button is-danger mt-5">
+    <button class="button is-danger mt-5" @click="toggle">
         Delete your account
     </button>
-    <div class="modal" id="deleteAccount">
+    <div :class="show && 'is-active'" class="modal" id="deleteAccount">
         <div class="modal-background"></div>
         <div class="modal-card">
-            <form>
+            <form name="accountForm" @submit.prevent="$fir.submit('account/delete')">
                 <header class="modal-card-head">
                     <p class="modal-card-title">Are you sure ?</p>
-                    <button class="delete" aria-label="close">
+                    <button @click="toggle" class="delete" aria-label="close">
                     </button>
                 </header>
                 <section class="modal-card-body">
@@ -49,7 +49,7 @@
                 </section>
                 <footer class="modal-card-foot is-justify-content-flex-end">
                     <button class="button is-danger" type="submit">Yes</button>
-                    <button class="button" type="button" aria-label="close">
+                    <button @click="toggle" class="button" type="button" aria-label="close">
                         Cancel
                     </button>
                 </footer>
