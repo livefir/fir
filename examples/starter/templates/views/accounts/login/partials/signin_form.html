@@ -1,5 +1,5 @@
 {{ define "signin_form" }}
-<div x-data="{magicLink: false}" id="signin_form">
+<div x-data="{magicLink: $persist(false)}" id="signin_form">
     {{ template "loading_modal" .}}
     <p class="title is-3 has-text-centered">Sign into {{.app_name}}</p>
     <div id="magic-login" :class="!magicLink && 'is-hidden'">
@@ -9,10 +9,10 @@
                 Use Password instead
             </button>
         </div>
-        <form name="magicLogin">
+        <form name="magicLogin" @submit.prevent="$fir.submit('auth/magic-login')">
             <div class="field">
                 <label class="label">Email</label>
-                <input name="Email" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" class="input" type="email"
+                <input name="email" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" class="input" type="email"
                     placeholder="your@email.com" aria-label="Email">
             </div>
             <div class="field is-grouped">

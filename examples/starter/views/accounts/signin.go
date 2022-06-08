@@ -5,44 +5,41 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/adnaan/authn"
 	"github.com/adnaan/fir"
 )
 
-type LoginView struct {
+type SigninView struct {
 	fir.DefaultView
 	Auth *authn.API
 }
 
-func (l *LoginView) Content() string {
+func (s *SigninView) Content() string {
 	return "./templates/views/accounts/login"
 }
 
-func (l *LoginView) Layout() string {
+func (s *SigninView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (l *LoginView) OnEvent(s fir.Socket) error {
-	s.Store().UpdateProp("show_loading_modal", true)
-	defer func() {
-		s.Store().UpdateProp("show_loading_modal", false)
-	}()
-	switch s.Event().ID {
+func (s *SigninView) OnEvent(st fir.Socket) error {
+	switch st.Event().ID {
 	case "auth/magic-login":
-		return l.MagicLogin(s)
+		return s.MagicLogin(st)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
 	}
 	return nil
 }
 
-func (l *LoginView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SigninView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	if r.Method == "POST" {
-		return l.LoginSubmit(w, r)
+		return s.LoginSubmit(w, r)
 	}
 
-	if _, err := l.Auth.CurrentAccount(r); err != nil {
+	if _, err := s.Auth.CurrentAccount(r); err != nil {
 		return fir.Status{Code: 200}, nil
 	}
 
@@ -51,7 +48,7 @@ func (l *LoginView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Statu
 	}
 }
 
-func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	var email, password string
 	_ = r.ParseForm()
 	for k, v := range r.Form {
@@ -81,7 +78,7 @@ func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Sta
 			continue
 		}
 	}
-	if err := l.Auth.Login(w, r, email, password); err != nil {
+	if err := s.Auth.Login(w, r, email, password); err != nil {
 		return fir.Status{Code: 200}, fir.Data{
 			"error": fir.UserError(err),
 		}
@@ -97,17 +94,22 @@ func (l *LoginView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Sta
 	return fir.Status{Code: 200}, fir.Data{}
 }
 
-func (l *LoginView) MagicLogin(s fir.Socket) error {
+func (s *SigninView) MagicLogin(st fir.Socket) error {
+	st.Store().UpdateProp("show_loading_modal", true)
+	defer func() {
+		time.Sleep(time.Second * 1)
+		st.Store().UpdateProp("show_loading_modal", false)
+	}()
 	r := new(ProfileRequest)
-	if err := s.Event().DecodeParams(r); err != nil {
+	if err := st.Event().DecodeParams(r); err != nil {
 		return err
 	}
 	if r.Email == "" {
 		return fmt.Errorf("%w", errors.New("email is required"))
 	}
-	if err := l.Auth.SendPasswordlessToken(s.Request().Context(), r.Email); err != nil {
+	if err := s.Auth.SendPasswordlessToken(st.Request().Context(), r.Email); err != nil {
 		return err
 	}
-	s.Morph("#signin_container", "signin_container", fir.Data{"sent_magic_link": true})
+	st.Morph("#signin_container", "signin_container", fir.Data{"sent_magic_link": true})
 	return nil
 }

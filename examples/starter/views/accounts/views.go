@@ -26,7 +26,7 @@ func (v Views) Forgot() fir.View {
 }
 
 func (v Views) Login() fir.View {
-	return &LoginView{Auth: v.Auth}
+	return &SigninView{Auth: v.Auth}
 }
 
 func (v Views) Reset() fir.View {
