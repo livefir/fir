@@ -23,11 +23,6 @@ func (s *SettingsView) Layout() string {
 }
 
 func (s *SettingsView) OnEvent(st fir.Socket) error {
-	st.Store("settings").UpdateProp("profile_loading", true)
-	defer func() {
-		time.Sleep(1 * time.Second)
-		st.Store("settings").UpdateProp("profile_loading", true)
-	}()
 	switch st.Event().ID {
 	case "account/update":
 		return s.UpdateProfile(st)
@@ -63,6 +58,11 @@ func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.St
 }
 
 func (s *SettingsView) UpdateProfile(st fir.Socket) error {
+	st.Store("settings").UpdateProp("profile_loading", true)
+	defer func() {
+		time.Sleep(1 * time.Second)
+		st.Store("settings").UpdateProp("profile_loading", false)
+	}()
 	req := new(ProfileRequest)
 	if err := st.Event().DecodeParams(req); err != nil {
 		return err

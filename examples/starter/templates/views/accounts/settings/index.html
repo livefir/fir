@@ -1,13 +1,13 @@
 {{define "content"}}
-<div class="columns is-multiline is-mobile is-centered">
-    <div class="column is-one-fifth-desktop is-four-fifths-mobile">
+<div x-data="{activeItem: 'profile'}" class="mx-2 columns is-multiline is-mobile is-centered">
+    <div class="column is-one-fifth-desktop is-one-quarter-tablet is-four-fifths-mobile">
         <aside class="menu">
             <p class="menu-label">
                 Account
             </p>
             <ul class="menu-list">
-                <li>
-                    <a>
+                <li @click="activeItem = 'profile'">
+                    <a :class="(activeItem === 'profile') && 'is-active'">
                         My profile
                     </a>
                 </li>
@@ -21,7 +21,7 @@
         </aside>
     </div>
     <div class="column is-two-fifths-desktop is-four-fifths-mobile has-background-white-bis px-5 py-5">
-        <div class="is-hidden">
+        <div :class="(activeItem !== 'profile') && 'is-hidden'">
             {{template "profile" .}}
         </div>
     </div>
