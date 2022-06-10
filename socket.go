@@ -106,7 +106,7 @@ func (s socket) setEventError(userMessage string, errs ...error) {
 			}
 			errstrs = append(errstrs, err.Error())
 		}
-		log.Printf("err: %v, errors: %v\n", userMessage, strings.Join(errstrs, ","))
+		log.Printf("[controller][error]  %v, errors: %v\n", userMessage, strings.Join(errstrs, ","))
 	}
 
 	s.Morph("#fir-event-error", "fir-event-error", Data{"eventError": userMessage})
@@ -136,15 +136,17 @@ func (s socket) Store(names ...string) Storer {
 	return &store{names: names, wc: s.wc, topic: s.topic}
 }
 
-func (s socket) Morph(selector, template string, data Data) {
+func (s socket) Morph(selector, tmpl string, data Data) {
 	var buf bytes.Buffer
-	err := s.rootTemplate.ExecuteTemplate(&buf, template, data)
+	err := s.rootTemplate.ExecuteTemplate(&buf, tmpl, data)
 	if err != nil {
-		log.Printf("err %v with data => \n %+v\n", err, getJSON(data))
+		if s.wc.debugLog {
+			log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
+		}
 		return
 	}
 	if s.wc.debugLog {
-		log.Printf("rendered template %+v, with data => \n %+v\n", template, getJSON(data))
+		log.Printf("[controller]rendered template %+v, with data => \n %+v\n", tmpl, getJSON(data))
 	}
 	html := buf.String()
 	buf.Reset()
