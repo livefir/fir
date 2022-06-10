@@ -392,7 +392,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	// if layout is empty and content is set
 	if view.Layout() == "" && view.Content() != "" {
 		// check if content is a not a file or directory
-		if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); err != nil {
 			return template.Must(template.New("base").
 				Funcs(view.FuncMap()).
 				Parse(view.Content())), nil
@@ -486,7 +486,7 @@ func find(p string, extensions []string) []string {
 	var files []string
 
 	fi, err := os.Stat(p)
-	if os.IsNotExist(err) {
+	if err != nil {
 		return files
 	}
 	if !fi.IsDir() {
