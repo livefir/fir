@@ -1,0 +1,7 @@
+**/*.db
+.vscode
+node_modules
+dist
+tmp
+browser/dist/
+browser/node_modules

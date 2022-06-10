@@ -1,4 +1,4 @@
-# fly.toml file generated for fir-starter on 2021-11-06T13:26:45+05:30
+# fly.toml file generated for fir-starter on 2022-06-10T12:18:48+02:00
 
 app = "fir-starter"
 
@@ -7,9 +7,11 @@ kill_timeout = 5
 processes = []
 
 [env]
-    APP_DOMAIN = "https://fir-starter.fly.dev"
-    APP_LOG_LEVEL = "error"
-    APP_DATASOURCE = "file:fir-starter.db?cache=shared&_fk=1"
+  APP_DATASOURCE = "file:fir-starter.db?cache=shared&_fk=1"
+  APP_DOMAIN = "https://fir-starter.fly.dev"
+  APP_LOG_LEVEL = "error"
+  APP_ENV="production"
+
 [experimental]
   allowed_public_ports = []
   auto_rollback = true
