@@ -1,6 +1,6 @@
 # Fir
 
-A Go library which makes building reactive UIs easy.
+A Go library to build reactive apps.
 
 - Suitable for Go developers who want to build moderately complex apps, internal tools, prototypes etc.
 - Skills needed: Go, HTML, CSS, Alpine.js.
