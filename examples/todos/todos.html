@@ -8,7 +8,7 @@
             </div>
             <div class="level-right">
                 <p class="level-item">
-                    <button class="button" @click='$fir.emit("todos/del",{id: {{.ID}}})'>
+                    <button class="button" x-on:click='$fir.emit("todos/del",{id: {{.ID}}})'>
                         <span class="icon is-small">
                             <i class="fa-solid fa-trash"></i>
                         </span>

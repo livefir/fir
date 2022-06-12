@@ -1,184 +1,107 @@
-import operations from "./operations";
+import Alpine from 'alpinejs';
+import morph from '@alpinejs/morph';
+import persist from '@alpinejs/persist'
 import { Iodine } from '@kingshott/iodine';
+import eventEmitter from "./event_emitter";
 
 const iodine = new Iodine();
 
 const isObject = (obj) => {
     return Object.prototype.toString.call(obj) === '[object Object]';
 };
-document.addEventListener('alpine:init', () => {
-    let connectURL = `ws://${window.location.host}${window.location.pathname}`
-    if (window.location.protocol === "https:") {
-        connectURL = `wss://${window.location.host}${window.location.pathname}`
+
+
+Alpine.store("fir", {})
+const updateStore = (storeName, data) => {
+    if (!isObject(data)) {
+        Alpine.store(storeName, data)
+        return
     }
-    Alpine.store("fir", {})
-    const updateStore = (storeName, data) => {
-        if (!isObject(data)) {
-            Alpine.store(storeName, data)
-            return
+    const prevStore = Object.assign({}, Alpine.store(storeName))
+    const nextStore = { ...prevStore, ...data }
+    Alpine.store(storeName, nextStore)
+}
+
+Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
+    const val = evaluate(expression)
+    if (isObject(val)) {
+        for (const [key, value] of Object.entries(val)) {
+            Alpine.store(key, value)
         }
-        const prevStore = Object.assign({}, Alpine.store(storeName))
-        const nextStore = { ...prevStore, ...data }
-        Alpine.store(storeName, nextStore)
+        return
     }
-
-    Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
-        const val = evaluate(expression)
-        if (isObject(val)) {
-            for (const [key, value] of Object.entries(val)) {
-                Alpine.store(key, value)
-            }
-            return
-        }
-    })
-
-    const emit = eventEmitter(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
-    emit("init", {})
-
-    Alpine.magic('fir', (el, { Alpine }) => {
-        return {
-            emit: emit,
-            navigate(to) {
-                if (!to) {
-                    return
-                }
-                window.location.href = to;
-            },
-            submit(eventID) {
-
-                let inputs = [...el.querySelectorAll("input[data-rules]")];
-                let formErrors = { errors: {} }
-                inputs.map((input) => {
-                    const rules = JSON.parse(input.dataset.rules);
-                    const isValid = iodine.is(input.value, rules);
-                    if (isValid !== true) {
-                        formErrors.errors[input.getAttribute("name")] = iodine.getErrorMessage(isValid)
-                    }
-                });
-
-                const formName = el.getAttribute("name")
-                // update form errors store
-                const prevStore = Object.assign({}, Alpine.store(formName))
-                const nextStore = { ...prevStore, ...formErrors }
-                Alpine.store(formName, nextStore)
-                if (Object.keys(formErrors.errors).length == 0) {
-                    let formData = new FormData(el);
-                    let params = {};
-                    formData.forEach((value, key) => params[key] = value);
-                    params["formName"] = formName;
-                    emit(eventID, params)
-                    return;
-                }
-            }
-        }
-    })
 })
 
-const reopenTimeouts = [2000, 5000, 10000, 30000, 60000];
-
-const eventEmitter = (
-    url,
-    socketOptions,
-    invokeOp,
-    updateStore
-) => {
-    let socket, openPromise, reopenTimeoutHandler;
-    let reopenCount = 0;
-
-    // socket code copied from https://github.com/arlac77/svelte-websocket-store/blob/master/src/index.mjs
-    // thank you https://github.com/arlac77 !!
-    function reopenTimeout() {
-        const n = reopenCount;
-        reopenCount++;
-        return reopenTimeouts[
-            n >= reopenTimeouts.length - 1 ? reopenTimeouts.length - 1 : n
-        ];
-    }
-
-    function closeSocket() {
-        if (reopenTimeoutHandler) {
-            clearTimeout(reopenTimeoutHandler);
-        }
-
-        if (socket) {
-            socket.close();
-            socket = undefined;
-        }
-    }
-
-    function reOpenSocket() {
-        closeSocket();
-        reopenTimeoutHandler = setTimeout(() => {
-            openSocket().then(() => {
-                //console.log("socket connected");
-                // location.reload(true)
-            }).catch(e => {
-                console.error(e)
-            })
-        },
-            reopenTimeout());
-    }
-
-    async function openSocket() {
-        if (reopenTimeoutHandler) {
-            clearTimeout(reopenTimeoutHandler);
-            reopenTimeoutHandler = undefined;
-        }
-
-        // we are still in the opening phase
-        if (openPromise) {
-            return openPromise;
-        }
-
-        try {
-            socket = new WebSocket(url, socketOptions);
-        } catch (e) {
-            // console.log("socket disconnected")
-        }
-
-
-        socket.onclose = event => reOpenSocket();
-        socket.onmessage = event => {
-            try {
-                const eventData = JSON.parse(event.data);
-                if (eventData.op) {
-                    if (eventData.op == "update-store") {
-                        updateStore(eventData.selector, eventData.value)
-                    } else {
-                        invokeOp(eventData);
-                    }
-
-                }
-            } catch (e) {
+Alpine.magic('fir', (el, { Alpine }) => {
+    return {
+        emit: emit,
+        navigate(to) {
+            if (!to) {
+                return
             }
+            window.location.href = to;
+        },
+        submit(eventID) {
 
-        };
+            let inputs = [...el.querySelectorAll("input[data-rules]")];
+            let formErrors = { errors: {} }
+            inputs.map((input) => {
+                const rules = JSON.parse(input.dataset.rules);
+                const isValid = iodine.is(input.value, rules);
+                if (isValid !== true) {
+                    formErrors.errors[input.getAttribute("name")] = iodine.getErrorMessage(isValid)
+                }
+            });
 
-        openPromise = new Promise((resolve, reject) => {
-            socket.onerror = error => {
-                reject(error);
-                openPromise = undefined;
-            };
-            socket.onopen = event => {
-                reopenCount = 0;
-                resolve();
-                openPromise = undefined;
-            };
-        });
-        return openPromise;
+            const formName = el.getAttribute("name")
+            // update form errors store
+            const prevStore = Object.assign({}, Alpine.store(formName))
+            const nextStore = { ...prevStore, ...formErrors }
+            Alpine.store(formName, nextStore)
+            if (Object.keys(formErrors.errors).length == 0) {
+                let formData = new FormData(el);
+                let params = {};
+                formData.forEach((value, key) => params[key] = value);
+                params["formName"] = formName;
+                emit(eventID, params)
+                return;
+            }
+        }
     }
+})
 
-    openSocket().then(() => { }).catch(e => console.error(e));
-    return (id, params) => {
-        if (!id) {
-            throw 'event.id is required';
-        }
-        const event = {
-            id: id,
-            params: params,
-        }
-        const send = () => socket.send(JSON.stringify(event));
-        if (!socket || socket && socket.readyState !== WebSocket.OPEN) openSocket().then(send).catch(e => console.error(e));
-        else send();
+const selectAll = (operation, callbackfn) => {
+    const prevFocusElement = document.activeElement;
+    const elements = document.querySelectorAll(operation.selector);
+    elements.forEach(el => el && callbackfn(el, operation.value));
+    const currFocusElement = document.activeElement;
+    if (prevFocusElement && prevFocusElement.focus && prevFocusElement !== currFocusElement) {
+        prevFocusElement.focus();
     }
 }
+
+const operations = {
+    morph: operation => selectAll(operation, (el, value) => {
+        Alpine.morph(el, value, {
+            key(el) {
+                return el.id
+            }
+        })
+    }),
+    // browser
+    reload: operation => window.location.reload()
+}
+
+
+let connectURL = `ws://${window.location.host}${window.location.pathname}`
+if (window.location.protocol === "https:") {
+    connectURL = `wss://${window.location.host}${window.location.pathname}`
+}
+const emit = eventEmitter(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
+emit("init", {})
+
+Alpine.plugin(morph)
+Alpine.plugin(persist)
+window.Alpine = Alpine
+Alpine.start()
+
