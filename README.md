@@ -6,6 +6,8 @@ A Go library to build reactive apps.
 - Skills needed: Go, HTML, CSS, Alpine.js.
 - Focuses only on the view layer.
 
+The library is a result of a series of experiments to build reactive apps in Go: [gomodest-template](https://github.com/adnaan/gomodest-template).
+
 ## A counter app.
 
 See the complete code in [examples/counter](./examples/counter)
@@ -62,4 +64,4 @@ See a more real world example in [examples/starter](./examples/starter/) which i
 
 ## Status
 
-Work in progress
+Work in progress.
