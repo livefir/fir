@@ -8,7 +8,7 @@ A Go library to build reactive apps.
 
 ## A counter app.
 
-See full example in [examples/counter](./examples/counter)
+See the complete code in [examples/counter](./examples/counter)
 
 `main.go`
 
@@ -46,6 +46,8 @@ func (c *Counter) OnEvent(s fir.Socket) error {
 ...
 ```
 
+See a more real world example in [examples/starter](./examples/starter/) which is also deployed here: [https://fir-starter.fly.dev/](https://fir-starter.fly.dev/)
+
 ## Principles
 
 - **Library** and not a framework. It’s a Go **library** to build reactive user interfaces.
@@ -57,3 +59,7 @@ func (c *Counter) OnEvent(s fir.Socket) error {
 - Be SEO friendly: First page render is done fully on the server side. Real-time interaction is done once the page has been rendered.
 - Have a low learning curve: For a Go user the only new thing to learn would be Alpinejs. And yes: HTML & CSS
 - No custom template engine: Writing our own template engine can enable in-memory html diffing and minimal change partial for the client, but it also means maintaining a new non standard template engine.
+
+## Status
+
+Work in progress
