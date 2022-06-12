@@ -260,16 +260,19 @@ func (wc *websocketController) messageAll(message []byte) {
 }
 
 func (wc *websocketController) getUser(w http.ResponseWriter, r *http.Request) (int, error) {
-	name := strings.TrimSpace(wc.name)
+	name := strings.ToLower(strings.ReplaceAll(wc.name, " ", "_"))
 	wc.cookieStore.MaxAge(0)
-	cookieSession, _ := wc.cookieStore.Get(r, fmt.Sprintf("_fir_key_%s", name))
+	cookieSession, err := wc.cookieStore.Get(r, fmt.Sprintf("_fir_key_%s", name))
+	if err != nil {
+		return -1, err
+	}
 	user := cookieSession.Values["user"]
 	if user == nil {
 		c := wc.userCount.incr()
 		cookieSession.Values["user"] = c
 		user = c
 	}
-	err := cookieSession.Save(r, w)
+	err = cookieSession.Save(r, w)
 	if err != nil {
 		log.Printf("getUser err %v\n", err)
 		return -1, err

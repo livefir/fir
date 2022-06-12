@@ -178,6 +178,14 @@ func (d DefaultErrorView) EventReceiver() <-chan Event {
 	return nil
 }
 
+type HelloView struct {
+	DefaultView
+}
+
+func (h *HelloView) Content() string {
+	return `<div>Hello fir app</div>`
+}
+
 type viewHandler struct {
 	view              View
 	errorView         View
