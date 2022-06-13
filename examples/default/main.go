@@ -9,7 +9,7 @@ import (
 
 func main() {
 	c := fir.NewController("A counter app", fir.DevelopmentMode(true))
-	http.Handle("/", c.Handler(&fir.HelloView{}))
+	http.Handle("/", c.Handler(&fir.DefaultView{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }
