@@ -467,6 +467,138 @@ func main() {
 
 </details>
 
+## Optional: Server only rendering
+
+
+If you have noticed, the above rendering of `count` html has a problem. We are updating the `<div id="count" ...></div>` twice. Once when we execute the template using `html/template` which replaces `{{.count}}` and after the page has loaded using alpinejs directive `x-text="$store.fir.count"`. We do this because we want to make tiny partial updates to our page by calling, `socket.Store().Update(...)` when an event comes in. 
+
+Instead we can [morph](https://alpinejs.dev/plugins/morph) our target html element. 
+
+{% raw %}
+```go
+
+<div>
+	{{define "count"}}<div id="count">{{.count}}</div>{{end}}
+	{{ template "count" .}}
+	<button class="button has-background-primary" @click="$fir.emit('inc')">+
+	</button>
+	<button class="button has-background-primary" @click="$fir.emit('dec')">-
+	</button>
+</div>
+
+...
+
+
+case "inc":
+	s.Morph("#count", "count", fir.Data{"count": c.Inc()})
+case "dec":
+	s.Morph("#count", "count", fir.Data{"count": c.Dec()})
+		
+```
+{% endraw %}
+
+In the above approach, after the first render of the page, alpinejs update has no role. We use `socket.Morph` to send a partial html snippet back to the client `fir` library which then morphs the target element. This approach is heavier on the wire but a lot simpler to reason about and provides a better page rendering performance.
+
+<details markdown="block">
+  <summary>
+    Expand main.go
+  </summary>
+
+{% raw %}
+```go
+
+package main
+
+import (
+	"log"
+	"net/http"
+	"sync/atomic"
+
+	"github.com/adnaan/fir"
+)
+
+type CounterView struct {
+	fir.DefaultView
+	count int32
+}
+
+func (c *CounterView) Inc() int32 {
+	atomic.AddInt32(&c.count, 1)
+	return atomic.LoadInt32(&c.count)
+}
+
+func (c *CounterView) Dec() int32 {
+	atomic.AddInt32(&c.count, -1)
+	return atomic.LoadInt32(&c.count)
+}
+
+func (c *CounterView) Value() int32 {
+	return atomic.LoadInt32(&c.count)
+}
+
+func (c *CounterView) Content() string {
+	return `
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>{{.app_name}}</title>
+	<meta charset="UTF-8">
+	<meta name="description" content="A counter app">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+</head>
+
+<body>
+	<div class="my-6" style="height: 500px">
+		<div class="columns is-mobile is-centered is-vcentered">
+			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+				<div>
+					{{define "count"}}<div id="count">{{.count}}</div>{{end}}
+					{{ template "count" .}}
+					<button class="button has-background-primary" @click="$fir.emit('inc')">+
+					</button>
+					<button class="button has-background-primary" @click="$fir.emit('dec')">-
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>`
+}
+
+func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
+		"count": c.Value(),
+	}
+}
+
+func (c *CounterView) OnEvent(s fir.Socket) error {
+	switch s.Event().ID {
+	case "inc":
+		s.Morph("#count", "count", fir.Data{"count": c.Inc()})
+	case "dec":
+		s.Morph("#count", "count", fir.Data{"count": c.Dec()})
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+	}
+	return nil
+}
+
+func main() {
+	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
+	http.Handle("/", controller.Handler(&CounterView{}))
+	http.ListenAndServe(":9867", nil)
+}
+
+
+```
+{% endraw %}
+
+</details>
+
 ## Optional: Layouts
 
 Right now are, our html page is one big blob. We might want to separate out the layout from the content for reusability. To do this we need to override the `Layout` method of the `View` interface.
