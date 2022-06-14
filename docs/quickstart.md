@@ -478,8 +478,7 @@ Instead we can [morph](https://alpinejs.dev/plugins/morph) our target html eleme
 ```go
 
 <div>
-	{{define "count"}}<div id="count">{{.count}}</div>{{end}}
-	{{ template "count" .}}
+	{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 	<button class="button has-background-primary" @click="$fir.emit('inc')">+
 	</button>
 	<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -495,9 +494,24 @@ case "dec":
 	s.Morph("#count", "count", fir.Data{"count": c.Dec()})
 		
 ```
+
+`block` is a `html/template` built-in shorthand for defining and using a template.
+
+This : 
+```go 
+{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+```
+is same as:
+```go
+{{define "count"}}<div id="count">{{.count}}</div>{{end}}
+{{ template "count"}}
+```
+
 {% endraw %}
 
 In the above approach, after the first render of the page, alpinejs update has no role. We use `socket.Morph` to send a partial html snippet back to the client `fir` library which then morphs the target element. This approach is heavier on the wire but a lot simpler to reason about and provides a better page rendering performance.
+
+
 
 <details markdown="block">
   <summary>
@@ -554,8 +568,7 @@ func (c *CounterView) Content() string {
 		<div class="columns is-mobile is-centered is-vcentered">
 			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 				<div>
-					{{define "count"}}<div id="count">{{.count}}</div>{{end}}
-					{{ template "count" .}}
+					{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 					<button class="button has-background-primary" @click="$fir.emit('inc')">+
 					</button>
 					<button class="button has-background-primary" @click="$fir.emit('dec')">-

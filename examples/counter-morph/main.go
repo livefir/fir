@@ -44,8 +44,7 @@ func (c *CounterView) Content() string {
 			<div class="columns is-mobile is-centered is-vcentered">
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
-						{{define "count"}}<div id="count">{{.count}}</div>{{end}}
-						{{ template "count" .}}
+						{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
