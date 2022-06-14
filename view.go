@@ -370,7 +370,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	if view.Layout() != "" && view.Content() == "" {
 		var layoutTemplate *template.Template
 		// check if layout is not a file or directory
-		if _, err := os.Stat(filepath.Join(projectRoot, view.Layout())); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(filepath.Join(projectRoot, view.Layout())); err != nil {
 			// is not a file but html content
 			layoutTemplate = template.Must(template.New("").Funcs(view.FuncMap()).Parse(view.Layout()))
 		} else {
@@ -425,7 +425,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	// 1. build layout
 	var layoutTemplate *template.Template
 	// check if layout is not a file or directory
-	if _, err := os.Stat(filepath.Join(projectRoot, view.Layout())); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(projectRoot, view.Layout())); err != nil {
 		// is not a file but html content
 		layoutTemplate = template.Must(template.New("base").Funcs(view.FuncMap()).Parse(view.Layout()))
 	} else {
@@ -458,7 +458,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 
 	// 2. add content
 	// check if content is a not a file or directory
-	if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); err != nil {
 		// content is not a file or directory but html content
 		viewTemplate = template.Must(layoutTemplate.Parse(view.Content()))
 	} else {
