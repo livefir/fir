@@ -2,7 +2,6 @@ package fir
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -30,6 +29,7 @@ type controlOpt struct {
 	projectRoot          string
 	developmentMode      bool
 	errorView            View
+	cookieStore          *sessions.CookieStore
 }
 
 type Option func(*controlOpt)
@@ -49,6 +49,12 @@ func WithUpgrader(upgrader websocket.Upgrader) Option {
 func WithErrorView(view View) Option {
 	return func(o *controlOpt) {
 		o.errorView = view
+	}
+}
+
+func WithCookieStore(cookieStore *sessions.CookieStore) Option {
+	return func(o *controlOpt) {
+		o.cookieStore = cookieStore
 	}
 }
 
@@ -102,9 +108,10 @@ func NewController(name string, options ...Option) Controller {
 			log.Println("client subscribed to topic: ", topic)
 			return &topic
 		},
-		upgrader:  websocket.Upgrader{EnableCompression: true},
-		watchExts: DefaultWatchExtensions,
-		errorView: &DefaultErrorView{},
+		upgrader:    websocket.Upgrader{EnableCompression: true},
+		watchExts:   DefaultWatchExtensions,
+		errorView:   &DefaultErrorView{},
+		cookieStore: sessions.NewCookieStore(securecookie.GenerateRandomKey(32)),
 	}
 
 	for _, option := range options {
@@ -121,13 +128,13 @@ func NewController(name string, options ...Option) Controller {
 	}
 
 	wc := &websocketController{
-		cookieStore:      sessions.NewCookieStore(securecookie.GenerateRandomKey(32)),
+		cookieStore:      o.cookieStore,
 		topicConnections: make(map[string]map[string]*websocket.Conn),
 		controlOpt:       *o,
 		name:             name,
 	}
-	log.Println("controller starting in developer mode ...", wc.developmentMode)
 	if wc.developmentMode {
+		log.Println("controller starting in developer mode ...", wc.developmentMode)
 		wc.debugLog = true
 		wc.enableWatch = true
 		wc.disableTemplateCache = true
@@ -260,19 +267,16 @@ func (wc *websocketController) messageAll(message []byte) {
 }
 
 func (wc *websocketController) getUser(w http.ResponseWriter, r *http.Request) (int, error) {
-	name := strings.ToLower(strings.ReplaceAll(wc.name, " ", "_"))
 	wc.cookieStore.MaxAge(0)
-	cookieSession, err := wc.cookieStore.Get(r, fmt.Sprintf("_fir_key_%s", name))
-	if err != nil {
-		return -1, err
-	}
+	cookieSession, _ := wc.cookieStore.Get(r, "_fir_session_")
+
 	user := cookieSession.Values["user"]
 	if user == nil {
 		c := wc.userCount.incr()
 		cookieSession.Values["user"] = c
 		user = c
 	}
-	err = cookieSession.Save(r, w)
+	err := cookieSession.Save(r, w)
 	if err != nil {
 		log.Printf("getUser err %v\n", err)
 		return -1, err
