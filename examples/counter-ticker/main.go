@@ -69,7 +69,6 @@ func (c *CounterView) Content() string {
 								<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
 								<hr>
 								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-								<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 								<button class="button has-background-primary" @click="$fir.emit('inc')">+
 								</button>
 								<button class="button has-background-primary" @click="$fir.emit('dec')">-

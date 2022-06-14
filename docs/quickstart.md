@@ -207,7 +207,6 @@ func (c *CounterView) Content() string {
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
 						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-						<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -309,7 +308,6 @@ func (c *CounterView) Content() string {
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
 						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-						<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -427,7 +425,6 @@ func (c *CounterView) Content() string {
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
 						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-						<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -535,12 +532,11 @@ func (c *CounterView) Value() int32 {
 
 func (c *CounterView) Content() string {
 	return `{{define "content" }} 
-<div class="my-6" style="height: 500px">
+		<div class="my-6" style="height: 500px">
 					<div class="columns is-mobile is-centered is-vcentered">
 						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 							<div>
 								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-								<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 								<button class="button has-background-primary" @click="$fir.emit('inc')">+
 								</button>
 								<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -695,14 +691,13 @@ func (c *CounterView) Updated() time.Time {
 
 func (c *CounterView) Content() string {
 	return `{{define "content" }} 
-<div class="my-6" style="height: 500px">
+		<div class="my-6" style="height: 500px">
 					<div class="columns is-mobile is-centered is-vcentered">
 						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 							<div>
 								<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
 								<hr>
 								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-								<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 								<button class="button has-background-primary" @click="$fir.emit('inc')">+
 								</button>
 								<button class="button has-background-primary" @click="$fir.emit('dec')">-

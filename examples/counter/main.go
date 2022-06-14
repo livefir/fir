@@ -45,7 +45,6 @@ func (c *CounterView) Content() string {
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
 						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-						<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
