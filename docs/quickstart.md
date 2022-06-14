@@ -69,7 +69,7 @@ func (c *CounterView) Content() string {
 
 ```
 
-In the above snippet we have created a new struct, `CounterView` and embedded `fir.DefaultView` type in it to satisfy the `View` interface.
+In the above snippet we have created a new struct, `CounterView` and embedded a `fir.DefaultView` type in it to satisfy the `View` interface.
 
 ```go
 
@@ -116,7 +116,7 @@ Run the above code to see the changes at [localhost:9867](http://localhost:9867)
 ```
 {% endraw %}   
 
-In the above snippet, we use the Alpinejs magic function, `$fir.emit` to send an event to the server on a button click. Shortly we will see how to handle this event to change state on the server, followed by updating a count on the web page.
+In the above snippet, we use the custom Alpinejs magic function, `$fir.emit` to send an event to the server on a button click. Shortly we will see how to handle this event to change state on the server, followed by updating a count on the web page.
 
 ## Render view
 
@@ -163,9 +163,9 @@ Before we go ahead, lets expand the above snippet to a full html page.
 
 </details>
 
-The html page includes the `fir` JS library which helps you add tiny bits of interactivity to the page.. The library bundles (Alpinejs)[https://alpinejs.dev] while providing extra direcitives(x-* thingy) and magic functions($ thingy).
+The html page includes the `fir` JS library which helps you add tiny bits of interactivity to the page.. The library bundles [Alpinejs](https://alpinejs.dev) and ships with extra direcitives(x-* thingy) and magic functions($ thingy).
 
-Let's also go ahead and add the above html page to the content of our view.
+Let's add the above html page to the `Content` method of our view. The `Content` method can return either a valid filename or html.
 
 <details markdown="block">
   <summary>
@@ -469,3 +469,306 @@ func main() {
 {% endraw %}
 
 </details>
+
+## Optional: Layouts
+
+Right now are, our html page is one big blob. We might want to separate out the layout from the content for reusability. To do this we need to override the `Layout` method of the `View` interface.
+
+{% raw %}
+```go
+type LayoutView struct {
+	fir.DefaultView
+}
+
+func (l *LayoutView) Content() string {
+	return `{{define "content"}}<div>world</div>{{ end }}`
+}
+
+func (l *LayoutView) Layout() string {
+	return `<div>Hello: {{template "content" .}}</div>`
+}
+```
+
+Notice the `{{template "content" .}}`. `Fir` looks for an equivalent defined template in `Content` which here is: `{{define "content"}}<div>world</div>{{ end }}`. By default it looks for a template named `content` but this can be overriden by returned a different layout name in `LayoutContentName() string` 
+
+{% endraw %}
+
+Lets update our code to split layout and content.
+
+
+<details markdown="block">
+  <summary>
+    Expand main.go
+  </summary>
+
+{% raw %}
+```go
+
+package main
+
+import (
+	"log"
+	"net/http"
+	"sync/atomic"
+
+	"github.com/adnaan/fir"
+)
+
+type CounterView struct {
+	fir.DefaultView
+	count int32
+}
+
+func (c *CounterView) Inc() int32 {
+	atomic.AddInt32(&c.count, 1)
+	return atomic.LoadInt32(&c.count)
+}
+
+func (c *CounterView) Dec() int32 {
+	atomic.AddInt32(&c.count, -1)
+	return atomic.LoadInt32(&c.count)
+}
+
+func (c *CounterView) Value() int32 {
+	return atomic.LoadInt32(&c.count)
+}
+
+func (c *CounterView) Content() string {
+	return `{{define "content" }} 
+<div class="my-6" style="height: 500px">
+					<div class="columns is-mobile is-centered is-vcentered">
+						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+							<div>
+								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+								<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
+								<button class="button has-background-primary" @click="$fir.emit('inc')">+
+								</button>
+								<button class="button has-background-primary" @click="$fir.emit('dec')">-
+								</button>
+							</div>
+						</div>
+					</div>
+		</div>
+	 {{end}}`
+}
+
+func (c *CounterView) Layout() string {
+	return `<!DOCTYPE html>
+	<html lang="en">
+	
+	<head>
+		<title>{{.app_name}}</title>
+		<meta charset="UTF-8">
+		<meta name="description" content="A counter app">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+	</head>
+	
+	<body>
+		{{template "content" .}}
+	</body>
+	
+	</html>`
+}
+
+func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
+		"count": c.Value(),
+	}
+}
+
+func (c *CounterView) OnEvent(s fir.Socket) error {
+	switch s.Event().ID {
+	case "inc":
+		s.Store().UpdateProp("count", c.Inc())
+	case "dec":
+		s.Store().UpdateProp("count", c.Dec())
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+	}
+	return nil
+}
+
+func main() {
+	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
+	http.Handle("/", controller.Handler(&CounterView{}))
+	http.ListenAndServe(":9867", nil)
+}
+```
+{% endraw %}
+
+</details>
+
+## Optional: Live Ticker
+
+We changed the state(`count`) on events(`inc`, `dec`) coming from the browser. It would be quite useful to change the state from events emanating from the server itself. To show this behaviour lets add a live ticker which shows how long ago the count was updated.
+
+Override the `EventReceiver` method of the `View` interface to return a receive only channel(`<- chan Event`). The channel is used  by `Fir` to dispatch the event to `OnEvent` where it can be handled.
+
+```go
+type CounterView struct {
+	fir.DefaultView
+	count int32
+	ch    chan fir.Event
+}
+
+func (c *CounterView) EventReceiver() <-chan fir.Event {
+	return c.ch
+}
+
+...
+
+http.Handle("/", controller.Handler(&CounterView{ch: make(chan fir.Event)}))
+```
+
+Since there are a bunch of changes, please see the full code:
+
+<details markdown="block">
+  <summary>
+    Expand main.go
+  </summary>
+
+{% raw %}
+
+```go
+package main
+
+import (
+	"log"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/adnaan/fir"
+)
+
+func NewCounterView() *CounterView {
+	timerCh := make(chan fir.Event)
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for ; true; <-ticker.C {
+			timerCh <- fir.Event{ID: "tick"}
+		}
+	}()
+	return &CounterView{ch: timerCh}
+}
+
+type CounterView struct {
+	fir.DefaultView
+	count   int32
+	updated time.Time
+	ch      chan fir.Event
+	sync.RWMutex
+}
+
+func (c *CounterView) EventReceiver() <-chan fir.Event {
+	return c.ch
+}
+
+func (c *CounterView) Inc() int32 {
+	c.Lock()
+	defer c.Unlock()
+	c.count += 1
+	c.updated = time.Now()
+	return c.count
+}
+
+func (c *CounterView) Dec() int32 {
+	c.Lock()
+	defer c.Unlock()
+	c.count -= 1
+	c.updated = time.Now()
+	return c.count
+}
+
+func (c *CounterView) Count() int32 {
+	c.RLock()
+	defer c.RUnlock()
+	return c.count
+}
+
+func (c *CounterView) Updated() time.Time {
+	c.RLock()
+	defer c.RUnlock()
+	return c.updated
+}
+
+func (c *CounterView) Content() string {
+	return `{{define "content" }} 
+<div class="my-6" style="height: 500px">
+					<div class="columns is-mobile is-centered is-vcentered">
+						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+							<div>
+								<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+								<hr>
+								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+								<!-- <div id="count" x-fir-text="$store.fir.count">{{.count}}</div> -->
+								<button class="button has-background-primary" @click="$fir.emit('inc')">+
+								</button>
+								<button class="button has-background-primary" @click="$fir.emit('dec')">-
+								</button>
+							</div>
+						</div>
+					</div>
+		</div>
+	 {{end}}`
+}
+
+func (c *CounterView) Layout() string {
+	return `<!DOCTYPE html>
+	<html lang="en">
+	
+	<head>
+		<title>{{.app_name}}</title>
+		<meta charset="UTF-8">
+		<meta name="description" content="A counter app">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+	</head>
+	
+	<body>
+		{{template "content" .}}
+	</body>
+	
+	</html>`
+}
+
+func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+	return fir.Status{Code: 200}, fir.Data{
+		"count": c.Count(),
+	}
+}
+
+func (c *CounterView) OnEvent(s fir.Socket) error {
+	switch s.Event().ID {
+	case "tick":
+		updated := c.Updated()
+		if updated.IsZero() {
+			return nil
+		}
+		s.Store().UpdateProp("count_updated", time.Since(updated).Seconds())
+	case "inc":
+		s.Store().UpdateProp("count", c.Inc())
+	case "dec":
+		s.Store().UpdateProp("count", c.Dec())
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+	}
+	return nil
+}
+
+func main() {
+	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
+	http.Handle("/", controller.Handler(NewCounterView()))
+	http.ListenAndServe(":9867", nil)
+}
+
+```
+
+{% endraw %}
+
+</details>
+
+Run the above main.go and go to [localhost:9867](http://localhost:9867/). Incrementing or decrementing the count should update the ticker.
+
+Final code with optional steps is also here [examples/counter-ticker](https://github.com/adnaan/fir/blob/main/examples/counter-ticker/main.go).
