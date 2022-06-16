@@ -312,11 +312,13 @@ func (wc *websocketController) Handler(view View) http.HandlerFunc {
 			wc:                wc,
 			user:              user,
 		}
-		if r.Header.Get("Connection") == "Upgrade" &&
+		if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
+			onPatchEvent(w, r, v)
+		} else if r.Header.Get("Connection") == "Upgrade" &&
 			r.Header.Get("Upgrade") == "websocket" {
-			OnEvent(w, r, v)
+			onWebsocket(w, r, v)
 		} else {
-			OnRequest(w, r, v)
+			onRequest(w, r, v)
 		}
 	}
 }

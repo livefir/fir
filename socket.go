@@ -9,29 +9,6 @@ import (
 	"strings"
 )
 
-type Op string
-
-const (
-	Morph       Op = "morph"
-	Reload      Op = "reload"
-	UpdateStore Op = "update-store"
-)
-
-type Operation struct {
-	Op       Op          `json:"op"`
-	Selector string      `json:"selector"`
-	Value    interface{} `json:"value"`
-}
-
-func (m *Operation) Bytes() []byte {
-	b, err := json.Marshal(m)
-	if err != nil {
-		log.Printf("error marshalling dom %v\n", err)
-		return nil
-	}
-	return b
-}
-
 type Data map[string]any
 
 type Socket interface {
@@ -57,7 +34,7 @@ type store struct {
 func (s *store) Update(v any) {
 
 	data := map[string]any{
-		"op":    UpdateStore,
+		"op":    updateStore,
 		"value": v,
 	}
 
@@ -152,7 +129,7 @@ func (s socket) Morph(selector, tmpl string, data Data) {
 	buf.Reset()
 
 	m := &Operation{
-		Op:       Morph,
+		Op:       morph,
 		Selector: selector,
 		Value:    html,
 	}
@@ -161,7 +138,7 @@ func (s socket) Morph(selector, tmpl string, data Data) {
 
 func (s socket) Reload() {
 	m := &Operation{
-		Op: Reload,
+		Op: reload,
 	}
 	s.wc.message(s.topic, m.Bytes())
 }

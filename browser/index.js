@@ -34,7 +34,7 @@ Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
 
 Alpine.magic('fir', (el, { Alpine }) => {
     return {
-        emit: emit,
+        emit: post,
         navigate(to) {
             if (!to) {
                 return
@@ -63,7 +63,7 @@ Alpine.magic('fir', (el, { Alpine }) => {
                 let params = {};
                 formData.forEach((value, key) => params[key] = value);
                 params["formName"] = formName;
-                emit(eventID, params)
+                post(eventID, params)
                 return;
             }
         }
@@ -89,13 +89,37 @@ const operations = {
         })
     }),
     // browser
-    reload: operation => window.location.reload()
+    reload: () => window.location.reload(),
+    store: (operation) => updateStore(operation.selector, operation.value)
 }
 
 
 let connectURL = `ws://${window.location.host}${window.location.pathname}`
 if (window.location.protocol === "https:") {
     connectURL = `wss://${window.location.host}${window.location.pathname}`
+}
+
+const post = (id, params) => {
+    fetch(window.location.pathname, {
+        method: 'POST', // or 'PUT'
+        headers: {
+            'Content-Type': 'application/json',
+            'X-FIR-MODE': 'event'
+        },
+        body: JSON.stringify({
+            id: id,
+            params: params,
+        }),
+    })
+        .then(response => response.json())
+        .then(patchset => {
+            patchset.forEach(patch => {
+                operations[patch.op](patch)
+            });
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
 }
 const emit = eventEmitter(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
 emit("init", {})

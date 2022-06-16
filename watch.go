@@ -31,7 +31,7 @@ func watchTemplates(wc *websocketController) {
 				if event.Op&fsnotify.Write == fsnotify.Write ||
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
-					m := &Operation{Op: Reload}
+					m := &Operation{Op: reload}
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
 					wc.messageAll(m.Bytes())
 					time.Sleep(1000 * time.Millisecond)

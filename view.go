@@ -42,6 +42,7 @@ type View interface {
 	Extensions() []string
 	FuncMap() template.FuncMap
 	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
+	OnPatchEvent(event Event) (Patchset, error)
 	OnEvent(s Socket) error
 	EventReceiver() <-chan Event
 }
@@ -125,6 +126,15 @@ func (d DefaultView) OnEvent(s Socket) error {
 	return nil
 }
 
+// OnEvent handles the events sent from the browser or received on the EventReceiver channel
+func (d DefaultView) OnPatchEvent(event Event) (Patchset, error) {
+	switch event.ID {
+	default:
+		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
+	}
+	return Patchset{}, nil
+}
+
 // EventReceiver is used to configure a receive only channel for receiving events from concurrent goroutines.
 // e.g. a concurrent goroutine sends a tick event every second to the returned channel which is then handled in OnEvent.
 func (d DefaultView) EventReceiver() <-chan Event {
@@ -174,6 +184,15 @@ func (d DefaultErrorView) OnEvent(s Socket) error {
 	return nil
 }
 
+// OnEvent handles the events sent from the browser or received on the EventReceiver channel
+func (d DefaultErrorView) OnPatchEvent(event Event) (Patchset, error) {
+	switch event.ID {
+	default:
+		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
+	}
+	return Patchset{}, nil
+}
+
 func (d DefaultErrorView) EventReceiver() <-chan Event {
 	return nil
 }
@@ -212,7 +231,61 @@ func (v *viewHandler) reloadTemplates() {
 	}
 }
 
-func OnRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
+func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
+	v.reloadTemplates()
+	var event Event
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&event)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if decoder.More() {
+		http.Error(w, "unknown fields in request body", http.StatusBadRequest)
+		return
+	}
+	patchset, err := v.view.OnPatchEvent(event)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	operations := make([]Operation, 0)
+	for _, patch := range patchset {
+		switch patch.Op() {
+		case morph:
+			morphPatch := patch.(Morph)
+			var buf bytes.Buffer
+			err := v.viewTemplate.ExecuteTemplate(&buf, morphPatch.Template, morphPatch.Data)
+			if err != nil {
+				// if s.wc.debugLog {
+				// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
+				// }
+				continue
+			}
+			// if s.wc.debugLog {
+			// 	log.Printf("[controller]rendered template %+v, with data => \n %+v\n", tmpl, getJSON(data))
+			// }
+			html := buf.String()
+			buf.Reset()
+			operations = append(operations, Operation{
+				Op:       morph,
+				Selector: morphPatch.Selector,
+				Value:    html,
+			})
+		case reload:
+		case updateStore:
+
+		}
+	}
+	json.NewEncoder(w).Encode(operations)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	v.reloadTemplates()
 
 	var err error
@@ -230,14 +303,14 @@ func OnRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	w.WriteHeader(status.Code)
 	if status.Code > 299 {
-		OnRequestError(w, r, v, &status)
+		onRequestError(w, r, v, &status)
 		return
 	}
 	v.viewTemplate.Option("missingkey=zero")
 	err = v.viewTemplate.Execute(w, v.mountData)
 	if err != nil {
 		log.Printf("OnRequest viewTemplate.Execute error:  %v", err)
-		OnRequestError(w, r, v, nil)
+		onRequestError(w, r, v, nil)
 	}
 	if v.wc.debugLog {
 		log.Printf("OnRequest render view %+v, with data => \n %+v\n",
@@ -246,7 +319,7 @@ func OnRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 }
 
-func OnRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
+func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
 	var errorStatus Status
 	errorStatus, v.mountData = v.errorView.OnRequest(w, r)
 	if v.mountData == nil {
@@ -267,7 +340,7 @@ func OnRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, stat
 	}
 }
 
-func OnEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
+func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	var topic *string
 	if v.wc.subscribeTopicFunc != nil {
 		topic = v.wc.subscribeTopicFunc(r)

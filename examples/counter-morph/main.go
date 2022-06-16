@@ -36,7 +36,7 @@ func (c *CounterView) Content() string {
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="http://localhost:8000/cdn.js"></script>
 	</head>
 
 	<body>
@@ -62,6 +62,26 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.Value(),
 	}
+}
+
+func (c *CounterView) OnPatchEvent(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
+	case "inc":
+		return fir.Patchset{fir.Morph{
+			Selector: "#count",
+			Template: "count",
+			Data:     fir.Data{"count": c.Inc()}}}, nil
+
+	case "dec":
+		return fir.Patchset{fir.Morph{
+			Selector: "#count",
+			Template: "count",
+			Data:     fir.Data{"count": c.Dec()}}}, nil
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
+	}
+
+	return nil, nil
 }
 
 func (c *CounterView) OnEvent(s fir.Socket) error {
