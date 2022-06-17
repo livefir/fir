@@ -1,0 +1,35 @@
+{
+  "name": "@adnaanx/fir",
+  "version": "0.0.4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adnaan/fir"
+  },
+  "keywords": [
+    "reactive",
+    "view",
+    "go",
+    "alpinejs"
+  ],
+  "description": "Alpinejs plugin for Fir: A reactive view library built in Go and Alpine.js",
+  "main": "dist/fir.cjs.js",
+  "module": "dist/fir.esm.js",
+  "unpkg": "dist/fir.min.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "watch": "node esbuild.config.mjs -w",
+    "prepublish": "npm run build"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.14.39",
+    "esbuild-serve": "^1.0.1"
+  },
+  "dependencies": {
+    "@alpinejs/morph": "^3.10.2",
+    "@alpinejs/persist": "^3.10.2",
+    "@kingshott/iodine": "^7.0.1",
+    "alpinejs": "^3.10.2"
+  }
+}
