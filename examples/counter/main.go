@@ -72,14 +72,18 @@ func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
 			fir.Morph{
 				Selector: "#count",
 				Template: "count",
-				Data:     fir.Data{"count": c.Inc()}}}, nil
+				Data:     fir.Data{"count": c.Inc()},
+			},
+		}, nil
 
 	case "dec":
 		return fir.Patchset{
 			fir.Morph{
 				Selector: "#count",
 				Template: "count",
-				Data:     fir.Data{"count": c.Dec()}}}, nil
+				Data:     fir.Data{"count": c.Dec()},
+			},
+		}, nil
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}

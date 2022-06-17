@@ -132,28 +132,27 @@ Before we go ahead, lets expand the above snippet to a full html page.
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-    <title>{{.app_name}}</title>
-    <meta charset="UTF-8">
-    <meta name="description" content="A counter app">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-    <script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+<head> 
+	<title>{{.app_name}}</title>
+	<meta charset="UTF-8">
+	<meta name="description" content="A counter app">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
 <body>
-    <div class="my-6" style="height: 500px">
-        <div class="columns is-mobile is-centered is-vcentered">
-            <div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-                <div>
-                    <div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-                    <button class="button has-background-primary" @click="$fir.emit('inc')">+
-                    </button>
-                    <button class="button has-background-primary" @click="$fir.emit('dec')">-
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+	<div class="my-6" style="height: 500px">
+		<div class="columns is-mobile is-centered is-vcentered">
+			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+				<div>
+					{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+					<button class="button has-background-primary" @click="$fir.emit('inc')">+</button>
+					<button class="button has-background-primary" @click="$fir.emit('dec')">-</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </body>
 
 </html>
@@ -163,7 +162,7 @@ Before we go ahead, lets expand the above snippet to a full html page.
 
 </details>
 
-The html page includes the `fir` JS library which helps you add tiny bits of interactivity to the page.. The library bundles [Alpinejs](https://alpinejs.dev) and ships with extra direcitives(x-* thingy) and magic functions($ thingy).
+The html page includes the `fir` JS library which helps you add tiny bits of interactivity to the page. The library is an  [Alpinejs](https://alpinejs.dev) plugin and ships with extra direcitives(x-* thingy) and magic functions($ thingy).
 
 Let's add the above html page to the `Content` method of our view. The `Content` method can return either a valid filename or html.
 
@@ -198,15 +197,16 @@ func (c *CounterView) Content() string {
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
-	
+
 	<body>
 		<div class="my-6" style="height: 500px">
 			<div class="columns is-mobile is-centered is-vcentered">
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
-						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+						{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -231,7 +231,7 @@ func main() {
 
 </details>
 
-Running the above code, show render two buttons but nothing else. We want to show an initial count on the page. To do this, we use Go's `html/template` to hydrate some date into our page. We override the `OnRequest` method of the `View` interface to do custom rendering.
+Running the above code, show render two buttons but nothing else. We want to show an initial count on the page. To do this, we use Go's `html/template` to hydrate some data into our page by overriding the `OnRequest` method of the `View` interface.
 
 ```go
 func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
@@ -241,14 +241,24 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 }
 ```
 
-By default, `fir.Data` was empty. After overriding `OnRequest` we are initialising it with a `count` value. The page is then passed through `html/template` and rendered. This is the standard way of rendering html templates in Go so this should be recongisable. 
+By default, `fir.Data` was zero value. After overriding `OnRequest` we are initialising it with a `count` value. The page is then passed through `html/template` and rendered. This is the standard way of rendering html templates in Go so this should be recongisable.
 
 {% raw %}
 ```html
-<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 ```
 
-Here the `{{.count}}` is replaced by `count` set in `fir.Data`. We will come to the `x-text` part shortly. 
+`block` is a `html/template` built-in shorthand for defining and using a template.
+
+This : 
+```go 
+{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+```
+is same as:
+```go
+{{define "count"}}<div id="count">{{.count}}</div>{{end}}
+{{ template "count"}}
+```
 {% endraw %}
 
 Since we want to count concurrently, we have used an atomic counter and added a few extra methods(`Inc`, `Dec`) to make our life easier. See the updated code below.
@@ -299,19 +309,18 @@ func (c *CounterView) Content() string {
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
-	
+
 	<body>
 		<div class="my-6" style="height: 500px">
 			<div class="columns is-mobile is-centered is-vcentered">
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
-						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-						<button class="button has-background-primary" @click="$fir.emit('inc')">+
-						</button>
-						<button class="button has-background-primary" @click="$fir.emit('dec')">-
-						</button>
+						{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+						<button class="button has-background-primary" @click="$fir.emit('inc')">+</button>
+						<button class="button has-background-primary" @click="$fir.emit('dec')">-</button>
 					</div>
 				</div>
 			</div>
@@ -340,33 +349,48 @@ func main() {
 Running the above code doesn't do anything new. We need a way to handle events emitted on clicking the `+`, `-` buttons.
 
 
-## Handling events
+## Update parts of the view
 
-Now that we have a way to send events to the server on user interaction, lets handle them to change state on the server. We override the `OnEvent` method of `View` interface.
-
-```go
-func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
-	switch event.ID {
-	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
-	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
-	}
-	return nil
-}
-```
-
-We instruct the client fir library to update [$store.fir](https://alpinejs.dev/globals/alpine-store) with `count` value. To show the updated value, we use [x-text](https://alpinejs.dev/directives/text).
+In response to user interaction we want to update a part of our web page to display a result. `Fir` allows you to `patch` targeteted areas of the DOM without a page reload. Lets see it in action.
 
 {% raw %}
 ```html
-<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+<div>
+	{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+	<button class="button has-background-primary" @click="$fir.emit('inc')">+</button>
+	<button class="button has-background-primary" @click="$fir.emit('dec')">-</button>
+</div>
+```
+{% endraw %}
+
+When the `+` button is clicked, an event `inc` is sent to the server which sends backs a `patch` instruction back to the page.
+
+```go
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
+	case "inc":
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()}}}, nil
+
+	case "dec":
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()}}}, nil
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
+	}
+
+	return nil, nil
+}
 ```
 
-Since the initial value of `$store.fir.count` is `undefined` when the page is first rendered, we `or` with `{{.count}}`.
-{% endraw %}
+`fir.Morph` is a `patch` which hydrates the new count value to the template `count`(i.e. {% raw %} `{{block "count" .}}`{%endraw%}) on the server and instructs the javascript client library to update(morph) the `<div id="count">`. 
+
 
 The updated `main.go` should now be fully working counter example.
 
@@ -416,15 +440,16 @@ func (c *CounterView) Content() string {
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
-	
+
 	<body>
 		<div class="my-6" style="height: 500px">
 			<div class="columns is-mobile is-centered is-vcentered">
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
-						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+						{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -444,160 +469,30 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	switch event.ID {
 	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()},
+			},
+		}, nil
+
 	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()},
+			},
+		}, nil
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
-}
 
-
-func main() {
-	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(CounterView{}))
-	http.ListenAndServe(":9867", nil)
-}
-```
-{% endraw %}
-
-</details>
-
-## Optional: Server only rendering
-
-
-If you have noticed, the above rendering of `count` html has a problem. We are updating the `<div id="count" ...></div>` twice. Once when we execute the template using `html/template` which replaces `{{.count}}` and after the page has loaded using alpinejs directive `x-text="$store.fir.count"`. We do this because we want to make tiny partial updates to our page by calling, `socket.Store().Update(...)` when an event comes in. 
-
-Instead we can [morph](https://alpinejs.dev/plugins/morph) our target html element. 
-
-{% raw %}
-```go
-
-<div>
-	{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-	<button class="button has-background-primary" @click="$fir.emit('inc')">+
-	</button>
-	<button class="button has-background-primary" @click="$fir.emit('dec')">-
-	</button>
-</div>
-
-...
-
-
-case "inc":
-	s.Morph("#count", "count", fir.Data{"count": c.Inc()})
-case "dec":
-	s.Morph("#count", "count", fir.Data{"count": c.Dec()})
-		
-```
-
-`block` is a `html/template` built-in shorthand for defining and using a template.
-
-This : 
-```go 
-{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-```
-is same as:
-```go
-{{define "count"}}<div id="count">{{.count}}</div>{{end}}
-{{ template "count"}}
-```
-
-{% endraw %}
-
-In the above approach, after the first render of the page, alpinejs update has no role. We use `socket.Morph` to send a partial html snippet back to the client `fir` library which then morphs the target element. This approach is heavier on the wire but a lot simpler to reason about and provides a better page rendering performance.
-
-
-
-<details markdown="block">
-  <summary>
-    Expand main.go
-  </summary>
-
-{% raw %}
-```go
-
-package main
-
-import (
-	"log"
-	"net/http"
-	"sync/atomic"
-
-	"github.com/adnaan/fir"
-)
-
-type CounterView struct {
-	fir.DefaultView
-	count int32
-}
-
-func (c *CounterView) Inc() int32 {
-	atomic.AddInt32(&c.count, 1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Dec() int32 {
-	atomic.AddInt32(&c.count, -1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Value() int32 {
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Content() string {
-	return `
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-	<title>{{.app_name}}</title>
-	<meta charset="UTF-8">
-	<meta name="description" content="A counter app">
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
-</head>
-
-<body>
-	<div class="my-6" style="height: 500px">
-		<div class="columns is-mobile is-centered is-vcentered">
-			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-				<div>
-					{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-					<button class="button has-background-primary" @click="$fir.emit('inc')">+
-					</button>
-					<button class="button has-background-primary" @click="$fir.emit('dec')">-
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
-</body>
-
-</html>`
-}
-
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Value(),
-	}
-}
-
-func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
-	switch event.ID {
-	case "inc":
-		s.Morph("#count", "count", fir.Data{"count": c.Inc()})
-	case "dec":
-		s.Morph("#count", "count", fir.Data{"count": c.Dec()})
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
-	}
-	return nil
+	return nil, nil
 }
 
 func main() {
@@ -606,11 +501,14 @@ func main() {
 	http.ListenAndServe(":9867", nil)
 }
 
-
 ```
 {% endraw %}
 
 </details>
+
+---
+
+If you want to skip ahead and look at final code for the optionals, its here: [examples/counter-ticker/main.go](https://github.com/adnaan/fir/blob/main/examples/counter-ticker/main.go)
 
 ## Optional: Layouts
 
@@ -676,40 +574,42 @@ func (c *CounterView) Value() int32 {
 }
 
 func (c *CounterView) Content() string {
-	return `{{define "content" }} 
-		<div class="my-6" style="height: 500px">
-					<div class="columns is-mobile is-centered is-vcentered">
-						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-							<div>
-								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-								<button class="button has-background-primary" @click="$fir.emit('inc')">+
-								</button>
-								<button class="button has-background-primary" @click="$fir.emit('dec')">-
-								</button>
-							</div>
-						</div>
-					</div>
+	return `
+{{define "content" }} 
+<div class="my-6" style="height: 500px">
+	<div class="columns is-mobile is-centered is-vcentered">
+		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+			<div>
+				{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+				<button class="button has-background-primary" @click="$fir.emit('inc')">+
+				</button>
+				<button class="button has-background-primary" @click="$fir.emit('dec')">-
+				</button>
+			</div>
 		</div>
-	 {{end}}`
-}
+	</div>
+</div>
+{{end}}`
 
 func (c *CounterView) Layout() string {
-	return `<!DOCTYPE html>
-	<html lang="en">
-	
-	<head>
-		<title>{{.app_name}}</title>
-		<meta charset="UTF-8">
-		<meta name="description" content="A counter app">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
-	</head>
-	
-	<body>
-		{{template "content" .}}
-	</body>
-	
-	</html>`
+	return 
+`<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>{{.app_name}}</title>
+	<meta charset="UTF-8">
+	<meta name="description" content="A counter app">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body>
+	{{template "content" .}}
+</body>
+
+</html>`
 }
 
 func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
@@ -718,16 +618,30 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	switch event.ID {
 	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()},
+			},
+		}, nil
+
 	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()},
+			},
+		}, nil
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+
+	return nil, nil
 }
 
 func main() {
@@ -742,27 +656,65 @@ func main() {
 
 ## Optional: Live Ticker
 
-We changed the state(`count`) on events(`inc`, `dec`) coming from the browser. It would be quite useful to change the state from events emanating from the server itself. To show this behaviour lets add a live ticker which shows how long ago the count was updated.
+On user interaction events, `OnPatch` sends back a `patchset` which patches the interesting parts of the page. It would be nice to update the page when something changes for a user on the server(e.g. notifications, stock ticker, chat message etc.). Using the `fir` library its possible to `stream` a `patch` over websockets or server-sent events(SSE).
 
-Override the `EventReceiver` method of the `View` interface to return a receive only channel(`<- chan Event`). The channel is used  by `Fir` to dispatch the event to `OnEvent` where it can be handled.
+Override the `Stream` method of the `View` interface to return a receive only channel(`<- chan Patch`). When a `patch` is sent to this channel its sent to the client library where its executed to update the page.
 
 ```go
 type CounterView struct {
 	fir.DefaultView
 	count int32
-	ch    chan fir.Event
+	stream    chan fir.Patch
 }
 
-func (c *CounterView) EventReceiver() <-chan fir.Event {
-	return c.ch
+func (c *CounterView) Stream() <-chan fir.Patch {
+	return c.stream
 }
 
 ...
 
-http.Handle("/", controller.Handler(&CounterView{ch: make(chan fir.Event)}))
+http.Handle("/", controller.Handler(&CounterView{stream: make(chan fir.Patch)}))
 ```
 
-Since there are a bunch of changes, please see the full code:
+We can send a `patch` to the stream.
+
+```go
+c.stream <- fir.Morph{...}
+```
+
+Lets expand the `counter` example to add a last updated ticker to the page. The ticker should update every second and tell us when was count last updated.
+
+For this example, we use a different `patch` type: `fir.Store{}`. 
+
+
+```go
+func NewCounterView() *CounterView {
+	stream := make(chan fir.Patch)
+	ticker := time.NewTicker(time.Second)
+	c := &CounterView{stream: stream}
+	go func() {
+		for ; true; <-ticker.C {
+			updated := c.Updated()
+			if updated.IsZero() {
+				continue
+			}
+			stream <- fir.Store{
+				Name: "fir",
+				Data: map[string]any{"count_updated": time.Since(updated).Seconds()},
+			}
+		}
+	}()
+	return c
+}
+```
+
+```html
+<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+```
+
+`fir.Store{}` updates the global [alpinejs $store](https://alpinejs.dev/globals/alpine-store). Since its reactive, the above html snippet automatically updates.
+
+See the complete working example:
 
 <details markdown="block">
   <summary>
@@ -784,26 +736,34 @@ import (
 )
 
 func NewCounterView() *CounterView {
-	timerCh := make(chan fir.Event)
+	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
+	c := &CounterView{stream: stream}
 	go func() {
 		for ; true; <-ticker.C {
-			timerCh <- fir.Event{ID: "tick"}
+			updated := c.Updated()
+			if updated.IsZero() {
+				continue
+			}
+			stream <- fir.Store{
+				Name: "fir",
+				Data: map[string]any{"count_updated": time.Since(updated).Seconds()},
+			}
 		}
 	}()
-	return &CounterView{ch: timerCh}
+	return c
 }
 
 type CounterView struct {
 	fir.DefaultView
 	count   int32
 	updated time.Time
-	ch      chan fir.Event
+	stream  chan fir.Patch
 	sync.RWMutex
 }
 
-func (c *CounterView) EventReceiver() <-chan fir.Event {
-	return c.ch
+func (c *CounterView) Stream() <-chan fir.Patch {
+	return c.stream
 }
 
 func (c *CounterView) Inc() int32 {
@@ -835,23 +795,24 @@ func (c *CounterView) Updated() time.Time {
 }
 
 func (c *CounterView) Content() string {
-	return `{{define "content" }} 
-		<div class="my-6" style="height: 500px">
-					<div class="columns is-mobile is-centered is-vcentered">
-						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-							<div>
-								<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
-								<hr>
-								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-								<button class="button has-background-primary" @click="$fir.emit('inc')">+
-								</button>
-								<button class="button has-background-primary" @click="$fir.emit('dec')">-
-								</button>
-							</div>
-						</div>
-					</div>
+	return `
+{{define "content" }} 
+<div class="my-6" style="height: 500px">
+	<div class="columns is-mobile is-centered is-vcentered">
+		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+			<div>
+				<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+				<hr>
+				{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+				<button class="button has-background-primary" @click="$fir.emit('inc')">+
+				</button>
+				<button class="button has-background-primary" @click="$fir.emit('dec')">-
+				</button>
+			</div>
 		</div>
-	 {{end}}`
+	</div>
+</div>
+{{end}}`
 }
 
 func (c *CounterView) Layout() string {
@@ -863,7 +824,8 @@ func (c *CounterView) Layout() string {
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
 	
 	<body>
@@ -879,22 +841,26 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	switch event.ID {
-	case "tick":
-		updated := c.Updated()
-		if updated.IsZero() {
-			return nil
-		}
-		s.Store().UpdateProp("count_updated", time.Since(updated).Seconds())
 	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()}}}, nil
+
 	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()}}}, nil
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+
+	return nil, nil
 }
 
 func main() {
@@ -902,7 +868,6 @@ func main() {
 	http.Handle("/", controller.Handler(NewCounterView()))
 	http.ListenAndServe(":9867", nil)
 }
-
 ```
 
 {% endraw %}
@@ -910,5 +875,3 @@ func main() {
 </details>
 
 Run the above main.go and go to [localhost:9867](http://localhost:9867/). Incrementing or decrementing the count should update the ticker.
-
-Final code with optional steps is also here [examples/counter-ticker](https://github.com/adnaan/fir/blob/main/examples/counter-ticker/main.go).
