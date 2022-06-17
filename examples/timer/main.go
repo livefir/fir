@@ -9,19 +9,23 @@ import (
 )
 
 func NewTimer() *Timer {
-	timerCh := make(chan fir.Event)
+	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
+	t := &Timer{stream: stream}
 	go func() {
 		for ; true; <-ticker.C {
-			timerCh <- fir.Event{ID: "tick"}
+			stream <- fir.Store{
+				Name: "fir",
+				Data: map[string]any{"ts": time.Now().String()},
+			}
 		}
 	}()
-	return &Timer{ch: timerCh}
+	return t
 }
 
 type Timer struct {
 	fir.DefaultView
-	ch chan fir.Event
+	stream chan fir.Patch
 }
 
 func (t *Timer) Content() string {
@@ -34,19 +38,8 @@ func (t *Timer) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, f
 	}
 }
 
-func (t *Timer) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
-	case "tick":
-		s.Store("").UpdateProp("ts", time.Now().String())
-		return nil
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
-	}
-	return nil
-}
-
-func (t *Timer) EventReceiver() <-chan fir.Event {
-	return t.ch
+func (t *Timer) Stream() <-chan fir.Patch {
+	return t.stream
 }
 
 func main() {

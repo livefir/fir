@@ -20,30 +20,24 @@ func (f *ForgotView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (f *ForgotView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (f *ForgotView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "account/forgot":
-		return f.SendRecovery(s)
+		req := new(ProfileRequest)
+		if err := event.DecodeParams(req); err != nil {
+			return nil, err
+		}
+
+		if err := f.Auth.Recovery(event.RequestContext(), req.Email); err != nil {
+			return nil, err
+		}
+
+		return fir.Patchset{fir.Store{
+			Name: "forgot",
+			Data: map[string]any{"recovery_sent": true},
+		}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
-}
-
-func (f *ForgotView) SendRecovery(s fir.Socket) error {
-	s.Store().UpdateProp("show_loading_modal", true)
-	defer func() {
-		s.Store().UpdateProp("show_loading_modal", false)
-	}()
-	req := new(ProfileRequest)
-	if err := s.Event().DecodeParams(req); err != nil {
-		return err
-	}
-
-	if err := f.Auth.Recovery(s.Request().Context(), req.Email); err != nil {
-		return err
-	}
-
-	s.Store("forgot").UpdateProp("recovery_sent", true)
-	return nil
+	return nil, nil
 }

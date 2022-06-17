@@ -47,37 +47,52 @@ func (t *TodosView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Statu
 	return fir.Status{Code: 200}, fir.Data{"todos": string(b)}
 }
 
-func (t *TodosView) OnEvent(s fir.Socket) error {
+func (t *TodosView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	var todo Todo
-	if err := s.Event().DecodeParams(&todo); err != nil {
-		return err
+	if err := event.DecodeParams(&todo); err != nil {
+		return nil, err
 	}
 
-	switch s.Event().ID {
+	switch event.ID {
 
 	case "todos/new":
 		if len(todo.Text) < 4 {
-			s.Store("formData").UpdateProp("textError", "Min length is 4")
-			return nil
+			return fir.Patchset{
+				fir.Store{
+					Name: "formData",
+					Data: map[string]any{
+						"textError": "Min length is 4",
+					},
+				},
+			}, nil
 		}
-		s.Store("formData").UpdateProp("textError", "")
 		if err := t.db.Insert(bolthold.NextSequence(), &todo); err != nil {
-			return err
+			return nil, err
 		}
 	case "todos/del":
 		if err := t.db.Delete(todo.ID, &todo); err != nil {
-			return err
+			return nil, err
 		}
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 	// list updated todos
 	todos := make([]Todo, 0) // important: initialise the array to return [] instead of null as a json response
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return err
+		return nil, err
 	}
-	s.Store("todos").Update(todos)
-	return nil
+	return fir.Patchset{
+		fir.Store{
+			Name: "formData",
+			Data: map[string]any{
+				"textError": "",
+			},
+		},
+		fir.Store{
+			Name: "todos",
+			Data: todos,
+		},
+	}, nil
 }
 
 func main() {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/adnaan/authn"
 	"github.com/adnaan/fir"
@@ -24,14 +23,29 @@ func (s *SigninView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (s *SigninView) OnEvent(st fir.Socket) error {
-	switch st.Event().ID {
+func (s *SigninView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "auth/magic-login":
-		return s.MagicLogin(st)
+		r := new(ProfileRequest)
+		if err := event.DecodeParams(r); err != nil {
+			return nil, err
+		}
+		if r.Email == "" {
+			return nil, fmt.Errorf("%w", errors.New("email is required"))
+		}
+		if err := s.Auth.SendPasswordlessToken(event.RequestContext(), r.Email); err != nil {
+			return nil, err
+		}
+
+		return fir.Patchset{fir.Morph{
+			Template: "signin_container",
+			Selector: "#signin_container",
+			Data:     fir.Data{"sent_magic_link": true},
+		}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+	return nil, nil
 }
 
 func (s *SigninView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
@@ -92,24 +106,4 @@ func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.St
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 
 	return fir.Status{Code: 200}, fir.Data{}
-}
-
-func (s *SigninView) MagicLogin(st fir.Socket) error {
-	st.Store().UpdateProp("show_loading_modal", true)
-	defer func() {
-		time.Sleep(time.Second * 1)
-		st.Store().UpdateProp("show_loading_modal", false)
-	}()
-	r := new(ProfileRequest)
-	if err := st.Event().DecodeParams(r); err != nil {
-		return err
-	}
-	if r.Email == "" {
-		return fmt.Errorf("%w", errors.New("email is required"))
-	}
-	if err := s.Auth.SendPasswordlessToken(st.Request().Context(), r.Email); err != nil {
-		return err
-	}
-	st.Morph("#signin_container", "signin_container", fir.Data{"sent_magic_link": true})
-	return nil
 }

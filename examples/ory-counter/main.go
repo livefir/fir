@@ -48,25 +48,25 @@ func (app *App) sessionMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-type Counter struct {
+type CounterView struct {
 	fir.DefaultView
 	count int32
 }
 
-func (c *Counter) Inc() int32 {
+func (c *CounterView) Inc() int32 {
 	atomic.AddInt32(&c.count, 1)
 	return atomic.LoadInt32(&c.count)
 }
-func (c *Counter) Dec() int32 {
+func (c *CounterView) Dec() int32 {
 	atomic.AddInt32(&c.count, -1)
 	return atomic.LoadInt32(&c.count)
 }
 
-func (c *Counter) Value() int32 {
+func (c *CounterView) Value() int32 {
 	return atomic.LoadInt32(&c.count)
 }
 
-func (c *Counter) Content() string {
+func (c *CounterView) Content() string {
 	return `<!DOCTYPE html>
 	<html lang="en">
 	
@@ -79,7 +79,7 @@ func (c *Counter) Content() string {
 			integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
 			crossorigin="anonymous" />
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="http://localhost:8000/cdn.js"></script>
 	</head>
 	
 	<body>
@@ -87,7 +87,7 @@ func (c *Counter) Content() string {
 			<div class="columns is-mobile is-centered is-vcentered">
 				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 					<div>
-						<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
+						{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 						<button class="button has-background-primary" @click="$fir.emit('inc')">+
 						</button>
 						<button class="button has-background-primary" @click="$fir.emit('dec')">-
@@ -108,22 +108,32 @@ func (c *Counter) Content() string {
 	</html>`
 }
 
-func (c *Counter) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.Value(),
 	}
 }
 
-func (c *Counter) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()}}}, nil
+
 	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()}}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+
+	return nil, nil
 }
 
 func main() {
@@ -139,7 +149,7 @@ func main() {
 	}
 
 	controller := fir.NewController("fir-ory-counter", fir.DevelopmentMode(true))
-	http.Handle("/", app.sessionMiddleware(controller.Handler(&Counter{})))
+	http.Handle("/", app.sessionMiddleware(controller.Handler(&CounterView{})))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

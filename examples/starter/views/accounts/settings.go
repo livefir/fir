@@ -1,9 +1,9 @@
 package accounts
 
 import (
+	"context"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/adnaan/authn"
 	"github.com/adnaan/fir"
@@ -22,16 +22,16 @@ func (s *SettingsView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (s *SettingsView) OnEvent(st fir.Socket) error {
-	switch st.Event().ID {
+func (s *SettingsView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "account/update":
-		return s.UpdateProfile(st)
+		return s.UpdateProfile(event)
 	case "account/delete":
-		return s.DeleteAccount(st)
+		return s.DeleteAccount(event)
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+	return nil, nil
 }
 
 func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
@@ -57,50 +57,54 @@ func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.St
 	}
 }
 
-func (s *SettingsView) UpdateProfile(st fir.Socket) error {
-	st.Store("settings").UpdateProp("profile_loading", true)
-	defer func() {
-		time.Sleep(1 * time.Second)
-		st.Store("settings").UpdateProp("profile_loading", false)
-	}()
+func (s *SettingsView) UpdateProfile(event fir.Event) (fir.Patchset, error) {
 	req := new(ProfileRequest)
-	if err := st.Event().DecodeParams(req); err != nil {
-		return err
+	if err := event.DecodeParams(req); err != nil {
+		return nil, err
 	}
-	rCtx := st.Request().Context()
+	rCtx := event.RequestContext()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := acc.Attributes().Set(rCtx, "name", req.Name); err != nil {
-		return err
+		return nil, err
 	}
+	var patchset fir.Patchset
 	if req.Email != "" && req.Email != acc.Email() {
 		if err := acc.ChangeEmail(rCtx, req.Email); err != nil {
-			return err
+			return nil, err
 		}
-		st.Store("settings").UpdateProp("change_email", true)
+		patchset = append(patchset, fir.Store{
+			Name: "settings",
+			Data: map[string]any{
+				"change_email": true,
+			},
+		})
 	}
 
-	st.Morph("#account_form", "account_form", fir.Data{
-		"name":  req.Name,
-		"email": acc.Email(),
+	patchset = append(patchset, fir.Morph{
+		Template: "account_form",
+		Selector: "#account_form",
+		Data: fir.Data{
+			"name":  req.Name,
+			"email": acc.Email(),
+		},
 	})
 
-	return nil
+	return patchset, nil
 }
 
-func (s *SettingsView) DeleteAccount(st fir.Socket) error {
-	rCtx := st.Request().Context()
+func (s *SettingsView) DeleteAccount(event fir.Event) (fir.Patchset, error) {
+	rCtx := event.RequestContext()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
-	acc, err := s.Auth.GetAccount(rCtx, userID)
+	acc, err := s.Auth.GetAccount(context.Background(), userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := acc.Delete(rCtx); err != nil {
-		return err
+		return nil, err
 	}
-	st.Reload()
-	return nil
+	return fir.Patchset{fir.Reload{}}, nil
 }

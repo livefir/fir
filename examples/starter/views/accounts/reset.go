@@ -25,14 +25,27 @@ func (rv *ResetView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (rv *ResetView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (rv *ResetView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "account/reset":
-		return rv.Reset(s)
+		r := new(ResetReq)
+		if err := event.DecodeParams(r); err != nil {
+			return nil, err
+		}
+		if r.ConfirmPassword != r.Password {
+			return nil, fmt.Errorf("%w", errors.New("passwords don't match"))
+		}
+		if err := rv.Auth.ConfirmRecovery(event.RequestContext(), r.Token, r.Password); err != nil {
+			return nil, err
+		}
+		return fir.Patchset{fir.Store{
+			Name: "reset",
+			Data: map[string]any{"password_reset": true},
+		}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+	return nil, nil
 }
 
 func (rv *ResetView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
@@ -46,23 +59,4 @@ type ResetReq struct {
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirm_password"`
 	Token           string `json:"token"`
-}
-
-func (rv *ResetView) Reset(s fir.Socket) error {
-	s.Store().UpdateProp("show_loading_modal", true)
-	defer func() {
-		s.Store().UpdateProp("show_loading_modal", false)
-	}()
-	r := new(ResetReq)
-	if err := s.Event().DecodeParams(r); err != nil {
-		return err
-	}
-	if r.ConfirmPassword != r.Password {
-		return fmt.Errorf("%w", errors.New("passwords don't match"))
-	}
-	if err := rv.Auth.ConfirmRecovery(s.Request().Context(), r.Token, r.Password); err != nil {
-		return err
-	}
-	s.Store("reset").UpdateProp("password_reset", true)
-	return nil
 }

@@ -345,14 +345,14 @@ Running the above code doesn't do anything new. We need a way to handle events e
 Now that we have a way to send events to the server on user interaction, lets handle them to change state on the server. We override the `OnEvent` method of `View` interface.
 
 ```go
-func (c *CounterView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+	switch event.ID {
 	case "inc":
 		s.Store().UpdateProp("count", c.Inc())
 	case "dec":
 		s.Store().UpdateProp("count", c.Dec())
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 	return nil
 }
@@ -444,14 +444,14 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+	switch event.ID {
 	case "inc":
 		s.Store().UpdateProp("count", c.Inc())
 	case "dec":
 		s.Store().UpdateProp("count", c.Dec())
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 	return nil
 }
@@ -588,14 +588,14 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+	switch event.ID {
 	case "inc":
 		s.Morph("#count", "count", fir.Data{"count": c.Inc()})
 	case "dec":
 		s.Morph("#count", "count", fir.Data{"count": c.Dec()})
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 	return nil
 }
@@ -718,14 +718,14 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+	switch event.ID {
 	case "inc":
 		s.Store().UpdateProp("count", c.Inc())
 	case "dec":
 		s.Store().UpdateProp("count", c.Dec())
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 	return nil
 }
@@ -879,8 +879,8 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event)(fir.Patchset,error) {
+	switch event.ID {
 	case "tick":
 		updated := c.Updated()
 		if updated.IsZero() {
@@ -892,7 +892,7 @@ func (c *CounterView) OnEvent(s fir.Socket) error {
 	case "dec":
 		s.Store().UpdateProp("count", c.Dec())
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 	return nil
 }

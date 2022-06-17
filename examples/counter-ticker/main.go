@@ -114,7 +114,7 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatchEvent(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{

@@ -17,16 +17,26 @@ See the complete code in [examples/counter](./examples/counter)
 ```go
 ...
 
-func (c *Counter) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()}}}, nil
+
 	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()}}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+
+	return nil, nil
 }
 
 ...
@@ -35,12 +45,16 @@ func (c *Counter) OnEvent(s fir.Socket) error {
 `app.html`
 
 ```html
+<head>
+    ...
+    <script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+</head>
 <div>
   <div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-  <button class="button has-background-primary" @click="$fir.emit('inc')">
+  <button @click="$fir.emit('inc')">
     +
   </button>
-  <button class="button has-background-primary" @click="$fir.emit('dec')">
+  <button @click="$fir.emit('dec')">
     -
   </button>
 </div>

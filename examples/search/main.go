@@ -50,24 +50,24 @@ func (s *Search) Partials() []string {
 	return []string{"cities.html"}
 }
 
-func (s *Search) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, nil
-}
-
-func (s *Search) OnEvent(st fir.Socket) error {
-	switch st.Event().ID {
+func (s *Search) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "search":
 		req := new(QueryRequest)
-		if err := st.Event().DecodeParams(req); err != nil {
-			return err
+		if err := event.DecodeParams(req); err != nil {
+			return nil, err
 		}
-		st.Morph("#cities", "cities", fir.Data{
-			"cities": getCities(req.Query),
-		})
+		return fir.Patchset{fir.Morph{
+			Template: "cities",
+			Selector: "#cities",
+			Data: fir.Data{
+				"cities": getCities(req.Query),
+			},
+		}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", st.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+	return nil, nil
 }
 
 func main() {

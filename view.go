@@ -35,17 +35,17 @@ func (a *AppContext) ActiveRoute(path, class string) string {
 }
 
 type View interface {
+	// Settings
 	Content() string
 	Layout() string
 	LayoutContentName() string
 	Partials() []string
 	Extensions() []string
 	FuncMap() template.FuncMap
+	// Lifecyle
 	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
-	OnPatchEvent(event Event) (Patchset, error)
+	OnPatch(event Event) (Patchset, error)
 	Stream() <-chan Patch
-	OnEvent(s Socket) error
-	EventReceiver() <-chan Event
 }
 
 type DefaultView struct{}
@@ -119,16 +119,7 @@ func (d DefaultView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, 
 }
 
 // OnEvent handles the events sent from the browser or received on the EventReceiver channel
-func (d DefaultView) OnEvent(s Socket) error {
-	switch s.Event().ID {
-	default:
-		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", s.Event())
-	}
-	return nil
-}
-
-// OnEvent handles the events sent from the browser or received on the EventReceiver channel
-func (d DefaultView) OnPatchEvent(event Event) (Patchset, error) {
+func (d DefaultView) OnPatch(event Event) (Patchset, error) {
 	switch event.ID {
 	default:
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
@@ -181,16 +172,8 @@ func (d DefaultErrorView) OnRequest(w http.ResponseWriter, r *http.Request) (Sta
 	return Status{Code: 500, Message: "Internal Error"}, Data{}
 }
 
-func (d DefaultErrorView) OnEvent(s Socket) error {
-	switch s.Event().ID {
-	default:
-		log.Printf("[DefaultErrorView] warning:handler not found for event => \n %+v\n", s.Event())
-	}
-	return nil
-}
-
 // OnEvent handles the events sent from the browser or received on the EventReceiver channel
-func (d DefaultErrorView) OnPatchEvent(event Event) (Patchset, error) {
+func (d DefaultErrorView) OnPatch(event Event) (Patchset, error) {
 	switch event.ID {
 	default:
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
@@ -296,7 +279,8 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		http.Error(w, "unknown fields in request body", http.StatusBadRequest)
 		return
 	}
-	patchset, err := v.view.OnPatchEvent(event)
+	event.requestContext = r.Context()
+	patchset, err := v.view.OnPatch(event)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -394,31 +378,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		topicVal = *topic
 	}
 
-	st := socket{
-		w:            w,
-		r:            r,
-		topic:        topicVal,
-		wc:           v.wc,
-		rootTemplate: v.viewTemplate,
-	}
 	done := make(chan struct{})
-	if v.view.EventReceiver() != nil {
-		go func() {
-			for {
-				select {
-				case event := <-v.view.EventReceiver():
-					st.event = event
-					err := v.view.OnEvent(st)
-					if err != nil {
-						log.Printf("[error] \n event => %+v, \n err: %v\n", event, err)
-					}
-				case <-done:
-					return
-				}
-			}
-
-		}()
-	}
 
 	if v.view.Stream() != nil {
 		go func() {
@@ -459,21 +419,8 @@ loop:
 		}
 
 		v.reloadTemplates()
-		st.event = *event
-		st.unsetEventError()
-
-		var eventHandlerErr error
-		if v.wc.debugLog {
-			log.Printf("[controller] received event %+v \n", st.event)
-		}
-		eventHandlerErr = v.view.OnEvent(st)
-
-		if eventHandlerErr != nil {
-			log.Printf("[error] \n event => %+v, \n err: %v\n", event, eventHandlerErr)
-			st.setEventError(UserError(eventHandlerErr), eventHandlerErr)
-		}
 	}
-	if v.view.EventReceiver() != nil {
+	if v.view.Stream() != nil {
 		done <- struct{}{}
 	}
 	if topic != nil {

@@ -26,22 +26,24 @@ func (r *Range) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, f
 	}
 }
 
-func (r *Range) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
+func (r *Range) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "update":
 		req := new(CountRequest)
-		if err := s.Event().DecodeParams(req); err != nil {
-			return err
+		if err := event.DecodeParams(req); err != nil {
+			return nil, err
 		}
 		count, err := strconv.Atoi(req.Count)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		s.Store().UpdateProp("total", count*10)
+		return fir.Patchset{
+			fir.Store{Name: "fir", Data: map[string]any{"total": count * 10}},
+		}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+	return nil, nil
 }
 
 func main() {
