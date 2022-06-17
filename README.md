@@ -1,16 +1,42 @@
 # Fir
 
-A Go library to build reactive apps.
+A Go library to build reactive apps .
 
 - Suitable for Go developers who want to build moderately complex apps, internal tools, prototypes etc.
 - Skills needed: Go, HTML, CSS, Alpine.js.
 - Focuses only on the view layer.
+- Ships with an Alpinejs plugin for user interactions(click, submit, navigate ) etc.
 
 The library is a result of a series of experiments to build reactive apps in Go: [gomodest-template](https://github.com/adnaan/gomodest-template).
+
+## Status
+
+Work in progress.
 
 ## A counter app.
 
 See the complete code in [examples/counter](./examples/counter)
+
+`app.html`
+
+```html
+<head>
+    ...
+    <script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<div>
+  {{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+  <button @click="$fir.emit('inc')">
+    +
+  </button>
+  <button @click="$fir.emit('dec')">
+    -
+  </button>
+</div>
+
+...
+```
 
 `main.go`
 
@@ -42,25 +68,7 @@ func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
 ...
 ```
 
-`app.html`
 
-```html
-<head>
-    ...
-    <script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
-</head>
-<div>
-  <div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-  <button @click="$fir.emit('inc')">
-    +
-  </button>
-  <button @click="$fir.emit('dec')">
-    -
-  </button>
-</div>
-
-...
-```
 
 See a more real world example in [examples/starter](./examples/starter/) which is also deployed here: [https://fir-starter.fly.dev/](https://fir-starter.fly.dev/)
 
@@ -76,6 +84,3 @@ See a more real world example in [examples/starter](./examples/starter/) which i
 - Have a low learning curve: For a Go user the only new thing to learn would be Alpinejs. And yes: HTML & CSS
 - No custom template engine: Writing our own template engine can enable in-memory html diffing and minimal change partial for the client, but it also means maintaining a new non standard template engine.
 
-## Status
-
-Work in progress.
