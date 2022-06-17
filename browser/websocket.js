@@ -1,10 +1,9 @@
 const reopenTimeouts = [2000, 5000, 10000, 30000, 60000];
 
-export default eventEmitter = (
+export default websocket = (
     url,
     socketOptions,
-    invokeOp,
-    updateStore
+    invokeOperation
 ) => {
     let socket, openPromise, reopenTimeoutHandler;
     let reopenCount = 0;
@@ -64,15 +63,10 @@ export default eventEmitter = (
         socket.onclose = event => reOpenSocket();
         socket.onmessage = event => {
             try {
-                const eventData = JSON.parse(event.data);
-                if (eventData.op) {
-                    if (eventData.op == "update-store") {
-                        updateStore(eventData.selector, eventData.value)
-                    } else {
-                        invokeOp(eventData);
-                    }
-
-                }
+                const patchOperations = JSON.parse(event.data);
+                patchOperations.forEach(patchOperation => {
+                    invokeOperation(patchOperation)
+                });
             } catch (e) {
             }
 
@@ -93,16 +87,4 @@ export default eventEmitter = (
     }
 
     openSocket().then(() => { }).catch(e => console.error(e));
-    return (id, params) => {
-        if (!id) {
-            throw 'event.id is required';
-        }
-        const event = {
-            id: id,
-            params: params,
-        }
-        const send = () => socket.send(JSON.stringify(event));
-        if (!socket || socket && socket.readyState !== WebSocket.OPEN) openSocket().then(send).catch(e => console.error(e));
-        else send();
-    }
 }

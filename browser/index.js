@@ -2,7 +2,7 @@ import Alpine from 'alpinejs';
 import morph from '@alpinejs/morph';
 import persist from '@alpinejs/persist'
 import { Iodine } from '@kingshott/iodine';
-import eventEmitter from "./event_emitter";
+import websocket from "./websocket";
 
 const iodine = new Iodine();
 
@@ -101,7 +101,7 @@ if (window.location.protocol === "https:") {
 
 const post = (id, params) => {
     fetch(window.location.pathname, {
-        method: 'POST', // or 'PUT'
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-FIR-MODE': 'event'
@@ -112,17 +112,17 @@ const post = (id, params) => {
         }),
     })
         .then(response => response.json())
-        .then(patchset => {
-            patchset.forEach(patch => {
-                operations[patch.op](patch)
+        .then(patchOperations => {
+            patchOperations.forEach(patchOperation => {
+                operations[patchOperation.op](patchOperation)
             });
         })
         .catch((error) => {
             console.error('Error:', error);
         });
 }
-const emit = eventEmitter(connectURL, [], (eventData) => operations[eventData.op](eventData), updateStore);
-emit("init", {})
+
+websocket(connectURL, [], (patchOperation) => operations[patchOperation.op](patchOperation), updateStore);
 
 Alpine.plugin(morph)
 Alpine.plugin(persist)

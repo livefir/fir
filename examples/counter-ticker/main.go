@@ -10,26 +10,34 @@ import (
 )
 
 func NewCounterView() *CounterView {
-	timerCh := make(chan fir.Event)
+	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
+	c := &CounterView{stream: stream}
 	go func() {
 		for ; true; <-ticker.C {
-			timerCh <- fir.Event{ID: "tick"}
+			updated := c.Updated()
+			if updated.IsZero() {
+				continue
+			}
+			stream <- fir.Store{
+				Name: "fir",
+				Data: map[string]any{"count_updated": time.Since(updated).Seconds()},
+			}
 		}
 	}()
-	return &CounterView{ch: timerCh}
+	return c
 }
 
 type CounterView struct {
 	fir.DefaultView
 	count   int32
 	updated time.Time
-	ch      chan fir.Event
+	stream  chan fir.Patch
 	sync.RWMutex
 }
 
-func (c *CounterView) EventReceiver() <-chan fir.Event {
-	return c.ch
+func (c *CounterView) Stream() <-chan fir.Patch {
+	return c.stream
 }
 
 func (c *CounterView) Inc() int32 {
@@ -61,23 +69,24 @@ func (c *CounterView) Updated() time.Time {
 }
 
 func (c *CounterView) Content() string {
-	return `{{define "content" }} 
+	return `
+{{define "content" }} 
 <div class="my-6" style="height: 500px">
-					<div class="columns is-mobile is-centered is-vcentered">
-						<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-							<div>
-								<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
-								<hr>
-								<div id="count" x-text="$store.fir.count || {{.count}}">{{.count}}</div>
-								<button class="button has-background-primary" @click="$fir.emit('inc')">+
-								</button>
-								<button class="button has-background-primary" @click="$fir.emit('dec')">-
-								</button>
-							</div>
-						</div>
-					</div>
+	<div class="columns is-mobile is-centered is-vcentered">
+		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+			<div>
+				<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+				<hr>
+				{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+				<button class="button has-background-primary" @click="$fir.emit('inc')">+
+				</button>
+				<button class="button has-background-primary" @click="$fir.emit('dec')">-
+				</button>
+			</div>
 		</div>
-	 {{end}}`
+	</div>
+</div>
+{{end}}`
 }
 
 func (c *CounterView) Layout() string {
@@ -89,7 +98,7 @@ func (c *CounterView) Layout() string {
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/cdn.min.js"></script>
+		<script defer src="http://localhost:8000/cdn.js"></script>
 	</head>
 	
 	<body>
@@ -105,22 +114,26 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnEvent(s fir.Socket) error {
-	switch s.Event().ID {
-	case "tick":
-		updated := c.Updated()
-		if updated.IsZero() {
-			return nil
-		}
-		s.Store().UpdateProp("count_updated", time.Since(updated).Seconds())
+func (c *CounterView) OnPatchEvent(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
 	case "inc":
-		s.Store().UpdateProp("count", c.Inc())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()}}}, nil
+
 	case "dec":
-		s.Store().UpdateProp("count", c.Dec())
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()}}}, nil
 	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", s.Event())
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil
+
+	return nil, nil
 }
 
 func main() {

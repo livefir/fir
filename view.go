@@ -43,6 +43,7 @@ type View interface {
 	FuncMap() template.FuncMap
 	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
 	OnPatchEvent(event Event) (Patchset, error)
+	Stream() <-chan Patch
 	OnEvent(s Socket) error
 	EventReceiver() <-chan Event
 }
@@ -141,6 +142,10 @@ func (d DefaultView) EventReceiver() <-chan Event {
 	return nil
 }
 
+func (d DefaultView) Stream() <-chan Patch {
+	return nil
+}
+
 type DefaultErrorView struct{}
 
 func (d DefaultErrorView) Content() string {
@@ -197,12 +202,8 @@ func (d DefaultErrorView) EventReceiver() <-chan Event {
 	return nil
 }
 
-type HelloView struct {
-	DefaultView
-}
-
-func (h *HelloView) Content() string {
-	return `<div>Hello fir app</div>`
+func (d DefaultErrorView) Stream() <-chan Patch {
+	return nil
 }
 
 type viewHandler struct {
@@ -231,6 +232,56 @@ func (v *viewHandler) reloadTemplates() {
 	}
 }
 
+func buildMorpPatch(t *template.Template, patch Patch) (Operation, error) {
+	morphPatch := patch.(Morph)
+	var buf bytes.Buffer
+	err := t.ExecuteTemplate(&buf, morphPatch.Template, morphPatch.Data)
+	if err != nil {
+		// if s.wc.debugLog {
+		// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
+		// }
+		return Operation{}, err
+	}
+	// if s.wc.debugLog {
+	// 	log.Printf("[controller]rendered template %+v, with data => \n %+v\n", tmpl, getJSON(data))
+	// }
+	html := buf.String()
+	buf.Reset()
+	return Operation{
+		Op:       morph,
+		Selector: morphPatch.Selector,
+		Value:    html,
+	}, nil
+}
+
+func buildStorePatch(patch Patch) Operation {
+	storePatch := patch.(Store)
+	return Operation{
+		Op:       updateStore,
+		Selector: storePatch.Name,
+		Value:    storePatch.Data,
+	}
+}
+
+func buildOperation(t *template.Template, patch Patch) (Operation, error) {
+
+	switch patch.Op() {
+	case morph:
+		operation, err := buildMorpPatch(t, patch)
+		if err != nil {
+			return Operation{}, err
+		}
+		return operation, nil
+	case reload:
+		return Operation{Op: reload}, nil
+	case updateStore:
+		return buildStorePatch(patch), nil
+	default:
+		return Operation{}, fmt.Errorf("operation unknown")
+	}
+
+}
+
 func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	v.reloadTemplates()
 	var event Event
@@ -252,31 +303,12 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
-		switch patch.Op() {
-		case morph:
-			morphPatch := patch.(Morph)
-			var buf bytes.Buffer
-			err := v.viewTemplate.ExecuteTemplate(&buf, morphPatch.Template, morphPatch.Data)
-			if err != nil {
-				// if s.wc.debugLog {
-				// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
-				// }
-				continue
-			}
-			// if s.wc.debugLog {
-			// 	log.Printf("[controller]rendered template %+v, with data => \n %+v\n", tmpl, getJSON(data))
-			// }
-			html := buf.String()
-			buf.Reset()
-			operations = append(operations, Operation{
-				Op:       morph,
-				Selector: morphPatch.Selector,
-				Value:    html,
-			})
-		case reload:
-		case updateStore:
 
+		operation, err := buildOperation(v.viewTemplate, patch)
+		if err != nil {
+			continue
 		}
+		operations = append(operations, operation)
 	}
 	json.NewEncoder(w).Encode(operations)
 	if err != nil {
@@ -380,6 +412,24 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 					if err != nil {
 						log.Printf("[error] \n event => %+v, \n err: %v\n", event, err)
 					}
+				case <-done:
+					return
+				}
+			}
+
+		}()
+	}
+
+	if v.view.Stream() != nil {
+		go func() {
+			for {
+				select {
+				case patch := <-v.view.Stream():
+					operation, err := buildOperation(v.viewTemplate, patch)
+					if err != nil {
+						continue
+					}
+					v.wc.writeJSON(topicVal, []Operation{operation})
 				case <-done:
 					return
 				}
