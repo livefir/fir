@@ -100,11 +100,6 @@ It borrows the idea of patching DOM on user interaction events from [phoenix liv
 Live patching of the DOM(over websockets, sse) is also available but only for server driven DOM patching.(notifications, live ticker etc.)
 
 
-## Status
-
-Work in progress. The current focus is to get to a developer experience which is acceptable to the community. Roadmap to v1.0.0 is still uncertain.
-
-
 
 ## Principles
 
@@ -118,3 +113,7 @@ Work in progress. The current focus is to get to a developer experience which is
 - Have a low learning curve: For a Go user the only new thing to learn would be Alpinejs. And yes: HTML & CSS
 - No custom template engine: Writing our own template engine can enable in-memory html diffing and minimal change partial for the client, but it also means maintaining a new non standard template engine.
 
+
+## Status
+
+Work in progress. The current focus is to get to a developer experience which is acceptable to the community. Roadmap to v1.0.0 is still uncertain.
