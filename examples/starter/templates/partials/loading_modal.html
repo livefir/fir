@@ -1,5 +1,7 @@
 {{ define "loading_modal" }}
-<div id="loading-modal" class="modal" :class="$store.fir.show_loading_modal && 'is-active'">
+<div x-data="{loading: false, toggle(){this.loading = !this.loading}}" @fir:emit-start.window="toggle"
+    @fir:emit-end.window="toggle" @fir:submit-start.window="toggle" @fir:submit-end.window="toggle" id="loading-modal"
+    class="modal" :class="loading && 'is-active'">
     <div class="modal-background"></div>
     <button class="button is-text is-loading is-large" disabled></button>
 </div>

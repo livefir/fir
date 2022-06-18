@@ -36,7 +36,9 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            emit: post,
+            emit(id, params) {
+                post(el, id, params)
+            },
             navigate(to) {
                 if (!to) {
                     return
@@ -44,7 +46,10 @@ const Plugin = (Alpine) => {
                 window.location.href = to;
             },
             submit(eventID) {
-
+                if (!(el instanceof HTMLFormElement)) {
+                    console.error("Element is not a form. Can't submit event. Please use $fir.emit for non-form elements")
+                    return
+                }
                 let inputs = [...el.querySelectorAll("input[data-rules]")];
                 let formErrors = { errors: {} }
                 inputs.map((input) => {
@@ -65,7 +70,7 @@ const Plugin = (Alpine) => {
                     let params = {};
                     formData.forEach((value, key) => params[key] = value);
                     params["formName"] = formName;
-                    post(eventID, params)
+                    post(el, eventID, params)
                     return;
                 }
             }
@@ -95,7 +100,38 @@ const Plugin = (Alpine) => {
         store: (operation) => updateStore(operation.selector, operation.value)
     }
 
-    const post = (id, params) => {
+    const post = (el, id, params) => {
+        let detail = {
+            id: el.id,
+            eventId: id,
+            params: params,
+        }
+
+        let startEventName = "fir:emit-start"
+        let endEventName = "fir:emit-end"
+        if (el instanceof HTMLFormElement) {
+            detail['formName'] = el.getAttribute("name");
+            startEventName = "fir:submit-start"
+            endEventName = "fir:submit-end"
+        }
+
+        const options = {
+            detail,
+            bubbles: true,
+            // Allows events to pass the shadow DOM barrier.
+            composed: true,
+            cancelable: true,
+        }
+
+
+        el.dispatchEvent(new CustomEvent(startEventName, options))
+        if (detail.id) {
+            el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.id}`, options))
+        }
+        if (detail.formName) {
+            el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.formName}`, options))
+        }
+
         fetch(window.location.pathname, {
             method: 'POST',
             headers: {
@@ -114,7 +150,15 @@ const Plugin = (Alpine) => {
                 });
             })
             .catch((error) => {
-                console.error('Error:', error);
+                console.error(`${endEventName} error: ${error}, detail: ${detail}`, error,);
+            }).finally(() => {
+                el.dispatchEvent(new CustomEvent(endEventName, options))
+                if (detail.id) {
+                    el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.id}`, options))
+                }
+                if (detail.formName) {
+                    el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.formName}`, options))
+                }
             });
     }
 
