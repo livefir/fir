@@ -265,9 +265,19 @@ In response to user interaction we want to update a part of our web page to disp
 {% raw %}
 ```html
 <div>
-	{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-	<button class="button has-background-primary" @click="$fir.emit('inc')">+</button>
-	<button class="button has-background-primary" @click="$fir.emit('dec')">-</button>
+	{{block "count" .}}
+		<div id="count">{{.count}}</div>
+	{{end}}
+	<button 
+		class="button has-background-primary" 
+		@click="$fir.emit('inc')">
+		+
+	</button>
+	<button 
+		class="button has-background-primary" 
+		@click="$fir.emit('dec')">
+		-
+	</button>
 </div>
 ```
 {% endraw %}
