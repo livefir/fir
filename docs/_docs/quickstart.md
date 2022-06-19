@@ -72,10 +72,13 @@ import (
 	"github.com/adnaan/fir"
 )
 
+type Counter struct {
+	count int32
+}
 
 type CounterView struct {
 	fir.DefaultView
-	count int32
+	model *Counter
 }
 
 func (c *CounterView) Content() string {
@@ -84,7 +87,7 @@ func (c *CounterView) Content() string {
 
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(CounterView{}))
+	http.Handle("/", controller.Handler(&CounterView{model: &Counter{}}))
 	http.ListenAndServe(":9867", nil)
 }
 ```
@@ -93,7 +96,7 @@ Run the above code to see the changes at [localhost:9867](http://localhost:9867)
 
 ## User interaction
 
-`Fir` has a companion javascript library which lets you send browser events to the server. You can use these events to change server state(in our case: `count int32`) and make partial page updates without a page reload.
+`Fir` has a companion javascript library which lets you send browser events to the server. You can use these events to change server state(in our case: `model *Counter`) and make partial page updates without a page reload.
 
 {% raw %}
 ```html
@@ -173,9 +176,12 @@ import (
 	"github.com/adnaan/fir"
 )
 
+type Counter struct {
+	count int32
+}
+
 type CounterView struct {
 	fir.DefaultView
-	count int32
 }
 
 func (c *CounterView) Content() string {
@@ -213,7 +219,7 @@ func (c *CounterView) Content() string {
 
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(CounterView{}))
+	http.Handle("/", controller.Handler(&CounterView{model: &Counter{}}))
 	http.ListenAndServe(":9867", nil)
 }
 ```
@@ -251,93 +257,6 @@ is same as:
 ```
 {% endraw %}
 
-Since we want to count concurrently, we have used an atomic counter and added a few extra methods(`Inc`, `Dec`) to make our life easier. See the updated code below.
-
-<details markdown="block">
-  <summary>
-    Expand main.go
-  </summary>
-
-{% raw %}
-```go
-
-package main
-
-import (
-	"log"
-	"net/http"
-	"sync/atomic"
-
-	"github.com/adnaan/fir"
-)
-
-type CounterView struct {
-	fir.DefaultView
-	count int32
-}
-
-func (c *CounterView) Inc() int32 {
-	atomic.AddInt32(&c.count, 1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Dec() int32 {
-	atomic.AddInt32(&c.count, -1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Value() int32 {
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Content() string {
-	return `<!DOCTYPE html>
-	<html lang="en">
-	
-	<head>
-		<title>{{.app_name}}</title>
-		<meta charset="UTF-8">
-		<meta name="description" content="A counter app">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
-		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-	</head>
-
-	<body>
-		<div class="my-6" style="height: 500px">
-			<div class="columns is-mobile is-centered is-vcentered">
-				<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-					<div>
-						{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-						<button class="button has-background-primary" @click="$fir.emit('inc')">+</button>
-						<button class="button has-background-primary" @click="$fir.emit('dec')">-</button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</body>
-	
-	</html>`
-}
-
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Value(),
-	}
-}
-
-func main() {
-	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(CounterView{}))
-	http.ListenAndServe(":9867", nil)
-}
-```
-{% endraw %}
-
-</details>
-
-Running the above code doesn't do anything new. We need a way to handle events emitted on clicking the `+`, `-` buttons.
-
 
 ## Update parts of the view
 
@@ -356,26 +275,33 @@ In response to user interaction we want to update a part of our web page to disp
 When the `+` button is clicked, an event `inc` is sent to the server which sends backs a `patch` instruction back to the page.
 
 ```go
-func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
+
+func (c *Counter) Inc() fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+	}
+}
+
+func (c *Counter) Dec() fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
+	}
+}
+
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()}}}, nil
-
+		return fir.Patchset{c.model.Inc()}
 	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()}}}, nil
+		return fir.Patchset{c.model.Dec()}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-
-	return nil, nil
+	return nil
 }
 ```
 
@@ -402,23 +328,33 @@ import (
 	"github.com/adnaan/fir"
 )
 
-type CounterView struct {
-	fir.DefaultView
+type Counter struct {
 	count int32
 }
 
-func (c *CounterView) Inc() int32 {
-	atomic.AddInt32(&c.count, 1)
+func (c *Counter) Inc() fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+	}
+}
+
+func (c *Counter) Dec() fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
+	}
+}
+
+func (c *Counter) Value() int32 {
 	return atomic.LoadInt32(&c.count)
 }
 
-func (c *CounterView) Dec() int32 {
-	atomic.AddInt32(&c.count, -1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Value() int32 {
-	return atomic.LoadInt32(&c.count)
+type CounterView struct {
+	fir.DefaultView
+	model *Counter
 }
 
 func (c *CounterView) Content() string {
@@ -455,41 +391,28 @@ func (c *CounterView) Content() string {
 
 func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Value(),
+		"count": c.model.Value(),
 	}
 }
 
-func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()},
-			},
-		}, nil
-
+		return fir.Patchset{c.model.Inc()}
 	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()},
-			},
-		}, nil
+		return fir.Patchset{c.model.Dec()}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-
-	return nil, nil
+	return nil
 }
 
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(&CounterView{}))
+	http.Handle("/", controller.Handler(&CounterView{model: &Counter{}}))
 	http.ListenAndServe(":9867", nil)
 }
+
 
 ```
 {% endraw %}
@@ -523,127 +446,6 @@ Notice the `{{template "content" .}}`. `Fir` looks for an equivalent defined tem
 
 {% endraw %}
 
-Lets update our code to split layout and content.
-
-
-<details markdown="block">
-  <summary>
-    Expand main.go
-  </summary>
-
-{% raw %}
-```go
-
-package main
-
-import (
-	"log"
-	"net/http"
-	"sync/atomic"
-
-	"github.com/adnaan/fir"
-)
-
-type CounterView struct {
-	fir.DefaultView
-	count int32
-}
-
-func (c *CounterView) Inc() int32 {
-	atomic.AddInt32(&c.count, 1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Dec() int32 {
-	atomic.AddInt32(&c.count, -1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Value() int32 {
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Content() string {
-	return `
-{{define "content" }} 
-<div class="my-6" style="height: 500px">
-	<div class="columns is-mobile is-centered is-vcentered">
-		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-			<div>
-				{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-				<button class="button has-background-primary" @click="$fir.emit('inc')">+
-				</button>
-				<button class="button has-background-primary" @click="$fir.emit('dec')">-
-				</button>
-			</div>
-		</div>
-	</div>
-</div>
-{{end}}`
-
-func (c *CounterView) Layout() string {
-	return 
-`<!DOCTYPE html>
-<html lang="en">
-
-<head>
-	<title>{{.app_name}}</title>
-	<meta charset="UTF-8">
-	<meta name="description" content="A counter app">
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
-	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-
-<body>
-	{{template "content" .}}
-</body>
-
-</html>`
-}
-
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Value(),
-	}
-}
-
-func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
-	switch event.ID {
-	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()},
-			},
-		}, nil
-
-	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()},
-			},
-		}, nil
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
-	}
-
-	return nil, nil
-}
-
-func main() {
-	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(&CounterView{}))
-	http.ListenAndServe(":9867", nil)
-}
-```
-{% endraw %}
-
-</details>
-
 ## Optional: Live Ticker
 
 On user interaction events, `OnEvent` sends back a `patchset` which patches the interesting parts of the page. It would be nice to update the page when something changes for a user on the server(e.g. notifications, stock ticker, chat message etc.). Using the `fir` library its possible to `stream` a `patch` over websockets or server-sent events(SSE).
@@ -651,10 +453,12 @@ On user interaction events, `OnEvent` sends back a `patchset` which patches the 
 Override the `Stream` method of the `View` interface to return a receive only channel(`<- chan Patch`). When a `patch` is sent to this channel its sent to the client library where its executed to update the page.
 
 ```go
+
 type CounterView struct {
 	fir.DefaultView
-	count int32
-	stream    chan fir.Patch
+	model  *Counter
+	stream chan fir.Patch
+	sync.RWMutex
 }
 
 func (c *CounterView) Stream() <-chan fir.Patch {
@@ -681,17 +485,15 @@ For this example, we use a different `patch` type: `fir.Store{}`.
 func NewCounterView() *CounterView {
 	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
-	c := &CounterView{stream: stream}
+	c := &CounterView{stream: stream, model: &Counter{}}
+
 	go func() {
 		for ; true; <-ticker.C {
-			updated := c.Updated()
-			if updated.IsZero() {
+			patch, err := c.model.Updated()
+			if err != nil {
 				continue
 			}
-			stream <- fir.Store{
-				Name: "fir",
-				Data: map[string]any{"count_updated": time.Since(updated).Seconds()},
-			}
+			stream <- patch
 		}
 	}()
 	return c
@@ -717,6 +519,7 @@ See the complete working example:
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -725,20 +528,66 @@ import (
 	"github.com/adnaan/fir"
 )
 
+type Counter struct {
+	count   int32
+	updated time.Time
+	sync.RWMutex
+}
+
+func (c *Counter) Inc() fir.Patch {
+	c.Lock()
+	defer c.Unlock()
+	c.count += 1
+	c.updated = time.Now()
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": c.count},
+	}
+}
+
+func (c *Counter) Dec() fir.Patch {
+	c.Lock()
+	defer c.Unlock()
+	c.count -= 1
+	c.updated = time.Now()
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": c.count},
+	}
+}
+
+func (c *Counter) Updated() (fir.Patch, error) {
+	c.RLock()
+	defer c.RUnlock()
+	if c.updated.IsZero() {
+		return nil, fmt.Errorf("time is zero")
+	}
+	return fir.Store{
+		Name: "fir",
+		Data: map[string]any{"count_updated": time.Since(c.updated).Seconds()},
+	}, nil
+}
+
+func (c *Counter) Count() int32 {
+	c.RLock()
+	defer c.RUnlock()
+	return c.count
+}
+
 func NewCounterView() *CounterView {
 	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
-	c := &CounterView{stream: stream}
+	c := &CounterView{stream: stream, model: &Counter{}}
+
 	go func() {
 		for ; true; <-ticker.C {
-			updated := c.Updated()
-			if updated.IsZero() {
+			patch, err := c.model.Updated()
+			if err != nil {
 				continue
 			}
-			stream <- fir.Store{
-				Name: "fir",
-				Data: map[string]any{"count_updated": time.Since(updated).Seconds()},
-			}
+			stream <- patch
 		}
 	}()
 	return c
@@ -746,42 +595,13 @@ func NewCounterView() *CounterView {
 
 type CounterView struct {
 	fir.DefaultView
-	count   int32
-	updated time.Time
-	stream  chan fir.Patch
+	model  *Counter
+	stream chan fir.Patch
 	sync.RWMutex
 }
 
 func (c *CounterView) Stream() <-chan fir.Patch {
 	return c.stream
-}
-
-func (c *CounterView) Inc() int32 {
-	c.Lock()
-	defer c.Unlock()
-	c.count += 1
-	c.updated = time.Now()
-	return c.count
-}
-
-func (c *CounterView) Dec() int32 {
-	c.Lock()
-	defer c.Unlock()
-	c.count -= 1
-	c.updated = time.Now()
-	return c.count
-}
-
-func (c *CounterView) Count() int32 {
-	c.RLock()
-	defer c.RUnlock()
-	return c.count
-}
-
-func (c *CounterView) Updated() time.Time {
-	c.RLock()
-	defer c.RUnlock()
-	return c.updated
 }
 
 func (c *CounterView) Content() string {
@@ -827,30 +647,21 @@ func (c *CounterView) Layout() string {
 
 func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Count(),
+		"count": c.model.Count(),
 	}
 }
 
-func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()}}}, nil
-
+		return fir.Patchset{c.model.Inc()}
 	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()}}}, nil
+		return fir.Patchset{c.model.Dec()}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 
-	return nil, nil
+	return nil
 }
 
 func main() {
@@ -858,6 +669,7 @@ func main() {
 	http.Handle("/", controller.Handler(NewCounterView()))
 	http.ListenAndServe(":9867", nil)
 }
+	
 ```
 
 {% endraw %}

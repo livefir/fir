@@ -84,7 +84,6 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-
 	return nil
 }
 
