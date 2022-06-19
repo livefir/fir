@@ -35,45 +35,51 @@ See the complete code in [examples/counter-ticker](https://github.com/adnaan/fir
 ```go
 ...
 
-func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
-	switch event.ID {
-	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()},
-			},
-		}, nil
-
-	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()},
-			},
-		}, nil
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
+func (c *Counter) Inc() fir.Patch {
+	c.Lock()
+	defer c.Unlock()
+	c.count += 1
+	c.updated = time.Now()
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": c.count},
 	}
+}
 
-	return nil, nil
+func (c *Counter) Dec() fir.Patch {
+	c.Lock()
+	defer c.Unlock()
+	c.count -= 1
+	c.updated = time.Now()
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": c.count},
+	}
+}
+
+func (c *Counter) Updated() (fir.Patch, error) {
+	c.RLock()
+	defer c.RUnlock()
+	if c.updated.IsZero() {
+		return nil, fmt.Errorf("time is zero")
+	}
+	return fir.Store{
+		Name: "fir",
+		Data: map[string]any{"count_updated": time.Since(c.updated).Seconds()},
+	}, nil
 }
 
 ...
+
 go func() {
 	for ; true; <-ticker.C {
-		updated := c.Updated()
-		if updated.IsZero() {
+		patch, err := c.model.Updated()
+		if err != nil {
 			continue
 		}
-		stream <- fir.Store{
-			Name: "fir",
-			Data: map[string]any{
-        "count_updated": time.Since(updated).Seconds(),
-        },
-		}
+		stream <- patch
 	}
 }()
 
