@@ -1,20 +1,10 @@
 ---
-layout: page
 title: Quickstart
-permalink: /quickstart/
+permalink: /docs/quickstart/
+redirect_from:
+  - /docs/
 ---
 
-
-<details open markdown="block">
-  <summary>
-    Table of contents
-  </summary>
-  {: .text-delta }
-- TOC
-{:toc}
-</details>
-
-# Quickstart
 
 Lets spend the next 15 minutes creating a new `reactive` counter app. If you want to skip ahead and look at final code, its here: [examples/counter/main.go](https://github.com/adnaan/fir/blob/main/examples/counter/main.go)
 

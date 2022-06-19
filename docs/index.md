@@ -2,15 +2,87 @@
 # Feel free to add content and custom Front Matter to this file.
 # To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
 
-layout: home
+layout: single
 permalink: /
 ---
 
-A Go library to build reactive apps.
+A library to build reactive apps using Go, HTML, CSS and [alpinejs](https://alpinejs.dev).
 
-- Suitable for Go developers who want to build moderately complex apps, internal tools, prototypes etc.
-- Skills needed: Go, HTML, CSS, Alpine.js.
-- Focuses only on the view layer.
+## A live counter app.
+
+See the complete code in [examples/counter-ticker](https://github.com/adnaan/fir/blob/main/examples/counter-ticker/main.go)
+
+`html`
+{%raw%}
+```html
+<div>
+  <div>
+    Count updated: 
+    <span x-text="$store.fir.count_updated || 0"></span> 
+    seconds ago
+  </div>
+  {{block "count" .}}<div id="count">{{.count}}</div>{{end}}
+  <button @click="$fir.emit('inc')">+</button>
+  <button @click="$fir.emit('dec')">-</button>
+</div>
+
+...
+```
+
+
+`go`
+
+```go
+...
+
+func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+	switch event.ID {
+	case "inc":
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Inc()},
+			},
+		}, nil
+
+	case "dec":
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#count",
+				Template: "count",
+				Data:     fir.Data{"count": c.Dec()},
+			},
+		}, nil
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
+	}
+
+	return nil, nil
+}
+
+...
+go func() {
+	for ; true; <-ticker.C {
+		updated := c.Updated()
+		if updated.IsZero() {
+			continue
+		}
+		stream <- fir.Store{
+			Name: "fir",
+			Data: map[string]any{
+        "count_updated": time.Since(updated).Seconds(),
+        },
+		}
+	}
+}()
+
+...
+```
+{%endraw%}
+
+
+See a more real world example in [examples/starter](./examples/starter/) which is also deployed here: [https://fir-starter.fly.dev/](https://fir-starter.fly.dev/)
 
 **Why does it exist ?**
 
@@ -38,6 +110,8 @@ It borrows the idea of patching DOM on user interaction events from [phoenix liv
 
 Live patching of the DOM(over websockets, sse) is also available but only for server driven DOM patching.(notifications, live ticker etc.)
 
+
+
 ## Principles
 
 - **Library** and not a framework. It’s a Go **library** to build reactive user interfaces.
@@ -49,3 +123,8 @@ Live patching of the DOM(over websockets, sse) is also available but only for se
 - Be SEO friendly: First page render is done fully on the server side. Real-time interaction is done once the page has been rendered.
 - Have a low learning curve: For a Go user the only new thing to learn would be Alpinejs. And yes: HTML & CSS
 - No custom template engine: Writing our own template engine can enable in-memory html diffing and minimal change partial for the client, but it also means maintaining a new non standard template engine.
+
+
+## Status
+
+Work in progress. The current focus is to get to a developer experience which is acceptable to the community. Roadmap to v1.0.0 is still uncertain.
