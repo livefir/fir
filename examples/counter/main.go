@@ -8,23 +8,33 @@ import (
 	"github.com/adnaan/fir"
 )
 
-type CounterView struct {
-	fir.DefaultView
+type Counter struct {
 	count int32
 }
 
-func (c *CounterView) Inc() int32 {
-	atomic.AddInt32(&c.count, 1)
+func (c *Counter) Inc() fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+	}
+}
+
+func (c *Counter) Dec() fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
+	}
+}
+
+func (c *Counter) Value() int32 {
 	return atomic.LoadInt32(&c.count)
 }
 
-func (c *CounterView) Dec() int32 {
-	atomic.AddInt32(&c.count, -1)
-	return atomic.LoadInt32(&c.count)
-}
-
-func (c *CounterView) Value() int32 {
-	return atomic.LoadInt32(&c.count)
+type CounterView struct {
+	fir.DefaultView
+	model *Counter
 }
 
 func (c *CounterView) Content() string {
@@ -61,29 +71,16 @@ func (c *CounterView) Content() string {
 
 func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Value(),
+		"count": c.model.Value(),
 	}
 }
 
 func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()},
-			},
-		}
-
+		return fir.Patchset{c.model.Inc()}
 	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()},
-			},
-		}
+		return fir.Patchset{c.model.Dec()}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
@@ -93,6 +90,6 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(&CounterView{}))
+	http.Handle("/", controller.Handler(&CounterView{model: &Counter{}}))
 	http.ListenAndServe(":9867", nil)
 }
