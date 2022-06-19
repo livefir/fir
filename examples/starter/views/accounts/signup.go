@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -26,17 +28,15 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 	case "auth/signup":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil
+			return errorPatch(err)
 		}
 
 		if req.Email == "" {
-			return nil
-			// return nil, fmt.Errorf("%w", errors.New("email is required"))
+			return errorPatch(fmt.Errorf("%w", errors.New("email is required")))
 		}
 
 		if req.Password == "" {
-			return nil
-			// return nil, fmt.Errorf("%w", errors.New("password is required"))
+			return errorPatch(fmt.Errorf("%w", errors.New("password is required")))
 		}
 
 		attributes := make(map[string]interface{})

@@ -25,11 +25,11 @@ func (f *ForgotView) OnEvent(event fir.Event) fir.Patchset {
 	case "account/forgot":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil
+			return errorPatch(err)
 		}
 
 		if err := f.Auth.Recovery(event.RequestContext(), req.Email); err != nil {
-			return nil
+			return errorPatch(err)
 		}
 
 		return fir.Patchset{fir.Store{

@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -26,14 +28,13 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	case "auth/magic-login":
 		r := new(ProfileRequest)
 		if err := event.DecodeParams(r); err != nil {
-			return nil
+			return errorPatch(err)
 		}
 		if r.Email == "" {
-			return nil
-			// return nil, fmt.Errorf("%w", errors.New("email is required"))
+			return errorPatch(fmt.Errorf("%w", errors.New("email is required")))
 		}
 		if err := s.Auth.SendPasswordlessToken(event.RequestContext(), r.Email); err != nil {
-			return nil
+			return errorPatch(err)
 		}
 
 		return fir.Patchset{fir.Morph{
