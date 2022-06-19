@@ -35,7 +35,7 @@ See the complete code in [examples/counter-ticker](https://github.com/adnaan/fir
 ```go
 ...
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{

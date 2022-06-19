@@ -115,26 +115,26 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{
 			fir.Morph{
 				Selector: "#count",
 				Template: "count",
-				Data:     fir.Data{"count": c.Inc()}}}, nil
+				Data:     fir.Data{"count": c.Inc()}}}
 
 	case "dec":
 		return fir.Patchset{
 			fir.Morph{
 				Selector: "#count",
 				Template: "count",
-				Data:     fir.Data{"count": c.Dec()}}}, nil
+				Data:     fir.Data{"count": c.Dec()}}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 
-	return nil, nil
+	return nil
 }
 
 func main() {

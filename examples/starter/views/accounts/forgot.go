@@ -20,24 +20,24 @@ func (f *ForgotView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (f *ForgotView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (f *ForgotView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "account/forgot":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil, err
+			return nil
 		}
 
 		if err := f.Auth.Recovery(event.RequestContext(), req.Email); err != nil {
-			return nil, err
+			return nil
 		}
 
 		return fir.Patchset{fir.Store{
 			Name: "forgot",
 			Data: map[string]any{"recovery_sent": true},
-		}}, nil
+		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil, nil
+	return nil
 }

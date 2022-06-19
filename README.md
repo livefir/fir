@@ -44,7 +44,7 @@ go func() {
 
 ...
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{

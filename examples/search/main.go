@@ -50,12 +50,12 @@ func (s *Search) Partials() []string {
 	return []string{"cities.html"}
 }
 
-func (s *Search) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "search":
 		req := new(QueryRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil, err
+			return nil
 		}
 		return fir.Patchset{fir.Morph{
 			Template: "cities",
@@ -63,11 +63,11 @@ func (s *Search) OnPatch(event fir.Event) (fir.Patchset, error) {
 			Data: fir.Data{
 				"cities": getCities(req.Query),
 			},
-		}}, nil
+		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil, nil
+	return nil
 }
 
 func main() {

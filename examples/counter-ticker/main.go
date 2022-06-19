@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -9,20 +10,66 @@ import (
 	"github.com/adnaan/fir"
 )
 
+type Counter struct {
+	count   int32
+	updated time.Time
+	sync.RWMutex
+}
+
+func (c *Counter) Inc() fir.Patch {
+	c.Lock()
+	defer c.Unlock()
+	c.count += 1
+	c.updated = time.Now()
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": c.count},
+	}
+}
+
+func (c *Counter) Dec() fir.Patch {
+	c.Lock()
+	defer c.Unlock()
+	c.count -= 1
+	c.updated = time.Now()
+	return fir.Morph{
+		Selector: "#count",
+		Template: "count",
+		Data:     fir.Data{"count": c.count},
+	}
+}
+
+func (c *Counter) Updated() (fir.Patch, error) {
+	c.RLock()
+	defer c.RUnlock()
+	if c.updated.IsZero() {
+		return nil, fmt.Errorf("time is zero")
+	}
+	return fir.Store{
+		Name: "fir",
+		Data: map[string]any{"count_updated": time.Since(c.updated).Seconds()},
+	}, nil
+}
+
+func (c *Counter) Count() int32 {
+	c.RLock()
+	defer c.RUnlock()
+	return c.count
+}
+
 func NewCounterView() *CounterView {
 	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
-	c := &CounterView{stream: stream}
+	c := &CounterView{stream: stream, model: &Counter{}}
+
 	go func() {
 		for ; true; <-ticker.C {
-			updated := c.Updated()
-			if updated.IsZero() {
+			patch, err := c.model.Updated()
+			if err != nil {
 				continue
 			}
-			stream <- fir.Store{
-				Name: "fir",
-				Data: map[string]any{"count_updated": time.Since(updated).Seconds()},
-			}
+			stream <- patch
 		}
 	}()
 	return c
@@ -30,42 +77,13 @@ func NewCounterView() *CounterView {
 
 type CounterView struct {
 	fir.DefaultView
-	count   int32
-	updated time.Time
-	stream  chan fir.Patch
+	model  *Counter
+	stream chan fir.Patch
 	sync.RWMutex
 }
 
 func (c *CounterView) Stream() <-chan fir.Patch {
 	return c.stream
-}
-
-func (c *CounterView) Inc() int32 {
-	c.Lock()
-	defer c.Unlock()
-	c.count += 1
-	c.updated = time.Now()
-	return c.count
-}
-
-func (c *CounterView) Dec() int32 {
-	c.Lock()
-	defer c.Unlock()
-	c.count -= 1
-	c.updated = time.Now()
-	return c.count
-}
-
-func (c *CounterView) Count() int32 {
-	c.RLock()
-	defer c.RUnlock()
-	return c.count
-}
-
-func (c *CounterView) Updated() time.Time {
-	c.RLock()
-	defer c.RUnlock()
-	return c.updated
 }
 
 func (c *CounterView) Content() string {
@@ -111,30 +129,21 @@ func (c *CounterView) Layout() string {
 
 func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
-		"count": c.Count(),
+		"count": c.model.Count(),
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "inc":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Inc()}}}, nil
-
+		return fir.Patchset{c.model.Inc()}
 	case "dec":
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#count",
-				Template: "count",
-				Data:     fir.Data{"count": c.Dec()}}}, nil
+		return fir.Patchset{c.model.Dec()}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
 
-	return nil, nil
+	return nil
 }
 
 func main() {

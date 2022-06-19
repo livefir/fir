@@ -1,8 +1,6 @@
 package accounts
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -23,27 +21,29 @@ func (s *SignupView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (s *SignupView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "auth/signup":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil, err
+			return nil
 		}
 
 		if req.Email == "" {
-			return nil, fmt.Errorf("%w", errors.New("email is required"))
+			return nil
+			// return nil, fmt.Errorf("%w", errors.New("email is required"))
 		}
 
 		if req.Password == "" {
-			return nil, fmt.Errorf("%w", errors.New("password is required"))
+			return nil
+			// return nil, fmt.Errorf("%w", errors.New("password is required"))
 		}
 
 		attributes := make(map[string]interface{})
 		attributes["name"] = req.Name
 
 		if err := s.Auth.Signup(event.RequestContext(), req.Email, req.Password, attributes); err != nil {
-			return nil, err
+			return nil
 		}
 		return fir.Patchset{fir.Morph{
 			Template: "signup_container",
@@ -51,11 +51,11 @@ func (s *SignupView) OnPatch(event fir.Event) (fir.Patchset, error) {
 			Data: fir.Data{
 				"sent_confirmation": true,
 			},
-		}}, nil
+		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil, nil
+	return nil
 }
 
 func (s *SignupView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {

@@ -44,7 +44,7 @@ type View interface {
 	FuncMap() template.FuncMap
 	// Lifecyle
 	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
-	OnPatch(event Event) (Patchset, error)
+	OnEvent(event Event) Patchset
 	Stream() <-chan Patch
 }
 
@@ -119,12 +119,12 @@ func (d DefaultView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, 
 }
 
 // OnEvent handles the events sent from the browser or received on the EventReceiver channel
-func (d DefaultView) OnPatch(event Event) (Patchset, error) {
+func (d DefaultView) OnEvent(event Event) Patchset {
 	switch event.ID {
 	default:
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
 	}
-	return Patchset{}, nil
+	return Patchset{}
 }
 
 // EventReceiver is used to configure a receive only channel for receiving events from concurrent goroutines.
@@ -173,12 +173,12 @@ func (d DefaultErrorView) OnRequest(w http.ResponseWriter, r *http.Request) (Sta
 }
 
 // OnEvent handles the events sent from the browser or received on the EventReceiver channel
-func (d DefaultErrorView) OnPatch(event Event) (Patchset, error) {
+func (d DefaultErrorView) OnEvent(event Event) Patchset {
 	switch event.ID {
 	default:
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
 	}
-	return Patchset{}, nil
+	return Patchset{}
 }
 
 func (d DefaultErrorView) EventReceiver() <-chan Event {
@@ -280,11 +280,7 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		return
 	}
 	event.requestContext = r.Context()
-	patchset, err := v.view.OnPatch(event)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	patchset := v.view.OnEvent(event)
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
 

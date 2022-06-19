@@ -356,7 +356,7 @@ In response to user interaction we want to update a part of our web page to disp
 When the `+` button is clicked, an event `inc` is sent to the server which sends backs a `patch` instruction back to the page.
 
 ```go
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{
@@ -459,7 +459,7 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{
@@ -608,7 +608,7 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{
@@ -646,7 +646,7 @@ func main() {
 
 ## Optional: Live Ticker
 
-On user interaction events, `OnPatch` sends back a `patchset` which patches the interesting parts of the page. It would be nice to update the page when something changes for a user on the server(e.g. notifications, stock ticker, chat message etc.). Using the `fir` library its possible to `stream` a `patch` over websockets or server-sent events(SSE).
+On user interaction events, `OnEvent` sends back a `patchset` which patches the interesting parts of the page. It would be nice to update the page when something changes for a user on the server(e.g. notifications, stock ticker, chat message etc.). Using the `fir` library its possible to `stream` a `patch` over websockets or server-sent events(SSE).
 
 Override the `Stream` method of the `View` interface to return a receive only channel(`<- chan Patch`). When a `patch` is sent to this channel its sent to the client library where its executed to update the page.
 
@@ -831,7 +831,7 @@ func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Sta
 	}
 }
 
-func (c *CounterView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (c *CounterView) OnEvent(event fir.Event) (fir.Patchset) {
 	switch event.ID {
 	case "inc":
 		return fir.Patchset{

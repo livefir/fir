@@ -1,8 +1,6 @@
 package accounts
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -23,29 +21,30 @@ func (s *SigninView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (s *SigninView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "auth/magic-login":
 		r := new(ProfileRequest)
 		if err := event.DecodeParams(r); err != nil {
-			return nil, err
+			return nil
 		}
 		if r.Email == "" {
-			return nil, fmt.Errorf("%w", errors.New("email is required"))
+			return nil
+			// return nil, fmt.Errorf("%w", errors.New("email is required"))
 		}
 		if err := s.Auth.SendPasswordlessToken(event.RequestContext(), r.Email); err != nil {
-			return nil, err
+			return nil
 		}
 
 		return fir.Patchset{fir.Morph{
 			Template: "signin_container",
 			Selector: "#signin_container",
 			Data:     fir.Data{"sent_magic_link": true},
-		}}, nil
+		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil, nil
+	return nil
 }
 
 func (s *SigninView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {

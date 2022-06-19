@@ -1,8 +1,6 @@
 package accounts
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -25,27 +23,28 @@ func (rv *ResetView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (rv *ResetView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (rv *ResetView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "account/reset":
 		r := new(ResetReq)
 		if err := event.DecodeParams(r); err != nil {
-			return nil, err
+			return nil
 		}
 		if r.ConfirmPassword != r.Password {
-			return nil, fmt.Errorf("%w", errors.New("passwords don't match"))
+			return nil
+			// return nil, fmt.Errorf("%w", errors.New("passwords don't match"))
 		}
 		if err := rv.Auth.ConfirmRecovery(event.RequestContext(), r.Token, r.Password); err != nil {
-			return nil, err
+			return nil
 		}
 		return fir.Patchset{fir.Store{
 			Name: "reset",
 			Data: map[string]any{"password_reset": true},
-		}}, nil
+		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil, nil
+	return nil
 }
 
 func (rv *ResetView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {

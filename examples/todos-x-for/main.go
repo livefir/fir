@@ -47,10 +47,10 @@ func (t *TodosView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Statu
 	return fir.Status{Code: 200}, fir.Data{"todos": string(b)}
 }
 
-func (t *TodosView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 	var todo Todo
 	if err := event.DecodeParams(&todo); err != nil {
-		return nil, err
+		return nil
 	}
 
 	switch event.ID {
@@ -64,14 +64,14 @@ func (t *TodosView) OnPatch(event fir.Event) (fir.Patchset, error) {
 						"textError": "Min length is 4",
 					},
 				},
-			}, nil
+			}
 		}
 		if err := t.db.Insert(bolthold.NextSequence(), &todo); err != nil {
-			return nil, err
+			return nil
 		}
 	case "todos/del":
 		if err := t.db.Delete(todo.ID, &todo); err != nil {
-			return nil, err
+			return nil
 		}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
@@ -79,7 +79,7 @@ func (t *TodosView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	// list updated todos
 	todos := make([]Todo, 0) // important: initialise the array to return [] instead of null as a json response
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return nil, err
+		return nil
 	}
 	return fir.Patchset{
 		fir.Store{
@@ -92,7 +92,7 @@ func (t *TodosView) OnPatch(event fir.Event) (fir.Patchset, error) {
 			Name: "todos",
 			Data: todos,
 		},
-	}, nil
+	}
 }
 
 func main() {

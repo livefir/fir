@@ -22,7 +22,7 @@ func (s *SettingsView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (s *SettingsView) OnPatch(event fir.Event) (fir.Patchset, error) {
+func (s *SettingsView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "account/update":
 		return s.UpdateProfile(event)
@@ -31,7 +31,7 @@ func (s *SettingsView) OnPatch(event fir.Event) (fir.Patchset, error) {
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return nil, nil
+	return nil
 }
 
 func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
@@ -57,24 +57,24 @@ func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.St
 	}
 }
 
-func (s *SettingsView) UpdateProfile(event fir.Event) (fir.Patchset, error) {
+func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 	req := new(ProfileRequest)
 	if err := event.DecodeParams(req); err != nil {
-		return nil, err
+		return nil
 	}
 	rCtx := event.RequestContext()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	if err := acc.Attributes().Set(rCtx, "name", req.Name); err != nil {
-		return nil, err
+		return nil
 	}
 	var patchset fir.Patchset
 	if req.Email != "" && req.Email != acc.Email() {
 		if err := acc.ChangeEmail(rCtx, req.Email); err != nil {
-			return nil, err
+			return nil
 		}
 		patchset = append(patchset, fir.Store{
 			Name: "settings",
@@ -93,18 +93,18 @@ func (s *SettingsView) UpdateProfile(event fir.Event) (fir.Patchset, error) {
 		},
 	})
 
-	return patchset, nil
+	return patchset
 }
 
-func (s *SettingsView) DeleteAccount(event fir.Event) (fir.Patchset, error) {
+func (s *SettingsView) DeleteAccount(event fir.Event) fir.Patchset {
 	rCtx := event.RequestContext()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(context.Background(), userID)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	if err := acc.Delete(rCtx); err != nil {
-		return nil, err
+		return nil
 	}
-	return fir.Patchset{fir.Reload{}}, nil
+	return fir.Patchset{fir.Reload{}}
 }
