@@ -34,6 +34,13 @@ func (a *AppContext) ActiveRoute(path, class string) string {
 	return ""
 }
 
+func (a *AppContext) NotActiveRoute(path, class string) string {
+	if a.URLPath != path {
+		return class
+	}
+	return ""
+}
+
 type View interface {
 	// Settings
 	Content() string
