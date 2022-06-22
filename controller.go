@@ -245,6 +245,22 @@ func (wc *websocketController) writeJSON(topic string, v any) {
 	}
 }
 
+func (wc *websocketController) writeJSONAll(v any) {
+	wc.Lock()
+	defer wc.Unlock()
+
+	for _, cm := range wc.topicConnections {
+		for connID, conn := range cm {
+			err := conn.WriteJSON(v)
+			if err != nil {
+				log.Printf("error: writing json message. closing conn %s with err %v", connID, err)
+				conn.Close()
+				continue
+			}
+		}
+	}
+}
+
 func (wc *websocketController) messageAll(message []byte) {
 	wc.Lock()
 	defer wc.Unlock()

@@ -118,19 +118,13 @@ func (d DefaultView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, 
 	return Status{Code: 200, Message: "ok"}, Data{}
 }
 
-// OnEvent handles the events sent from the browser or received on the EventReceiver channel
+// OnEvent handles the events sent from the browser
 func (d DefaultView) OnEvent(event Event) Patchset {
 	switch event.ID {
 	default:
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
 	}
 	return Patchset{}
-}
-
-// EventReceiver is used to configure a receive only channel for receiving events from concurrent goroutines.
-// e.g. a concurrent goroutine sends a tick event every second to the returned channel which is then handled in OnEvent.
-func (d DefaultView) EventReceiver() <-chan Event {
-	return nil
 }
 
 func (d DefaultView) Stream() <-chan Patch {
@@ -172,17 +166,13 @@ func (d DefaultErrorView) OnRequest(w http.ResponseWriter, r *http.Request) (Sta
 	return Status{Code: 500, Message: "Internal Error"}, Data{}
 }
 
-// OnEvent handles the events sent from the browser or received on the EventReceiver channel
+// OnEvent handles the events sent from the browser
 func (d DefaultErrorView) OnEvent(event Event) Patchset {
 	switch event.ID {
 	default:
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
 	}
 	return Patchset{}
-}
-
-func (d DefaultErrorView) EventReceiver() <-chan Event {
-	return nil
 }
 
 func (d DefaultErrorView) Stream() <-chan Patch {
