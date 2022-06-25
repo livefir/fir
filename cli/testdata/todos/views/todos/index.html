@@ -1,0 +1,17 @@
+{{define "content"}}
+<div x-data class="columns">
+    <div class="column is-4">
+        {{template "newtodo" .}}
+    </div>
+    <div class="column is-7 is-offset-1">
+        {{block "todolist" .}}
+        <div id="itemlist">
+            {{range .todos}}
+            {{template "todo" .}}
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+

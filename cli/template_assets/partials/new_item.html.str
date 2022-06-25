@@ -1,0 +1,4 @@
+{{define "new$VIEW_NAME"}}
+<p class="has-text-weight-semibold mb-2 has-text-centered">Create a $VIEW_NAME</p>
+$FORM
+{{end}}

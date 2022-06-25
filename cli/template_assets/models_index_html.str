@@ -1,0 +1,17 @@
+{{define "content"}}
+<div x-data class="columns">
+    <div class="column is-4">
+        {{template "new$VIEW_NAME" .}}
+    </div>
+    <div class="column is-7 is-offset-1">
+        {{block "$VIEW_NAMElist" .}}
+        <div id="itemlist">
+            {{range .$VIEW_NAMEs}}
+            {{template "$VIEW_NAME" .}}
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+
