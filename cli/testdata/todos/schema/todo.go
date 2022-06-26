@@ -13,7 +13,7 @@ type Todo struct {
 // Fields of the Todo.
 func (Todo) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("email_address").
+		field.String("title").
 			Unique(),
 	}
 }

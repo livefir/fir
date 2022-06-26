@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/adnaan/fir/testdata/todos/models/migrate"
+	"github.com/adnaan/fir/cli/testdata/todos/models/migrate"
 
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"

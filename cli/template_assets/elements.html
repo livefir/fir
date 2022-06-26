@@ -1,0 +1,22 @@
+{{define "bulma:form-input"}}
+<div class="field">
+    <label class="label">{{.label}}</label>
+    <div class="control">
+        <input name="{{.name}}" class="input" type="{{.type}}" placeholder="{{.placeholder}}">
+    </div>
+</div>
+{{end}}
+
+{{define "bulma:form-button"}}
+<div class="field">
+    <div class="control">
+        <button type="{{.Type}}" class="button is-primary">{{.Text}}</button>
+    </div>
+</div>
+{{end}}
+
+{{define "bulma:form"}}
+<form name="new-{{.name}}" @submit.prevent="$fir.submit('{{.name}}s/{{.action}}')">
+    {{.fields}}
+</form>
+{{end}}

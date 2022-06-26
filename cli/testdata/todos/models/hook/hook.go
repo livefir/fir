@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/adnaan/fir/testdata/todos/models"
+	"github.com/adnaan/fir/cli/testdata/todos/models"
 )
 
 // The TodoFunc type is an adapter to allow the use of ordinary

@@ -5,9 +5,9 @@ package enttest
 import (
 	"context"
 
-	"github.com/adnaan/fir/testdata/todos/models"
+	"github.com/adnaan/fir/cli/testdata/todos/models"
 	// required by schema hooks.
-	_ "github.com/adnaan/fir/testdata/todos/models/runtime"
+	_ "github.com/adnaan/fir/cli/testdata/todos/models/runtime"
 
 	"entgo.io/ent/dialect/sql/schema"
 )

@@ -11,8 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/adnaan/fir/testdata/todos/models/predicate"
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 )
 
 // TodoQuery is the builder for querying Todo entities.
@@ -253,12 +253,12 @@ func (tq *TodoQuery) Clone() *TodoQuery {
 // Example:
 //
 //	var v []struct {
-//		EmailAddress string `json:"email_address,omitempty"`
+//		Title string `json:"title,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Todo.Query().
-//		GroupBy(todo.FieldEmailAddress).
+//		GroupBy(todo.FieldTitle).
 //		Aggregate(models.Count()).
 //		Scan(ctx, &v)
 //
@@ -280,11 +280,11 @@ func (tq *TodoQuery) GroupBy(field string, fields ...string) *TodoGroupBy {
 // Example:
 //
 //	var v []struct {
-//		EmailAddress string `json:"email_address,omitempty"`
+//		Title string `json:"title,omitempty"`
 //	}
 //
 //	client.Todo.Query().
-//		Select(todo.FieldEmailAddress).
+//		Select(todo.FieldTitle).
 //		Scan(ctx, &v)
 //
 func (tq *TodoQuery) Select(fields ...string) *TodoSelect {

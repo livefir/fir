@@ -1,4 +1,4 @@
-package todo
+package todos
 
 import (
 	"net/http"

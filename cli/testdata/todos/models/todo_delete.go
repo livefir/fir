@@ -9,8 +9,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/adnaan/fir/testdata/todos/models/predicate"
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 )
 
 // TodoDelete is the builder for deleting a Todo entity.

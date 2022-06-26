@@ -7,8 +7,8 @@ const (
 	Label = "todo"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldEmailAddress holds the string denoting the email_address field in the database.
-	FieldEmailAddress = "email_address"
+	// FieldTitle holds the string denoting the title field in the database.
+	FieldTitle = "title"
 	// Table holds the table name of the todo in the database.
 	Table = "todos"
 )
@@ -16,7 +16,7 @@ const (
 // Columns holds all SQL columns for todo fields.
 var Columns = []string{
 	FieldID,
-	FieldEmailAddress,
+	FieldTitle,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

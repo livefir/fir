@@ -9,7 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 )
 
 // TodoCreate is the builder for creating a Todo entity.
@@ -19,9 +19,9 @@ type TodoCreate struct {
 	hooks    []Hook
 }
 
-// SetEmailAddress sets the "email_address" field.
-func (tc *TodoCreate) SetEmailAddress(s string) *TodoCreate {
-	tc.mutation.SetEmailAddress(s)
+// SetTitle sets the "title" field.
+func (tc *TodoCreate) SetTitle(s string) *TodoCreate {
+	tc.mutation.SetTitle(s)
 	return tc
 }
 
@@ -95,8 +95,8 @@ func (tc *TodoCreate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (tc *TodoCreate) check() error {
-	if _, ok := tc.mutation.EmailAddress(); !ok {
-		return &ValidationError{Name: "email_address", err: errors.New(`models: missing required field "Todo.email_address"`)}
+	if _, ok := tc.mutation.Title(); !ok {
+		return &ValidationError{Name: "title", err: errors.New(`models: missing required field "Todo.title"`)}
 	}
 	return nil
 }
@@ -125,13 +125,13 @@ func (tc *TodoCreate) createSpec() (*Todo, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
-	if value, ok := tc.mutation.EmailAddress(); ok {
+	if value, ok := tc.mutation.Title(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
-			Column: todo.FieldEmailAddress,
+			Column: todo.FieldTitle,
 		})
-		_node.EmailAddress = value
+		_node.Title = value
 	}
 	return _node, _spec
 }

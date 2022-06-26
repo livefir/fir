@@ -10,8 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/adnaan/fir/testdata/todos/models/predicate"
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 )
 
 // TodoUpdate is the builder for updating Todo entities.
@@ -27,9 +27,9 @@ func (tu *TodoUpdate) Where(ps ...predicate.Todo) *TodoUpdate {
 	return tu
 }
 
-// SetEmailAddress sets the "email_address" field.
-func (tu *TodoUpdate) SetEmailAddress(s string) *TodoUpdate {
-	tu.mutation.SetEmailAddress(s)
+// SetTitle sets the "title" field.
+func (tu *TodoUpdate) SetTitle(s string) *TodoUpdate {
+	tu.mutation.SetTitle(s)
 	return tu
 }
 
@@ -110,11 +110,11 @@ func (tu *TodoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := tu.mutation.EmailAddress(); ok {
+	if value, ok := tu.mutation.Title(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
-			Column: todo.FieldEmailAddress,
+			Column: todo.FieldTitle,
 		})
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
@@ -136,9 +136,9 @@ type TodoUpdateOne struct {
 	mutation *TodoMutation
 }
 
-// SetEmailAddress sets the "email_address" field.
-func (tuo *TodoUpdateOne) SetEmailAddress(s string) *TodoUpdateOne {
-	tuo.mutation.SetEmailAddress(s)
+// SetTitle sets the "title" field.
+func (tuo *TodoUpdateOne) SetTitle(s string) *TodoUpdateOne {
+	tuo.mutation.SetTitle(s)
 	return tuo
 }
 
@@ -243,11 +243,11 @@ func (tuo *TodoUpdateOne) sqlSave(ctx context.Context) (_node *Todo, err error) 
 			}
 		}
 	}
-	if value, ok := tuo.mutation.EmailAddress(); ok {
+	if value, ok := tuo.mutation.Title(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
-			Column: todo.FieldEmailAddress,
+			Column: todo.FieldTitle,
 		})
 	}
 	_node = &Todo{config: tuo.config}

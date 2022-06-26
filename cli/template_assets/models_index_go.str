@@ -1,7 +1,7 @@
 
 {{ define "../views/$VIEW_NAMEs/index" }}
 
-package $VIEW_NAME
+package $VIEW_NAMEs
 
 import (
 	"log"

@@ -32,7 +32,7 @@ var genCmd = &cobra.Command{
 		`,
 			IDType:  &field.TypeInfo{Type: field.TypeInt},
 			Target:  modelsPath,
-			Package: "github.com/adnaan/fir/testdata/todos/models",
+			Package: "github.com/adnaan/fir/cli/testdata/todos/models",
 		}, entc.Extensions(&entgo.ViewExtension{TemplatesPath: templatesPath}))
 		if err != nil {
 			log.Fatal("running ent codegen:", err)

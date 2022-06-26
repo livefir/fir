@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <title>{{.app_name}}</title>
+    {{template "header" .}}
+</head>
+
+<body>
+    <div class="columns is-mobile">
+        <div class="column is-8 is-offset-2">
+            {{template "navbar" .}}
+            <div class="" style="min-height: 101vh !important;">
+                {{template "content" .}}
+            </div>
+            {{template "footer" .}}
+        </div>
+
+    </div>
+</body>
+
+</html>

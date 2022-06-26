@@ -4,7 +4,7 @@ package todo
 
 import (
 	"entgo.io/ent/dialect/sql"
-	"github.com/adnaan/fir/testdata/todos/models/predicate"
+	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
 )
 
 // ID filters vertices based on their ID field.
@@ -90,29 +90,29 @@ func IDLTE(id int) predicate.Todo {
 	})
 }
 
-// EmailAddress applies equality check predicate on the "email_address" field. It's identical to EmailAddressEQ.
-func EmailAddress(v string) predicate.Todo {
+// Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
+func Title(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldEmailAddress), v))
+		s.Where(sql.EQ(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressEQ applies the EQ predicate on the "email_address" field.
-func EmailAddressEQ(v string) predicate.Todo {
+// TitleEQ applies the EQ predicate on the "title" field.
+func TitleEQ(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldEmailAddress), v))
+		s.Where(sql.EQ(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressNEQ applies the NEQ predicate on the "email_address" field.
-func EmailAddressNEQ(v string) predicate.Todo {
+// TitleNEQ applies the NEQ predicate on the "title" field.
+func TitleNEQ(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldEmailAddress), v))
+		s.Where(sql.NEQ(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressIn applies the In predicate on the "email_address" field.
-func EmailAddressIn(vs ...string) predicate.Todo {
+// TitleIn applies the In predicate on the "title" field.
+func TitleIn(vs ...string) predicate.Todo {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -124,12 +124,12 @@ func EmailAddressIn(vs ...string) predicate.Todo {
 			s.Where(sql.False())
 			return
 		}
-		s.Where(sql.In(s.C(FieldEmailAddress), v...))
+		s.Where(sql.In(s.C(FieldTitle), v...))
 	})
 }
 
-// EmailAddressNotIn applies the NotIn predicate on the "email_address" field.
-func EmailAddressNotIn(vs ...string) predicate.Todo {
+// TitleNotIn applies the NotIn predicate on the "title" field.
+func TitleNotIn(vs ...string) predicate.Todo {
 	v := make([]interface{}, len(vs))
 	for i := range v {
 		v[i] = vs[i]
@@ -141,70 +141,70 @@ func EmailAddressNotIn(vs ...string) predicate.Todo {
 			s.Where(sql.False())
 			return
 		}
-		s.Where(sql.NotIn(s.C(FieldEmailAddress), v...))
+		s.Where(sql.NotIn(s.C(FieldTitle), v...))
 	})
 }
 
-// EmailAddressGT applies the GT predicate on the "email_address" field.
-func EmailAddressGT(v string) predicate.Todo {
+// TitleGT applies the GT predicate on the "title" field.
+func TitleGT(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldEmailAddress), v))
+		s.Where(sql.GT(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressGTE applies the GTE predicate on the "email_address" field.
-func EmailAddressGTE(v string) predicate.Todo {
+// TitleGTE applies the GTE predicate on the "title" field.
+func TitleGTE(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldEmailAddress), v))
+		s.Where(sql.GTE(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressLT applies the LT predicate on the "email_address" field.
-func EmailAddressLT(v string) predicate.Todo {
+// TitleLT applies the LT predicate on the "title" field.
+func TitleLT(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldEmailAddress), v))
+		s.Where(sql.LT(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressLTE applies the LTE predicate on the "email_address" field.
-func EmailAddressLTE(v string) predicate.Todo {
+// TitleLTE applies the LTE predicate on the "title" field.
+func TitleLTE(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldEmailAddress), v))
+		s.Where(sql.LTE(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressContains applies the Contains predicate on the "email_address" field.
-func EmailAddressContains(v string) predicate.Todo {
+// TitleContains applies the Contains predicate on the "title" field.
+func TitleContains(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldEmailAddress), v))
+		s.Where(sql.Contains(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressHasPrefix applies the HasPrefix predicate on the "email_address" field.
-func EmailAddressHasPrefix(v string) predicate.Todo {
+// TitleHasPrefix applies the HasPrefix predicate on the "title" field.
+func TitleHasPrefix(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldEmailAddress), v))
+		s.Where(sql.HasPrefix(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressHasSuffix applies the HasSuffix predicate on the "email_address" field.
-func EmailAddressHasSuffix(v string) predicate.Todo {
+// TitleHasSuffix applies the HasSuffix predicate on the "title" field.
+func TitleHasSuffix(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldEmailAddress), v))
+		s.Where(sql.HasSuffix(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressEqualFold applies the EqualFold predicate on the "email_address" field.
-func EmailAddressEqualFold(v string) predicate.Todo {
+// TitleEqualFold applies the EqualFold predicate on the "title" field.
+func TitleEqualFold(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldEmailAddress), v))
+		s.Where(sql.EqualFold(s.C(FieldTitle), v))
 	})
 }
 
-// EmailAddressContainsFold applies the ContainsFold predicate on the "email_address" field.
-func EmailAddressContainsFold(v string) predicate.Todo {
+// TitleContainsFold applies the ContainsFold predicate on the "title" field.
+func TitleContainsFold(v string) predicate.Todo {
 	return predicate.Todo(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldEmailAddress), v))
+		s.Where(sql.ContainsFold(s.C(FieldTitle), v))
 	})
 }
 

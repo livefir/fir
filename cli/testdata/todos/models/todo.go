@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 )
 
 // Todo is the model entity for the Todo schema.
@@ -15,8 +15,8 @@ type Todo struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// EmailAddress holds the value of the "email_address" field.
-	EmailAddress string `json:"email_address,omitempty"`
+	// Title holds the value of the "title" field.
+	Title string `json:"title,omitempty"`
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -26,7 +26,7 @@ func (*Todo) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case todo.FieldID:
 			values[i] = new(sql.NullInt64)
-		case todo.FieldEmailAddress:
+		case todo.FieldTitle:
 			values[i] = new(sql.NullString)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Todo", columns[i])
@@ -49,11 +49,11 @@ func (t *Todo) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			t.ID = int(value.Int64)
-		case todo.FieldEmailAddress:
+		case todo.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email_address", values[i])
+				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
-				t.EmailAddress = value.String
+				t.Title = value.String
 			}
 		}
 	}
@@ -83,8 +83,8 @@ func (t *Todo) String() string {
 	var builder strings.Builder
 	builder.WriteString("Todo(")
 	builder.WriteString(fmt.Sprintf("id=%v", t.ID))
-	builder.WriteString(", email_address=")
-	builder.WriteString(t.EmailAddress)
+	builder.WriteString(", title=")
+	builder.WriteString(t.Title)
 	builder.WriteByte(')')
 	return builder.String()
 }

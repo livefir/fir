@@ -11,7 +11,7 @@ var (
 	// TodosColumns holds the columns for the "todos" table.
 	TodosColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "email_address", Type: field.TypeString, Unique: true},
+		{Name: "title", Type: field.TypeString, Unique: true},
 	}
 	// TodosTable holds the schema information for the "todos" table.
 	TodosTable = &schema.Table{

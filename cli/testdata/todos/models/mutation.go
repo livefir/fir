@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/adnaan/fir/testdata/todos/models/predicate"
-	"github.com/adnaan/fir/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
+	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 
 	"entgo.io/ent"
 )
@@ -32,7 +32,7 @@ type TodoMutation struct {
 	op            Op
 	typ           string
 	id            *int
-	email_address *string
+	title         *string
 	clearedFields map[string]struct{}
 	done          bool
 	oldValue      func(context.Context) (*Todo, error)
@@ -137,40 +137,40 @@ func (m *TodoMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
-// SetEmailAddress sets the "email_address" field.
-func (m *TodoMutation) SetEmailAddress(s string) {
-	m.email_address = &s
+// SetTitle sets the "title" field.
+func (m *TodoMutation) SetTitle(s string) {
+	m.title = &s
 }
 
-// EmailAddress returns the value of the "email_address" field in the mutation.
-func (m *TodoMutation) EmailAddress() (r string, exists bool) {
-	v := m.email_address
+// Title returns the value of the "title" field in the mutation.
+func (m *TodoMutation) Title() (r string, exists bool) {
+	v := m.title
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldEmailAddress returns the old "email_address" field's value of the Todo entity.
+// OldTitle returns the old "title" field's value of the Todo entity.
 // If the Todo object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TodoMutation) OldEmailAddress(ctx context.Context) (v string, err error) {
+func (m *TodoMutation) OldTitle(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEmailAddress is only allowed on UpdateOne operations")
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEmailAddress requires an ID field in the mutation")
+		return v, errors.New("OldTitle requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEmailAddress: %w", err)
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
 	}
-	return oldValue.EmailAddress, nil
+	return oldValue.Title, nil
 }
 
-// ResetEmailAddress resets all changes to the "email_address" field.
-func (m *TodoMutation) ResetEmailAddress() {
-	m.email_address = nil
+// ResetTitle resets all changes to the "title" field.
+func (m *TodoMutation) ResetTitle() {
+	m.title = nil
 }
 
 // Where appends a list predicates to the TodoMutation builder.
@@ -193,8 +193,8 @@ func (m *TodoMutation) Type() string {
 // AddedFields().
 func (m *TodoMutation) Fields() []string {
 	fields := make([]string, 0, 1)
-	if m.email_address != nil {
-		fields = append(fields, todo.FieldEmailAddress)
+	if m.title != nil {
+		fields = append(fields, todo.FieldTitle)
 	}
 	return fields
 }
@@ -204,8 +204,8 @@ func (m *TodoMutation) Fields() []string {
 // schema.
 func (m *TodoMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case todo.FieldEmailAddress:
-		return m.EmailAddress()
+	case todo.FieldTitle:
+		return m.Title()
 	}
 	return nil, false
 }
@@ -215,8 +215,8 @@ func (m *TodoMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *TodoMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case todo.FieldEmailAddress:
-		return m.OldEmailAddress(ctx)
+	case todo.FieldTitle:
+		return m.OldTitle(ctx)
 	}
 	return nil, fmt.Errorf("unknown Todo field %s", name)
 }
@@ -226,12 +226,12 @@ func (m *TodoMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *TodoMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case todo.FieldEmailAddress:
+	case todo.FieldTitle:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetEmailAddress(v)
+		m.SetTitle(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Todo field %s", name)
@@ -282,8 +282,8 @@ func (m *TodoMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *TodoMutation) ResetField(name string) error {
 	switch name {
-	case todo.FieldEmailAddress:
-		m.ResetEmailAddress()
+	case todo.FieldTitle:
+		m.ResetTitle()
 		return nil
 	}
 	return fmt.Errorf("unknown Todo field %s", name)

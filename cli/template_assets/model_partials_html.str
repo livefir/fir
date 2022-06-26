@@ -1,3 +1,3 @@
-{{define $VIEW_NAME}}
+{{define "$VIEW_NAME"}}
 <div id="$VIEW_NAME-{{.ID}}">{{.Title}}</div>
 {{end}}
