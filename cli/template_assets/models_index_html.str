@@ -6,7 +6,7 @@
     <div class="column is-7 is-offset-1">
         {{block "$VIEW_NAMElist" .}}
         <div id="itemlist">
-            {{range .$VIEW_NAMEs}}
+            {{range .$VIEW_PLURAL_NAME}}
             {{template "$VIEW_NAME" .}}
             {{end}}
         </div>

@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
+	pluralize "github.com/gertd/go-pluralize"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -28,18 +29,23 @@ func PrepareTemplates(schemaPath, viewsPath, templateAssetsPath string) string {
 
 func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath string) {
 	viewName := strings.ToLower(node.Name)
+	pluralize := pluralize.NewClient()
+	pluralizedViewName := pluralize.Plural(viewName)
+
 	fmt.Println("building templates for", viewName)
 	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, viewName), os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := os.MkdirAll(fmt.Sprintf("%s/%ss", viewsPath, viewName), os.ModePerm); err != nil {
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, pluralizedViewName), os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := os.MkdirAll(fmt.Sprintf("%s/%ss/partials", viewsPath, viewName), os.ModePerm); err != nil {
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s/partials", viewsPath, pluralizedViewName), os.ModePerm); err != nil {
 		panic(err)
 	}
+
 	replaceVars := map[string]string{
-		"$VIEW_NAME": viewName,
+		"$VIEW_NAME":        viewName,
+		"$VIEW_PLURAL_NAME": pluralizedViewName,
 	}
 	// model/index.go
 	generateTemplateWithReplace(
@@ -65,14 +71,14 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 	// views/models/index.html
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "models_index_html.str"),
-		filepath.Join(viewsPath, viewName+"s", "index.html"),
+		filepath.Join(viewsPath, pluralizedViewName, "index.html"),
 		replaceVars,
 	)
 
 	// views/models/partials/model.html
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "model_partials_html.str"),
-		filepath.Join(viewsPath, viewName+"s", "partials", viewName+".html"),
+		filepath.Join(viewsPath, pluralizedViewName, "partials", viewName+".html"),
 		replaceVars,
 	)
 
@@ -105,7 +111,7 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 	// generate template
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "new_model_partials_html.str"),
-		filepath.Join(viewsPath, viewName+"s", "partials", "new_"+viewName+".html"),
+		filepath.Join(viewsPath, pluralizedViewName, "partials", "new_"+viewName+".html"),
 		replaceVars,
 	)
 }

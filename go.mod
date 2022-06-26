@@ -34,6 +34,7 @@ require (
 	github.com/andybalholm/cascadia v1.0.0 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
+	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/uuid v1.3.0 // indirect

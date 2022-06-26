@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/adnaan/fir/cli/testdata/$VIEW_NAMEs/models"
+	"github.com/adnaan/fir/cli/testdata/$VIEW_PLURAL_NAME/models"
 	"github.com/adnaan/fir"
 )
 
