@@ -1,13 +1,10 @@
-
-{{ define "../views/$MODEL_PLURAL_NAME/index" }}
-
-package $MODEL_PLURAL_NAME
+package {{.pkgName}}
 
 import (
 	"log"
 	"net/http"
 
-	"github.com/adnaan/fir/cli/testdata/$MODEL_PLURAL_NAME/models"
+	"{{.modelsPkg}}"
 	"github.com/adnaan/fir"
 )
 
@@ -17,14 +14,19 @@ type View struct {
 }
 
 func (v *View) Content() string {
-	return "./views/$MODEL_PLURAL_NAME"
+	return "{{.content}}"
 }
 
 func (v *View) Layout() string {
-	return "./templates/layouts/index.html"
+	return "{{.layout}}"
 }
 
 func (v *View) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: http.StatusOK}, nil
+	{{.modelNamePlural}}, err := v.DB.{{.modelNameTitled}}.Query().All(r.Context())
+	if err != nil {
+		log.Printf("error querying {{.modelNamePlural}},: %s\n", err)
+		return fir.Status{Code: 200, Message: "Internal Server Error"}, nil
+	}
+
+	return fir.Status{Code: http.StatusOK}, fir.Data{"{{.modelNamePlural}},": {{.modelNamePlural}},}
 }
-{{ end }}

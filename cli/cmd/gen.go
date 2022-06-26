@@ -23,17 +23,18 @@ var genCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		schema := "./testdata/todos/schema"
 		viewsPath := "testdata/todos/views"
-		modelsPath := "./testdata/todos/models"
 		templateAssetsPath := "./template_assets"
-		templatesPath := entgo.PrepareTemplates(schema, viewsPath, templateAssetsPath)
+		modelsPath := "./testdata/todos/models"
+		modelsPkg := "github.com/adnaan/fir/cli/testdata/todos/models"
+		entgo.Generate(schema, viewsPath, templateAssetsPath, modelsPkg)
 		err := entc.Generate(schema, &gen.Config{
 			Header: `
 			// Code generated (@generated) by entc, DO NOT EDIT.
 		`,
 			IDType:  &field.TypeInfo{Type: field.TypeInt},
 			Target:  modelsPath,
-			Package: "github.com/adnaan/fir/cli/testdata/todos/models",
-		}, entc.Extensions(&entgo.ViewExtension{TemplatesPath: templatesPath}))
+			Package: modelsPkg,
+		})
 		if err != nil {
 			log.Fatal("running ent codegen:", err)
 		}

@@ -1,6 +1,7 @@
 package todos
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/adnaan/fir"
@@ -13,7 +14,7 @@ type View struct {
 }
 
 func (v *View) Content() string {
-	return "./views/todos"
+	return "views/todos"
 }
 
 func (v *View) Layout() string {
@@ -21,5 +22,11 @@ func (v *View) Layout() string {
 }
 
 func (v *View) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: http.StatusOK}, nil
+	todos, err := v.DB.Todo.Query().All(r.Context())
+	if err != nil {
+		log.Printf("error querying todos,: %s\n", err)
+		return fir.Status{Code: 200, Message: "Internal Server Error"}, nil
+	}
+
+	return fir.Status{Code: http.StatusOK}, fir.Data{"todos,": todos}
 }

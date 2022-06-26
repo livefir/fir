@@ -3,11 +3,12 @@ package entgo
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	htmlTemplate "html/template"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
@@ -16,18 +17,23 @@ import (
 	"golang.org/x/text/language"
 )
 
-func PrepareTemplates(schemaPath, viewsPath, templateAssetsPath string) string {
+func checkerr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Generate(schemaPath, viewsPath, templateAssetsPath, modelsPkg string) {
 	g, err := entc.LoadGraph(schemaPath, &gen.Config{})
 	checkerr(err)
 	tmpDir, err := ioutil.TempDir("", "")
 	checkerr(err)
 	for _, node := range g.Nodes {
-		buildTemplates(node, tmpDir, viewsPath, templateAssetsPath)
+		buildTemplates(node, tmpDir, viewsPath, templateAssetsPath, modelsPkg)
 	}
-	return tmpDir
 }
 
-func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath string) {
+func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath, modelsPkg string) {
 	modelName := strings.ToLower(node.Name)
 	pluralize := pluralize.NewClient()
 	pluralizedModelName := pluralize.Plural(modelName)
@@ -43,40 +49,52 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 		panic(err)
 	}
 
+	// views/model/index.go
+	execTextTemplate(
+		filepath.Join(templateAssetsPath, "model_index_go.str"),
+		filepath.Join(viewsPath, modelName, "index.go"),
+		map[string]any{
+			"pkgName":   modelName,
+			"content":   filepath.Join("./views", modelName),
+			"layout":    "./templates/layouts/index.html",
+			"modelsPkg": modelsPkg,
+		},
+	)
+
+	// views/models/index.go
+	execTextTemplate(
+		filepath.Join(templateAssetsPath, "models_index_go.str"),
+		filepath.Join(viewsPath, pluralizedModelName, "index.go"),
+		map[string]any{
+			"pkgName":         pluralizedModelName,
+			"content":         filepath.Join("./views", pluralizedModelName),
+			"layout":          "./templates/layouts/index.html",
+			"modelNamePlural": pluralizedModelName,
+			"modelNameTitled": cases.Title(language.AmericanEnglish).String(modelName),
+			"modelsPkg":       modelsPkg,
+		},
+	)
+
 	replaceVars := map[string]string{
 		"$MODEL_NAME":        modelName,
 		"$MODEL_PLURAL_NAME": pluralizedModelName,
 	}
-	// views/model/index.go
-	generateTemplateWithReplace(
-		filepath.Join(templateAssetsPath, "model_index_go.str"),
-		filepath.Join(templatesPath, "model_index_go.tmpl"),
-		replaceVars,
-	)
-
-	// views/models/index.go
-	generateTemplateWithReplace(
-		filepath.Join(templateAssetsPath, "models_index_go.str"),
-		filepath.Join(templatesPath, "models_index_go.tmpl"),
-		replaceVars,
-	)
-
 	// views/model/index.html
-	generateTemplateWithReplace(
+	genHtmlTemplate(
 		filepath.Join(templateAssetsPath, "model_index_html.str"),
 		filepath.Join(viewsPath, modelName, "index.html"),
 		replaceVars,
 	)
 
 	// views/models/index.html
-	generateTemplateWithReplace(
+	genHtmlTemplate(
 		filepath.Join(templateAssetsPath, "models_index_html.str"),
 		filepath.Join(viewsPath, pluralizedModelName, "index.html"),
 		replaceVars,
 	)
 
 	// views/models/partials/model.html
-	generateTemplateWithReplace(
+	genHtmlTemplate(
 		filepath.Join(templateAssetsPath, "model_partials_html.str"),
 		filepath.Join(viewsPath, pluralizedModelName, "partials", modelName+".html"),
 		replaceVars,
@@ -105,27 +123,40 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 	elements.ExecuteTemplate(&buf, "bulma:form", map[string]any{
 		"name":   modelName,
 		"action": "new",
-		"fields": template.HTML(strings.Join(fields, "\n")),
+		"fields": htmlTemplate.HTML(strings.Join(fields, "\n")),
 	})
 	replaceVars["$FORM"] = buf.String()
 	// generate template
-	generateTemplateWithReplace(
+	genHtmlTemplate(
 		filepath.Join(templateAssetsPath, "new_model_partials_html.str"),
 		filepath.Join(viewsPath, pluralizedModelName, "partials", "new_"+modelName+".html"),
 		replaceVars,
 	)
 }
 
-func loadDefaultElements(templateAssetsPath string) *template.Template {
-	return template.Must(template.ParseFiles(filepath.Join(templateAssetsPath, "elements.html")))
+func loadDefaultElements(templateAssetsPath string) *htmlTemplate.Template {
+	return htmlTemplate.Must(htmlTemplate.ParseFiles(filepath.Join(templateAssetsPath, "elements.html")))
 }
 
-func generateTemplateWithReplace(inFile, outFile string, vars map[string]string) {
+func genHtmlTemplate(inFile, outFile string, vars map[string]string) {
 	outData, err := ioutil.ReadFile(filepath.Join(inFile))
 	checkerr(err)
 	for k, v := range vars {
 		outData = bytes.ReplaceAll(outData, []byte(k), []byte(v))
 	}
 	err = ioutil.WriteFile(outFile, outData, 0644)
+	checkerr(err)
+}
+
+func execTextTemplate(inFile, outFile string, vars map[string]any) {
+	outData, err := ioutil.ReadFile(filepath.Join(inFile))
+	checkerr(err)
+
+	t := template.Must(template.New("gen").Parse(string(outData)))
+	buf := new(bytes.Buffer)
+	err = t.ExecuteTemplate(buf, "gen", vars)
+	checkerr(err)
+
+	err = ioutil.WriteFile(outFile, buf.Bytes(), 0644)
 	checkerr(err)
 }

@@ -12,7 +12,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var DefaultWatchExtensions = []string{".go", ".gohtml", ".gotmpl", ".html", ".tmpl"}
+var DefaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
 
 func watchTemplates(wc *websocketController) {
 	watcher, err := fsnotify.NewWatcher()
