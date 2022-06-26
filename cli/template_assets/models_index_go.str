@@ -1,13 +1,13 @@
 
-{{ define "../views/$VIEW_PLURAL_NAME/index" }}
+{{ define "../views/$MODEL_PLURAL_NAME/index" }}
 
-package $VIEW_PLURAL_NAME
+package $MODEL_PLURAL_NAME
 
 import (
 	"log"
 	"net/http"
 
-	"github.com/adnaan/fir/cli/testdata/$VIEW_PLURAL_NAME/models"
+	"github.com/adnaan/fir/cli/testdata/$MODEL_PLURAL_NAME/models"
 	"github.com/adnaan/fir"
 )
 
@@ -17,7 +17,7 @@ type View struct {
 }
 
 func (v *View) Content() string {
-	return "./views/$VIEW_PLURAL_NAME"
+	return "./views/$MODEL_PLURAL_NAME"
 }
 
 func (v *View) Layout() string {

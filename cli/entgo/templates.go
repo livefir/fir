@@ -28,33 +28,33 @@ func PrepareTemplates(schemaPath, viewsPath, templateAssetsPath string) string {
 }
 
 func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath string) {
-	viewName := strings.ToLower(node.Name)
+	modelName := strings.ToLower(node.Name)
 	pluralize := pluralize.NewClient()
-	pluralizedViewName := pluralize.Plural(viewName)
+	pluralizedModelName := pluralize.Plural(modelName)
 
-	fmt.Println("building templates for", viewName)
-	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, viewName), os.ModePerm); err != nil {
+	fmt.Println("building templates for", modelName)
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, modelName), os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, pluralizedViewName), os.ModePerm); err != nil {
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, pluralizedModelName), os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := os.MkdirAll(fmt.Sprintf("%s/%s/partials", viewsPath, pluralizedViewName), os.ModePerm); err != nil {
+	if err := os.MkdirAll(fmt.Sprintf("%s/%s/partials", viewsPath, pluralizedModelName), os.ModePerm); err != nil {
 		panic(err)
 	}
 
 	replaceVars := map[string]string{
-		"$VIEW_NAME":        viewName,
-		"$VIEW_PLURAL_NAME": pluralizedViewName,
+		"$MODEL_NAME":        modelName,
+		"$MODEL_PLURAL_NAME": pluralizedModelName,
 	}
-	// model/index.go
+	// views/model/index.go
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "model_index_go.str"),
 		filepath.Join(templatesPath, "model_index_go.tmpl"),
 		replaceVars,
 	)
 
-	// models/index.go
+	// views/models/index.go
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "models_index_go.str"),
 		filepath.Join(templatesPath, "models_index_go.tmpl"),
@@ -64,21 +64,21 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 	// views/model/index.html
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "model_index_html.str"),
-		filepath.Join(viewsPath, viewName, "index.html"),
+		filepath.Join(viewsPath, modelName, "index.html"),
 		replaceVars,
 	)
 
 	// views/models/index.html
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "models_index_html.str"),
-		filepath.Join(viewsPath, pluralizedViewName, "index.html"),
+		filepath.Join(viewsPath, pluralizedModelName, "index.html"),
 		replaceVars,
 	)
 
 	// views/models/partials/model.html
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "model_partials_html.str"),
-		filepath.Join(viewsPath, pluralizedViewName, "partials", viewName+".html"),
+		filepath.Join(viewsPath, pluralizedModelName, "partials", modelName+".html"),
 		replaceVars,
 	)
 
@@ -103,7 +103,7 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 		}
 	}
 	elements.ExecuteTemplate(&buf, "bulma:form", map[string]any{
-		"name":   viewName,
+		"name":   modelName,
 		"action": "new",
 		"fields": template.HTML(strings.Join(fields, "\n")),
 	})
@@ -111,7 +111,7 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 	// generate template
 	generateTemplateWithReplace(
 		filepath.Join(templateAssetsPath, "new_model_partials_html.str"),
-		filepath.Join(viewsPath, pluralizedViewName, "partials", "new_"+viewName+".html"),
+		filepath.Join(viewsPath, pluralizedModelName, "partials", "new_"+modelName+".html"),
 		replaceVars,
 	)
 }
