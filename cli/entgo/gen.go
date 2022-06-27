@@ -2,7 +2,9 @@ package entgo
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"go/format"
 	htmlTemplate "html/template"
 	"io/ioutil"
 	"os"
@@ -23,22 +25,28 @@ func checkerr(err error) {
 	}
 }
 
-func Generate(schemaPath, viewsPath, templateAssetsPath, modelsPkg string) {
+var templateAssetsPath = "./template_assets"
+
+//go:embed template_assets/*
+var templateAssets embed.FS
+
+func Generate(projectPath, modelsPkg string) {
+	schemaPath, err := filepath.Abs(filepath.Join(projectPath, "schema"))
+	checkerr(err)
 	g, err := entc.LoadGraph(schemaPath, &gen.Config{})
 	checkerr(err)
-	tmpDir, err := ioutil.TempDir("", "")
-	checkerr(err)
 	for _, node := range g.Nodes {
-		buildTemplates(node, tmpDir, viewsPath, templateAssetsPath, modelsPkg)
+		buildTemplates(node, projectPath, modelsPkg)
 	}
 }
 
-func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath, modelsPkg string) {
+func buildTemplates(node *gen.Type, projectPath, modelsPkg string) {
+	viewsPath := filepath.Join(projectPath, "views")
 	modelName := strings.ToLower(node.Name)
 	pluralize := pluralize.NewClient()
 	pluralizedModelName := pluralize.Plural(modelName)
 
-	fmt.Println("building templates for", modelName)
+	fmt.Println("generating views for: ", modelName)
 	if err := os.MkdirAll(fmt.Sprintf("%s/%s", viewsPath, modelName), os.ModePerm); err != nil {
 		panic(err)
 	}
@@ -102,7 +110,7 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 
 	// views/models/partials/new_model.html
 	// build form
-	elements := loadDefaultElements(templateAssetsPath)
+	elements := loadDefaultElements(filepath.Join(templateAssetsPath, "elements.html"))
 	var fields []string
 	var buf bytes.Buffer
 	for _, field := range node.Fields {
@@ -134,29 +142,35 @@ func buildTemplates(node *gen.Type, templatesPath, viewsPath, templateAssetsPath
 	)
 }
 
-func loadDefaultElements(templateAssetsPath string) *htmlTemplate.Template {
-	return htmlTemplate.Must(htmlTemplate.ParseFiles(filepath.Join(templateAssetsPath, "elements.html")))
+func loadDefaultElements(elementsPath string) *htmlTemplate.Template {
+	data, err := templateAssets.ReadFile(elementsPath)
+	checkerr(err)
+	return htmlTemplate.Must(htmlTemplate.New("").Parse(string(data)))
 }
 
 func genHtmlTemplate(inFile, outFile string, vars map[string]string) {
-	outData, err := ioutil.ReadFile(filepath.Join(inFile))
+	inFileData, err := templateAssets.ReadFile(inFile)
 	checkerr(err)
 	for k, v := range vars {
-		outData = bytes.ReplaceAll(outData, []byte(k), []byte(v))
+		inFileData = bytes.ReplaceAll(inFileData, []byte(k), []byte(v))
 	}
-	err = ioutil.WriteFile(outFile, outData, 0644)
+	err = ioutil.WriteFile(outFile, inFileData, 0644)
 	checkerr(err)
 }
 
 func execTextTemplate(inFile, outFile string, vars map[string]any) {
-	outData, err := ioutil.ReadFile(filepath.Join(inFile))
+	inFileData, err := templateAssets.ReadFile(inFile)
 	checkerr(err)
 
-	t := template.Must(template.New("gen").Parse(string(outData)))
+	t := template.Must(template.New("gen").Parse(string(inFileData)))
 	buf := new(bytes.Buffer)
 	err = t.ExecuteTemplate(buf, "gen", vars)
 	checkerr(err)
 
-	err = ioutil.WriteFile(outFile, buf.Bytes(), 0644)
+	inFileData, err = format.Source(buf.Bytes())
 	checkerr(err)
+
+	err = ioutil.WriteFile(outFile, inFileData, 0644)
+	checkerr(err)
+	buf.Reset()
 }

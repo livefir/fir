@@ -21,7 +21,9 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/adnaan/fir/cli/cmd"
+import (
+	"github.com/adnaan/fir/cli/cmd"
+)
 
 func main() {
 	cmd.Execute()

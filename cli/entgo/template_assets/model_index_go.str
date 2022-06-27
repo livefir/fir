@@ -1,9 +1,6 @@
 package {{.pkgName}}
 
 import (
-	"log"
-	"net/http"
-
 	"{{.modelsPkg}}"
 	"github.com/adnaan/fir"
 )
