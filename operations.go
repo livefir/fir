@@ -58,3 +58,12 @@ type Reload struct{}
 func (r Reload) Op() Op {
 	return reload
 }
+
+func Error(err error) Patchset {
+	log.Printf("[controller] error: %s\n", err)
+	return Patchset{Morph{
+		Selector: "#fir-error",
+		Template: "fir-error",
+		Data:     Data{"error": UserError(err)},
+	}}
+}
