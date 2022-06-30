@@ -60,21 +60,21 @@ func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.St
 func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 	req := new(ProfileRequest)
 	if err := event.DecodeParams(req); err != nil {
-		return errorPatch(err)
+		return fir.Error(err)
 	}
 	rCtx := event.RequestContext()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)
 	if err != nil {
-		return errorPatch(err)
+		return fir.Error(err)
 	}
 	if err := acc.Attributes().Set(rCtx, "name", req.Name); err != nil {
-		return errorPatch(err)
+		return fir.Error(err)
 	}
 	var patchset fir.Patchset
 	if req.Email != "" && req.Email != acc.Email() {
 		if err := acc.ChangeEmail(rCtx, req.Email); err != nil {
-			return errorPatch(err)
+			return fir.Error(err)
 		}
 		patchset = append(patchset, fir.Store{
 			Name: "settings",
@@ -85,11 +85,13 @@ func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 	}
 
 	patchset = append(patchset, fir.Morph{
-		Template: "account_form",
 		Selector: "#account_form",
-		Data: fir.Data{
-			"name":  req.Name,
-			"email": acc.Email(),
+		Template: fir.Template{
+			Name: "account_form",
+			Data: fir.Data{
+				"name":  req.Name,
+				"email": acc.Email(),
+			},
 		},
 	})
 
@@ -101,10 +103,10 @@ func (s *SettingsView) DeleteAccount(event fir.Event) fir.Patchset {
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(context.Background(), userID)
 	if err != nil {
-		return errorPatch(err)
+		return fir.Error(err)
 	}
 	if err := acc.Delete(rCtx); err != nil {
-		return errorPatch(err)
+		return fir.Error(err)
 	}
 	return fir.Patchset{fir.Reload{}}
 }

@@ -30,13 +30,13 @@ func (rv *ResetView) OnEvent(event fir.Event) fir.Patchset {
 	case "account/reset":
 		r := new(ResetReq)
 		if err := event.DecodeParams(r); err != nil {
-			return errorPatch(err)
+			return fir.Error(err)
 		}
 		if r.ConfirmPassword != r.Password {
-			return errorPatch(fmt.Errorf("%w", errors.New("passwords don't match")))
+			return fir.Error(fmt.Errorf("%w", errors.New("passwords don't match")))
 		}
 		if err := rv.Auth.ConfirmRecovery(event.RequestContext(), r.Token, r.Password); err != nil {
-			return errorPatch(err)
+			return fir.Error(err)
 		}
 		return fir.Patchset{fir.Store{
 			Name: "reset",

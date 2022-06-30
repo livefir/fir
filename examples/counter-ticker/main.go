@@ -16,16 +16,22 @@ type Counter struct {
 	sync.RWMutex
 }
 
+func morphCount(c int32) fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: fir.Template{
+			Name: "count",
+			Data: fir.Data{"count": c},
+		},
+	}
+}
+
 func (c *Counter) Inc() fir.Patch {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
 	c.updated = time.Now()
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": c.count},
-	}
+	return morphCount(c.count)
 }
 
 func (c *Counter) Dec() fir.Patch {
@@ -33,11 +39,7 @@ func (c *Counter) Dec() fir.Patch {
 	defer c.Unlock()
 	c.count -= 1
 	c.updated = time.Now()
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": c.count},
-	}
+	return morphCount(c.count)
 }
 
 func (c *Counter) Updated() (fir.Patch, error) {
@@ -48,7 +50,9 @@ func (c *Counter) Updated() (fir.Patch, error) {
 	}
 	return fir.Store{
 		Name: "fir",
-		Data: map[string]any{"count_updated": time.Since(c.updated).Seconds()},
+		Data: fir.Data{
+			"count_updated": time.Since(c.updated).Seconds(),
+		},
 	}, nil
 }
 

@@ -88,9 +88,11 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 			},
 		},
 		fir.Morph{
-			Template: "todos",
 			Selector: "#todos",
-			Data:     fir.Data{"todos": todos},
+			Template: fir.Template{
+				Name: "todos",
+				Data: fir.Data{"todos": todos},
+			},
 		},
 	}
 }

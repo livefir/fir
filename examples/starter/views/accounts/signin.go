@@ -28,19 +28,21 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	case "auth/magic-login":
 		r := new(ProfileRequest)
 		if err := event.DecodeParams(r); err != nil {
-			return errorPatch(err)
+			return fir.Error(err)
 		}
 		if r.Email == "" {
-			return errorPatch(fmt.Errorf("%w", errors.New("email is required")))
+			return fir.Error(fmt.Errorf("%w", errors.New("email is required")))
 		}
 		if err := s.Auth.SendPasswordlessToken(event.RequestContext(), r.Email); err != nil {
-			return errorPatch(err)
+			return fir.Error(err)
 		}
 
 		return fir.Patchset{fir.Morph{
-			Template: "signin_container",
 			Selector: "#signin_container",
-			Data:     fir.Data{"sent_magic_link": true},
+			Template: fir.Template{
+				Name: "signin_container",
+				Data: fir.Data{"sent_magic_link": true},
+			},
 		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)

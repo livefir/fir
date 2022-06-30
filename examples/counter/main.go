@@ -12,20 +12,22 @@ type Counter struct {
 	count int32
 }
 
-func (c *Counter) Inc() fir.Patch {
+func morphCount(c int32) fir.Patch {
 	return fir.Morph{
 		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+		Template: fir.Template{
+			Name: "count",
+			Data: fir.Data{"count": c},
+		},
 	}
 }
 
+func (c *Counter) Inc() fir.Patch {
+	return morphCount(atomic.AddInt32(&c.count, 1))
+}
+
 func (c *Counter) Dec() fir.Patch {
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
-	}
+	return morphCount(atomic.AddInt32(&c.count, -1))
 }
 
 func (c *Counter) Value() int32 {

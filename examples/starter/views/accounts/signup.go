@@ -28,15 +28,15 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 	case "auth/signup":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return errorPatch(err)
+			return fir.Error(err)
 		}
 
 		if req.Email == "" {
-			return errorPatch(fmt.Errorf("%w", errors.New("email is required")))
+			return fir.Error(fmt.Errorf("%w", errors.New("email is required")))
 		}
 
 		if req.Password == "" {
-			return errorPatch(fmt.Errorf("%w", errors.New("password is required")))
+			return fir.Error(fmt.Errorf("%w", errors.New("password is required")))
 		}
 
 		attributes := make(map[string]interface{})
@@ -46,11 +46,12 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 			return nil
 		}
 		return fir.Patchset{fir.Morph{
-			Template: "signup_container",
 			Selector: "#signup_container",
-			Data: fir.Data{
-				"sent_confirmation": true,
-			},
+			Template: fir.Template{
+				Name: "signup_container",
+				Data: fir.Data{
+					"sent_confirmation": true,
+				}},
 		}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
