@@ -212,10 +212,46 @@ func (v *viewHandler) reloadTemplates() {
 	}
 }
 
-func buildMorpPatch(t *template.Template, patch Patch) (Operation, error) {
-	morphPatch := patch.(Morph)
+func buildDOMPatch(t *template.Template, patch Patch) (Operation, error) {
+	var op Op
+	var template string
+	var selector string
+	var data interface{}
+	switch v := patch.(type) {
+	case Morph:
+		op = v.Op()
+		template = v.Template
+		selector = v.Selector
+		data = v.Data
+	case After:
+		op = v.Op()
+		template = v.Template
+		selector = v.Selector
+		data = v.Data
+	case Before:
+		op = v.Op()
+		template = v.Template
+		selector = v.Selector
+		data = v.Data
+	case Append:
+		op = v.Op()
+		template = v.Template
+		selector = v.Selector
+		data = v.Data
+	case Prepend:
+		op = v.Op()
+		template = v.Template
+		selector = v.Selector
+		data = v.Data
+	case Remove:
+		op = v.Op()
+		template = v.Template
+		selector = v.Selector
+		data = v.Data
+	}
+
 	var buf bytes.Buffer
-	err := t.ExecuteTemplate(&buf, morphPatch.Template, morphPatch.Data)
+	err := t.ExecuteTemplate(&buf, template, data)
 	if err != nil {
 		// if s.wc.debugLog {
 		// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
@@ -228,8 +264,8 @@ func buildMorpPatch(t *template.Template, patch Patch) (Operation, error) {
 	html := buf.String()
 	buf.Reset()
 	return Operation{
-		Op:       morph,
-		Selector: morphPatch.Selector,
+		Op:       op,
+		Selector: selector,
 		Value:    html,
 	}, nil
 }
@@ -244,10 +280,9 @@ func buildStorePatch(patch Patch) Operation {
 }
 
 func buildOperation(t *template.Template, patch Patch) (Operation, error) {
-
 	switch patch.Op() {
-	case morph:
-		operation, err := buildMorpPatch(t, patch)
+	case morph, after, before, appendOp, prepend, remove:
+		operation, err := buildDOMPatch(t, patch)
 		if err != nil {
 			return Operation{}, err
 		}

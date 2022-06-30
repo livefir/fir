@@ -9,6 +9,11 @@ type Op string
 
 const (
 	morph       Op = "morph"
+	after       Op = "after"
+	before      Op = "before"
+	appendOp    Op = "append"
+	prepend     Op = "prepend"
+	remove      Op = "remove"
 	reload      Op = "reload"
 	updateStore Op = "store"
 )
@@ -42,6 +47,56 @@ type Morph struct {
 
 func (m Morph) Op() Op {
 	return morph
+}
+
+type After struct {
+	Selector string
+	Template string
+	Data     map[string]any
+}
+
+func (a After) Op() Op {
+	return after
+}
+
+type Before struct {
+	Selector string
+	Template string
+	Data     map[string]any
+}
+
+func (b Before) Op() Op {
+	return before
+}
+
+type Append struct {
+	Selector string
+	Template string
+	Data     map[string]any
+}
+
+func (a Append) Op() Op {
+	return appendOp
+}
+
+type Prepend struct {
+	Selector string
+	Template string
+	Data     map[string]any
+}
+
+func (p Prepend) Op() Op {
+	return prepend
+}
+
+type Remove struct {
+	Selector string
+	Template string
+	Data     map[string]any
+}
+
+func (r Remove) Op() Op {
+	return remove
 }
 
 type Store struct {

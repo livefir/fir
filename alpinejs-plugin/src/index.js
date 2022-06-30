@@ -95,7 +95,21 @@ const Plugin = (Alpine) => {
                 }
             })
         }),
-        // browser
+        after: operation => selectAll(operation, (el, value) => {
+            el.insertBefore(value, el.nextSibling)
+        }),
+        before: operation => selectAll(operation, (el, value) => {
+            el.insertBefore(value, el)
+        }),
+        append: operation => selectAll(operation, (el, value) => {
+            el.append(value)
+        }),
+        prepend: operation => selectAll(operation, (el, value) => {
+            el.prepend(value)
+        }),
+        remove: operation => selectAll(operation, (el, value) => {
+            el.remove()
+        }),
         reload: () => window.location.reload(),
         store: (operation) => updateStore(operation.selector, operation.value)
     }
