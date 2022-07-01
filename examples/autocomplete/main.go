@@ -59,7 +59,7 @@ func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 		return fir.Patchset{
 			fir.Morph{
 				Selector: "#list_cities",
-				Template: fir.Template{
+				Template: &fir.Template{
 					Name: "cities",
 					Data: fir.Data{
 						"cities": getCities(req.Query),
@@ -70,7 +70,7 @@ func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}
-	return fir.Patchset{}
+	return nil
 }
 
 func main() {

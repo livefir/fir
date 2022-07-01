@@ -86,7 +86,7 @@ func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 
 	patchset = append(patchset, fir.Morph{
 		Selector: "#account_form",
-		Template: fir.Template{
+		Template: &fir.Template{
 			Name: "account_form",
 			Data: fir.Data{
 				"name":  req.Name,

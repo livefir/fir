@@ -39,7 +39,7 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 
 		return fir.Patchset{fir.Morph{
 			Selector: "#signin_container",
-			Template: fir.Template{
+			Template: &fir.Template{
 				Name: "signin_container",
 				Data: fir.Data{"sent_magic_link": true},
 			},

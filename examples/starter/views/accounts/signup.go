@@ -47,7 +47,7 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 		}
 		return fir.Patchset{fir.Morph{
 			Selector: "#signup_container",
-			Template: fir.Template{
+			Template: &fir.Template{
 				Name: "signup_container",
 				Data: fir.Data{
 					"sent_confirmation": true,

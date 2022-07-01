@@ -214,37 +214,45 @@ func (v *viewHandler) reloadTemplates() {
 
 func buildDOMPatch(t *template.Template, patch Patch) (Operation, error) {
 	var op Op
-	var template Template
+	var patchTemplate *Template
 	var selector string
+
 	switch v := patch.(type) {
 	case Morph:
 		op = v.Op()
-		template = v.Template
+		patchTemplate = v.Template
 		selector = v.Selector
 	case After:
 		op = v.Op()
-		template = v.Template
+		patchTemplate = v.Template
 		selector = v.Selector
 	case Before:
 		op = v.Op()
-		template = v.Template
+		patchTemplate = v.Template
 		selector = v.Selector
 	case Append:
 		op = v.Op()
-		template = v.Template
+		patchTemplate = v.Template
 		selector = v.Selector
 	case Prepend:
 		op = v.Op()
-		template = v.Template
+		patchTemplate = v.Template
 		selector = v.Selector
 	case Remove:
 		op = v.Op()
-		template = v.Template
+		patchTemplate = v.Template
 		selector = v.Selector
 	}
 
+	if patchTemplate == nil {
+		return Operation{}, fmt.Errorf("error: patch %v template is nil", patch.Op())
+	}
+	if selector == "" {
+		return Operation{}, fmt.Errorf("error: patch %v selector is empty", patch.Op())
+	}
+
 	var buf bytes.Buffer
-	err := t.ExecuteTemplate(&buf, template.Name, template.Data)
+	err := t.ExecuteTemplate(&buf, patchTemplate.Name, patchTemplate.Data)
 	if err != nil {
 		// if s.wc.debugLog {
 		// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
@@ -263,13 +271,20 @@ func buildDOMPatch(t *template.Template, patch Patch) (Operation, error) {
 	}, nil
 }
 
-func buildStorePatch(patch Patch) Operation {
+func buildStorePatch(patch Patch) (Operation, error) {
 	storePatch := patch.(Store)
+	if storePatch.Name == "" {
+		return Operation{}, fmt.Errorf("error: patch %v name is empty", patch.Op())
+	}
+	if storePatch.Data == nil {
+		return Operation{}, fmt.Errorf("error: patch %v data is nil", patch.Op())
+	}
+
 	return Operation{
 		Op:       updateStore,
 		Selector: storePatch.Name,
 		Value:    storePatch.Data,
-	}
+	}, nil
 }
 
 func buildOperation(t *template.Template, patch Patch) (Operation, error) {
@@ -283,7 +298,7 @@ func buildOperation(t *template.Template, patch Patch) (Operation, error) {
 	case reload:
 		return Operation{Op: reload}, nil
 	case updateStore:
-		return buildStorePatch(patch), nil
+		return buildStorePatch(patch)
 	default:
 		return Operation{}, fmt.Errorf("operation unknown")
 	}

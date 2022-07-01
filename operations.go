@@ -46,7 +46,7 @@ type Template struct {
 
 type Morph struct {
 	Selector string
-	Template Template
+	Template *Template
 }
 
 func (m Morph) Op() Op {
@@ -55,7 +55,7 @@ func (m Morph) Op() Op {
 
 type After struct {
 	Selector string
-	Template Template
+	Template *Template
 }
 
 func (a After) Op() Op {
@@ -64,7 +64,7 @@ func (a After) Op() Op {
 
 type Before struct {
 	Selector string
-	Template Template
+	Template *Template
 }
 
 func (b Before) Op() Op {
@@ -73,7 +73,7 @@ func (b Before) Op() Op {
 
 type Append struct {
 	Selector string
-	Template Template
+	Template *Template
 }
 
 func (a Append) Op() Op {
@@ -82,7 +82,7 @@ func (a Append) Op() Op {
 
 type Prepend struct {
 	Selector string
-	Template Template
+	Template *Template
 }
 
 func (p Prepend) Op() Op {
@@ -91,7 +91,7 @@ func (p Prepend) Op() Op {
 
 type Remove struct {
 	Selector string
-	Template Template
+	Template *Template
 }
 
 func (r Remove) Op() Op {
@@ -117,7 +117,7 @@ func Error(err error) Patchset {
 	log.Printf("[controller] error: %s\n", err)
 	return Patchset{Morph{
 		Selector: "#fir-error",
-		Template: Template{
+		Template: &Template{
 			Name: "fir-error",
 			Data: Data{"error": UserError(err)}},
 	}}

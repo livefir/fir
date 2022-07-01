@@ -52,7 +52,7 @@ type Counter struct {
 func morphCount(c int32) fir.Patch {
 	return fir.Morph{
 		Selector: "#count",
-		Template: fir.Template{
+		Template: &fir.Template{
 			Name: "count",
 			Data: fir.Data{"count": c},
 		},

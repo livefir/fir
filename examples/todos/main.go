@@ -83,13 +83,13 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 	return fir.Patchset{
 		fir.Store{
 			Name: "formData",
-			Data: map[string]any{
+			Data: fir.Data{
 				"textError": "",
 			},
 		},
 		fir.Morph{
 			Selector: "#todos",
-			Template: fir.Template{
+			Template: &fir.Template{
 				Name: "todos",
 				Data: fir.Data{"todos": todos},
 			},

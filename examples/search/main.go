@@ -59,7 +59,7 @@ func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 		}
 		return fir.Patchset{fir.Morph{
 			Selector: "#cities",
-			Template: fir.Template{
+			Template: &fir.Template{
 				Name: "cities",
 				Data: fir.Data{
 					"cities": getCities(req.Query),
