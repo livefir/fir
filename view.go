@@ -297,6 +297,9 @@ func buildOperation(t *template.Template, patch Patch) (Operation, error) {
 		return operation, nil
 	case reload:
 		return Operation{Op: reload}, nil
+	case resetForm:
+		p := patch.(ResetForm)
+		return Operation{Op: resetForm, Selector: p.Selector}, nil
 	case updateStore:
 		return buildStorePatch(patch)
 	default:
@@ -321,13 +324,17 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 	event.requestContext = r.Context()
 	patchset := v.view.OnEvent(event)
+
+	// unset error patch
+	patchset = append([]Patch{morphError("")}, patchset...)
+
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
-
 		operation, err := buildOperation(v.viewTemplate, patch)
 		if err != nil {
 			continue
 		}
+
 		operations = append(operations, operation)
 	}
 	json.NewEncoder(w).Encode(operations)

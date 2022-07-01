@@ -16,6 +16,7 @@ const (
 	remove      Op = "remove"
 	reload      Op = "reload"
 	updateStore Op = "store"
+	resetForm   Op = "resetForm"
 )
 
 type Operation struct {
@@ -113,12 +114,24 @@ func (r Reload) Op() Op {
 	return reload
 }
 
-func Error(err error) Patchset {
-	log.Printf("[controller] error: %s\n", err)
-	return Patchset{Morph{
+type ResetForm struct {
+	Selector string
+}
+
+func (r ResetForm) Op() Op {
+	return resetForm
+}
+
+func morphError(err string) Patch {
+	return Morph{
 		Selector: "#fir-error",
 		Template: &Template{
 			Name: "fir-error",
-			Data: Data{"error": UserError(err)}},
-	}}
+			Data: Data{"error": err}},
+	}
+}
+
+func Error(err error) Patchset {
+	log.Printf("[controller] error: %s\n", err)
+	return Patchset{morphError(UserError(err))}
 }

@@ -87,6 +87,18 @@ const Plugin = (Alpine) => {
         }
     }
 
+    const toElements = (htmlString) => {
+        var template = document.createElement('template');
+        template.innerHTML = htmlString;
+        return template.content.childNodes;
+    }
+
+    const toElement = (htmlString) => {
+        var template = document.createElement('template');
+        template.innerHTML = htmlString;
+        return template.content.firstChild;
+    }
+
     const operations = {
         morph: operation => selectAll(operation, (el, value) => {
             Alpine.morph(el, value, {
@@ -96,21 +108,26 @@ const Plugin = (Alpine) => {
             })
         }),
         after: operation => selectAll(operation, (el, value) => {
-            el.insertBefore(value, el.nextSibling)
+            el.insertBefore(toElement(value), el.nextSibling)
         }),
         before: operation => selectAll(operation, (el, value) => {
-            el.insertBefore(value, el)
+            el.insertBefore(toElement(value), el)
         }),
         append: operation => selectAll(operation, (el, value) => {
-            el.append(value)
+            el.append(...toElements(value))
         }),
         prepend: operation => selectAll(operation, (el, value) => {
-            el.prepend(value)
+            el.prepend(...toElements(value))
         }),
         remove: operation => selectAll(operation, (el, value) => {
             el.remove()
         }),
         reload: () => window.location.reload(),
+        resetForm: operation => selectAll(operation, (el, value) => {
+            if (el instanceof HTMLFormElement) {
+                el.reset()
+            }
+        }),
         store: (operation) => updateStore(operation.selector, operation.value)
     }
 
