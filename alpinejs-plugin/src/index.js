@@ -128,6 +128,7 @@ const Plugin = (Alpine) => {
                 el.reset()
             }
         }),
+        navigate: operation => window.location.replace(operation.value),
         store: (operation) => updateStore(operation.selector, operation.value)
     }
 

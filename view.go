@@ -300,6 +300,9 @@ func buildOperation(t *template.Template, patch Patch) (Operation, error) {
 	case resetForm:
 		p := patch.(ResetForm)
 		return Operation{Op: resetForm, Selector: p.Selector}, nil
+	case navigate:
+		p := patch.(Navigate)
+		return Operation{Op: navigate, Value: p.To}, nil
 	case updateStore:
 		return buildStorePatch(patch)
 	default:

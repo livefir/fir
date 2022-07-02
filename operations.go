@@ -17,6 +17,7 @@ const (
 	reload      Op = "reload"
 	updateStore Op = "store"
 	resetForm   Op = "resetForm"
+	navigate    Op = "navigate"
 )
 
 type Operation struct {
@@ -120,6 +121,14 @@ type ResetForm struct {
 
 func (r ResetForm) Op() Op {
 	return resetForm
+}
+
+type Navigate struct {
+	To string
+}
+
+func (n Navigate) Op() Op {
+	return navigate
 }
 
 func morphError(err string) Patch {
