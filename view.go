@@ -147,7 +147,8 @@ func (d DefaultView) Stream() <-chan Patch {
 type DefaultErrorView struct{}
 
 func (d DefaultErrorView) Content() string {
-	return `{{ define "content"}}
+	return `
+{{ define "content"}}
     <div style="text-align:center"><h1>{{.statusCode}}</h1></div>
     <div style="text-align:center"><h1>{{.statusMessage}}</h1></div>
     <div style="text-align:center"><a href="javascript:history.back()">back</a></div>
@@ -164,7 +165,7 @@ func (d DefaultErrorView) LayoutContentName() string {
 }
 
 func (d DefaultErrorView) Partials() []string {
-	return []string{"./templates/partials"}
+	return []string{}
 }
 
 func (d DefaultErrorView) Extensions() []string {
@@ -378,13 +379,14 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		URLPath: r.URL.Path,
 	}
 
-	w.WriteHeader(status.Code)
 	if status.Code > 299 {
 		onRequestError(w, r, v, &status)
 		return
 	}
+
 	v.viewTemplate.Option("missingkey=zero")
-	err = v.viewTemplate.Execute(w, v.mountData)
+	var buf bytes.Buffer
+	err = v.viewTemplate.Execute(&buf, v.mountData)
 	if err != nil {
 		log.Printf("OnGet viewTemplate.Execute error:  %v", err)
 		onRequestError(w, r, v, nil)
@@ -393,6 +395,9 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		log.Printf("OnGet render view %+v, with data => \n %+v\n",
 			v.view.Content(), getJSON(v.mountData))
 	}
+
+	w.WriteHeader(status.Code)
+	w.Write(buf.Bytes())
 
 }
 
@@ -407,7 +412,10 @@ func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, stat
 	}
 	v.mountData["statusCode"] = status.Code
 	v.mountData["statusMessage"] = status.Message
-	err := v.errorViewTemplate.Execute(w, v.mountData)
+
+	v.viewTemplate.Option("missingkey=zero")
+	var buf bytes.Buffer
+	err := v.errorViewTemplate.Execute(&buf, v.mountData)
 	if err != nil {
 		log.Printf("err rendering error template: %v\n", err)
 		_, errWrite := w.Write([]byte("Something went wrong"))
@@ -415,6 +423,10 @@ func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, stat
 			panic(errWrite)
 		}
 	}
+
+	w.WriteHeader(status.Code)
+	w.Write(buf.Bytes())
+
 }
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
@@ -532,13 +544,15 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	if view.Layout() == "" && view.Content() != "" {
 		// check if content is a not a file or directory
 		if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); err != nil {
-			return template.Must(template.New("base").
-				Funcs(view.FuncMap()).
-				Parse(view.Content())), nil
+			return template.Must(
+				template.New(
+					view.LayoutContentName()).
+					Funcs(view.FuncMap()).
+					Parse(view.Content()),
+			), nil
 		} else {
-
-			viewContentPath := filepath.Join(projectRoot, view.Content())
 			// is a file or directory
+			viewContentPath := filepath.Join(projectRoot, view.Content())
 			var pageFiles []string
 			// view and its partials
 			pageFiles = append(pageFiles, find(viewContentPath, view.Extensions())...)
