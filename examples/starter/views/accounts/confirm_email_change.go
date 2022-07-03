@@ -23,10 +23,7 @@ func (c *ConfirmEmailChangeView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (c *ConfirmEmailChangeView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	if r.Method != "GET" {
-		return fir.Status{Code: 405}, nil
-	}
+func (c *ConfirmEmailChangeView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	token := chi.URLParam(r, "token")
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := c.Auth.GetAccount(r.Context(), userID)

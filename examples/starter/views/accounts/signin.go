@@ -50,11 +50,7 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SigninView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	if r.Method == "POST" {
-		return s.LoginSubmit(w, r)
-	}
-
+func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
 		return fir.Status{Code: 200}, nil
 	}
@@ -62,6 +58,11 @@ func (s *SigninView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Stat
 	return fir.Status{Code: 200}, fir.Data{
 		"is_logged_in": true,
 	}
+
+}
+
+func (s *SigninView) OnPost(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+	return s.LoginSubmit(w, r)
 }
 
 func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {

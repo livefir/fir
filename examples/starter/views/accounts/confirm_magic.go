@@ -22,10 +22,7 @@ func (c *ConfirmMagicView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (c *ConfirmMagicView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	if r.Method != "GET" {
-		return fir.Status{Code: 405}, nil
-	}
+func (c *ConfirmMagicView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	token := chi.URLParam(r, "token")
 	err := c.Auth.LoginWithPasswordlessToken(w, r, token)
 	if err != nil {

@@ -227,17 +227,17 @@ func main() {
 
 </details>
 
-Running the above code, show render two buttons but nothing else. We want to show an initial count on the page. To do this, we use Go's `html/template` to hydrate some data into our page by overriding the `OnRequest` method of the `View` interface.
+Running the above code, show render two buttons but nothing else. We want to show an initial count on the page. To do this, we use Go's `html/template` to hydrate some data into our page by overriding the `OnGet` method of the `View` interface.
 
 ```go
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.Value(),
 	}
 }
 ```
 
-By default, `fir.Data` was zero value. After overriding `OnRequest` we are initialising it with a `count` value. The page is then passed through `html/template` and rendered. This is the standard way of rendering html templates in Go so this should be recongisable.
+By default, `fir.Data` was zero value. After overriding `OnGet` we are initialising it with a `count` value. The page is then passed through `html/template` and rendered. This is the standard way of rendering html templates in Go so this should be recongisable.
 
 {% raw %}
 ```html
@@ -399,7 +399,7 @@ func (c *CounterView) Content() string {
 	</html>`
 }
 
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.model.Value(),
 	}
@@ -655,7 +655,7 @@ func (c *CounterView) Layout() string {
 	</html>`
 }
 
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.model.Count(),
 	}

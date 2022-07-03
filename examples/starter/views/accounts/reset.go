@@ -48,7 +48,7 @@ func (rv *ResetView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (rv *ResetView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (rv *ResetView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	token := chi.URLParam(r, "token")
 	return fir.Status{Code: 200}, fir.Data{
 		"token": token,

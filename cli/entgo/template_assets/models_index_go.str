@@ -21,7 +21,7 @@ func (v *View) Layout() string {
 	return "{{.layout}}"
 }
 
-func (v *View) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	{{.modelNamePlural}}, err := v.DB.{{.modelNameTitled}}.Query().All(r.Context())
 	if err != nil {
 		log.Printf("error querying {{.modelNamePlural}},: %s\n", err)

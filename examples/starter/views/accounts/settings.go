@@ -34,10 +34,7 @@ func (s *SettingsView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SettingsView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	if r.Method != "GET" {
-		return fir.Status{Code: 405}, nil
-	}
+func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(r.Context(), userID)
 	if err != nil {

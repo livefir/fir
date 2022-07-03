@@ -108,7 +108,7 @@ func (c *CounterView) Content() string {
 	</html>`
 }
 
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.model.Value(),
 	}

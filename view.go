@@ -50,7 +50,8 @@ type View interface {
 	Extensions() []string
 	FuncMap() template.FuncMap
 	// Lifecyle
-	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
+	OnGet(http.ResponseWriter, *http.Request) (Status, Data)
+	OnPost(http.ResponseWriter, *http.Request) (Status, Data)
 	OnEvent(event Event) Patchset
 	Stream() <-chan Patch
 }
@@ -120,9 +121,14 @@ func (d DefaultView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-// OnRequest is called when the page is first loaded for the http route.
-func (d DefaultView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, Data) {
+// OnGet is called when the page is first loaded for the http route.
+func (d DefaultView) OnGet(w http.ResponseWriter, r *http.Request) (Status, Data) {
 	return Status{Code: 200, Message: "ok"}, Data{}
+}
+
+// OnPost is called when a form is submitted for the http route.
+func (d DefaultView) OnPost(w http.ResponseWriter, r *http.Request) (Status, Data) {
+	return Status{Code: 405, Message: "method not allowed"}, Data{}
 }
 
 // OnEvent handles the events sent from the browser
@@ -169,8 +175,12 @@ func (d DefaultErrorView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-func (d DefaultErrorView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, Data) {
+func (d DefaultErrorView) OnGet(w http.ResponseWriter, r *http.Request) (Status, Data) {
 	return Status{Code: 500, Message: "Internal Error"}, Data{}
+}
+
+func (d DefaultErrorView) OnPost(w http.ResponseWriter, r *http.Request) (Status, Data) {
+	return Status{Code: 405, Message: "method not allowed"}, Data{}
 }
 
 // OnEvent handles the events sent from the browser
@@ -353,10 +363,15 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	var err error
 	var status Status
 
-	status, v.mountData = v.view.OnRequest(w, r)
+	if r.Method == "POST" {
+		status, v.mountData = v.view.OnPost(w, r)
+	} else {
+		status, v.mountData = v.view.OnGet(w, r)
+	}
 	if v.mountData == nil {
 		v.mountData = make(Data)
 	}
+
 	v.mountData["app_name"] = v.wc.name
 	v.mountData["fir"] = &AppContext{
 		Name:    v.wc.name,
@@ -371,11 +386,11 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	v.viewTemplate.Option("missingkey=zero")
 	err = v.viewTemplate.Execute(w, v.mountData)
 	if err != nil {
-		log.Printf("OnRequest viewTemplate.Execute error:  %v", err)
+		log.Printf("OnGet viewTemplate.Execute error:  %v", err)
 		onRequestError(w, r, v, nil)
 	}
 	if v.wc.debugLog {
-		log.Printf("OnRequest render view %+v, with data => \n %+v\n",
+		log.Printf("OnGet render view %+v, with data => \n %+v\n",
 			v.view.Content(), getJSON(v.mountData))
 	}
 
@@ -383,7 +398,7 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
 	var errorStatus Status
-	errorStatus, v.mountData = v.errorView.OnRequest(w, r)
+	errorStatus, v.mountData = v.errorView.OnGet(w, r)
 	if v.mountData == nil {
 		v.mountData = make(Data)
 	}

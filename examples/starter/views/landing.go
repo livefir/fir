@@ -20,10 +20,7 @@ func (l *LandingView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (l *LandingView) OnRequest(_ http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
-	if r.Method != "GET" {
-		return fir.Status{Code: 405}, nil
-	}
+func (l *LandingView) OnPost(_ http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
 	if _, err := l.Auth.CurrentAccount(r); err != nil {
 		return fir.Status{Code: 200}, nil
 	}
