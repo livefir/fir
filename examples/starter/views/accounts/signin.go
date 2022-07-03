@@ -50,35 +50,36 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return fir.Status{Code: 200}, nil
+		return fir.Page{}
 	}
 
-	return fir.Status{Code: 200}, fir.Data{
-		"is_logged_in": true,
+	return fir.Page{
+		Data: fir.Data{
+			"is_logged_in": true,
+		},
 	}
-
 }
 
-func (s *SigninView) OnPost(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SigninView) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 	return s.LoginSubmit(w, r)
 }
 
-func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) fir.Page {
 	var email, password string
 	_ = r.ParseForm()
 	for k, v := range r.Form {
 		if k == "email" && len(v) == 0 {
-			return fir.Status{Code: 200}, fir.Data{
+			return fir.Page{Data: fir.Data{
 				"error": "email is required",
-			}
+			}}
 		}
 
 		if k == "password" && len(v) == 0 {
-			return fir.Status{Code: 200}, fir.Data{
+			return fir.Page{Data: fir.Data{
 				"error": "password is required",
-			}
+			}}
 		}
 
 		if len(v) == 0 {
@@ -96,9 +97,9 @@ func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.St
 		}
 	}
 	if err := s.Auth.Login(w, r, email, password); err != nil {
-		return fir.Status{Code: 200}, fir.Data{
+		return fir.Page{Data: fir.Data{
 			"error": fir.UserError(err),
-		}
+		}}
 	}
 	redirectTo := "/app"
 	from := r.URL.Query().Get("from")
@@ -108,5 +109,5 @@ func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) (fir.St
 
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 
-	return fir.Status{Code: 200}, fir.Data{}
+	return fir.Page{}
 }

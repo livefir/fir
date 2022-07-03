@@ -59,13 +59,14 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SignupView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SignupView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return fir.Status{Code: 200}, nil
+		return fir.Page{}
 	}
 
-	return fir.Status{Code: 200}, fir.Data{
+	return fir.Page{Data: fir.Data{
 		"is_logged_in": true,
+	},
 	}
 }
 

@@ -230,7 +230,7 @@ func main() {
 Running the above code, show render two buttons but nothing else. We want to show an initial count on the page. To do this, we use Go's `html/template` to hydrate some data into our page by overriding the `OnGet` method of the `View` interface.
 
 ```go
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.Value(),
 	}
@@ -399,7 +399,7 @@ func (c *CounterView) Content() string {
 	</html>`
 }
 
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.model.Value(),
 	}
@@ -655,7 +655,7 @@ func (c *CounterView) Layout() string {
 	</html>`
 }
 
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
 	return fir.Status{Code: 200}, fir.Data{
 		"count": c.model.Count(),
 	}

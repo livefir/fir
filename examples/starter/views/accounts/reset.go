@@ -48,11 +48,11 @@ func (rv *ResetView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (rv *ResetView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (rv *ResetView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	token := chi.URLParam(r, "token")
-	return fir.Status{Code: 200}, fir.Data{
+	return fir.Page{Data: fir.Data{
 		"token": token,
-	}
+	}}
 }
 
 type ResetReq struct {

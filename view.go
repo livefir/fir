@@ -17,7 +17,8 @@ import (
 
 var DefaultViewExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
 
-type Status struct {
+type Page struct {
+	Data    Data   `json:"data"`
 	Code    int    `json:"statusCode"`
 	Message string `json:"statusMessage"`
 }
@@ -50,8 +51,8 @@ type View interface {
 	Extensions() []string
 	FuncMap() template.FuncMap
 	// Lifecyle
-	OnGet(http.ResponseWriter, *http.Request) (Status, Data)
-	OnPost(http.ResponseWriter, *http.Request) (Status, Data)
+	OnGet(http.ResponseWriter, *http.Request) Page
+	OnPost(http.ResponseWriter, *http.Request) Page
 	OnEvent(event Event) Patchset
 	Stream() <-chan Patch
 }
@@ -122,13 +123,13 @@ func (d DefaultView) FuncMap() template.FuncMap {
 }
 
 // OnGet is called when the page is first loaded for the http route.
-func (d DefaultView) OnGet(w http.ResponseWriter, r *http.Request) (Status, Data) {
-	return Status{Code: 200, Message: "ok"}, Data{}
+func (d DefaultView) OnGet(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 200, Message: "OK"}
 }
 
 // OnPost is called when a form is submitted for the http route.
-func (d DefaultView) OnPost(w http.ResponseWriter, r *http.Request) (Status, Data) {
-	return Status{Code: 405, Message: "method not allowed"}, Data{}
+func (d DefaultView) OnPost(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 405, Message: "method not allowed"}
 }
 
 // OnEvent handles the events sent from the browser
@@ -176,12 +177,12 @@ func (d DefaultErrorView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-func (d DefaultErrorView) OnGet(w http.ResponseWriter, r *http.Request) (Status, Data) {
-	return Status{Code: 500, Message: "Internal Error"}, Data{}
+func (d DefaultErrorView) OnGet(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 500, Message: "Internal Server Error"}
 }
 
-func (d DefaultErrorView) OnPost(w http.ResponseWriter, r *http.Request) (Status, Data) {
-	return Status{Code: 405, Message: "method not allowed"}, Data{}
+func (d DefaultErrorView) OnPost(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 405, Message: "method not allowed"}
 }
 
 // OnEvent handles the events sent from the browser
@@ -362,13 +363,14 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	v.reloadTemplates()
 
 	var err error
-	var status Status
+	var page Page
 
 	if r.Method == "POST" {
-		status, v.mountData = v.view.OnPost(w, r)
+		page = v.view.OnPost(w, r)
 	} else {
-		status, v.mountData = v.view.OnGet(w, r)
+		page = v.view.OnGet(w, r)
 	}
+	v.mountData = page.Data
 	if v.mountData == nil {
 		v.mountData = make(Data)
 	}
@@ -379,8 +381,15 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		URLPath: r.URL.Path,
 	}
 
-	if status.Code > 299 {
-		onRequestError(w, r, v, &status)
+	if page.Code == 0 {
+		page.Code = http.StatusOK
+	}
+	if page.Message == "" {
+		page.Message = http.StatusText(page.Code)
+	}
+
+	if page.Code > 299 {
+		onRequestError(w, r, v, &page)
 		return
 	}
 
@@ -396,22 +405,22 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 			v.view.Content(), getJSON(v.mountData))
 	}
 
-	w.WriteHeader(status.Code)
+	w.WriteHeader(page.Code)
 	w.Write(buf.Bytes())
 
 }
 
-func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
-	var errorStatus Status
-	errorStatus, v.mountData = v.errorView.OnGet(w, r)
+func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, page *Page) {
+	errorPage := v.errorView.OnGet(w, r)
+	if page == nil {
+		page = &errorPage
+	}
+	v.mountData = page.Data
 	if v.mountData == nil {
 		v.mountData = make(Data)
 	}
-	if status == nil {
-		status = &errorStatus
-	}
-	v.mountData["statusCode"] = status.Code
-	v.mountData["statusMessage"] = status.Message
+	v.mountData["statusCode"] = page.Code
+	v.mountData["statusMessage"] = page.Message
 
 	v.viewTemplate.Option("missingkey=zero")
 	var buf bytes.Buffer
@@ -424,7 +433,7 @@ func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, stat
 		}
 	}
 
-	w.WriteHeader(status.Code)
+	w.WriteHeader(page.Code)
 	w.Write(buf.Bytes())
 
 }

@@ -36,15 +36,13 @@ func (t *TodosView) Partials() []string {
 	return []string{"todos.html"}
 }
 
-func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	todos := make([]Todo, 0)
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return fir.Status{
-			Code: 200,
-		}, nil
+		return fir.Page{}
 	}
 	b, _ := json.Marshal(todos)
-	return fir.Status{Code: 200}, fir.Data{"todos": string(b)}
+	return fir.Page{Data: fir.Data{"todos": string(b)}}
 }
 
 func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {

@@ -22,13 +22,13 @@ func (c *ConfirmMagicView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (c *ConfirmMagicView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (c *ConfirmMagicView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	token := chi.URLParam(r, "token")
 	err := c.Auth.LoginWithPasswordlessToken(w, r, token)
 	if err != nil {
-		return fir.Status{Code: 200}, nil
+		return fir.Page{}
 	}
 	redirectTo := "/app"
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
-	return fir.Status{Code: 200}, nil
+	return fir.Page{}
 }

@@ -20,11 +20,12 @@ func (l *LandingView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (l *LandingView) OnPost(_ http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (l *LandingView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := l.Auth.CurrentAccount(r); err != nil {
-		return fir.Status{Code: 200}, nil
+		return fir.Page{}
 	}
-	return fir.Status{Code: 200}, fir.Data{
-		"is_logged_in": true,
-	}
+	return fir.Page{
+		Data: fir.Data{
+			"is_logged_in": true,
+		}}
 }

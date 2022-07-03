@@ -34,11 +34,11 @@ func (s *SettingsView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(r.Context(), userID)
 	if err != nil {
-		return fir.Status{Code: 200}, nil
+		return fir.Page{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 
 	name := ""
@@ -47,11 +47,12 @@ func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status
 		name, _ = m.String("name")
 	}
 
-	return fir.Status{Code: 200}, fir.Data{
-		"is_logged_in": true,
-		"email":        acc.Email(),
-		"name":         name,
-	}
+	return fir.Page{
+		Data: fir.Data{
+			"is_logged_in": true,
+			"email":        acc.Email(),
+			"name":         name,
+		}}
 }
 
 func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {

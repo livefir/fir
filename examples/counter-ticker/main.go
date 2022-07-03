@@ -131,10 +131,11 @@ func (c *CounterView) Layout() string {
 	</html>`
 }
 
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.model.Count(),
-	}
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{
+			"count": c.model.Count(),
+		}}
 }
 
 func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {

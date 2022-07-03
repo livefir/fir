@@ -21,7 +21,7 @@ func (v *View) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (v *View) OnGet(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	todos, err := v.DB.Todo.Query().All(r.Context())
 	if err != nil {
 		log.Printf("error querying todos,: %s\n", err)
