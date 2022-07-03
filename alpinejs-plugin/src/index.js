@@ -139,12 +139,14 @@ const Plugin = (Alpine) => {
             params: params,
         }
 
+        let eventName = "fir:emit"
         let startEventName = "fir:emit-start"
         let endEventName = "fir:emit-end"
         if (el instanceof HTMLFormElement) {
             detail['formName'] = el.getAttribute("name");
             startEventName = "fir:submit-start"
             endEventName = "fir:submit-end"
+            eventName = "fir:submit"
         }
 
         const options = {
@@ -159,9 +161,10 @@ const Plugin = (Alpine) => {
         el.dispatchEvent(new CustomEvent(startEventName, options))
         if (detail.id) {
             el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.id}`, options))
-        }
-        if (detail.formName) {
+            el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
+        } else if (detail.formName) {
             el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.formName}`, options))
+            el.dispatchEvent(new CustomEvent(`${eventName}:${detail.formName}`, options))
         }
 
         fetch(window.location.pathname, {
@@ -187,9 +190,10 @@ const Plugin = (Alpine) => {
                 el.dispatchEvent(new CustomEvent(endEventName, options))
                 if (detail.id) {
                     el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.id}`, options))
-                }
-                if (detail.formName) {
+                    el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
+                } else if (detail.formName) {
                     el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.formName}`, options))
+                    el.dispatchEvent(new CustomEvent(`${eventName}:${detail.formName}`, options))
                 }
             });
     }
