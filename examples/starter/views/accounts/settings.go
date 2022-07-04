@@ -58,21 +58,21 @@ func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 	req := new(ProfileRequest)
 	if err := event.DecodeParams(req); err != nil {
-		return fir.Error(err)
+		return fir.PatchError(err)
 	}
 	rCtx := event.RequestContext()
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(rCtx, userID)
 	if err != nil {
-		return fir.Error(err)
+		return fir.PatchError(err)
 	}
 	if err := acc.Attributes().Set(rCtx, "name", req.Name); err != nil {
-		return fir.Error(err)
+		return fir.PatchError(err)
 	}
 	var patchset fir.Patchset
 	if req.Email != "" && req.Email != acc.Email() {
 		if err := acc.ChangeEmail(rCtx, req.Email); err != nil {
-			return fir.Error(err)
+			return fir.PatchError(err)
 		}
 		patchset = append(patchset, fir.Store{
 			Name: "settings",
@@ -101,10 +101,10 @@ func (s *SettingsView) DeleteAccount(event fir.Event) fir.Patchset {
 	userID, _ := rCtx.Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(context.Background(), userID)
 	if err != nil {
-		return fir.Error(err)
+		return fir.PatchError(err)
 	}
 	if err := acc.Delete(rCtx); err != nil {
-		return fir.Error(err)
+		return fir.PatchError(err)
 	}
 	return fir.Patchset{fir.Reload{}}
 }

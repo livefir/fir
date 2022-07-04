@@ -21,6 +21,7 @@ type Page struct {
 	Data    Data   `json:"data"`
 	Code    int    `json:"statusCode"`
 	Message string `json:"statusMessage"`
+	Error   error  `json:"-"`
 }
 
 type AppContext struct {
@@ -339,9 +340,22 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 	event.requestContext = r.Context()
 	patchset := v.view.OnEvent(event)
+	if patchset == nil {
+		patchset = Patchset{}
+	}
 
-	// unset error patch
-	patchset = append([]Patch{morphError("")}, patchset...)
+	firErrorPatchExists := false
+
+	for _, patch := range patchset {
+		if patch.GetSelector() == "#fir-error" {
+			firErrorPatchExists = true
+		}
+	}
+
+	if !firErrorPatchExists {
+		// unset error patch
+		patchset = append([]Patch{morphError("")}, patchset...)
+	}
 
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
@@ -381,6 +395,8 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		URLPath: r.URL.Path,
 	}
 
+	page.Data = v.mountData
+
 	if page.Code == 0 {
 		page.Code = http.StatusOK
 	}
@@ -395,14 +411,14 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	v.viewTemplate.Option("missingkey=zero")
 	var buf bytes.Buffer
-	err = v.viewTemplate.Execute(&buf, v.mountData)
+	err = v.viewTemplate.Execute(&buf, page.Data)
 	if err != nil {
 		log.Printf("OnGet viewTemplate.Execute error:  %v", err)
 		onRequestError(w, r, v, nil)
 	}
 	if v.wc.debugLog {
 		log.Printf("OnGet render view %+v, with data => \n %+v\n",
-			v.view.Content(), getJSON(v.mountData))
+			v.view.Content(), getJSON(page.Data))
 	}
 
 	w.WriteHeader(page.Code)
@@ -422,15 +438,22 @@ func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, page
 	v.mountData["statusCode"] = page.Code
 	v.mountData["statusMessage"] = page.Message
 
+	page.Data = v.mountData
+
 	v.viewTemplate.Option("missingkey=zero")
 	var buf bytes.Buffer
-	err := v.errorViewTemplate.Execute(&buf, v.mountData)
+	err := v.errorViewTemplate.Execute(&buf, page.Data)
 	if err != nil {
 		log.Printf("err rendering error template: %v\n", err)
 		_, errWrite := w.Write([]byte("Something went wrong"))
 		if errWrite != nil {
 			panic(errWrite)
 		}
+	}
+
+	if v.wc.debugLog {
+		log.Printf("OnGet render error view %+v, with data => \n %+v\n",
+			v.view.Content(), getJSON(page.Data))
 	}
 
 	w.WriteHeader(page.Code)

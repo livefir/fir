@@ -28,15 +28,15 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 	case "auth/signup":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return fir.Error(err)
+			return fir.PatchError(err)
 		}
 
 		if req.Email == "" {
-			return fir.Error(fmt.Errorf("%w", errors.New("email is required")))
+			return fir.PatchError(fmt.Errorf("%w", errors.New("email is required")))
 		}
 
 		if req.Password == "" {
-			return fir.Error(fmt.Errorf("%w", errors.New("password is required")))
+			return fir.PatchError(fmt.Errorf("%w", errors.New("password is required")))
 		}
 
 		attributes := make(map[string]interface{})

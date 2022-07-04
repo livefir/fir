@@ -37,6 +37,7 @@ func (m *Operation) Bytes() []byte {
 
 type Patch interface {
 	Op() Op
+	GetSelector() string
 }
 
 type Patchset []Patch
@@ -55,6 +56,10 @@ func (m Morph) Op() Op {
 	return morph
 }
 
+func (m Morph) GetSelector() string {
+	return m.Selector
+}
+
 type After struct {
 	Selector string
 	Template *Template
@@ -64,9 +69,17 @@ func (a After) Op() Op {
 	return after
 }
 
+func (a After) GetSelector() string {
+	return a.Selector
+}
+
 type Before struct {
 	Selector string
 	Template *Template
+}
+
+func (b Before) GetSelector() string {
+	return b.Selector
 }
 
 func (b Before) Op() Op {
@@ -78,6 +91,10 @@ type Append struct {
 	Template *Template
 }
 
+func (a Append) GetSelector() string {
+	return a.Selector
+}
+
 func (a Append) Op() Op {
 	return appendOp
 }
@@ -85,6 +102,10 @@ func (a Append) Op() Op {
 type Prepend struct {
 	Selector string
 	Template *Template
+}
+
+func (p Prepend) GetSelector() string {
+	return p.Selector
 }
 
 func (p Prepend) Op() Op {
@@ -96,6 +117,10 @@ type Remove struct {
 	Template *Template
 }
 
+func (r Remove) GetSelector() string {
+	return r.Selector
+}
+
 func (r Remove) Op() Op {
 	return remove
 }
@@ -105,11 +130,19 @@ type Store struct {
 	Data any
 }
 
+func (s Store) GetSelector() string {
+	return s.Name
+}
+
 func (s Store) Op() Op {
 	return updateStore
 }
 
 type Reload struct{}
+
+func (r Reload) GetSelector() string {
+	return ""
+}
 
 func (r Reload) Op() Op {
 	return reload
@@ -117,6 +150,10 @@ func (r Reload) Op() Op {
 
 type ResetForm struct {
 	Selector string
+}
+
+func (r ResetForm) GetSelector() string {
+	return r.Selector
 }
 
 func (r ResetForm) Op() Op {
@@ -127,20 +164,10 @@ type Navigate struct {
 	To string
 }
 
+func (n Navigate) GetSelector() string {
+	return n.To
+}
+
 func (n Navigate) Op() Op {
 	return navigate
-}
-
-func morphError(err string) Patch {
-	return Morph{
-		Selector: "#fir-error",
-		Template: &Template{
-			Name: "fir-error",
-			Data: Data{"error": err}},
-	}
-}
-
-func Error(err error) Patchset {
-	log.Printf("[controller] error: %s\n", err)
-	return Patchset{morphError(UserError(err))}
 }
