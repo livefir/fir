@@ -341,6 +341,7 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	event.requestContext = r.Context()
 	patchset := v.view.OnEvent(event)
 	if patchset == nil {
+		log.Printf("[view] warning: no patchset returned for event: %v\n", event)
 		patchset = Patchset{}
 	}
 
@@ -361,6 +362,7 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	for _, patch := range patchset {
 		operation, err := buildOperation(v.viewTemplate, patch)
 		if err != nil {
+			log.Printf("[view] buildOperation error: %v\n", err)
 			continue
 		}
 
