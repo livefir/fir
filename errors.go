@@ -51,9 +51,11 @@ func PatchError(err error, userMessage ...string) Patchset {
 	msg := "internal error"
 	if err != nil && len(userMessage) == 0 {
 		msg = err.Error()
+		log.Printf("[controller] patch error: %s\n", err)
 	}
 	if len(userMessage) > 0 {
 		msg = strings.Join(userMessage, " ")
+		log.Printf("[controller] patch error: %s, message: %s\n", err, msg)
 	}
 	log.Printf("[controller] patch error: %s, %s\n", err, msg)
 	return Patchset{morphError(msg)}
@@ -63,11 +65,13 @@ func PageError(err error, userMessage ...string) Page {
 	msg := "internal error"
 	if err != nil && len(userMessage) == 0 {
 		msg = err.Error()
+		log.Printf("[controller] page error: %s\n", err)
 	}
 	if len(userMessage) > 0 {
 		msg = strings.Join(userMessage, " ")
+		log.Printf("[controller] page error: %s, message: %s\n", err, msg)
 	}
-	log.Printf("[controller] page error: %s, %s\n", err, msg)
+
 	data := Data{"error": msg}
 	if msg == "" {
 		data = nil
