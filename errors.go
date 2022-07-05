@@ -1,6 +1,7 @@
 package fir
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -81,4 +82,22 @@ func PageError(err error, userMessage ...string) Page {
 		Error: err,
 		Data:  data,
 	}
+}
+
+func UnsetFormErrors(fields ...string) Patchset {
+	var patchset Patchset
+
+	for _, field := range fields {
+		patchset = append(patchset, Morph{
+			Selector: fmt.Sprintf("#%s-error", field),
+			Template: &Template{
+				Name: fmt.Sprintf("%s-error", field),
+				Data: Data{
+					fmt.Sprintf("#%sError", field): "",
+				},
+			},
+		})
+	}
+
+	return patchset
 }
