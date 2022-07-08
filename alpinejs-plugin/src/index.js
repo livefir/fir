@@ -45,9 +45,13 @@ const Plugin = (Alpine) => {
                 }
                 window.location.href = to;
             },
-            submit(eventID) {
+            submit(event) {
                 if (!(el instanceof HTMLFormElement)) {
                     console.error("Element is not a form. Can't submit event. Please use $fir.emit for non-form elements")
+                    return
+                }
+                if (!el.id) {
+                    console.error("Form element has no id. Can't submit event. Please use $fir.emit for non-form elements")
                     return
                 }
                 let inputs = [...el.querySelectorAll("input[data-rules]")];
@@ -60,17 +64,31 @@ const Plugin = (Alpine) => {
                     }
                 });
 
-                const formName = el.getAttribute("name")
+
+                let formMethod = el.getAttribute("method")
+                if (!formMethod) {
+                    formMethod = "get"
+                }
+
                 // update form errors store
-                const prevStore = Object.assign({}, Alpine.store(formName))
+                const prevStore = Object.assign({}, Alpine.store(el.id))
                 const nextStore = { ...prevStore, ...formErrors }
-                Alpine.store(formName, nextStore)
+                Alpine.store(el.id, nextStore)
                 if (Object.keys(formErrors.errors).length == 0) {
                     let formData = new FormData(el);
+                    if (event.submitter.name) {
+                        formData.append(event.submitter.name, event.submitter.value)
+                    }
                     let params = {};
                     formData.forEach((value, key) => params[key] = value);
-                    params["formName"] = formName;
-                    post(el, eventID, params)
+                    params["formID"] = e.id;
+
+                    post(el, el.id, params)
+                    if (formMethod.toLowerCase() === "get") {
+                        const url = new URL(window.location);
+                        formData.forEach((value, key) => url.searchParams.set(key, value));
+                        window.history.pushState({}, '', url);
+                    }
                     return;
                 }
             }
@@ -143,7 +161,6 @@ const Plugin = (Alpine) => {
         let startEventName = "fir:emit-start"
         let endEventName = "fir:emit-end"
         if (el instanceof HTMLFormElement) {
-            detail['formName'] = el.getAttribute("name");
             startEventName = "fir:submit-start"
             endEventName = "fir:submit-end"
             eventName = "fir:submit"
@@ -162,9 +179,6 @@ const Plugin = (Alpine) => {
         if (detail.id) {
             el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.id}`, options))
             el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
-        } else if (detail.formName) {
-            el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.formName}`, options))
-            el.dispatchEvent(new CustomEvent(`${eventName}:${detail.formName}`, options))
         }
 
         fetch(window.location.pathname, {
@@ -191,9 +205,6 @@ const Plugin = (Alpine) => {
                 if (detail.id) {
                     el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.id}`, options))
                     el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
-                } else if (detail.formName) {
-                    el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.formName}`, options))
-                    el.dispatchEvent(new CustomEvent(`${eventName}:${detail.formName}`, options))
                 }
             });
     }
