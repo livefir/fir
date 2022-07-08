@@ -407,6 +407,7 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 
 	if page.Code > 299 {
+		log.Printf("page error: %v\n", page.Error)
 		onRequestError(w, r, v, &page)
 		return
 	}

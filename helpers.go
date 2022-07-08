@@ -21,3 +21,12 @@ func DecodeForm(dst interface{}, r *http.Request) error {
 
 	return nil
 }
+
+func DecodeURLValues(dst interface{}, r *http.Request) error {
+	err := decoder.Decode(dst, r.URL.Query())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
