@@ -76,12 +76,12 @@ const Plugin = (Alpine) => {
                 Alpine.store(el.id, nextStore)
                 if (Object.keys(formErrors.errors).length == 0) {
                     let formData = new FormData(el);
-                    if (event.submitter.name) {
+                    if (event.submitter && event.submitter.name) {
                         formData.append(event.submitter.name, event.submitter.value)
                     }
                     let params = {};
                     formData.forEach((value, key) => params[key] = value);
-                    params["formID"] = e.id;
+                    params["formID"] = el.id;
 
                     post(el, el.id, params)
                     if (formMethod.toLowerCase() === "get") {
