@@ -80,8 +80,7 @@ const Plugin = (Alpine) => {
                         formData.append(event.submitter.name, event.submitter.value)
                     }
                     let params = {};
-                    formData.forEach((value, key) => params[key] = value);
-                    params["formID"] = el.id;
+                    formData.forEach((value, key) => params[key] = new Array(value));
 
                     post(el, el.id, params)
                     if (formMethod.toLowerCase() === "get") {
