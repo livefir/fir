@@ -20,10 +20,11 @@ func (r *Range) Content() string {
 	return "app.html"
 }
 
-func (r *Range) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"total": 0,
-	}
+func (r *Range) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{
+			"total": 0,
+		}}
 }
 
 func (r *Range) OnEvent(event fir.Event) fir.Patchset {

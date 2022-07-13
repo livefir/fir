@@ -1,0 +1,19 @@
+package {{.pkgName}}
+
+import (
+	"{{.modelsPkg}}"
+	"github.com/adnaan/fir"
+)
+
+type View struct {
+	DB *models.Client
+	fir.DefaultView
+}
+
+func (v *View) Content() string {
+	return "{{.content}}"
+}
+
+func (v *View) Layout() string {
+	return "{{.layout}}"
+}

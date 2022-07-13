@@ -32,9 +32,9 @@ func (t *Timer) Content() string {
 	return "app.html"
 }
 
-func (t *Timer) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"ts": time.Now().String(),
+func (t *Timer) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{"ts": time.Now().String()},
 	}
 }
 

@@ -49,20 +49,22 @@ type Counter struct {
 	count int32
 }
 
-func (c *Counter) Inc() fir.Patch {
+func morphCount(c int32) fir.Patch {
 	return fir.Morph{
 		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+		Template: &fir.Template{
+			Name: "count",
+			Data: fir.Data{"count": c},
+		},
 	}
 }
 
+func (c *Counter) Inc() fir.Patch {
+	return morphCount(atomic.AddInt32(&c.count, 1))
+}
+
 func (c *Counter) Dec() fir.Patch {
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
-	}
+	return morphCount(atomic.AddInt32(&c.count, -1))
 }
 
 func (c *Counter) Value() int32 {
@@ -106,10 +108,11 @@ func (c *CounterView) Content() string {
 	</html>`
 }
 
-func (c *CounterView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.model.Value(),
-	}
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{
+			"count": c.model.Value(),
+		}}
 }
 
 func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {

@@ -1,0 +1,17 @@
+{{define "content"}}
+<div x-data class="columns mt-5">
+  <div class="column is-4">{{template "create[[.modelName]]" .}}</div>
+  <div class="column is-8">
+    {{template "toolbar" .}}
+    {{block "[[.modelName]]list" .}}
+    <div id="[[.modelName]]list">
+      {{range .[[.modelNamePlural]]}}
+      {{template "[[.modelName]]item" .}}
+      {{else}}
+      Nothing here
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}

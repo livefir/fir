@@ -1,0 +1,153 @@
+package show
+
+import (
+	"context"
+	"log"
+	"net/http"
+
+	"[[.modelsPkg]]"
+	"[[.utilsPkg]]"
+	"github.com/adnaan/fir"
+	"github.com/fatih/structs"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+)
+
+
+type View struct {
+	DB *models.Client
+	fir.DefaultView
+}
+
+func (v *View) Content() string {
+	return "[[.content]]/show"
+}
+
+func (v *View) Layout() string {
+	return "[[.layout]]"
+}
+
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+
+	id := chi.URLParam(r, "id")
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return fir.PageError(err, "invalid [[.modelName]] id")
+	}
+	[[.modelName]], err := v.DB.[[.modelNameTitled]].Get(r.Context(), uid)
+	if err != nil {
+		return fir.ErrNotFound(err, "[[.modelName]] not found")
+	}
+
+	return fir.Page{Data: structs.Map([[.modelName]])}
+}
+
+func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
+	var req update[[.modelNameTitled]]Req
+	err := fir.DecodeForm(&req, r)
+	if err != nil {
+		return fir.PageError(err, "error decoding request")
+	}
+
+	req.id = chi.URLParamFromCtx(r.Context(), "id")
+
+	switch req.Action {
+	case "update":
+		[[.modelName]], err := update[[.modelNameTitled]](r.Context(), v.DB, req)
+		if err != nil {
+			return utils.PageFormError(err)
+		}
+		return fir.Page{Data: structs.Map([[.modelName]])}
+
+	case "delete":
+		if err := delete[[.modelNameTitled]](r.Context(), v.DB, req); err != nil {
+			return fir.PageError(err, "error deleting [[.modelName]]")
+		}
+		http.Redirect(w, r, "/", http.StatusFound)
+	default:
+		return fir.PageError(err, "unknown request")
+
+	}
+
+	return fir.Page{}
+}
+
+func (v *View) OnEvent(event fir.Event) fir.Patchset {
+	switch event.ID {
+	case "[[.modelName]]-update":
+		return on[[.modelNameTitled]]Update(v.DB, event)
+	case "[[.modelName]]-delete":
+		return on[[.modelNameTitled]]Delete(v.DB, event)
+	default:
+		log.Printf("unknown event: %s\n", event.ID)
+		return nil
+	}
+}
+
+type update[[.modelNameTitled]]Req struct {
+	id          string
+	Action      string `json:"action" schema:"action"`
+	[[range .updateFormFields -]]
+	[[.StructField]] [[.Type]] `json:"[[.Name]]" schema:"[[.Name]]"`
+	[[end]]
+}
+
+func update[[.modelNameTitled]](ctx context.Context, db *models.Client, req update[[.modelNameTitled]]Req) (*models.[[.modelNameTitled]], error) {
+	id, err := uuid.Parse(req.id)
+	if err != nil {
+		return nil, err
+	}
+	[[.modelName]], err := db.[[.modelNameTitled]].
+		UpdateOneID(id).
+		[[range .updateFormFields]]
+		Set[[.StructField]](req.[[.StructField]]).
+		[[end]]
+		Save(ctx)
+	return [[.modelName]], err
+}
+
+func delete[[.modelNameTitled]](ctx context.Context, db *models.Client, req update[[.modelNameTitled]]Req) error {
+	id, err := uuid.Parse(req.id)
+	if err != nil {
+		return err
+	}
+	return db.[[.modelNameTitled]].DeleteOneID(id).Exec(ctx)
+}
+
+func on[[.modelNameTitled]]Update(db *models.Client, event fir.Event) fir.Patchset {
+	var req update[[.modelNameTitled]]Req
+	if err := event.DecodeFormParams(&req); err != nil {
+		return fir.PatchError(err)
+	}
+
+	req.id = chi.URLParamFromCtx(event.RequestContext(), "id")
+
+	[[.modelName]], err := update[[.modelNameTitled]](event.RequestContext(), db, req)
+	if err != nil {
+		return utils.PatchFormError(err)
+	}
+
+	patchset := append(
+		fir.UnsetFormErrors("title", "description"),
+		fir.Morph{
+			Selector: "[[.modelName]]",
+			Template: &fir.Template{
+				Name: "[[.modelName]]",
+				Data: structs.Map([[.modelName]]),
+			},
+		})
+
+	return patchset
+}
+
+func on[[.modelNameTitled]]Delete(db *models.Client, event fir.Event) fir.Patchset {
+	id := chi.URLParamFromCtx(event.RequestContext(), "id")
+	if err := delete[[.modelNameTitled]](event.RequestContext(), db, update[[.modelNameTitled]]Req{id: id}); err != nil {
+		return fir.PatchError(err)
+	}
+	return fir.Patchset{
+		fir.Navigate{
+			To: "/",
+		},
+	}
+}

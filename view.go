@@ -17,9 +17,11 @@ import (
 
 var DefaultViewExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
 
-type Status struct {
+type Page struct {
+	Data    Data   `json:"data"`
 	Code    int    `json:"statusCode"`
 	Message string `json:"statusMessage"`
+	Error   error  `json:"-"`
 }
 
 type AppContext struct {
@@ -50,7 +52,8 @@ type View interface {
 	Extensions() []string
 	FuncMap() template.FuncMap
 	// Lifecyle
-	OnRequest(http.ResponseWriter, *http.Request) (Status, Data)
+	OnGet(http.ResponseWriter, *http.Request) Page
+	OnPost(http.ResponseWriter, *http.Request) Page
 	OnEvent(event Event) Patchset
 	Stream() <-chan Patch
 }
@@ -120,9 +123,14 @@ func (d DefaultView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-// OnRequest is called when the page is first loaded for the http route.
-func (d DefaultView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, Data) {
-	return Status{Code: 200, Message: "ok"}, Data{}
+// OnGet is called when the page is first loaded for the http route.
+func (d DefaultView) OnGet(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 200, Message: "OK"}
+}
+
+// OnPost is called when a form is submitted for the http route.
+func (d DefaultView) OnPost(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 405, Message: "method not allowed"}
 }
 
 // OnEvent handles the events sent from the browser
@@ -141,7 +149,8 @@ func (d DefaultView) Stream() <-chan Patch {
 type DefaultErrorView struct{}
 
 func (d DefaultErrorView) Content() string {
-	return `{{ define "content"}}
+	return `
+{{ define "content"}}
     <div style="text-align:center"><h1>{{.statusCode}}</h1></div>
     <div style="text-align:center"><h1>{{.statusMessage}}</h1></div>
     <div style="text-align:center"><a href="javascript:history.back()">back</a></div>
@@ -158,7 +167,7 @@ func (d DefaultErrorView) LayoutContentName() string {
 }
 
 func (d DefaultErrorView) Partials() []string {
-	return []string{"./templates/partials"}
+	return []string{}
 }
 
 func (d DefaultErrorView) Extensions() []string {
@@ -169,8 +178,12 @@ func (d DefaultErrorView) FuncMap() template.FuncMap {
 	return DefaultFuncMap()
 }
 
-func (d DefaultErrorView) OnRequest(w http.ResponseWriter, r *http.Request) (Status, Data) {
-	return Status{Code: 500, Message: "Internal Error"}, Data{}
+func (d DefaultErrorView) OnGet(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 500, Message: "Internal Server Error"}
+}
+
+func (d DefaultErrorView) OnPost(w http.ResponseWriter, r *http.Request) Page {
+	return Page{Code: 405, Message: "method not allowed"}
 }
 
 // OnEvent handles the events sent from the browser
@@ -212,10 +225,47 @@ func (v *viewHandler) reloadTemplates() {
 	}
 }
 
-func buildMorpPatch(t *template.Template, patch Patch) (Operation, error) {
-	morphPatch := patch.(Morph)
+func buildDOMPatch(t *template.Template, patch Patch) (Operation, error) {
+	var op Op
+	var patchTemplate *Template
+	var selector string
+
+	switch v := patch.(type) {
+	case Morph:
+		op = v.Op()
+		patchTemplate = v.Template
+		selector = v.Selector
+	case After:
+		op = v.Op()
+		patchTemplate = v.Template
+		selector = v.Selector
+	case Before:
+		op = v.Op()
+		patchTemplate = v.Template
+		selector = v.Selector
+	case Append:
+		op = v.Op()
+		patchTemplate = v.Template
+		selector = v.Selector
+	case Prepend:
+		op = v.Op()
+		patchTemplate = v.Template
+		selector = v.Selector
+	case Remove:
+		op = v.Op()
+		patchTemplate = v.Template
+		selector = v.Selector
+	}
+
+	if patchTemplate == nil {
+		return Operation{}, fmt.Errorf("error: patch %v template is nil", patch.Op())
+	}
+	if selector == "" {
+		return Operation{}, fmt.Errorf("error: patch %v selector is empty", patch.Op())
+	}
+
 	var buf bytes.Buffer
-	err := t.ExecuteTemplate(&buf, morphPatch.Template, morphPatch.Data)
+	err := t.ExecuteTemplate(&buf, patchTemplate.Name, patchTemplate.Data)
 	if err != nil {
 		// if s.wc.debugLog {
 		// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
@@ -228,34 +278,46 @@ func buildMorpPatch(t *template.Template, patch Patch) (Operation, error) {
 	html := buf.String()
 	buf.Reset()
 	return Operation{
-		Op:       morph,
-		Selector: morphPatch.Selector,
+		Op:       op,
+		Selector: selector,
 		Value:    html,
 	}, nil
 }
 
-func buildStorePatch(patch Patch) Operation {
+func buildStorePatch(patch Patch) (Operation, error) {
 	storePatch := patch.(Store)
+	if storePatch.Name == "" {
+		return Operation{}, fmt.Errorf("error: patch %v name is empty", patch.Op())
+	}
+	if storePatch.Data == nil {
+		return Operation{}, fmt.Errorf("error: patch %v data is nil", patch.Op())
+	}
+
 	return Operation{
 		Op:       updateStore,
 		Selector: storePatch.Name,
 		Value:    storePatch.Data,
-	}
+	}, nil
 }
 
 func buildOperation(t *template.Template, patch Patch) (Operation, error) {
-
 	switch patch.Op() {
-	case morph:
-		operation, err := buildMorpPatch(t, patch)
+	case morph, after, before, appendOp, prepend, remove:
+		operation, err := buildDOMPatch(t, patch)
 		if err != nil {
 			return Operation{}, err
 		}
 		return operation, nil
 	case reload:
 		return Operation{Op: reload}, nil
+	case resetForm:
+		p := patch.(ResetForm)
+		return Operation{Op: resetForm, Selector: p.Selector}, nil
+	case navigate:
+		p := patch.(Navigate)
+		return Operation{Op: navigate, Value: p.To}, nil
 	case updateStore:
-		return buildStorePatch(patch), nil
+		return buildStorePatch(patch)
 	default:
 		return Operation{}, fmt.Errorf("operation unknown")
 	}
@@ -278,13 +340,32 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 	event.requestContext = r.Context()
 	patchset := v.view.OnEvent(event)
+	if patchset == nil {
+		log.Printf("[view] warning: no patchset returned for event: %v\n", event)
+		patchset = Patchset{}
+	}
+
+	firErrorPatchExists := false
+
+	for _, patch := range patchset {
+		if patch.GetSelector() == "#fir-error" {
+			firErrorPatchExists = true
+		}
+	}
+
+	if !firErrorPatchExists {
+		// unset error patch
+		patchset = append([]Patch{morphError("")}, patchset...)
+	}
+
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
-
 		operation, err := buildOperation(v.viewTemplate, patch)
 		if err != nil {
+			log.Printf("[view] buildOperation error: %v\n", err)
 			continue
 		}
+
 		operations = append(operations, operation)
 	}
 	json.NewEncoder(w).Encode(operations)
@@ -298,48 +379,73 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	v.reloadTemplates()
 
 	var err error
-	var status Status
+	var page Page
 
-	status, v.mountData = v.view.OnRequest(w, r)
+	if r.Method == "POST" {
+		page = v.view.OnPost(w, r)
+	} else {
+		page = v.view.OnGet(w, r)
+	}
+	v.mountData = page.Data
 	if v.mountData == nil {
 		v.mountData = make(Data)
 	}
+
 	v.mountData["app_name"] = v.wc.name
 	v.mountData["fir"] = &AppContext{
 		Name:    v.wc.name,
 		URLPath: r.URL.Path,
 	}
 
-	w.WriteHeader(status.Code)
-	if status.Code > 299 {
-		onRequestError(w, r, v, &status)
+	page.Data = v.mountData
+
+	if page.Code == 0 {
+		page.Code = http.StatusOK
+	}
+	if page.Message == "" {
+		page.Message = http.StatusText(page.Code)
+	}
+
+	if page.Code > 299 {
+		log.Printf("page error: %v\n", page.Error)
+		onRequestError(w, r, v, &page)
 		return
 	}
+
 	v.viewTemplate.Option("missingkey=zero")
-	err = v.viewTemplate.Execute(w, v.mountData)
+	var buf bytes.Buffer
+	err = v.viewTemplate.Execute(&buf, page.Data)
 	if err != nil {
-		log.Printf("OnRequest viewTemplate.Execute error:  %v", err)
+		log.Printf("OnGet viewTemplate.Execute error:  %v", err)
 		onRequestError(w, r, v, nil)
 	}
 	if v.wc.debugLog {
-		log.Printf("OnRequest render view %+v, with data => \n %+v\n",
-			v.view.Content(), getJSON(v.mountData))
+		log.Printf("OnGet render view %+v, with data => \n %+v\n",
+			v.view.Content(), getJSON(page.Data))
 	}
+
+	w.WriteHeader(page.Code)
+	w.Write(buf.Bytes())
 
 }
 
-func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, status *Status) {
-	var errorStatus Status
-	errorStatus, v.mountData = v.errorView.OnRequest(w, r)
+func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, page *Page) {
+	errorPage := v.errorView.OnGet(w, r)
+	if page == nil {
+		page = &errorPage
+	}
+	v.mountData = page.Data
 	if v.mountData == nil {
 		v.mountData = make(Data)
 	}
-	if status == nil {
-		status = &errorStatus
-	}
-	v.mountData["statusCode"] = status.Code
-	v.mountData["statusMessage"] = status.Message
-	err := v.errorViewTemplate.Execute(w, v.mountData)
+	v.mountData["statusCode"] = page.Code
+	v.mountData["statusMessage"] = page.Message
+
+	page.Data = v.mountData
+
+	v.viewTemplate.Option("missingkey=zero")
+	var buf bytes.Buffer
+	err := v.errorViewTemplate.Execute(&buf, page.Data)
 	if err != nil {
 		log.Printf("err rendering error template: %v\n", err)
 		_, errWrite := w.Write([]byte("Something went wrong"))
@@ -347,6 +453,15 @@ func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, stat
 			panic(errWrite)
 		}
 	}
+
+	if v.wc.debugLog {
+		log.Printf("OnGet render error view %+v, with data => \n %+v\n",
+			v.view.Content(), getJSON(page.Data))
+	}
+
+	w.WriteHeader(page.Code)
+	w.Write(buf.Bytes())
+
 }
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
@@ -464,13 +579,15 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	if view.Layout() == "" && view.Content() != "" {
 		// check if content is a not a file or directory
 		if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); err != nil {
-			return template.Must(template.New("base").
-				Funcs(view.FuncMap()).
-				Parse(view.Content())), nil
+			return template.Must(
+				template.New(
+					view.LayoutContentName()).
+					Funcs(view.FuncMap()).
+					Parse(view.Content()),
+			), nil
 		} else {
-
-			viewContentPath := filepath.Join(projectRoot, view.Content())
 			// is a file or directory
+			viewContentPath := filepath.Join(projectRoot, view.Content())
 			var pageFiles []string
 			// view and its partials
 			pageFiles = append(pageFiles, find(viewContentPath, view.Extensions())...)

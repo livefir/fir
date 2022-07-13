@@ -35,14 +35,12 @@ func (t *TodosView) Partials() []string {
 	return []string{"todos.html"}
 }
 
-func (t *TodosView) OnRequest(_ http.ResponseWriter, _ *http.Request) (fir.Status, fir.Data) {
+func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return fir.Status{
-			Code: 200,
-		}, nil
+		return fir.Page{}
 	}
-	return fir.Status{Code: 200}, fir.Data{"todos": todos}
+	return fir.Page{Data: fir.Data{"todos": todos}}
 }
 
 func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
@@ -83,14 +81,16 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 	return fir.Patchset{
 		fir.Store{
 			Name: "formData",
-			Data: map[string]any{
+			Data: fir.Data{
 				"textError": "",
 			},
 		},
 		fir.Morph{
-			Template: "todos",
 			Selector: "#todos",
-			Data:     fir.Data{"todos": todos},
+			Template: &fir.Template{
+				Name: "todos",
+				Data: fir.Data{"todos": todos},
+			},
 		},
 	}
 }

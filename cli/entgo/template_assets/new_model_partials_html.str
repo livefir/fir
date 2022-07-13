@@ -1,0 +1,4 @@
+{{define "new$MODEL_NAME"}}
+<p class="has-text-weight-semibold mb-2 has-text-centered">Create a $MODEL_NAME</p>
+$FORM
+{{end}}

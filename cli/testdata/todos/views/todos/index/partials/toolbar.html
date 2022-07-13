@@ -1,0 +1,39 @@
+{{define "toolbar"}}
+<form class="mb-4" id="todo-query" @order-changed="$fir.submit" @search-changed="$fir.submit"
+    @submit.prevent="$fir.submit">
+    <div class="field is-horizontal">
+        <div class="field-body">
+            <div class="field has-addons">
+                <div class="control is-expanded">
+                    <div class="select is-fullwidth">
+                        <select name="order" @change="$dispatch('order-changed')">
+                            <option value="newest" {{if eq .order "newest" }} selected {{end}}>Newest</option>
+                            <option value="oldest" {{if eq .order "oldest" }} selected {{end}}>Oldest</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="control">
+                    <button type="submit" class="button is-info">Sort</button>
+                </div>
+            </div>
+            <div class="field has-addons">
+                <div class="control is-expanded">
+                    <input @input.debounce.500ms="$dispatch('search-changed')" name="search" class="input" type="text"
+                        value="{{.search}}" placeholder="Find a todo">
+                </div>
+                <div class="control">
+                    <button type="submit" class="button is-info">Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{block "pagination" .}}
+    <nav id="pagination" class="pagination is-right mt-4" role="navigation" aria-label="pagination">
+        <button type="submit" class="button is-small {{if not .hasPrevious}} is-static {{end}}" name="offset"
+            value="{{.prev}}">Previous</button>
+        <button type="submit" class="button is-small {{if not .hasNext}} is-static {{end}}" name="offset"
+            value="{{.next}}">Next</button>
+    </nav>
+    {{end}}
+</form>
+{{end}}

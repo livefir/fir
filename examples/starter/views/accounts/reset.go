@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -30,13 +29,13 @@ func (rv *ResetView) OnEvent(event fir.Event) fir.Patchset {
 	case "account/reset":
 		r := new(ResetReq)
 		if err := event.DecodeParams(r); err != nil {
-			return errorPatch(err)
+			return fir.PatchError(err)
 		}
 		if r.ConfirmPassword != r.Password {
-			return errorPatch(fmt.Errorf("%w", errors.New("passwords don't match")))
+			return fir.PatchError(errors.New("passwords don't match"))
 		}
 		if err := rv.Auth.ConfirmRecovery(event.RequestContext(), r.Token, r.Password); err != nil {
-			return errorPatch(err)
+			return fir.PatchError(err)
 		}
 		return fir.Patchset{fir.Store{
 			Name: "reset",
@@ -48,11 +47,11 @@ func (rv *ResetView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (rv *ResetView) OnRequest(w http.ResponseWriter, r *http.Request) (fir.Status, fir.Data) {
+func (rv *ResetView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	token := chi.URLParam(r, "token")
-	return fir.Status{Code: 200}, fir.Data{
+	return fir.Page{Data: fir.Data{
 		"token": token,
-	}
+	}}
 }
 
 type ResetReq struct {
