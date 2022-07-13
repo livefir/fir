@@ -25,7 +25,7 @@ func (s *SignupView) Layout() string {
 
 func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
-	case "auth/signup":
+	case "signup-form":
 		req := new(ProfileRequest)
 		if err := event.DecodeParams(req); err != nil {
 			return fir.PatchError(err)
@@ -61,7 +61,7 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 
 func (s *SignupView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return fir.Page{}
+		return fir.PageError(err, "unauthorized")
 	}
 
 	return fir.Page{Data: fir.Data{

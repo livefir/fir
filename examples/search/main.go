@@ -55,7 +55,7 @@ func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 	case "search":
 		req := new(QueryRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil
+			return fir.PatchError(err, "failed to decode search request")
 		}
 		return fir.Patchset{fir.Morph{
 			Selector: "#cities",

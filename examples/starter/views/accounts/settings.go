@@ -24,9 +24,9 @@ func (s *SettingsView) Layout() string {
 
 func (s *SettingsView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
-	case "account/update":
+	case "account-update":
 		return s.UpdateProfile(event)
-	case "account/delete":
+	case "account-delete":
 		return s.DeleteAccount(event)
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
@@ -38,7 +38,7 @@ func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(r.Context(), userID)
 	if err != nil {
-		return fir.Page{Code: http.StatusBadRequest, Message: err.Error()}
+		return fir.ErrBadRequest(err)
 	}
 
 	name := ""

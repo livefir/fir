@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -28,13 +27,11 @@ func (c *ConfirmEmailChangeView) OnGet(w http.ResponseWriter, r *http.Request) f
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := c.Auth.GetAccount(r.Context(), userID)
 	if err != nil {
-		log.Printf("confirm change email: GetAccount err %v", err)
-		return fir.Page{}
+		return fir.PageError(err, "failed to get account")
 	}
 
 	if err := acc.ConfirmEmailChange(r.Context(), token); err != nil {
-		log.Printf("confirm change email: ConfirmEmailChange err %v", err)
-		return fir.Page{}
+		return fir.PageError(err, "failed to confirm email change")
 	}
 
 	redirectTo := "/account"

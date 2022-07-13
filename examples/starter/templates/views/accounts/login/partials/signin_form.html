@@ -9,7 +9,7 @@
                 Use Password instead
             </button>
         </div>
-        <form name="magicLogin" @submit.prevent="$fir.submit('auth/magic-login')">
+        <form id="magic-login" @submit.prevent="$fir.submit">
             <div class="field">
                 <label class="label">Email</label>
                 <input name="email" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" class="input" type="email"

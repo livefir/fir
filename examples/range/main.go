@@ -32,11 +32,11 @@ func (r *Range) OnEvent(event fir.Event) fir.Patchset {
 	case "update":
 		req := new(CountRequest)
 		if err := event.DecodeParams(req); err != nil {
-			return nil
+			return fir.PatchError(err, "failed to decode update request")
 		}
 		count, err := strconv.Atoi(req.Count)
 		if err != nil {
-			return nil
+			return fir.PatchError(err, "failed to parse count")
 		}
 		return fir.Patchset{
 			fir.Store{Name: "fir", Data: map[string]any{"total": count * 10}},

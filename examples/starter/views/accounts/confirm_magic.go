@@ -26,7 +26,7 @@ func (c *ConfirmMagicView) OnGet(w http.ResponseWriter, r *http.Request) fir.Pag
 	token := chi.URLParam(r, "token")
 	err := c.Auth.LoginWithPasswordlessToken(w, r, token)
 	if err != nil {
-		return fir.Page{}
+		return fir.PageError(err, "failed to login with passwordless token")
 	}
 	redirectTo := "/app"
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)

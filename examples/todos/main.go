@@ -46,7 +46,7 @@ func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 	var todo Todo
 	if err := event.DecodeParams(&todo); err != nil {
-		return nil
+		return fir.PatchError(err, "failed to decode todo")
 	}
 
 	switch event.ID {
@@ -63,11 +63,11 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 			}
 		}
 		if err := t.db.Insert(bolthold.NextSequence(), &todo); err != nil {
-			return nil
+			return fir.PatchError(err, "failed to insert todo")
 		}
 	case "todos/del":
 		if err := t.db.Delete(todo.ID, &todo); err != nil {
-			return nil
+			return fir.PatchError(err, "failed to delete todo")
 		}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
@@ -75,7 +75,7 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 	// list updated todos
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return nil
+		return fir.PatchError(err, "failed to find todos")
 	}
 
 	return fir.Patchset{

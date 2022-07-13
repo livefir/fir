@@ -286,21 +286,25 @@ When the `+` button is clicked, an event `inc` is sent to the server which sends
 
 ```go
 
-func (c *Counter) Inc() fir.Patch {
+func morphCount(c int32) fir.Patch {
 	return fir.Morph{
 		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+		Template: &fir.Template{
+			Name: "count",
+			Data: fir.Data{"count": c},
+		},
 	}
 }
 
-func (c *Counter) Dec() fir.Patch {
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
-	}
+func (c *Counter) Inc() fir.Patch {
+	return morphCount(atomic.AddInt32(&c.count, 1))
 }
+
+func (c *Counter) Dec() fir.Patch {
+	return morphCount(atomic.AddInt32(&c.count, -1))
+}
+
+...
 
 func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
@@ -342,20 +346,22 @@ type Counter struct {
 	count int32
 }
 
-func (c *Counter) Inc() fir.Patch {
+func morphCount(c int32) fir.Patch {
 	return fir.Morph{
 		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, 1)},
+		Template: &fir.Template{
+			Name: "count",
+			Data: fir.Data{"count": c},
+		},
 	}
 }
 
+func (c *Counter) Inc() fir.Patch {
+	return morphCount(atomic.AddInt32(&c.count, 1))
+}
+
 func (c *Counter) Dec() fir.Patch {
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": atomic.AddInt32(&c.count, -1)},
-	}
+	return morphCount(atomic.AddInt32(&c.count, -1))
 }
 
 func (c *Counter) Value() int32 {
@@ -365,6 +371,25 @@ func (c *Counter) Value() int32 {
 type CounterView struct {
 	fir.DefaultView
 	model *Counter
+}
+
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{
+			"count": c.model.Value(),
+		}}
+}
+
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
+	switch event.ID {
+	case "inc":
+		return fir.Patchset{c.model.Inc()}
+	case "dec":
+		return fir.Patchset{c.model.Dec()}
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
+	}
+	return nil
 }
 
 func (c *CounterView) Content() string {
@@ -399,29 +424,12 @@ func (c *CounterView) Content() string {
 	</html>`
 }
 
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.model.Value(),
-	}
-}
-
-func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
-	switch event.ID {
-	case "inc":
-		return fir.Patchset{c.model.Inc()}
-	case "dec":
-		return fir.Patchset{c.model.Dec()}
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
-	}
-	return nil
-}
-
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
 	http.Handle("/", controller.Handler(&CounterView{model: &Counter{}}))
 	http.ListenAndServe(":9867", nil)
 }
+
 
 
 ```
@@ -544,16 +552,22 @@ type Counter struct {
 	sync.RWMutex
 }
 
+func morphCount(c int32) fir.Patch {
+	return fir.Morph{
+		Selector: "#count",
+		Template: &fir.Template{
+			Name: "count",
+			Data: fir.Data{"count": c},
+		},
+	}
+}
+
 func (c *Counter) Inc() fir.Patch {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
 	c.updated = time.Now()
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": c.count},
-	}
+	return morphCount(c.count)
 }
 
 func (c *Counter) Dec() fir.Patch {
@@ -561,11 +575,7 @@ func (c *Counter) Dec() fir.Patch {
 	defer c.Unlock()
 	c.count -= 1
 	c.updated = time.Now()
-	return fir.Morph{
-		Selector: "#count",
-		Template: "count",
-		Data:     fir.Data{"count": c.count},
-	}
+	return morphCount(c.count)
 }
 
 func (c *Counter) Updated() (fir.Patch, error) {
@@ -576,7 +586,9 @@ func (c *Counter) Updated() (fir.Patch, error) {
 	}
 	return fir.Store{
 		Name: "fir",
-		Data: map[string]any{"count_updated": time.Since(c.updated).Seconds()},
+		Data: fir.Data{
+			"count_updated": time.Since(c.updated).Seconds(),
+		},
 	}, nil
 }
 
@@ -655,10 +667,11 @@ func (c *CounterView) Layout() string {
 	</html>`
 }
 
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
-	return fir.Status{Code: 200}, fir.Data{
-		"count": c.model.Count(),
-	}
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{
+			"count": c.model.Count(),
+		}}
 }
 
 func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
@@ -679,6 +692,7 @@ func main() {
 	http.Handle("/", controller.Handler(NewCounterView()))
 	http.ListenAndServe(":9867", nil)
 }
+
 	
 ```
 

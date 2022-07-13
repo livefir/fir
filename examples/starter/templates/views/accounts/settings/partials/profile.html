@@ -15,7 +15,7 @@
         <!-- Right side -->
         <div class="level-right">
             <p class="level-item" x-data="{loading: false,toggle(){this.loading = !this.loading}}"
-                @fir:submit-start:account-form.window="toggle" @fir:submit-end:account-form.window="toggle">
+                @fir:submit-start:account-update.window="toggle" @fir:submit-end:account-update.window="toggle">
                 <span id="profile-loading" :class="!loading && 'is-hidden'"
                     class="button is-link is-outlined is-loading is-small is-rounded is-static">
                 </span>
@@ -37,7 +37,7 @@
     <div :class="show && 'is-active'" class="modal" id="deleteAccount">
         <div class="modal-background"></div>
         <div class="modal-card">
-            <form name="accountForm" @submit.prevent="$fir.submit('account/delete')">
+            <form name="account-delete" @submit.prevent="$fir.submit">
                 <header class="modal-card-head">
                     <p class="modal-card-title">Are you sure ?</p>
                     <button @click="toggle" class="delete" aria-label="close">

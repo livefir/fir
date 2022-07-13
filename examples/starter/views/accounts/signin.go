@@ -25,7 +25,7 @@ func (s *SigninView) Layout() string {
 
 func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
-	case "auth/magic-login":
+	case "magic-login":
 		r := new(ProfileRequest)
 		if err := event.DecodeParams(r); err != nil {
 			return fir.PatchError(err)
@@ -52,7 +52,7 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 
 func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return fir.Page{}
+		return fir.PageError(err, "unauthorized")
 	}
 
 	return fir.Page{
@@ -71,15 +71,11 @@ func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) fir.Pag
 	_ = r.ParseForm()
 	for k, v := range r.Form {
 		if k == "email" && len(v) == 0 {
-			return fir.Page{Data: fir.Data{
-				"error": "email is required",
-			}}
+			return fir.PageError(fmt.Errorf("email is required"))
 		}
 
 		if k == "password" && len(v) == 0 {
-			return fir.Page{Data: fir.Data{
-				"error": "password is required",
-			}}
+			return fir.PageError(fmt.Errorf("password is required"))
 		}
 
 		if len(v) == 0 {
@@ -97,9 +93,7 @@ func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) fir.Pag
 		}
 	}
 	if err := s.Auth.Login(w, r, email, password); err != nil {
-		return fir.Page{Data: fir.Data{
-			"error": fir.UserError(err),
-		}}
+		return fir.PageError(err, "unauthorized")
 	}
 	redirectTo := "/app"
 	from := r.URL.Query().Get("from")

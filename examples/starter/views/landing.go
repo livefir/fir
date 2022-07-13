@@ -22,7 +22,7 @@ func (l *LandingView) Layout() string {
 
 func (l *LandingView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := l.Auth.CurrentAccount(r); err != nil {
-		return fir.Page{}
+		return fir.PageError(err, "failed to get current account")
 	}
 	return fir.Page{
 		Data: fir.Data{

@@ -2,7 +2,7 @@
 <div x-data id="signup_form">
     <p class="title is-3 has-text-centered">Sign up with {{.fir.Name}}</p>
     {{ template "loading_modal" .}}
-    <form name="signupForm" method="post" @submit.prevent="$fir.submit('auth/signup')">
+    <form id="signup-form" method="post" @submit.prevent="$fir.submit">
         <div class="field">
             <label class="label">Name</label>
             <input name="name" class="input" type="text" data-rules='["required","minLength:3"]'

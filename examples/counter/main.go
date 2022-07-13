@@ -39,6 +39,25 @@ type CounterView struct {
 	model *Counter
 }
 
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	return fir.Page{
+		Data: fir.Data{
+			"count": c.model.Value(),
+		}}
+}
+
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
+	switch event.ID {
+	case "inc":
+		return fir.Patchset{c.model.Inc()}
+	case "dec":
+		return fir.Patchset{c.model.Dec()}
+	default:
+		log.Printf("warning:handler not found for event => \n %+v\n", event)
+	}
+	return nil
+}
+
 func (c *CounterView) Content() string {
 	return `<!DOCTYPE html>
 	<html lang="en">
@@ -69,25 +88,6 @@ func (c *CounterView) Content() string {
 	</body>
 	
 	</html>`
-}
-
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
-	return fir.Page{
-		Data: fir.Data{
-			"count": c.model.Value(),
-		}}
-}
-
-func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
-	switch event.ID {
-	case "inc":
-		return fir.Patchset{c.model.Inc()}
-	case "dec":
-		return fir.Patchset{c.model.Dec()}
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
-	}
-	return nil
 }
 
 func main() {

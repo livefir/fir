@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -27,8 +26,7 @@ func (h *ConfirmView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	token := chi.URLParam(r, "token")
 	err := h.Auth.ConfirmSignupEmail(r.Context(), token)
 	if err != nil {
-		log.Println("err confirm.OnGet", err)
-		return fir.Page{}
+		return fir.PageError(err, "failed to confirm signup email")
 	}
 	return fir.Page{
 		Data: fir.Data{
