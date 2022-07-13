@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/adnaan/fir/cli/testdata/todos/models/migrate"
+	"github.com/google/uuid"
 
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 
@@ -162,7 +163,7 @@ func (c *TodoClient) UpdateOne(t *Todo) *TodoUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *TodoClient) UpdateOneID(id int) *TodoUpdateOne {
+func (c *TodoClient) UpdateOneID(id uuid.UUID) *TodoUpdateOne {
 	mutation := newTodoMutation(c.config, OpUpdateOne, withTodoID(id))
 	return &TodoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -179,7 +180,7 @@ func (c *TodoClient) DeleteOne(t *Todo) *TodoDeleteOne {
 }
 
 // DeleteOneID returns a delete builder for the given id.
-func (c *TodoClient) DeleteOneID(id int) *TodoDeleteOne {
+func (c *TodoClient) DeleteOneID(id uuid.UUID) *TodoDeleteOne {
 	builder := c.Delete().Where(todo.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -194,12 +195,12 @@ func (c *TodoClient) Query() *TodoQuery {
 }
 
 // Get returns a Todo entity by its id.
-func (c *TodoClient) Get(ctx context.Context, id int) (*Todo, error) {
+func (c *TodoClient) Get(ctx context.Context, id uuid.UUID) (*Todo, error) {
 	return c.Query().Where(todo.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *TodoClient) GetX(ctx context.Context, id int) *Todo {
+func (c *TodoClient) GetX(ctx context.Context, id uuid.UUID) *Todo {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)

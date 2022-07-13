@@ -7,8 +7,8 @@ import (
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/cli/testdata/todos/models"
-	"github.com/adnaan/fir/cli/testdata/todos/views/todo"
-	"github.com/adnaan/fir/cli/testdata/todos/views/todos"
+	todosIndex "github.com/adnaan/fir/cli/testdata/todos/views/todos/index"
+	todosShow "github.com/adnaan/fir/cli/testdata/todos/views/todos/show"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -28,8 +28,8 @@ func main() {
 
 	c := fir.NewController("todos", fir.DevelopmentMode(true))
 	r := chi.NewRouter()
-	r.Handle("/", c.Handler(&todos.View{DB: db}))
-	r.Handle("/{id}", c.Handler(&todo.View{DB: db}))
+	r.Handle("/", c.Handler(&todosIndex.View{DB: db}))
+	r.Handle("/{id}", c.Handler(&todosShow.View{DB: db}))
 
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", r)

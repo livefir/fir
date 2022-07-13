@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
+	"github.com/google/uuid"
 
 	"entgo.io/ent"
 )
@@ -31,8 +33,11 @@ type TodoMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
+	create_time   *time.Time
+	update_time   *time.Time
 	title         *string
+	description   *string
 	clearedFields map[string]struct{}
 	done          bool
 	oldValue      func(context.Context) (*Todo, error)
@@ -59,7 +64,7 @@ func newTodoMutation(c config, op Op, opts ...todoOption) *TodoMutation {
 }
 
 // withTodoID sets the ID field of the mutation.
-func withTodoID(id int) todoOption {
+func withTodoID(id uuid.UUID) todoOption {
 	return func(m *TodoMutation) {
 		var (
 			err   error
@@ -109,9 +114,15 @@ func (m TodoMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Todo entities.
+func (m *TodoMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *TodoMutation) ID() (id int, exists bool) {
+func (m *TodoMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -122,12 +133,12 @@ func (m *TodoMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *TodoMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *TodoMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -135,6 +146,78 @@ func (m *TodoMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *TodoMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *TodoMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the Todo entity.
+// If the Todo object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *TodoMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *TodoMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *TodoMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the Todo entity.
+// If the Todo object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *TodoMutation) ResetUpdateTime() {
+	m.update_time = nil
 }
 
 // SetTitle sets the "title" field.
@@ -173,6 +256,42 @@ func (m *TodoMutation) ResetTitle() {
 	m.title = nil
 }
 
+// SetDescription sets the "description" field.
+func (m *TodoMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *TodoMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Todo entity.
+// If the Todo object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TodoMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *TodoMutation) ResetDescription() {
+	m.description = nil
+}
+
 // Where appends a list predicates to the TodoMutation builder.
 func (m *TodoMutation) Where(ps ...predicate.Todo) {
 	m.predicates = append(m.predicates, ps...)
@@ -192,9 +311,18 @@ func (m *TodoMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TodoMutation) Fields() []string {
-	fields := make([]string, 0, 1)
+	fields := make([]string, 0, 4)
+	if m.create_time != nil {
+		fields = append(fields, todo.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, todo.FieldUpdateTime)
+	}
 	if m.title != nil {
 		fields = append(fields, todo.FieldTitle)
+	}
+	if m.description != nil {
+		fields = append(fields, todo.FieldDescription)
 	}
 	return fields
 }
@@ -204,8 +332,14 @@ func (m *TodoMutation) Fields() []string {
 // schema.
 func (m *TodoMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case todo.FieldCreateTime:
+		return m.CreateTime()
+	case todo.FieldUpdateTime:
+		return m.UpdateTime()
 	case todo.FieldTitle:
 		return m.Title()
+	case todo.FieldDescription:
+		return m.Description()
 	}
 	return nil, false
 }
@@ -215,8 +349,14 @@ func (m *TodoMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *TodoMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case todo.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case todo.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
 	case todo.FieldTitle:
 		return m.OldTitle(ctx)
+	case todo.FieldDescription:
+		return m.OldDescription(ctx)
 	}
 	return nil, fmt.Errorf("unknown Todo field %s", name)
 }
@@ -226,12 +366,33 @@ func (m *TodoMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *TodoMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case todo.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case todo.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
 	case todo.FieldTitle:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTitle(v)
+		return nil
+	case todo.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Todo field %s", name)
@@ -282,8 +443,17 @@ func (m *TodoMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *TodoMutation) ResetField(name string) error {
 	switch name {
+	case todo.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case todo.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
 	case todo.FieldTitle:
 		m.ResetTitle()
+		return nil
+	case todo.FieldDescription:
+		m.ResetDescription()
 		return nil
 	}
 	return fmt.Errorf("unknown Todo field %s", name)

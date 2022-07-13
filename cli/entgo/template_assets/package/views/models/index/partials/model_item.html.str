@@ -1,0 +1,9 @@
+{{block "[[.modelName]]item" .}}
+<a id="[[.modelName]]item-{{.ID}}" href="/{{.ID}}">
+    <div class="content box mt-2" style="text-decoration: none;">
+        [[range .listItemFields -]]
+		 <p> {{.[[.StructField]]}} </p>
+		[[- end]]
+    </div>
+</a>
+{{end}}

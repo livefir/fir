@@ -1,0 +1,188 @@
+package [[.modelNamePlural]]
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+
+	"[[.modelsPkg]]"
+	"[[.modelsPkg]]/[[.modelName]]"
+	"github.com/adnaan/autobahn/utils"
+	"github.com/adnaan/fir"
+)
+
+var defaultPageSize = 5
+
+type View struct {
+	DB *models.Client
+	fir.DefaultView
+}
+
+func (v *View) Content() string {
+	return "[[.content]]/index"
+}
+
+func (v *View) Layout() string {
+	return "[[.layout]]"
+}
+
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+	var req queryReq
+	err := fir.DecodeURLValues(&req, r)
+	if err != nil {
+		return fir.PageError(err, "error decoding query params")
+	}
+
+	[[.modelNamePlural]], err := [[.modelName]]Query(v.DB, req).All(r.Context())
+	if err != nil {
+		return fir.ErrInternalServer(err)
+	}
+
+	data := fir.Data{"[[.modelNamePlural]]": [[.modelNamePlural]]}
+	for k, v := range paginationData(req, len([[.modelNamePlural]])) {
+		data[k] = v
+	}
+
+	return fir.Page{Data: data}
+}
+
+func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
+	var req createReq
+	err := fir.DecodeForm(&req, r)
+	if err != nil {
+		return fir.PageError(err)
+	}
+
+	[[.modelName]], err := save[[.modelNameTitled]](r.Context(), v.DB, req)
+	if err != nil {
+		return utils.PageFormError(err)
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/%s", [[.modelName]].ID.String()), http.StatusFound)
+
+	return fir.Page{}
+}
+
+func (v *View) OnEvent(event fir.Event) fir.Patchset {
+	switch event.ID {
+	case "[[.modelName]]-create":
+		return on[[.modelNameTitled]]Create(v.DB, event)
+	case "[[.modelName]]-query":
+		return on[[.modelNameTitled]]Query(v.DB, event)
+	default:
+		log.Printf("unknown event: %s\n", event.ID)
+		return nil
+	}
+}
+
+type queryReq struct {
+	Order  string `json:"order" schema:"order"`
+	Search string `json:"search" schema:"search"`
+	Offset int    `json:"offset" schema:"offset"`
+	Limit  int    `json:"limit" schema:"limit"`
+}
+
+type createReq struct {
+	[[range .createFormFields -]]
+	[[.StructField]] [[.Type]] `json:"[[.Name]]" schema:"[[.Name]],required"`
+	[[end]]
+}
+
+func [[.modelName]]Query(db *models.Client, req queryReq) *models.[[.modelNameTitled]]Query {
+	if req.Limit == 0 {
+		req.Limit = defaultPageSize
+	}
+
+	q := db.[[.modelNameTitled]].Query().Offset(req.Offset).Limit(req.Limit)
+	if req.Search != "" {
+		q = q.Where([[.modelName]].TitleContains(req.Search))
+	}
+	if req.Order == "oldest" {
+		q = q.Order(models.Desc("create_time"))
+	} else {
+		q = q.Order(models.Asc("create_time"))
+	}
+
+	return q
+}
+
+func paginationData(req queryReq, [[.modelName]]Len int) fir.Data {
+	prev := req.Offset - defaultPageSize
+	hasPrevious := true
+	if prev < 0 || req.Offset == 0 {
+		hasPrevious = false
+	}
+	next := defaultPageSize + req.Offset
+	hasNext := true
+	if [[.modelName]]Len < defaultPageSize {
+		hasNext = false
+	}
+	return fir.Data{
+		"prev":        prev,
+		"next":        next,
+		"hasPrevious": hasPrevious,
+		"hasNext":     hasNext,
+	}
+}
+
+func save[[.modelNameTitled]](ctx context.Context, db *models.Client, req createReq) (*models.[[.modelNameTitled]], error) {
+	[[.modelName]], err := db.[[.modelNameTitled]].
+		Create().
+		[[range .createFormFields]]
+		Set[[.StructField]](req.[[.StructField]]).
+		[[end]]
+		Save(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return [[.modelName]], nil
+}
+
+func on[[.modelNameTitled]]Create(db *models.Client, event fir.Event) fir.Patchset {
+	var req createReq
+	if err := event.DecodeFormParams(&req); err != nil {
+		return fir.PatchError(err, "error decoding request")
+	}
+
+	[[.modelName]], err := save[[.modelNameTitled]](event.RequestContext(), db, req)
+	if err != nil {
+		return utils.PatchFormError(err)
+	}
+
+	return fir.Patchset{
+		fir.Navigate{
+			To: fmt.Sprintf("/%s", [[.modelName]].ID.String()),
+		},
+	}
+}
+
+func on[[.modelNameTitled]]Query(db *models.Client, event fir.Event) fir.Patchset {
+	var req queryReq
+	if err := event.DecodeFormParams(&req); err != nil {
+		return fir.PatchError(err, "error decoding request")
+	}
+	[[.modelNamePlural]], err := [[.modelName]]Query(db, req).All(event.RequestContext())
+	if err != nil {
+		return fir.PatchError(err, "error querying [[.modelNamePlural]]")
+	}
+
+	return fir.Patchset{
+		fir.Morph{
+			Selector: "#[[.modelName]]list",
+			Template: &fir.Template{
+				Name: "[[.modelName]]list",
+				Data: fir.Data{"[[.modelNamePlural]]": [[.modelNamePlural]]},
+			},
+		},
+		fir.Morph{
+			Selector: "#pagination",
+			Template: &fir.Template{
+				Name: "pagination",
+				Data: paginationData(req, len([[.modelNamePlural]])),
+			},
+		},
+	}
+}

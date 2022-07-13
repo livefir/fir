@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
+	"github.com/google/uuid"
 )
 
 // TodoCreate is the builder for creating a Todo entity.
@@ -19,9 +21,57 @@ type TodoCreate struct {
 	hooks    []Hook
 }
 
+// SetCreateTime sets the "create_time" field.
+func (tc *TodoCreate) SetCreateTime(t time.Time) *TodoCreate {
+	tc.mutation.SetCreateTime(t)
+	return tc
+}
+
+// SetNillableCreateTime sets the "create_time" field if the given value is not nil.
+func (tc *TodoCreate) SetNillableCreateTime(t *time.Time) *TodoCreate {
+	if t != nil {
+		tc.SetCreateTime(*t)
+	}
+	return tc
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (tc *TodoCreate) SetUpdateTime(t time.Time) *TodoCreate {
+	tc.mutation.SetUpdateTime(t)
+	return tc
+}
+
+// SetNillableUpdateTime sets the "update_time" field if the given value is not nil.
+func (tc *TodoCreate) SetNillableUpdateTime(t *time.Time) *TodoCreate {
+	if t != nil {
+		tc.SetUpdateTime(*t)
+	}
+	return tc
+}
+
 // SetTitle sets the "title" field.
 func (tc *TodoCreate) SetTitle(s string) *TodoCreate {
 	tc.mutation.SetTitle(s)
+	return tc
+}
+
+// SetDescription sets the "description" field.
+func (tc *TodoCreate) SetDescription(s string) *TodoCreate {
+	tc.mutation.SetDescription(s)
+	return tc
+}
+
+// SetID sets the "id" field.
+func (tc *TodoCreate) SetID(u uuid.UUID) *TodoCreate {
+	tc.mutation.SetID(u)
+	return tc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (tc *TodoCreate) SetNillableID(u *uuid.UUID) *TodoCreate {
+	if u != nil {
+		tc.SetID(*u)
+	}
 	return tc
 }
 
@@ -36,6 +86,7 @@ func (tc *TodoCreate) Save(ctx context.Context) (*Todo, error) {
 		err  error
 		node *Todo
 	)
+	tc.defaults()
 	if len(tc.hooks) == 0 {
 		if err = tc.check(); err != nil {
 			return nil, err
@@ -93,10 +144,45 @@ func (tc *TodoCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (tc *TodoCreate) defaults() {
+	if _, ok := tc.mutation.CreateTime(); !ok {
+		v := todo.DefaultCreateTime()
+		tc.mutation.SetCreateTime(v)
+	}
+	if _, ok := tc.mutation.UpdateTime(); !ok {
+		v := todo.DefaultUpdateTime()
+		tc.mutation.SetUpdateTime(v)
+	}
+	if _, ok := tc.mutation.ID(); !ok {
+		v := todo.DefaultID()
+		tc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (tc *TodoCreate) check() error {
+	if _, ok := tc.mutation.CreateTime(); !ok {
+		return &ValidationError{Name: "create_time", err: errors.New(`models: missing required field "Todo.create_time"`)}
+	}
+	if _, ok := tc.mutation.UpdateTime(); !ok {
+		return &ValidationError{Name: "update_time", err: errors.New(`models: missing required field "Todo.update_time"`)}
+	}
 	if _, ok := tc.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`models: missing required field "Todo.title"`)}
+	}
+	if v, ok := tc.mutation.Title(); ok {
+		if err := todo.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`models: validator failed for field "Todo.title": %w`, err)}
+		}
+	}
+	if _, ok := tc.mutation.Description(); !ok {
+		return &ValidationError{Name: "description", err: errors.New(`models: missing required field "Todo.description"`)}
+	}
+	if v, ok := tc.mutation.Description(); ok {
+		if err := todo.DescriptionValidator(v); err != nil {
+			return &ValidationError{Name: "description", err: fmt.Errorf(`models: validator failed for field "Todo.description": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -109,8 +195,13 @@ func (tc *TodoCreate) sqlSave(ctx context.Context) (*Todo, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -120,11 +211,31 @@ func (tc *TodoCreate) createSpec() (*Todo, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: todo.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: todo.FieldID,
 			},
 		}
 	)
+	if id, ok := tc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := tc.mutation.CreateTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: todo.FieldCreateTime,
+		})
+		_node.CreateTime = value
+	}
+	if value, ok := tc.mutation.UpdateTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: todo.FieldUpdateTime,
+		})
+		_node.UpdateTime = value
+	}
 	if value, ok := tc.mutation.Title(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -132,6 +243,14 @@ func (tc *TodoCreate) createSpec() (*Todo, *sqlgraph.CreateSpec) {
 			Column: todo.FieldTitle,
 		})
 		_node.Title = value
+	}
+	if value, ok := tc.mutation.Description(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: todo.FieldDescription,
+		})
+		_node.Description = value
 	}
 	return _node, _spec
 }
@@ -150,6 +269,7 @@ func (tcb *TodoCreateBulk) Save(ctx context.Context) ([]*Todo, error) {
 	for i := range tcb.builders {
 		func(i int, root context.Context) {
 			builder := tcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*TodoMutation)
 				if !ok {
@@ -177,10 +297,6 @@ func (tcb *TodoCreateBulk) Save(ctx context.Context) ([]*Todo, error) {
 				}
 				mutation.id = &nodes[i].ID
 				mutation.done = true
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				return nodes[i], nil
 			})
 			for i := len(builder.hooks) - 1; i >= 0; i-- {

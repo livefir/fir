@@ -1,22 +1,27 @@
-{{define "bulma:form-input"}}
+[[define "bulma:form-input"]]
 <div class="field">
-    <label class="label">{{.label}}</label>
+    <label class="label">[[.label]]</label>
     <div class="control">
-        <input name="{{.name}}" class="input" type="{{.type}}" placeholder="{{.placeholder}}">
+        <input name="[[.name]]" class="input" type="[[.type]]" value="[[.value]]" placeholder="[[.placeholder]]">
+    </div>
+    {{block "[[.name]]-error" .}}
+    <div id="title-error">
+        <p class="help is-danger">{{.[[.name]]Error}}</p>
+    </div>
+    {{end}}
+</div>
+[[end]]
+
+[[define "bulma:form-button"]]
+<div class="field">
+    <div class="control">
+        <button type="[[.Type]]" class="button is-primary">[[.Text]]</button>
     </div>
 </div>
-{{end}}
+[[end]]
 
-{{define "bulma:form-button"}}
-<div class="field">
-    <div class="control">
-        <button type="{{.Type}}" class="button is-primary">{{.Text}}</button>
-    </div>
-</div>
-{{end}}
-
-{{define "bulma:form"}}
-<form name="new-{{.name}}" @submit.prevent="$fir.submit('{{.name}}s/{{.action}}')">
-    {{.fields}}
+[[define "bulma:form"]]
+<form id="new-[[.name]]" @submit.prevent="$fir.submit">
+    [[.fields]]
 </form>
-{{end}}
+[[end]]

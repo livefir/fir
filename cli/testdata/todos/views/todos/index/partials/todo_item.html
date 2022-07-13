@@ -1,0 +1,7 @@
+{{block "todoitem" .}}
+<a id="todoitem-{{.ID}}" href="/{{.ID}}">
+    <div class="content box mt-2" style="text-decoration: none;">
+        <p> {{.Title}} </p>
+    </div>
+</a>
+{{end}}

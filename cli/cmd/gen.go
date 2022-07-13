@@ -69,4 +69,5 @@ func init() {
 
 	genCmd.Flags().StringVarP(&projectPath, "project", "p", wd, "path to project")
 	genCmd.Flags().StringVarP(&pkg, "package", "P", "github.com/adnaan/fir/cli/testdata/todos", "project package path")
+	genCmd.MarkFlagRequired("package")
 }

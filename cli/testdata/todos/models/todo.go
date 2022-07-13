@@ -5,18 +5,26 @@ package models
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
+	"github.com/google/uuid"
 )
 
 // Todo is the model entity for the Todo schema.
 type Todo struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// CreateTime holds the value of the "create_time" field.
+	CreateTime time.Time `json:"create_time,omitempty"`
+	// UpdateTime holds the value of the "update_time" field.
+	UpdateTime time.Time `json:"update_time,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// Description holds the value of the "description" field.
+	Description string `json:"description,omitempty"`
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -24,10 +32,12 @@ func (*Todo) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case todo.FieldID:
-			values[i] = new(sql.NullInt64)
-		case todo.FieldTitle:
+		case todo.FieldTitle, todo.FieldDescription:
 			values[i] = new(sql.NullString)
+		case todo.FieldCreateTime, todo.FieldUpdateTime:
+			values[i] = new(sql.NullTime)
+		case todo.FieldID:
+			values[i] = new(uuid.UUID)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Todo", columns[i])
 		}
@@ -44,16 +54,34 @@ func (t *Todo) assignValues(columns []string, values []interface{}) error {
 	for i := range columns {
 		switch columns[i] {
 		case todo.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				t.ID = *value
 			}
-			t.ID = int(value.Int64)
+		case todo.FieldCreateTime:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field create_time", values[i])
+			} else if value.Valid {
+				t.CreateTime = value.Time
+			}
+		case todo.FieldUpdateTime:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field update_time", values[i])
+			} else if value.Valid {
+				t.UpdateTime = value.Time
+			}
 		case todo.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
 				t.Title = value.String
+			}
+		case todo.FieldDescription:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field description", values[i])
+			} else if value.Valid {
+				t.Description = value.String
 			}
 		}
 	}
@@ -83,8 +111,14 @@ func (t *Todo) String() string {
 	var builder strings.Builder
 	builder.WriteString("Todo(")
 	builder.WriteString(fmt.Sprintf("id=%v", t.ID))
+	builder.WriteString(", create_time=")
+	builder.WriteString(t.CreateTime.Format(time.ANSIC))
+	builder.WriteString(", update_time=")
+	builder.WriteString(t.UpdateTime.Format(time.ANSIC))
 	builder.WriteString(", title=")
 	builder.WriteString(t.Title)
+	builder.WriteString(", description=")
+	builder.WriteString(t.Description)
 	builder.WriteByte(')')
 	return builder.String()
 }

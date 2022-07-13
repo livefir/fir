@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -27,9 +28,21 @@ func (tu *TodoUpdate) Where(ps ...predicate.Todo) *TodoUpdate {
 	return tu
 }
 
+// SetUpdateTime sets the "update_time" field.
+func (tu *TodoUpdate) SetUpdateTime(t time.Time) *TodoUpdate {
+	tu.mutation.SetUpdateTime(t)
+	return tu
+}
+
 // SetTitle sets the "title" field.
 func (tu *TodoUpdate) SetTitle(s string) *TodoUpdate {
 	tu.mutation.SetTitle(s)
+	return tu
+}
+
+// SetDescription sets the "description" field.
+func (tu *TodoUpdate) SetDescription(s string) *TodoUpdate {
+	tu.mutation.SetDescription(s)
 	return tu
 }
 
@@ -44,13 +57,20 @@ func (tu *TodoUpdate) Save(ctx context.Context) (int, error) {
 		err      error
 		affected int
 	)
+	tu.defaults()
 	if len(tu.hooks) == 0 {
+		if err = tu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = tu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*TodoMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = tu.check(); err != nil {
+				return 0, err
 			}
 			tu.mutation = mutation
 			affected, err = tu.sqlSave(ctx)
@@ -92,13 +112,36 @@ func (tu *TodoUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (tu *TodoUpdate) defaults() {
+	if _, ok := tu.mutation.UpdateTime(); !ok {
+		v := todo.UpdateDefaultUpdateTime()
+		tu.mutation.SetUpdateTime(v)
+	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (tu *TodoUpdate) check() error {
+	if v, ok := tu.mutation.Title(); ok {
+		if err := todo.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`models: validator failed for field "Todo.title": %w`, err)}
+		}
+	}
+	if v, ok := tu.mutation.Description(); ok {
+		if err := todo.DescriptionValidator(v); err != nil {
+			return &ValidationError{Name: "description", err: fmt.Errorf(`models: validator failed for field "Todo.description": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (tu *TodoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   todo.Table,
 			Columns: todo.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: todo.FieldID,
 			},
 		},
@@ -110,11 +153,25 @@ func (tu *TodoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := tu.mutation.UpdateTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: todo.FieldUpdateTime,
+		})
+	}
 	if value, ok := tu.mutation.Title(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
 			Column: todo.FieldTitle,
+		})
+	}
+	if value, ok := tu.mutation.Description(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: todo.FieldDescription,
 		})
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
@@ -136,9 +193,21 @@ type TodoUpdateOne struct {
 	mutation *TodoMutation
 }
 
+// SetUpdateTime sets the "update_time" field.
+func (tuo *TodoUpdateOne) SetUpdateTime(t time.Time) *TodoUpdateOne {
+	tuo.mutation.SetUpdateTime(t)
+	return tuo
+}
+
 // SetTitle sets the "title" field.
 func (tuo *TodoUpdateOne) SetTitle(s string) *TodoUpdateOne {
 	tuo.mutation.SetTitle(s)
+	return tuo
+}
+
+// SetDescription sets the "description" field.
+func (tuo *TodoUpdateOne) SetDescription(s string) *TodoUpdateOne {
+	tuo.mutation.SetDescription(s)
 	return tuo
 }
 
@@ -160,13 +229,20 @@ func (tuo *TodoUpdateOne) Save(ctx context.Context) (*Todo, error) {
 		err  error
 		node *Todo
 	)
+	tuo.defaults()
 	if len(tuo.hooks) == 0 {
+		if err = tuo.check(); err != nil {
+			return nil, err
+		}
 		node, err = tuo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*TodoMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = tuo.check(); err != nil {
+				return nil, err
 			}
 			tuo.mutation = mutation
 			node, err = tuo.sqlSave(ctx)
@@ -208,13 +284,36 @@ func (tuo *TodoUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (tuo *TodoUpdateOne) defaults() {
+	if _, ok := tuo.mutation.UpdateTime(); !ok {
+		v := todo.UpdateDefaultUpdateTime()
+		tuo.mutation.SetUpdateTime(v)
+	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (tuo *TodoUpdateOne) check() error {
+	if v, ok := tuo.mutation.Title(); ok {
+		if err := todo.TitleValidator(v); err != nil {
+			return &ValidationError{Name: "title", err: fmt.Errorf(`models: validator failed for field "Todo.title": %w`, err)}
+		}
+	}
+	if v, ok := tuo.mutation.Description(); ok {
+		if err := todo.DescriptionValidator(v); err != nil {
+			return &ValidationError{Name: "description", err: fmt.Errorf(`models: validator failed for field "Todo.description": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (tuo *TodoUpdateOne) sqlSave(ctx context.Context) (_node *Todo, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   todo.Table,
 			Columns: todo.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: todo.FieldID,
 			},
 		},
@@ -243,11 +342,25 @@ func (tuo *TodoUpdateOne) sqlSave(ctx context.Context) (_node *Todo, err error) 
 			}
 		}
 	}
+	if value, ok := tuo.mutation.UpdateTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: todo.FieldUpdateTime,
+		})
+	}
 	if value, ok := tuo.mutation.Title(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
 			Value:  value,
 			Column: todo.FieldTitle,
+		})
+	}
+	if value, ok := tuo.mutation.Description(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeString,
+			Value:  value,
+			Column: todo.FieldDescription,
 		})
 	}
 	_node = &Todo{config: tuo.config}
