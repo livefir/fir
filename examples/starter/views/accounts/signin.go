@@ -27,7 +27,7 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "magic-login":
 		r := new(ProfileRequest)
-		if err := event.DecodeParams(r); err != nil {
+		if err := event.DecodeFormParams(r); err != nil {
 			return fir.PatchError(err)
 		}
 		if r.Email == "" {
@@ -52,7 +52,7 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 
 func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return fir.PageError(err, "unauthorized")
+		return fir.Page{}
 	}
 
 	return fir.Page{

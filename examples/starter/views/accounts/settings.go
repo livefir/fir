@@ -57,7 +57,7 @@ func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 
 func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 	req := new(ProfileRequest)
-	if err := event.DecodeParams(req); err != nil {
+	if err := event.DecodeFormParams(req); err != nil {
 		return fir.PatchError(err)
 	}
 	rCtx := event.RequestContext()

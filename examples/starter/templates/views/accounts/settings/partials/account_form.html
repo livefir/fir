@@ -1,6 +1,6 @@
 {{define "account_form"}}
 <div id="account_form">
-    <form x-data id="account-update" @submit.prevent="$fir.submit">
+    <form method="post" x-data id="account-update" @submit.prevent="$fir.submit">
         <div class="field">
             <label class="label">Name</label>
             <div class="control">
