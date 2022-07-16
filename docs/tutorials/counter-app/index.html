@@ -1,0 +1,525 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=https://adnaan.badr.in/fir/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=https://adnaan.badr.in/fir/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=https://adnaan.badr.in/fir/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script><link rel=stylesheet href=https://adnaan.badr.in/fir/main.31de6591ca30693a54bd7e7b218a5254f188d7e2074fd62385c9669768f90af0a62ab6009fec54162ce076ace69150c161319add9cbf80f2a806780b1374d5a1.css integrity="sha512-Md5lkcowaTpUvX57IYpSVPGI1+IHT9Yjhclml2j5CvCmKrYAn+xUFizgdqzmkVDBYTGa3Zy/gPKoBngLE3TVoQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Counter App - Fir</title><meta name=description content="Lets spend the next 15 minutes creating a new reactive counter app. If you want to skip ahead and look at final code, its here: examples/counter/main.go
+Prerequisites # Have you installed Go ? If yes, we are good to go.
+Creating a new app # The fir library concerns itself with only the view controller so starting off is as easy as mounting a view on the fir controller:
+package main import ( &amp;quot;log&amp;quot; &amp;quot;net/http&amp;quot; &amp;quot;github."><link rel=canonical href=https://adnaan.badr.in/fir/docs/tutorials/counter-app/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Counter App"><meta property="og:description" content="Lets spend the next 15 minutes creating a new reactive counter app. If you want to skip ahead and look at final code, its here: examples/counter/main.go
+Prerequisites # Have you installed Go ? If yes, we are good to go.
+Creating a new app # The fir library concerns itself with only the view controller so starting off is as easy as mounting a view on the fir controller:
+package main import ( &#34;log&#34; &#34;net/http&#34; &#34;github."><meta property="og:url" content="https://adnaan.badr.in/fir/docs/tutorials/counter-app/"><meta property="og:site_name" content="Fir"><meta property="article:published_time" content="2022-07-16T18:31:59+02:00"><meta property="article:modified_time" content="2022-07-16T18:31:59+02:00"><meta property="og:image" content="https://adnaan.badr.in/fir/doks.png"><meta property="og:image:alt" content="Fir"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@adnaanx"><meta name=twitter:creator content="@adnaanx"><meta name=twitter:title content="Counter App"><meta name=twitter:description content><meta name=twitter:image content="https://adnaan.badr.in/fir/doks.png"><meta name=twitter:image:alt content="Counter App"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://adnaan.badr.in/#/schema/organization/1","name":"Doks","url":"https://adnaan.badr.in/","sameAs":["https://github.com/adnaan/fir"],"logo":{"@type":"ImageObject","@id":"https://adnaan.badr.in/#/schema/image/1","url":"https://adnaan.badr.in/logo-doks.png","width":512,"height":512,"caption":"Doks"},"image":{"@id":"https://adnaan.badr.in/#/schema/image/1"}},{"@type":"WebSite","@id":"https://adnaan.badr.in/#/schema/website/1","url":"https://adnaan.badr.in/","name":"Fir","description":"The Fir toolkit offers a Go library, an Alpine.js plugin and a CLI to build progressively enhanced dynamic apps with mostly server-rendered HTML.","publisher":{"@id":"https://adnaan.badr.in/#/schema/organization/1"}},{"@type":"WebPage","@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/","url":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/","name":"Counter App","description":"","isPartOf":{"@id":"https://adnaan.badr.in/#/schema/website/1"},"about":{"@id":"https://adnaan.badr.in/#/schema/organization/1"},"datePublished":"2022-07-16T18:31:59CET","dateModified":"2022-07-16T18:31:59CET","breadcrumb":{"@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/#/schema/image/2"},"inLanguage":"en-US","potentialAction":[{"@type":"ReadAction","target":["https://adnaan.badr.in/fir/docs/tutorials/counter-app/"]}]},{"@type":"BreadcrumbList","@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"https://adnaan.badr.in/fir/","url":"https://adnaan.badr.in/fir/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@type":"WebPage","@id":"https://adnaan.badr.in/fir/docs/","url":"https://adnaan.badr.in/fir/docs/","name":"Docs"}},{"@type":"ListItem","position":3,"item":{"@type":"WebPage","@id":"https://adnaan.badr.in/fir/docs/tutorials/","url":"https://adnaan.badr.in/fir/docs/tutorials/","name":"Tutorials"}},{"@type":"ListItem","position":4,"item":{"@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"https://adnaan.badr.in/#/schema/article/1","headline":"Counter App","description":"","isPartOf":{"@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/"},"mainEntityOfPage":{"@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/"},"datePublished":"2022-07-16T18:31:59CET","dateModified":"2022-07-16T18:31:59CET","author":{"@id":"https://adnaan.badr.in/#/schema/person/2"},"publisher":{"@id":"https://adnaan.badr.in/#/schema/organization/1"},"image":{"@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"https://adnaan.badr.in/#/schema/person/2","name":"Adnaan Badr","sameAs":["https://twitter.com/adnaanx","https://www.linkedin.com/in/henkverlinde/","https://github.com/adnaan"]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"https://adnaan.badr.in/fir/docs/tutorials/counter-app/#/schema/image/2","url":"https://adnaan.badr.in/fir/doks.png","contentUrl":"https://adnaan.badr.in/fir/doks.png","caption":"Counter App"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=https://adnaan.badr.in/fir/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=https://adnaan.badr.in/fir/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=https://adnaan.badr.in/fir/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=https://adnaan.badr.in/fir/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=https://adnaan.badr.in/fir/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=https://adnaan.badr.in/fir/site.webmanifest></head><body class="docs single"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=https://adnaan.badr.in/fir/ aria-label=Fir>Fir</a>
+<button class="btn btn-link order-0 ms-auto d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasExample aria-controls=offcanvasExample><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-more-horizontal"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button><div class="offcanvas offcanvas-start d-lg-none" tabindex=-1 id=offcanvasExample aria-labelledby=offcanvasExampleLabel><div class=header-bar></div><div class=offcanvas-header><h5 class=offcanvas-title id=offcanvasExampleLabel>Browse docs</h5><button type=button class=btn-close data-bs-dismiss=offcanvas aria-label=Close></button></div><div class=offcanvas-body><aside class="doks-sidebar mt-n3"><nav id=doks-docs-nav aria-label="Tertiary navigation"><ul class="list-unstyled collapsible-sidebar"><li class=mb-1><button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle=collapse data-bs-target=#section-3b878279a04dc47d60932cb294d96259 aria-expanded=false>
+Overview</button><div class=collapse id=section-3b878279a04dc47d60932cb294d96259><ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small"><li><a class="docs-link rounded" href=https://adnaan.badr.in/fir/docs/overview/introduction/>Introduction</a></li><li><a class="docs-link rounded" href=https://adnaan.badr.in/fir/docs/overview/quick-start/>Quick Start</a></li></ul></div></li><li class=mb-1><button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle=collapse data-bs-target=#section-130ddfce9c28453883ccfe2da8b6d5ac aria-expanded=true>
+Tutorials</button><div class="collapse show" id=section-130ddfce9c28453883ccfe2da8b6d5ac><ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small"><li><a class="docs-link rounded active" href=https://adnaan.badr.in/fir/docs/tutorials/counter-app/>Counter App</a></li></ul></div></li></ul></nav></aside></div></div><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=https://adnaan.badr.in/fir/>Fir</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=https://adnaan.badr.in/fir/docs/overview/introduction/>Docs</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://github.com/adnaan/fir><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li></ul><hr class="text-black-50 my-4 d-lg-none"><button id=mode class="btn btn-link" type=button aria-label="Toggle user interface mode">
+<span class=toggle-dark><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span><span class=toggle-light><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span></button></div></div></nav></header></div><div class=container-xxl><aside class=doks-sidebar><nav id=doks-docs-nav class="collapse d-lg-none" aria-label="Tertiary navigation"><ul class="list-unstyled collapsible-sidebar"><li class=mb-1><button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle=collapse data-bs-target=#section-3b878279a04dc47d60932cb294d96259 aria-expanded=false>
+Overview</button><div class=collapse id=section-3b878279a04dc47d60932cb294d96259><ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small"><li><a class="docs-link rounded" href=https://adnaan.badr.in/fir/docs/overview/introduction/>Introduction</a></li><li><a class="docs-link rounded" href=https://adnaan.badr.in/fir/docs/overview/quick-start/>Quick Start</a></li></ul></div></li><li class=mb-1><button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle=collapse data-bs-target=#section-130ddfce9c28453883ccfe2da8b6d5ac aria-expanded=true>
+Tutorials</button><div class="collapse show" id=section-130ddfce9c28453883ccfe2da8b6d5ac><ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small"><li><a class="docs-link rounded active" href=https://adnaan.badr.in/fir/docs/tutorials/counter-app/>Counter App</a></li></ul></div></li></ul></nav></aside></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap"><div class="col-lg-5 col-xl-4 docs-sidebar d-none d-lg-block"><nav class=docs-links aria-label="Main navigation"><ul class="list-unstyled collapsible-sidebar"><li class=mb-1><button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle=collapse data-bs-target=#section-3b878279a04dc47d60932cb294d96259 aria-expanded=false>
+Overview</button><div class=collapse id=section-3b878279a04dc47d60932cb294d96259><ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small"><li><a class="docs-link rounded" href=https://adnaan.badr.in/fir/docs/overview/introduction/>Introduction</a></li><li><a class="docs-link rounded" href=https://adnaan.badr.in/fir/docs/overview/quick-start/>Quick Start</a></li></ul></div></li><li class=mb-1><button class="btn btn-toggle align-items-center rounded collapsed" data-bs-toggle=collapse data-bs-target=#section-130ddfce9c28453883ccfe2da8b6d5ac aria-expanded=true>
+Tutorials</button><div class="collapse show" id=section-130ddfce9c28453883ccfe2da8b6d5ac><ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small"><li><a class="docs-link rounded active" href=https://adnaan.badr.in/fir/docs/tutorials/counter-app/>Counter App</a></li></ul></div></li></ul></nav></div><nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation"><div class=d-xl-none><button class="btn btn-outline-primary btn-sm doks-toc-toggle collapsed" type=button data-bs-toggle=collapse data-bs-target=#onThisPage aria-controls=doks-docs-nav aria-expanded=false aria-label="Toggle On this page navigation">
+<span>On this page</span>
+<span><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="doks doks-expand" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><title>Expand</title><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="doks doks-collapse" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><title>Collapse</title><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg></span></button><div class=collapse id=onThisPage><div class="card card-body mt-3 py-1"><div class=page-links><nav id=TableOfContents><ul><li><a href=#prerequisites>Prerequisites</a></li><li><a href=#creating-a-new-app>Creating a new app</a></li><li><a href=#creating-a-new-view>Creating a new view</a></li><li><a href=#user-interaction>User interaction</a></li><li><a href=#render-view>Render view</a></li><li><a href=#update-parts-of-the-view>Update parts of the view</a></li><li><a href=#optional-layouts>Optional: Layouts</a></li><li><a href=#optional-live-ticker>Optional: Live Ticker</a></li></ul></nav></div></div></div></div><div class="page-links d-none d-xl-block"><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#prerequisites>Prerequisites</a></li><li><a href=#creating-a-new-app>Creating a new app</a></li><li><a href=#creating-a-new-view>Creating a new view</a></li><li><a href=#user-interaction>User interaction</a></li><li><a href=#render-view>Render view</a></li><li><a href=#update-parts-of-the-view>Update parts of the view</a></li><li><a href=#optional-layouts>Optional: Layouts</a></li><li><a href=#optional-live-ticker>Optional: Live Ticker</a></li></ul></nav></div></nav><main class="docs-content col-lg-11 col-xl-9"><h1>Counter App</h1><p class=lead></p><nav class=d-xl-none aria-label="Quaternary navigation"><div class=d-xl-none><button class="btn btn-outline-primary btn-sm doks-toc-toggle collapsed" type=button data-bs-toggle=collapse data-bs-target=#onThisPage aria-controls=doks-docs-nav aria-expanded=false aria-label="Toggle On this page navigation">
+<span>On this page</span>
+<span><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="doks doks-expand" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><title>Expand</title><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="doks doks-collapse" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><title>Collapse</title><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg></span></button><div class=collapse id=onThisPage><div class="card card-body mt-3 py-1"><div class=page-links><nav id=TableOfContents><ul><li><a href=#prerequisites>Prerequisites</a></li><li><a href=#creating-a-new-app>Creating a new app</a></li><li><a href=#creating-a-new-view>Creating a new view</a></li><li><a href=#user-interaction>User interaction</a></li><li><a href=#render-view>Render view</a></li><li><a href=#update-parts-of-the-view>Update parts of the view</a></li><li><a href=#optional-layouts>Optional: Layouts</a></li><li><a href=#optional-live-ticker>Optional: Live Ticker</a></li></ul></nav></div></div></div></div><div class="page-links d-none d-xl-block"><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#prerequisites>Prerequisites</a></li><li><a href=#creating-a-new-app>Creating a new app</a></li><li><a href=#creating-a-new-view>Creating a new view</a></li><li><a href=#user-interaction>User interaction</a></li><li><a href=#render-view>Render view</a></li><li><a href=#update-parts-of-the-view>Update parts of the view</a></li><li><a href=#optional-layouts>Optional: Layouts</a></li><li><a href=#optional-live-ticker>Optional: Live Ticker</a></li></ul></nav></div></nav><p>Lets spend the next 15 minutes creating a new <code>reactive</code> counter app. If you want to skip ahead and look at final code, its here: <a href=https://github.com/adnaan/fir/blob/main/examples/counter/main.go>examples/counter/main.go</a></p><h2 id=prerequisites>Prerequisites <a href=#prerequisites class=anchor aria-hidden=true>#</a></h2><p>Have you installed <a href=https://go.dev/doc/install>Go</a> ? If yes, we are good to go.</p><h2 id=creating-a-new-app>Creating a new app <a href=#creating-a-new-app class=anchor aria-hidden=true>#</a></h2><p>The <code>fir</code> library concerns itself with only the view controller so starting off is as easy as mounting a view on the <code>fir</code> controller:</p><pre><code class=language-go>package main
+
+import (
+ &quot;log&quot;
+ &quot;net/http&quot;
+
+ &quot;github.com/adnaan/fir&quot;
+)
+
+func main() {
+ controller := fir.NewController(&quot;counter_app&quot;, fir.DevelopmentMode(true))
+ http.Handle(&quot;/&quot;, controller.Handler(&amp;fir.DefaultView{}))
+ http.ListenAndServe(&quot;:9867&quot;, nil)
+}
+
+</code></pre><p>Copy the above snippet in a <code>main.go</code> file and run <code>go run main.go</code>. Open <a href=http://localhost:9867>localhost:9867</a> to see the running app.</p><p>We have created a controller and registered a <code>DefaultView</code> by calling <code>controller.Handler(&fir.HelloView{})</code>. The <code>contoller.Handler</code> method accepts a <a href=https://pkg.go.dev/github.com/adnaan/fir#View>View</a> interface. <code>fir.DefaultView</code> satisfies the methods for the <code>View</code> interface with default values.</p><p>The fir library doesn&rsquo;t manage routing so you can bring your favorite routing library to actually route requests to the view. Here we keep it simple and mount the <code>http.HandlerFunc</code> returned by <code>controller.Handler</code> on the <code>/</code> route: <code>http.Handle("/", c.Handler(&fir.DefaultView{}))</code></p><h2 id=creating-a-new-view>Creating a new view <a href=#creating-a-new-view class=anchor aria-hidden=true>#</a></h2><p>We want to build a counter app. To do this we want to create a new view and replace <code>DefaultView</code>.</p><p>This is how we do that:</p><pre><code class=language-go>type CounterView struct {
+ fir.DefaultView
+ count int32
+}
+
+func (c *CounterView) Content() string {
+ return &quot;A counter app&quot;
+}
+
+</code></pre><p>In the above snippet we have created a new struct, <code>CounterView</code> and embedded a <code>fir.DefaultView</code> type in it to satisfy the <code>View</code> interface.</p><pre><code class=language-go>
+package main
+
+import (
+ &quot;log&quot;
+ &quot;net/http&quot;
+
+ &quot;github.com/adnaan/fir&quot;
+)
+
+type Counter struct {
+ count int32
+}
+
+type CounterView struct {
+ fir.DefaultView
+ model *Counter
+}
+
+func (c *CounterView) Content() string {
+ return &quot;A counter app&quot;
+}
+
+func main() {
+ controller := fir.NewController(&quot;counter_app&quot;, fir.DevelopmentMode(true))
+ http.Handle(&quot;/&quot;, controller.Handler(&amp;CounterView{model: &amp;Counter{}}))
+ http.ListenAndServe(&quot;:9867&quot;, nil)
+}
+</code></pre><p>Run the above code to see the changes at <a href=http://localhost:9867>localhost:9867</a>.</p><h2 id=user-interaction>User interaction <a href=#user-interaction class=anchor aria-hidden=true>#</a></h2><p><code>Fir</code> has a companion javascript library which lets you send browser events to the server. You can use these events to change server state(in our case: <code>model *Counter</code>) and make partial page updates without a page reload.</p><pre><code class=language-html>&lt;div&gt;
+    &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('inc')&quot;&gt;+
+    &lt;/button&gt;
+    &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('dec')&quot;&gt;-
+    &lt;/button&gt;
+&lt;/div&gt;
+</code></pre><p>In the above snippet, we use the custom Alpinejs magic function, <code>$fir.emit</code> to send an event to the server on a button click. Shortly we will see how to handle this event to change state on the server, followed by updating a count on the web page.</p><h2 id=render-view>Render view <a href=#render-view class=anchor aria-hidden=true>#</a></h2><p>Before we go ahead, lets expand the above snippet to a full html page.</p><details markdown=block><summary>Expand html page</summary><pre><code class=language-html>&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+
+&lt;head&gt; 
+ &lt;title&gt;{{.app_name}}&lt;/title&gt;
+ &lt;meta charset=&quot;UTF-8&quot;&gt;
+ &lt;meta name=&quot;description&quot; content=&quot;A counter app&quot;&gt;
+ &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css&quot; /&gt;
+ &lt;script defer src=&quot;https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js&quot;&gt;&lt;/script&gt;
+ &lt;script defer src=&quot;https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js&quot;&gt;&lt;/script&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+ &lt;div class=&quot;my-6&quot; style=&quot;height: 500px&quot;&gt;
+  &lt;div class=&quot;columns is-mobile is-centered is-vcentered&quot;&gt;
+   &lt;div x-data class=&quot;column is-one-third-desktop has-text-centered is-narrow&quot;&gt;
+    &lt;div&gt;
+     {{block &quot;count&quot; .}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+     &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('inc')&quot;&gt;+&lt;/button&gt;
+     &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('dec')&quot;&gt;-&lt;/button&gt;
+    &lt;/div&gt;
+   &lt;/div&gt;
+  &lt;/div&gt;
+ &lt;/div&gt;
+&lt;/body&gt;
+
+&lt;/html&gt;
+
+</code></pre></details><p>The html page includes the <code>fir</code> JS library which helps you add tiny bits of interactivity to the page. The library is an <a href=https://alpinejs.dev>Alpinejs</a> plugin and ships with extra direcitives(x-* thingy) and magic functions($ thingy).</p><p>Let&rsquo;s add the above html page to the <code>Content</code> method of our view. The <code>Content</code> method can return either a valid filename or html.</p><details markdown=block><summary>Expand main.go</summary><pre><code class=language-go>
+package main
+
+import (
+ &quot;log&quot;
+ &quot;net/http&quot;
+
+ &quot;github.com/adnaan/fir&quot;
+)
+
+type Counter struct {
+ count int32
+}
+
+type CounterView struct {
+ fir.DefaultView
+}
+
+func (c *CounterView) Content() string {
+ return `&lt;!DOCTYPE html&gt;
+ &lt;html lang=&quot;en&quot;&gt;
+ 
+ &lt;head&gt;
+  &lt;title&gt;{{.app_name}}&lt;/title&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;description&quot; content=&quot;A counter app&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css&quot; /&gt;
+  &lt;script defer src=&quot;https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js&quot;&gt;&lt;/script&gt;
+  &lt;script defer src=&quot;https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js&quot;&gt;&lt;/script&gt;
+ &lt;/head&gt;
+
+ &lt;body&gt;
+  &lt;div class=&quot;my-6&quot; style=&quot;height: 500px&quot;&gt;
+   &lt;div class=&quot;columns is-mobile is-centered is-vcentered&quot;&gt;
+    &lt;div x-data class=&quot;column is-one-third-desktop has-text-centered is-narrow&quot;&gt;
+     &lt;div&gt;
+      {{block &quot;count&quot; .}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+      &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('inc')&quot;&gt;+
+      &lt;/button&gt;
+      &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('dec')&quot;&gt;-
+      &lt;/button&gt;
+     &lt;/div&gt;
+    &lt;/div&gt;
+   &lt;/div&gt;
+  &lt;/div&gt;
+ &lt;/body&gt;
+ 
+ &lt;/html&gt;`
+}
+
+
+func main() {
+ controller := fir.NewController(&quot;counter_app&quot;, fir.DevelopmentMode(true))
+ http.Handle(&quot;/&quot;, controller.Handler(&amp;CounterView{model: &amp;Counter{}}))
+ http.ListenAndServe(&quot;:9867&quot;, nil)
+}
+</code></pre></details><p>Running the above code, show render two buttons but nothing else. We want to show an initial count on the page. To do this, we use Go&rsquo;s <code>html/template</code> to hydrate some data into our page by overriding the <code>OnGet</code> method of the <code>View</code> interface.</p><pre><code class=language-go>func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
+ return fir.Status{Code: 200}, fir.Data{
+  &quot;count&quot;: c.Value(),
+ }
+}
+</code></pre><p>By default, <code>fir.Data</code> was zero value. After overriding <code>OnGet</code> we are initialising it with a <code>count</code> value. The page is then passed through <code>html/template</code> and rendered. This is the standard way of rendering html templates in Go so this should be recongisable.</p><pre><code class=language-html>{{block &quot;count&quot; .}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+</code></pre><p><code>block</code> is a <code>html/template</code> built-in shorthand for defining and using a template.</p><p>This :</p><pre><code class=language-go>{{block &quot;count&quot; .}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+</code></pre><p>is same as:</p><pre><code class=language-go>{{define &quot;count&quot;}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+{{ template &quot;count&quot;}}
+</code></pre><h2 id=update-parts-of-the-view>Update parts of the view <a href=#update-parts-of-the-view class=anchor aria-hidden=true>#</a></h2><p>In response to user interaction we want to update a part of our web page to display a result. <code>Fir</code> allows you to <code>patch</code> targeteted areas of the DOM without a page reload. Lets see it in action.</p><pre><code class=language-html>&lt;div&gt;
+ {{block &quot;count&quot; .}}
+  &lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;
+ {{end}}
+ &lt;button 
+  class=&quot;button has-background-primary&quot; 
+  @click=&quot;$fir.emit('inc')&quot;&gt;
+  +
+ &lt;/button&gt;
+ &lt;button 
+  class=&quot;button has-background-primary&quot; 
+  @click=&quot;$fir.emit('dec')&quot;&gt;
+  -
+ &lt;/button&gt;
+&lt;/div&gt;
+</code></pre><p>When the <code>+</code> button is clicked, an event <code>inc</code> is sent to the server which sends backs a <code>patch</code> instruction back to the page.</p><pre><code class=language-go>
+func morphCount(c int32) fir.Patch {
+ return fir.Morph{
+  Selector: &quot;#count&quot;,
+  Template: &amp;fir.Template{
+   Name: &quot;count&quot;,
+   Data: fir.Data{&quot;count&quot;: c},
+  },
+ }
+}
+
+func (c *Counter) Inc() fir.Patch {
+ return morphCount(atomic.AddInt32(&amp;c.count, 1))
+}
+
+func (c *Counter) Dec() fir.Patch {
+ return morphCount(atomic.AddInt32(&amp;c.count, -1))
+}
+
+...
+
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
+ switch event.ID {
+ case &quot;inc&quot;:
+  return fir.Patchset{c.model.Inc()}
+ case &quot;dec&quot;:
+  return fir.Patchset{c.model.Dec()}
+ default:
+  log.Printf(&quot;warning:handler not found for event =&gt; \n %+v\n&quot;, event)
+ }
+ return nil
+}
+</code></pre><p><code>fir.Morph</code> is a <code>patch</code> which hydrates the new count value to the template <code>count</code>(i.e. <code>{{block "count" .}}</code>{%endraw%}) on the server and instructs the javascript client library to update(morph) the <code>&lt;div id="count"></code>.</p><p>The updated <code>main.go</code> should now be fully working counter example.</p><details markdown=block><summary>Expand main.go</summary><pre><code class=language-go>
+package main
+
+import (
+ &quot;log&quot;
+ &quot;net/http&quot;
+ &quot;sync/atomic&quot;
+
+ &quot;github.com/adnaan/fir&quot;
+)
+
+type Counter struct {
+ count int32
+}
+
+func morphCount(c int32) fir.Patch {
+ return fir.Morph{
+  Selector: &quot;#count&quot;,
+  Template: &amp;fir.Template{
+   Name: &quot;count&quot;,
+   Data: fir.Data{&quot;count&quot;: c},
+  },
+ }
+}
+
+func (c *Counter) Inc() fir.Patch {
+ return morphCount(atomic.AddInt32(&amp;c.count, 1))
+}
+
+func (c *Counter) Dec() fir.Patch {
+ return morphCount(atomic.AddInt32(&amp;c.count, -1))
+}
+
+func (c *Counter) Value() int32 {
+ return atomic.LoadInt32(&amp;c.count)
+}
+
+type CounterView struct {
+ fir.DefaultView
+ model *Counter
+}
+
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+ return fir.Page{
+  Data: fir.Data{
+   &quot;count&quot;: c.model.Value(),
+  }}
+}
+
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
+ switch event.ID {
+ case &quot;inc&quot;:
+  return fir.Patchset{c.model.Inc()}
+ case &quot;dec&quot;:
+  return fir.Patchset{c.model.Dec()}
+ default:
+  log.Printf(&quot;warning:handler not found for event =&gt; \n %+v\n&quot;, event)
+ }
+ return nil
+}
+
+func (c *CounterView) Content() string {
+ return `&lt;!DOCTYPE html&gt;
+ &lt;html lang=&quot;en&quot;&gt;
+ 
+ &lt;head&gt;
+  &lt;title&gt;{{.app_name}}&lt;/title&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;description&quot; content=&quot;A counter app&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css&quot; /&gt;
+  &lt;script defer src=&quot;https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js&quot;&gt;&lt;/script&gt;
+  &lt;script defer src=&quot;https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js&quot;&gt;&lt;/script&gt;
+ &lt;/head&gt;
+
+ &lt;body&gt;
+  &lt;div class=&quot;my-6&quot; style=&quot;height: 500px&quot;&gt;
+   &lt;div class=&quot;columns is-mobile is-centered is-vcentered&quot;&gt;
+    &lt;div x-data class=&quot;column is-one-third-desktop has-text-centered is-narrow&quot;&gt;
+     &lt;div&gt;
+      {{block &quot;count&quot; .}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+      &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('inc')&quot;&gt;+
+      &lt;/button&gt;
+      &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('dec')&quot;&gt;-
+      &lt;/button&gt;
+     &lt;/div&gt;
+    &lt;/div&gt;
+   &lt;/div&gt;
+  &lt;/div&gt;
+ &lt;/body&gt;
+ 
+ &lt;/html&gt;`
+}
+
+func main() {
+ controller := fir.NewController(&quot;counter_app&quot;, fir.DevelopmentMode(true))
+ http.Handle(&quot;/&quot;, controller.Handler(&amp;CounterView{model: &amp;Counter{}}))
+ http.ListenAndServe(&quot;:9867&quot;, nil)
+}
+
+
+
+</code></pre></details><hr><p>If you want to skip ahead and look at final code for the optionals, its here: <a href=https://github.com/adnaan/fir/blob/main/examples/counter-ticker/main.go>examples/counter-ticker/main.go</a></p><h2 id=optional-layouts>Optional: Layouts <a href=#optional-layouts class=anchor aria-hidden=true>#</a></h2><p>Right now are, our html page is one big blob. We might want to separate out the layout from the content for reusability. To do this we need to override the <code>Layout</code> method of the <code>View</code> interface.</p><pre><code class=language-go>type LayoutView struct {
+ fir.DefaultView
+}
+
+func (l *LayoutView) Content() string {
+ return `{{define &quot;content&quot;}}&lt;div&gt;world&lt;/div&gt;{{ end }}`
+}
+
+func (l *LayoutView) Layout() string {
+ return `&lt;div&gt;Hello: {{template &quot;content&quot; .}}&lt;/div&gt;`
+}
+</code></pre><p>Notice the <code>{{template "content" .}}</code>. <code>Fir</code> looks for an equivalent defined template in <code>Content</code> which here is: <code>{{define "content"}}&lt;div>world&lt;/div>{{ end }}</code>. By default it looks for a template named <code>content</code> but this can be overriden by returned a different layout name in <code>LayoutContentName() string</code></p><h2 id=optional-live-ticker>Optional: Live Ticker <a href=#optional-live-ticker class=anchor aria-hidden=true>#</a></h2><p>On user interaction events, <code>OnEvent</code> sends back a <code>patchset</code> which patches the interesting parts of the page. It would be nice to update the page when something changes for a user on the server(e.g. notifications, stock ticker, chat message etc.). Using the <code>fir</code> library its possible to <code>stream</code> a <code>patch</code> over websockets or server-sent events(SSE).</p><p>Override the <code>Stream</code> method of the <code>View</code> interface to return a receive only channel(<code>&lt;- chan Patch</code>). When a <code>patch</code> is sent to this channel its sent to the client library where its executed to update the page.</p><pre><code class=language-go>
+type CounterView struct {
+ fir.DefaultView
+ model  *Counter
+ stream chan fir.Patch
+ sync.RWMutex
+}
+
+func (c *CounterView) Stream() &lt;-chan fir.Patch {
+ return c.stream
+}
+
+...
+
+http.Handle(&quot;/&quot;, controller.Handler(&amp;CounterView{stream: make(chan fir.Patch)}))
+</code></pre><p>We can send a <code>patch</code> to the stream.</p><pre><code class=language-go>c.stream &lt;- fir.Morph{...}
+</code></pre><p>Lets expand the <code>counter</code> example to add a last updated ticker to the page. The ticker should update every second and tell us when was count last updated.</p><p>For this example, we use a different <code>patch</code> type: <code>fir.Store{}</code>.</p><pre><code class=language-go>func NewCounterView() *CounterView {
+ stream := make(chan fir.Patch)
+ ticker := time.NewTicker(time.Second)
+ c := &amp;CounterView{stream: stream, model: &amp;Counter{}}
+
+ go func() {
+  for ; true; &lt;-ticker.C {
+   patch, err := c.model.Updated()
+   if err != nil {
+    continue
+   }
+   stream &lt;- patch
+  }
+ }()
+ return c
+}
+</code></pre><pre><code class=language-html>&lt;div&gt;Count updated: &lt;span x-text=&quot;$store.fir.count_updated || 0&quot;&gt;&lt;/span&gt; seconds ago&lt;/div&gt;
+</code></pre><p><code>fir.Store{}</code> updates the global <a href=https://alpinejs.dev/globals/alpine-store>alpinejs $store</a>. Since its reactive, the above html snippet automatically updates.</p><p>See the complete working example:</p><details markdown=block><summary>Expand main.go</summary><pre><code class=language-go>package main
+
+import (
+ &quot;fmt&quot;
+ &quot;log&quot;
+ &quot;net/http&quot;
+ &quot;sync&quot;
+ &quot;time&quot;
+
+ &quot;github.com/adnaan/fir&quot;
+)
+
+type Counter struct {
+ count   int32
+ updated time.Time
+ sync.RWMutex
+}
+
+func morphCount(c int32) fir.Patch {
+ return fir.Morph{
+  Selector: &quot;#count&quot;,
+  Template: &amp;fir.Template{
+   Name: &quot;count&quot;,
+   Data: fir.Data{&quot;count&quot;: c},
+  },
+ }
+}
+
+func (c *Counter) Inc() fir.Patch {
+ c.Lock()
+ defer c.Unlock()
+ c.count += 1
+ c.updated = time.Now()
+ return morphCount(c.count)
+}
+
+func (c *Counter) Dec() fir.Patch {
+ c.Lock()
+ defer c.Unlock()
+ c.count -= 1
+ c.updated = time.Now()
+ return morphCount(c.count)
+}
+
+func (c *Counter) Updated() (fir.Patch, error) {
+ c.RLock()
+ defer c.RUnlock()
+ if c.updated.IsZero() {
+  return nil, fmt.Errorf(&quot;time is zero&quot;)
+ }
+ return fir.Store{
+  Name: &quot;fir&quot;,
+  Data: fir.Data{
+   &quot;count_updated&quot;: time.Since(c.updated).Seconds(),
+  },
+ }, nil
+}
+
+func (c *Counter) Count() int32 {
+ c.RLock()
+ defer c.RUnlock()
+ return c.count
+}
+
+func NewCounterView() *CounterView {
+ stream := make(chan fir.Patch)
+ ticker := time.NewTicker(time.Second)
+ c := &amp;CounterView{stream: stream, model: &amp;Counter{}}
+
+ go func() {
+  for ; true; &lt;-ticker.C {
+   patch, err := c.model.Updated()
+   if err != nil {
+    continue
+   }
+   stream &lt;- patch
+  }
+ }()
+ return c
+}
+
+type CounterView struct {
+ fir.DefaultView
+ model  *Counter
+ stream chan fir.Patch
+ sync.RWMutex
+}
+
+func (c *CounterView) Stream() &lt;-chan fir.Patch {
+ return c.stream
+}
+
+func (c *CounterView) Content() string {
+ return `
+{{define &quot;content&quot; }} 
+&lt;div class=&quot;my-6&quot; style=&quot;height: 500px&quot;&gt;
+ &lt;div class=&quot;columns is-mobile is-centered is-vcentered&quot;&gt;
+  &lt;div x-data class=&quot;column is-one-third-desktop has-text-centered is-narrow&quot;&gt;
+   &lt;div&gt;
+    &lt;div&gt;Count updated: &lt;span x-text=&quot;$store.fir.count_updated || 0&quot;&gt;&lt;/span&gt; seconds ago&lt;/div&gt;
+    &lt;hr&gt;
+    {{block &quot;count&quot; .}}&lt;div id=&quot;count&quot;&gt;{{.count}}&lt;/div&gt;{{end}}
+    &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('inc')&quot;&gt;+
+    &lt;/button&gt;
+    &lt;button class=&quot;button has-background-primary&quot; @click=&quot;$fir.emit('dec')&quot;&gt;-
+    &lt;/button&gt;
+   &lt;/div&gt;
+  &lt;/div&gt;
+ &lt;/div&gt;
+&lt;/div&gt;
+{{end}}`
+}
+
+func (c *CounterView) Layout() string {
+ return `&lt;!DOCTYPE html&gt;
+ &lt;html lang=&quot;en&quot;&gt;
+ 
+ &lt;head&gt;
+  &lt;title&gt;{{.app_name}}&lt;/title&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;description&quot; content=&quot;A counter app&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css&quot; /&gt;
+  &lt;script defer src=&quot;https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js&quot;&gt;&lt;/script&gt;
+  &lt;script defer src=&quot;https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js&quot;&gt;&lt;/script&gt;
+ &lt;/head&gt;
+ 
+ &lt;body&gt;
+  {{template &quot;content&quot; .}}
+ &lt;/body&gt;
+ 
+ &lt;/html&gt;`
+}
+
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+ return fir.Page{
+  Data: fir.Data{
+   &quot;count&quot;: c.model.Count(),
+  }}
+}
+
+func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
+ switch event.ID {
+ case &quot;inc&quot;:
+  return fir.Patchset{c.model.Inc()}
+ case &quot;dec&quot;:
+  return fir.Patchset{c.model.Dec()}
+ default:
+  log.Printf(&quot;warning:handler not found for event =&gt; \n %+v\n&quot;, event)
+ }
+
+ return nil
+}
+
+func main() {
+ controller := fir.NewController(&quot;counter_app&quot;, fir.DevelopmentMode(true))
+ http.Handle(&quot;/&quot;, controller.Handler(NewCounterView()))
+ http.ListenAndServe(&quot;:9867&quot;, nil)
+}
+
+ 
+</code></pre></details><p>Run the above main.go and go to <a href=http://localhost:9867/>localhost:9867</a>. Incrementing or decrementing the count should update the ticker.</p><div class="page-footer-meta d-flex flex-column flex-md-row justify-content-between"></div><div class="docs-navigation d-flex justify-content-between"><a href=https://adnaan.badr.in/fir/docs/overview/quick-start/><div class="card my-1"><div class="card-body py-2">&larr; Quick Start</div></div></a></div></main></div></div></div><footer class="footer text-muted"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div></div></div></footer><script src=https://adnaan.badr.in/fir/js/bootstrap.min.54bf0932b8a36d0e152b1635b099a6ef1394d35327e2437550a075c9c8ed1bd8aed5847c21b36fc02ed24014c031d9ca24017b0c78b1639d7e2fa8329898b842.js integrity="sha512-VL8JMrijbQ4VKxY1sJmm7xOU01Mn4kN1UKB1ycjtG9iu1YR8IbNvwC7SQBTAMdnKJAF7DHixY51+L6gymJi4Qg==" crossorigin=anonymous defer></script>
+<script src=https://adnaan.badr.in/fir/js/highlight.min.5d6f0cf947e4113050c77888e0573b1db7b4fcc46c02b35560eb83150574f049dcc378443447514b4b25cbf1cff85522c403b87759cb2203b64fb78e2afa084c.js integrity="sha512-XW8M+UfkETBQx3iI4Fc7Hbe0/MRsArNVYOuDFQV08Encw3hENEdRS0sly/HP+FUixAO4d1nLIgO2T7eOKvoITA==" crossorigin=anonymous defer></script>
+<script src=https://adnaan.badr.in/fir/main.min.162c56a0426544de0d010e66c56e321579655c400c9aae06a6823e7682de379adadf2165bd416fea191e4e7e410fbf1fd2c35a759aa43ff2e3787067669bf81b.js integrity="sha512-FixWoEJlRN4NAQ5mxW4yFXllXEAMmq4GpoI+doLeN5ra3yFlvUFv6hkeTn5BD78f0sNadZqkP/LjeHBnZpv4Gw==" crossorigin=anonymous defer></script>
+<script src=https://adnaan.badr.in/fir/index.min.f4d971bf7abc192b58464084c4432fae625b4f0d0d1932c781150d2f9b005d5ca1079a52faed7ff2fb17266a3b5f788f18d247250aef9a98a8bad36513263a41.js integrity="sha512-9Nlxv3q8GStYRkCExEMvrmJbTw0NGTLHgRUNL5sAXVyhB5pS+u1/8vsXJmo7X3iPGNJHJQrvmpioutNlEyY6QQ==" crossorigin=anonymous defer></script></body></html>
