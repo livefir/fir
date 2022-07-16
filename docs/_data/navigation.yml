@@ -1,18 +1,20 @@
 # main links
 main:
-  - title: "Quickstart"
-    url: "/docs/quickstart/"
-  # - title: "About"
-  #   url: https://mmistakes.github.io/minimal-mistakes/about/
-  # - title: "Sample Posts"
-  #   url: /year-archive/
-  # - title: "Sample Collections"
-  #   url: /collection-archive/
-  # - title: "Sitemap"
-  #   url: /sitemap/
+    - title: 'Quickstart'
+      url: '/docs/quickstart/'
+    # - title: "About"
+    #   url: https://mmistakes.github.io/minimal-mistakes/about/
+    # - title: "Sample Posts"
+    #   url: /year-archive/
+    # - title: "Sample Collections"
+    #   url: /collection-archive/
+    # - title: "Sitemap"
+    #   url: /sitemap/
 
 docs:
-  - title: Getting Started
-    children:
-      - title: "Quickstart"
-        url: /docs/quickstart/
+    - title: Getting Started
+      children:
+          - title: 'Quickstart'
+            url: /docs/quickstart/
+          - title: 'Tutorial: Live counter'
+            url: /docs/counterapp/
