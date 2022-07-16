@@ -8,7 +8,7 @@ draft: false
 images: []
 menu:
   docs:
-    parent: ""
+    parent: "tutorials"
     identifier: "counter-app-8d2fa2ae2e747faf5c2f3c8d48ef09f9"
 weight: 999
 toc: true

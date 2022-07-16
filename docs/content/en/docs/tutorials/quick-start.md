@@ -8,7 +8,7 @@ draft: false
 images: []
 menu:
   docs:
-    parent: "overview"
+    parent: "tutorials"
 weight: 110
 toc: true
 ---
@@ -19,7 +19,9 @@ Lets spend the next 15 minutes creating a simple app. If you want to skip ahead 
 
 Have you installed [Go 1.18](https://go.dev/doc/install) ? If yes, we are good to go.
 
+
 ## Creating a new app
+
 
 The `fir` library concerns itself with only the view controller so starting off is as easy as mounting a view on the `fir` controller:
 
@@ -41,7 +43,14 @@ func main() {
 
 ```
 
-Copy the above snippet in a `main.go` file and run `go run main.go`. Open [localhost:9867](http://localhost:9867) to see the running app.
+```bash
+mkdir hello-fir && cd hello-fir
+touch main.go # copy-paste the above snippet
+go get ./...
+go run main.go
+```
+
+Open [localhost:9867](http://localhost:9867) to see the running app.
 
 We have created a controller and registered a `DefaultView` by calling `controller.Handler(&fir.HelloView{})`. The `contoller.Handler` method accepts a [View](https://pkg.go.dev/github.com/adnaan/fir#View) interface. `fir.DefaultView` satisfies the methods for the `View` interface with default values.
 
@@ -250,6 +259,8 @@ In the above snippet, we use the custom Alpinejs magic function, `$fir.submit` t
 To handle page events emitted by the `fir` client library, we override the `OnEvent` method of the `View` interface. In response to a page event, we want to send back a set of `Patch` operations which can modify targeted sections of the page.
 
 ```go
+...
+
 func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
  switch event.ID {
  case "new-task":
@@ -274,3 +285,115 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
  return nil
 }
 ```
+
+## Final
+
+The big idea behind `Fir` is wrapping a `div` in a `{{ template ...}}` `html/template` action and then later patching it over standard HTTP on state change. Below is the final code:
+
+```go
+package main
+
+import (
+	"net/http"
+	"sync"
+
+	"github.com/adnaan/fir"
+)
+
+type Task struct {
+	Text string `json:"text" schema:"text"`
+}
+
+type TaskView struct {
+	fir.DefaultView
+	tasks []Task
+	sync.RWMutex
+}
+
+func (t *TaskView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+	t.RLock()
+	defer t.RUnlock()
+	return fir.Page{Data: fir.Data{"tasks": t.tasks}}
+}
+
+func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
+	t.Lock()
+	defer t.Unlock()
+
+	var task Task
+	if err := fir.DecodeForm(&task, r); err != nil {
+		return fir.PageError(err, "failed to decode form")
+	}
+
+	t.tasks = append(t.tasks, task)
+	return fir.Page{Data: fir.Data{"tasks": t.tasks}}
+}
+
+func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
+	switch event.ID {
+	case "new-task":
+		var task Task
+		if err := event.DecodeFormParams(&task); err != nil {
+			return fir.PatchError(err, "failed to decode task")
+		}
+
+		t.Lock()
+		defer t.Unlock()
+		t.tasks = append(t.tasks, task)
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#tasks",
+				Template: &fir.Template{
+					Name: "tasks",
+					Data: fir.Data{"tasks": t.tasks},
+				},
+			},
+		}
+	}
+	return nil
+}
+
+func (*TaskView) Layout() string {
+	return `
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<title>{{.app_name}}</title>
+		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+	</head>
+	<body>
+		{{template "content" .}}
+	</body>
+	</html>`
+}
+
+func (*TaskView) Content() string {
+	return `
+	{{define "content"}}
+		<div x-data>
+			<h1>Tasks</h1>
+			<form id="new-task" method="post" @submit.prevent="$fir.submit">
+				<input type="text" name="text" placeholder="New task" />
+			</form>
+			{{block "tasks" .}}
+				<div id="tasks">
+					{{range .tasks}}
+						<div>{{.Text}}</div>
+					{{end}}
+				</div>
+			{{end}}
+		</div>
+	{{end}}`
+}
+
+func main() {
+	controller := fir.NewController("task_app", fir.DevelopmentMode(true))
+	http.Handle("/", controller.Handler(&TaskView{tasks: make([]Task, 0)}))
+	http.ListenAndServe(":9867", nil)
+}
+
+
+```
+
+
