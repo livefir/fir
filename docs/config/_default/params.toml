@@ -81,8 +81,8 @@ alertText = ""
 repoHost = "GitHub"
 #repoHost = "Gitea"
 docsRepo = "https://github.com/adnaan/fir"
-docsRepoBranch = "master"
-docsRepoSubPath = ""
+docsRepoBranch = "main"
+docsRepoSubPath = "docs"
 editPage = false
 lastMod = false
 
