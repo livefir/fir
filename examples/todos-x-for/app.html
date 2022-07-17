@@ -51,7 +51,31 @@
                                 x-text="$store.formData.textError"></p>
                         </div>
                     </form>
-                    <div x-data class="my-5">{{template "todos" .}}</div>
+                    <div x-data class="my-5">
+                        {{ block "todos" .}}
+                        <div id="todos" x-fir-store="{todos: {{.todos}}}">
+                            <template x-for="(todo,index) in $store.todos">
+                                <div class="box" :id="`todo-${todo.id}`">
+                                    <div class="level">
+                                        <div class="level-left">
+                                            <p class="level-item" x-text="todo.text"></p>
+                                        </div>
+                                        <div class="level-right">
+                                            <p class="level-item">
+                                                <button class="button"
+                                                    x-on:click='$fir.emit("todos/del",{id: todo.id})'>
+                                                    <span class="icon is-small">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </span>
+                                                </button>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        {{end}}
+                    </div>
                 </div>
             </div>
         </div>

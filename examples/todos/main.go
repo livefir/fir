@@ -31,10 +31,6 @@ func (t *TodosView) Content() string {
 	return "app.html"
 }
 
-func (t *TodosView) Partials() []string {
-	return []string{"todos.html"}
-}
-
 func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {

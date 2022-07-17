@@ -46,9 +46,6 @@ func (s *Search) Content() string {
 	return "app.html"
 }
 
-func (s *Search) Partials() []string {
-	return []string{"cities.html"}
-}
 func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
 	case "query":

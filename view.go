@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/lithammer/shortuuid"
 )
@@ -362,6 +363,9 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	for _, patch := range patchset {
 		operation, err := buildOperation(v.viewTemplate, patch)
 		if err != nil {
+			if strings.ContainsAny("fir-error", err.Error()) {
+				continue
+			}
 			log.Printf("[view] buildOperation error: %v\n", err)
 			continue
 		}

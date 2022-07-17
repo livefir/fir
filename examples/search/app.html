@@ -23,7 +23,13 @@
                         aria-label="Search Cities" autocomplete="off"
                         @input="$fir.emit('search',{query: $event.target.value})">
                 </div>
-                {{template "cities" .}}
+                {{ block "cities" .}}
+                <div id="cities">
+                    {{range .cities}}
+                    <div>{{.}}</div>
+                    {{end}}
+                </div>
+                {{end}}
             </div>
         </div>
     </div>
