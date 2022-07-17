@@ -49,7 +49,40 @@ func buildTemplates(node *gen.Type, projectPath, modelsPkg string) {
 	pluralize := pluralize.NewClient()
 	pluralizedModelName := pluralize.Plural(modelName)
 
-	fmt.Println("generating views for: ", modelName)
+	fmt.Println(">> generating views for schema: ", modelName)
+	annotationError := fmt.Sprintf(`
+error: fir view annotations not found for: %s
+
+The generator requires the three annotations to be present in the entgo schema.
+e.g.
+
+func (Todo) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		fir.CreateForm{
+			Fields: []string{"title", "description"},
+		},
+		fir.UpdateForm{
+			Fields: []string{"title", "description"},
+		},
+		fir.ListItem{
+			Fields: []string{"title"},
+		},
+	}
+}
+
+See the fir documentation for more information.
+	
+`, modelName)
+
+	if len(node.Annotations) == 0 {
+		fmt.Printf("  >> skip generating views for schema: %s. view annotations not found. see cli docs for details.\n", modelName)
+		return
+	}
+
+	if node.Annotations["CreateForm"] == nil || node.Annotations["UpdateForm"] == nil || node.Annotations["ListItem"] == nil {
+		fmt.Print(annotationError)
+		return
+	}
 
 	var createFormAnnotation []string
 	for _, v := range (node.Annotations["CreateForm"].(map[string]any))["Fields"].([]interface{}) {

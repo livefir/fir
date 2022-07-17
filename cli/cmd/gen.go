@@ -5,6 +5,8 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,10 +17,10 @@ import (
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
 	"github.com/adnaan/fir/cli/entgo"
+	"golang.org/x/mod/modfile"
 )
 
 var projectPath string
-var pkg string
 
 // genCmd represents the gen command
 var genCmd = &cobra.Command{
@@ -37,7 +39,17 @@ var genCmd = &cobra.Command{
 			cmd.Help()
 			return
 		}
-		modelsPkg := filepath.Join(pkg, "models")
+		// read module name from go.mod file
+		goModPath := filepath.Join(projectPath, "go.mod")
+		goModBytes, err := ioutil.ReadFile(goModPath)
+		if err != nil {
+			log.Printf("error reading %s: %v\n.", goModPath, err)
+			return
+		}
+		module := modfile.ModulePath(goModBytes)
+		fmt.Println("using module:", module)
+
+		modelsPkg := filepath.Join(module, "models")
 		entgo.Generate(projectPath, modelsPkg)
 		err = entc.Generate(schemaPath, &gen.Config{
 			Header: `
@@ -56,18 +68,10 @@ var genCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(genCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// genCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// genCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	genCmd.Flags().StringVarP(&projectPath, "project", "p", wd, "path to project")
-	genCmd.Flags().StringVarP(&pkg, "package", "P", "github.com/adnaan/fir/cli/testdata/todos", "project package path")
-	genCmd.MarkFlagRequired("package")
 }
