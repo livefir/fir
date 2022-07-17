@@ -167,19 +167,22 @@ type websocketController struct {
 	sync.RWMutex
 }
 
-func (wc *websocketController) addConnection(topic, connID string, sess *websocket.Conn) {
+func (wc *websocketController) addConnection(topic, connID string, sess *websocket.Conn) (created bool) {
 	wc.Lock()
 	defer wc.Unlock()
 	_, ok := wc.topicConnections[topic]
 	if !ok {
 		// topic doesn't exit. create
 		wc.topicConnections[topic] = make(map[string]*websocket.Conn)
+		created = true
+		log.Println("topic created", topic)
 	}
 	wc.topicConnections[topic][connID] = sess
 	log.Println("addConnection", topic, connID, len(wc.topicConnections[topic]))
+	return
 }
 
-func (wc *websocketController) removeConnection(topic, connID string) {
+func (wc *websocketController) removeConnection(topic, connID string) (destroyed bool) {
 	wc.Lock()
 	defer wc.Unlock()
 	connMap, ok := wc.topicConnections[topic]
@@ -195,9 +198,12 @@ func (wc *websocketController) removeConnection(topic, connID string) {
 	// no connections for the topic, remove it
 	if len(connMap) == 0 {
 		delete(wc.topicConnections, topic)
+		destroyed = true
+		log.Println("topic destroyed", topic)
 	}
 
 	log.Println("removeConnection", topic, connID, len(wc.topicConnections[topic]))
+	return
 }
 
 func (wc *websocketController) message(topic string, message []byte) {

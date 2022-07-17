@@ -56,6 +56,8 @@ type View interface {
 	OnGet(http.ResponseWriter, *http.Request) Page
 	OnPost(http.ResponseWriter, *http.Request) Page
 	OnEvent(event Event) Patchset
+	OnTopicCreated(string)
+	OnTopicDestroyed(string)
 	Stream() <-chan Patch
 }
 
@@ -143,6 +145,16 @@ func (d DefaultView) OnEvent(event Event) Patchset {
 	return Patchset{}
 }
 
+// OnTopicCreated is called when the first client subscribes for websocket connection.
+func (d DefaultView) OnTopicCreated(topic string) {
+	log.Println("topic created", topic)
+}
+
+// OnTopicDestroyed is called when the last client unsubscribes from websocket connection.
+func (d DefaultView) OnTopicDestroyed(topic string) {
+	log.Println("topic destroyed", topic)
+}
+
 func (d DefaultView) Stream() <-chan Patch {
 	return nil
 }
@@ -194,6 +206,16 @@ func (d DefaultErrorView) OnEvent(event Event) Patchset {
 		log.Printf("[defaultView] warning:handler not found for event => \n %+v\n", event)
 	}
 	return Patchset{}
+}
+
+// OnTopicCreated is called when the first client subscribes for websocket connection.
+func (d DefaultErrorView) OnTopicCreated(topic string) {
+	log.Println("topic created", topic)
+}
+
+// OnTopicDestroyed is called when the last client unsubscribes from websocket connection.
+func (d DefaultErrorView) OnTopicDestroyed(topic string) {
+	log.Println("topic destroyed", topic)
 }
 
 func (d DefaultErrorView) Stream() <-chan Patch {
@@ -482,7 +504,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	connID := shortuuid.New()
 	if topic != nil {
-		v.wc.addConnection(*topic, connID, c)
+		if created := v.wc.addConnection(*topic, connID, c); created {
+			v.view.OnTopicCreated(*topic)
+		}
 	}
 
 	topicVal := ""
@@ -536,7 +560,9 @@ loop:
 		done <- struct{}{}
 	}
 	if topic != nil {
-		v.wc.removeConnection(*topic, connID)
+		if destroyed := v.wc.removeConnection(*topic, connID); destroyed {
+			v.view.OnTopicDestroyed(*topic)
+		}
 	}
 }
 
