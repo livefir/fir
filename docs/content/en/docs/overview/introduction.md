@@ -23,24 +23,25 @@ The library is a result of a series of experiments to build reactive apps in Go:
 
 ## What is it ?
 
-- A Go library
+- Its a toolkit: a Go library, a CLI and an alpine.js plugin
 - Focuses only on the view layer.
 - Ships with an Alpinejs plugin for user interactions(click, submit, navigate ) etc.
 
 ## Who is it for ?
 
-- Is also the why
 - Suitable for Go developers who want to build moderately complex apps, internal tools, prototypes etc.
 - Skills needed: Go, HTML, CSS, Alpine.js.
 
 ## What can you do with it ?
 
+- Build reactive webapps using Go, html/template and sprinkles of declarative javascript(alpine.js)
 - Update parts of the web page on user interaction without reloading the page over regular http: clicks, form submits etc.
 - Stream page updates over a persistent connection(WS, SSE): notifications, live tickers, chat messages etc.
+- Use the CLI to generate html using [entgo schema](https://entgo.io/docs/schema-def)
 
 ## Is it like hotwire or is it like phoenix liveview ?
 
-It borrows the idea of patching DOM on user interaction events from [phoenix live view](https://hex.pm/packages/phoenix_live_view). But instead of streaming DOM diffs over websocket and sticthing it back on the client, it takes the [hotwire](https://hotwired.dev/) approach of re-rendering html templates on the server and sending back a patch DOM operation to the javascript client.
+It borrows the idea of patching DOM on user interaction events from [phoenix live view](https://hex.pm/packages/phoenix_live_view). But instead of streaming DOM diffs over websocket and sticthing it back on the client, it takes the [hotwire](https://hotwired.dev/) approach of re-rendering html templates on the server and sending back a patch DOM operation to the javascript client over standard HTTP.
 
 Live patching of the DOM(over websockets, sse) is also available but only for server driven DOM patching.(notifications, live ticker etc.)
 
