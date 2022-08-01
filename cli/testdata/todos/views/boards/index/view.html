@@ -1,0 +1,17 @@
+{{define "content"}}
+<div x-data class="columns mt-5">
+  <div class="column is-4">{{template "createboard" .}}</div>
+  <div class="column is-8">
+    {{template "toolbar" .}}
+    {{block "boardlist" .}}
+    <div id="boardlist">
+      {{range .boards}}
+      {{template "boarditem" .}}
+      {{else}}
+      Nothing here
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}

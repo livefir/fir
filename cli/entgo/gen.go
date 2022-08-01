@@ -50,6 +50,25 @@ func buildTemplates(node *gen.Type, projectPath, modelsPkg string) {
 	pluralizedModelName := pluralize.Plural(modelName)
 
 	fmt.Println(">> generating views for schema: ", modelName)
+	nodeHasParent := false
+	nodeParentName := ""
+	var children []string
+	for _, edge := range node.Edges {
+		// if owner is the same as modelName
+		if edge.Owner.Name == node.Name {
+			// edge is a child
+			children = append(children, edge.Name)
+			continue
+		} else {
+			// edge is a parent
+			if edge.Unique {
+				fmt.Printf("node has a parent: %+v\n", edge.Owner.Name)
+				nodeHasParent = true
+				nodeParentName = strings.ToLower(edge.Owner.Name)
+			}
+		}
+	}
+
 	annotationError := fmt.Sprintf(`
 error: fir view annotations not found for: %s
 
@@ -172,6 +191,9 @@ See the fir documentation for more information.
 		"createFormFields":      createFormFields,
 		"updateFormFields":      updateFormFields,
 		"listItemFields":        listItemFields,
+		"hasParent":             nodeHasParent,
+		"nodeParentName":        nodeParentName,
+		"children":              children,
 	}
 
 	//log.Printf("%+v\n", data)

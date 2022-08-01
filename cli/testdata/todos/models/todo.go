@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 	"github.com/google/uuid"
 )
@@ -25,6 +26,33 @@ type Todo struct {
 	Title string `json:"title,omitempty"`
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TodoQuery when eager-loading is set.
+	Edges       TodoEdges `json:"edges"`
+	board_todos *uuid.UUID
+}
+
+// TodoEdges holds the relations/edges for other nodes in the graph.
+type TodoEdges struct {
+	// Owner holds the value of the owner edge.
+	Owner *Board `json:"owner,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// OwnerOrErr returns the Owner value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TodoEdges) OwnerOrErr() (*Board, error) {
+	if e.loadedTypes[0] {
+		if e.Owner == nil {
+			// The edge owner was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: board.Label}
+		}
+		return e.Owner, nil
+	}
+	return nil, &NotLoadedError{edge: "owner"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -38,6 +66,8 @@ func (*Todo) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullTime)
 		case todo.FieldID:
 			values[i] = new(uuid.UUID)
+		case todo.ForeignKeys[0]: // board_todos
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Todo", columns[i])
 		}
@@ -83,9 +113,21 @@ func (t *Todo) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				t.Description = value.String
 			}
+		case todo.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field board_todos", values[i])
+			} else if value.Valid {
+				t.board_todos = new(uuid.UUID)
+				*t.board_todos = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryOwner queries the "owner" edge of the Todo entity.
+func (t *Todo) QueryOwner() *BoardQuery {
+	return (&TodoClient{config: t.config}).QueryOwner(t)
 }
 
 // Update returns a builder for updating this Todo.

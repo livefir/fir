@@ -3,7 +3,7 @@
     <div class="column is-three-fifths">
         <nav class="breadcrumb has-succeeds-separator" aria-label="breadcrumbs">
             <ul>
-                <li><a href="/">Todos</a></li>
+                <li><a href="/{{.Edges.Owner.ID}}/todos">Todos</a></li>
                 <li class="is-active"><a href="#" aria-current="page">Edit</a></li>
             </ul>
         </nav>
@@ -53,6 +53,8 @@
             </form>
         </div>
         {{end}}
+    </div>
+    <div class="column has-text-centered">
     </div>
 </div>
 {{end}}

@@ -10,18 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// Todo holds the schema definition for the Todo entity.
-type Todo struct {
+// Board holds the schema definition for the Board entity.
+type Board struct {
 	ent.Schema
 }
 
-func (Todo) Mixin() []ent.Mixin {
-	return []ent.Mixin{
-		mixin.Time{},
-	}
-}
-
-func (Todo) Annotations() []schema.Annotation {
+func (Board) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		fir.CreateForm{
 			Fields: []string{"title", "description"},
@@ -35,8 +29,14 @@ func (Todo) Annotations() []schema.Annotation {
 	}
 }
 
-// Fields of the Todo.
-func (Todo) Fields() []ent.Field {
+func (Board) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixin.Time{},
+	}
+}
+
+// Fields of the Board.
+func (Board) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("title").Validate(fir.MinMax(3, 140)),
@@ -44,9 +44,9 @@ func (Todo) Fields() []ent.Field {
 	}
 }
 
-// Edges of the Todo.
-func (Todo) Edges() []ent.Edge {
+// Edges of the Board.
+func (Board) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("owner", Board.Type).Ref("todos").Unique(),
+		edge.To("todos", Todo.Type),
 	}
 }

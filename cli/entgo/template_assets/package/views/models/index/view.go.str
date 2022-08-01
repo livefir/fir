@@ -7,9 +7,17 @@ import (
 	"net/http"
 
 	"[[.modelsPkg]]"
+	[[if .hasParent]]
+	"[[.modelsPkg]]/predicate"
+	"[[.modelsPkg]]/[[.nodeParentName]]"
+	[[end]]
 	"[[.modelsPkg]]/[[.modelName]]"
-	"github.com/adnaan/autobahn/utils"
+	"[[.utilsPkg]]"
 	"github.com/adnaan/fir"
+	[[if .hasParent]]
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	[[end]]
 )
 
 var defaultPageSize = 5
@@ -34,6 +42,14 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.PageError(err, "error decoding query params")
 	}
 
+	[[if .hasParent]]
+	[[.nodeParentName]]ID, err := uuid.Parse(chi.URLParam(r, "[[.nodeParentName]]ID"))
+	if err != nil {
+		return fir.PageError(err, "error parsing [[.nodeParentName]] id")
+	}
+	req.[[.nodeParentName]]ID = [[.nodeParentName]]ID
+	[[end]]
+
 	[[.modelNamePlural]], err := [[.modelName]]Query(v.DB, req).All(r.Context())
 	if err != nil {
 		return fir.ErrInternalServer(err)
@@ -54,13 +70,26 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.PageError(err)
 	}
 
+	[[if .hasParent]]
+	[[.nodeParentName]]ID, err := uuid.Parse(chi.URLParam(r, "[[.nodeParentName]]ID"))
+	if err != nil {
+		return fir.PageError(err, "error parsing [[.nodeParentName]] id")
+	}
+	req.[[.nodeParentName]]ID = [[.nodeParentName]]ID
+	[[end]]
+
+
 	[[.modelName]], err := save[[.modelNameTitled]](r.Context(), v.DB, req)
 	if err != nil {
 		return utils.PageFormError(err)
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/%s", [[.modelName]].ID.String()), http.StatusFound)
-
+	[[if .hasParent]]
+	http.Redirect(w, r, fmt.Sprintf("/%s/[[.modelNamePlural]]/%s/show", req.[[.nodeParentName]]ID.String(), [[.modelName]].ID.String()), http.StatusFound)
+	[[else]]
+	http.Redirect(w, r, fmt.Sprintf("/%s/show", [[.modelName]].ID.String()), http.StatusFound)
+	[[end]]
+	
 	return fir.Page{}
 }
 
@@ -77,6 +106,9 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 }
 
 type queryReq struct {
+	[[ if .hasParent ]]
+		[[.nodeParentName]]ID	uuid.UUID
+	[[ end ]]
 	Order  string `json:"order" schema:"order"`
 	Search string `json:"search" schema:"search"`
 	Offset int    `json:"offset" schema:"offset"`
@@ -84,6 +116,9 @@ type queryReq struct {
 }
 
 type createReq struct {
+	[[ if .hasParent ]]
+		[[.nodeParentName]]ID	uuid.UUID
+	[[ end ]]
 	[[range .createFormFields -]]
 	[[.StructField]] [[.Type]] `json:"[[.Name]]" schema:"[[.Name]],required"`
 	[[end]]
@@ -93,11 +128,20 @@ func [[.modelName]]Query(db *models.Client, req queryReq) *models.[[.modelNameTi
 	if req.Limit == 0 {
 		req.Limit = defaultPageSize
 	}
-
 	q := db.[[.modelNameTitled]].Query().Offset(req.Offset).Limit(req.Limit)
+	[[if .hasParent]]
+	ps := []predicate.[[.modelNameTitled]]{[[.modelName]].HasOwnerWith([[.nodeParentName]].ID(req.[[.nodeParentName]]ID))}
+	if req.Search != "" {
+		ps = append(ps, [[.modelName]].TitleContains(req.Search))
+	}
+	q = q.Where(ps...)
+	q = q.WithOwner()
+	[[else]]
 	if req.Search != "" {
 		q = q.Where([[.modelName]].TitleContains(req.Search))
 	}
+	[[end]]
+	
 	if req.Order == "oldest" {
 		q = q.Order(models.Desc("create_time"))
 	} else {
@@ -123,6 +167,7 @@ func paginationData(req queryReq, [[.modelName]]Len int) fir.Data {
 		"next":        next,
 		"hasPrevious": hasPrevious,
 		"hasNext":     hasNext,
+		"search":      req.Search,
 	}
 }
 
@@ -132,6 +177,9 @@ func save[[.modelNameTitled]](ctx context.Context, db *models.Client, req create
 		[[range .createFormFields]]
 		Set[[.StructField]](req.[[.StructField]]).
 		[[end]]
+		[[ if .hasParent ]]
+		SetOwnerID(req.[[.nodeParentName]]ID).
+		[[ end ]]
 		Save(ctx)
 
 	if err != nil {
@@ -147,6 +195,15 @@ func on[[.modelNameTitled]]Create(db *models.Client, event fir.Event) fir.Patchs
 		return fir.PatchError(err, "error decoding request")
 	}
 
+	[[if .hasParent]]
+	[[.nodeParentName]]ID, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(),"[[.nodeParentName]]ID"))
+	if err != nil {
+		return fir.PatchError(err, "error parsing [[.nodeParentName]] id")
+	}
+	req.[[.nodeParentName]]ID = [[.nodeParentName]]ID
+	[[end]]
+
+
 	[[.modelName]], err := save[[.modelNameTitled]](event.RequestContext(), db, req)
 	if err != nil {
 		return utils.PatchFormError(err)
@@ -154,7 +211,11 @@ func on[[.modelNameTitled]]Create(db *models.Client, event fir.Event) fir.Patchs
 
 	return fir.Patchset{
 		fir.Navigate{
-			To: fmt.Sprintf("/%s", [[.modelName]].ID.String()),
+			[[- if .hasParent]]
+			To: fmt.Sprintf("/%s/[[.modelNamePlural]]/%s/show", req.[[.nodeParentName]]ID.String(), [[.modelName]].ID.String()),
+			[[- else]]
+			To: fmt.Sprintf("/%s/show", [[.modelName]].ID.String()),
+			[[- end]]
 		},
 	}
 }
@@ -164,6 +225,16 @@ func on[[.modelNameTitled]]Query(db *models.Client, event fir.Event) fir.Patchse
 	if err := event.DecodeFormParams(&req); err != nil {
 		return fir.PatchError(err, "error decoding request")
 	}
+
+	[[if .hasParent]]
+	[[.nodeParentName]]ID, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(),"[[.nodeParentName]]ID"))
+	if err != nil {
+		return fir.PatchError(err, "error parsing [[.nodeParentName]] id")
+	}
+	req.[[.nodeParentName]]ID = [[.nodeParentName]]ID
+	[[end]]
+
+
 	[[.modelNamePlural]], err := [[.modelName]]Query(db, req).All(event.RequestContext())
 	if err != nil {
 		return fir.PatchError(err, "error querying [[.modelNamePlural]]")

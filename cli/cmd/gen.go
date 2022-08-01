@@ -21,6 +21,7 @@ import (
 )
 
 var projectPath string
+var module string
 
 // genCmd represents the gen command
 var genCmd = &cobra.Command{
@@ -39,14 +40,23 @@ var genCmd = &cobra.Command{
 			cmd.Help()
 			return
 		}
-		// read module name from go.mod file
+
 		goModPath := filepath.Join(projectPath, "go.mod")
-		goModBytes, err := ioutil.ReadFile(goModPath)
-		if err != nil {
-			log.Printf("error reading %s: %v\n.", goModPath, err)
+		if _, err := os.Stat(goModPath); !os.IsNotExist(err) {
+			goModBytes, err := ioutil.ReadFile(goModPath)
+			if err != nil {
+				log.Printf("error reading %s: %v\n.", goModPath, err)
+				return
+			}
+			module = modfile.ModulePath(goModBytes)
+		}
+
+		if module == "" {
+			log.Printf("module not set and go.mod doesn't exist %s\n", goModPath)
+			cmd.Help()
 			return
 		}
-		module := modfile.ModulePath(goModBytes)
+
 		fmt.Println("using module:", module)
 
 		modelsPkg := filepath.Join(module, "models")
@@ -74,4 +84,5 @@ func init() {
 	}
 
 	genCmd.Flags().StringVarP(&projectPath, "project", "p", wd, "path to project")
+	genCmd.Flags().StringVarP(&module, "module", "m", "", "module name(go.mod) or package(github.com/x/y/z) of the current project")
 }

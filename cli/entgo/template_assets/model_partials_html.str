@@ -1,3 +1,0 @@
-{{define "$MODEL_NAME"}}
-<div id="$MODEL_NAME-{{.ID}}">{{.Title}}</div>
-{{end}}

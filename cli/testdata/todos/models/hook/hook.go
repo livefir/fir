@@ -9,6 +9,19 @@ import (
 	"github.com/adnaan/fir/cli/testdata/todos/models"
 )
 
+// The BoardFunc type is an adapter to allow the use of ordinary
+// function as Board mutator.
+type BoardFunc func(context.Context, *models.BoardMutation) (models.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BoardFunc) Mutate(ctx context.Context, m models.Mutation) (models.Value, error) {
+	mv, ok := m.(*models.BoardMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *models.BoardMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The TodoFunc type is an adapter to allow the use of ordinary
 // function as Todo mutator.
 type TodoFunc func(context.Context, *models.TodoMutation) (models.Value, error)

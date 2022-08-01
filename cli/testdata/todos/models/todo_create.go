@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 	"github.com/google/uuid"
 )
@@ -73,6 +74,25 @@ func (tc *TodoCreate) SetNillableID(u *uuid.UUID) *TodoCreate {
 		tc.SetID(*u)
 	}
 	return tc
+}
+
+// SetOwnerID sets the "owner" edge to the Board entity by ID.
+func (tc *TodoCreate) SetOwnerID(id uuid.UUID) *TodoCreate {
+	tc.mutation.SetOwnerID(id)
+	return tc
+}
+
+// SetNillableOwnerID sets the "owner" edge to the Board entity by ID if the given value is not nil.
+func (tc *TodoCreate) SetNillableOwnerID(id *uuid.UUID) *TodoCreate {
+	if id != nil {
+		tc = tc.SetOwnerID(*id)
+	}
+	return tc
+}
+
+// SetOwner sets the "owner" edge to the Board entity.
+func (tc *TodoCreate) SetOwner(b *Board) *TodoCreate {
+	return tc.SetOwnerID(b.ID)
 }
 
 // Mutation returns the TodoMutation object of the builder.
@@ -251,6 +271,26 @@ func (tc *TodoCreate) createSpec() (*Todo, *sqlgraph.CreateSpec) {
 			Column: todo.FieldDescription,
 		})
 		_node.Description = value
+	}
+	if nodes := tc.mutation.OwnerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   todo.OwnerTable,
+			Columns: []string{todo.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: board.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.board_todos = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

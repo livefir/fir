@@ -11,9 +11,13 @@ import (
 func PageFormError(err error) fir.Page {
 	var validError *models.ValidationError
 	if errors.As(err, &validError) {
+		userError := validError.Unwrap()
+		if errors.Unwrap(validError.Unwrap()) != nil {
+			userError = errors.Unwrap(validError.Unwrap())
+		}
 		return fir.Page{
 			Data: fir.Data{
-				fmt.Sprintf("%sError", validError.Name): errors.Unwrap(validError.Unwrap()).Error(),
+				fmt.Sprintf("%sError", validError.Name): userError.Error(),
 			},
 		}
 	}

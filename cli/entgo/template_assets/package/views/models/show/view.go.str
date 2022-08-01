@@ -2,11 +2,15 @@ package show
 
 import (
 	"context"
+	[[- if .hasParent]]
+	"fmt"	
+	[[- end]]
 	"log"
 	"net/http"
 
 	"[[.modelsPkg]]"
 	"[[.utilsPkg]]"
+	"[[.modelsPkg]]/[[.modelName]]"
 	"github.com/adnaan/fir"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi/v5"
@@ -28,13 +32,16 @@ func (v *View) Layout() string {
 }
 
 func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
-
-	id := chi.URLParam(r, "id")
-	uid, err := uuid.Parse(id)
+	id, err := uuid.Parse(chi.URLParam(r, "[[.modelName]]ID"))
 	if err != nil {
 		return fir.PageError(err, "invalid [[.modelName]] id")
 	}
-	[[.modelName]], err := v.DB.[[.modelNameTitled]].Get(r.Context(), uid)
+	[[.modelName]], err := v.DB.[[.modelNameTitled]].Query().
+		Where([[.modelName]].ID(id)).
+		[[ if .hasParent ]]
+		WithOwner().
+		[[ end ]]
+		Only(r.Context())
 	if err != nil {
 		return fir.ErrNotFound(err, "[[.modelName]] not found")
 	}
@@ -49,7 +56,11 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.PageError(err, "error decoding request")
 	}
 
-	req.id = chi.URLParamFromCtx(r.Context(), "id")
+	id, err := uuid.Parse(chi.URLParam(r, "[[.modelName]]ID"))
+	if err != nil {
+		return fir.PageError(err, "invalid [[.modelName]] id")
+	}
+	req.id = id
 
 	switch req.Action {
 	case "update":
@@ -60,7 +71,7 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.Page{Data: structs.Map([[.modelName]])}
 
 	case "delete":
-		if err := delete[[.modelNameTitled]](r.Context(), v.DB, req); err != nil {
+		if err := delete[[.modelNameTitled]](r.Context(), v.DB, id); err != nil {
 			return fir.PageError(err, "error deleting [[.modelName]]")
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
@@ -85,7 +96,7 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 }
 
 type update[[.modelNameTitled]]Req struct {
-	id          string
+	id          uuid.UUID
 	Action      string `json:"action" schema:"action"`
 	[[range .updateFormFields -]]
 	[[.StructField]] [[.Type]] `json:"[[.Name]]" schema:"[[.Name]]"`
@@ -93,12 +104,8 @@ type update[[.modelNameTitled]]Req struct {
 }
 
 func update[[.modelNameTitled]](ctx context.Context, db *models.Client, req update[[.modelNameTitled]]Req) (*models.[[.modelNameTitled]], error) {
-	id, err := uuid.Parse(req.id)
-	if err != nil {
-		return nil, err
-	}
 	[[.modelName]], err := db.[[.modelNameTitled]].
-		UpdateOneID(id).
+		UpdateOneID(req.id).
 		[[range .updateFormFields]]
 		Set[[.StructField]](req.[[.StructField]]).
 		[[end]]
@@ -106,11 +113,7 @@ func update[[.modelNameTitled]](ctx context.Context, db *models.Client, req upda
 	return [[.modelName]], err
 }
 
-func delete[[.modelNameTitled]](ctx context.Context, db *models.Client, req update[[.modelNameTitled]]Req) error {
-	id, err := uuid.Parse(req.id)
-	if err != nil {
-		return err
-	}
+func delete[[.modelNameTitled]](ctx context.Context, db *models.Client, id uuid.UUID) error {
 	return db.[[.modelNameTitled]].DeleteOneID(id).Exec(ctx)
 }
 
@@ -120,7 +123,11 @@ func on[[.modelNameTitled]]Update(db *models.Client, event fir.Event) fir.Patchs
 		return fir.PatchError(err)
 	}
 
-	req.id = chi.URLParamFromCtx(event.RequestContext(), "id")
+	id, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "[[.modelName]]ID"))
+	if err != nil {
+		return fir.PatchError(err, "invalid [[.modelName]] id")
+	}
+	req.id = id
 
 	[[.modelName]], err := update[[.modelNameTitled]](event.RequestContext(), db, req)
 	if err != nil {
@@ -141,13 +148,28 @@ func on[[.modelNameTitled]]Update(db *models.Client, event fir.Event) fir.Patchs
 }
 
 func on[[.modelNameTitled]]Delete(db *models.Client, event fir.Event) fir.Patchset {
-	id := chi.URLParamFromCtx(event.RequestContext(), "id")
-	if err := delete[[.modelNameTitled]](event.RequestContext(), db, update[[.modelNameTitled]]Req{id: id}); err != nil {
+	[[- if .hasParent ]]
+	[[.nodeParentName]]ID, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "[[.nodeParentName]]ID"))
+	if err != nil {
+		return fir.PatchError(err, "invalid [[.nodeParentName]] id")
+	}
+	[[- end ]]
+
+	id, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "[[.modelName]]ID"))
+	if err != nil {
+		return fir.PatchError(err, "invalid [[.modelName]] id")
+	}
+
+	if err := delete[[.modelNameTitled]](event.RequestContext(), db, id); err != nil {
 		return fir.PatchError(err)
 	}
 	return fir.Patchset{
 		fir.Navigate{
-			To: "/",
+			[[- if .hasParent ]]
+				To: fmt.Sprintf("/%s/[[.modelNamePlural]]", [[.nodeParentName]]ID),
+			[[- else ]]	
+				To: "/",
+			[[- end ]]
 		},
 	}
 }

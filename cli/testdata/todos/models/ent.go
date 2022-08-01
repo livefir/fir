@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
 )
 
@@ -29,7 +30,8 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
-		todo.Table: todo.ValidColumn,
+		board.Table: board.ValidColumn,
+		todo.Table:  todo.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

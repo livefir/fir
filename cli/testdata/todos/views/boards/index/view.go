@@ -1,4 +1,4 @@
-package todos
+package boards
 
 import (
 	"context"
@@ -8,15 +8,9 @@ import (
 
 	"github.com/adnaan/fir/cli/testdata/todos/models"
 
-	"github.com/adnaan/fir/cli/testdata/todos/models/board"
-	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
-
 	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/utils"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 var defaultPageSize = 5
@@ -27,7 +21,7 @@ type View struct {
 }
 
 func (v *View) Content() string {
-	return "views/todos/index"
+	return "views/boards/index"
 }
 
 func (v *View) Layout() string {
@@ -41,19 +35,13 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.PageError(err, "error decoding query params")
 	}
 
-	boardID, err := uuid.Parse(chi.URLParam(r, "boardID"))
-	if err != nil {
-		return fir.PageError(err, "error parsing board id")
-	}
-	req.boardID = boardID
-
-	todos, err := todoQuery(v.DB, req).All(r.Context())
+	boards, err := boardQuery(v.DB, req).All(r.Context())
 	if err != nil {
 		return fir.ErrInternalServer(err)
 	}
 
-	data := fir.Data{"todos": todos}
-	for k, v := range paginationData(req, len(todos)) {
+	data := fir.Data{"boards": boards}
+	for k, v := range paginationData(req, len(boards)) {
 		data[k] = v
 	}
 
@@ -67,28 +55,22 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.PageError(err)
 	}
 
-	boardID, err := uuid.Parse(chi.URLParam(r, "boardID"))
-	if err != nil {
-		return fir.PageError(err, "error parsing board id")
-	}
-	req.boardID = boardID
-
-	todo, err := saveTodo(r.Context(), v.DB, req)
+	board, err := saveBoard(r.Context(), v.DB, req)
 	if err != nil {
 		return utils.PageFormError(err)
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/%s/todos/%s/show", req.boardID.String(), todo.ID.String()), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/%s/show", board.ID.String()), http.StatusFound)
 
 	return fir.Page{}
 }
 
 func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
-	case "todo-create":
-		return onTodoCreate(v.DB, event)
-	case "todo-query":
-		return onTodoQuery(v.DB, event)
+	case "board-create":
+		return onBoardCreate(v.DB, event)
+	case "board-query":
+		return onBoardQuery(v.DB, event)
 	default:
 		log.Printf("unknown event: %s\n", event.ID)
 		return nil
@@ -96,8 +78,6 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 }
 
 type queryReq struct {
-	boardID uuid.UUID
-
 	Order  string `json:"order" schema:"order"`
 	Search string `json:"search" schema:"search"`
 	Offset int    `json:"offset" schema:"offset"`
@@ -105,24 +85,19 @@ type queryReq struct {
 }
 
 type createReq struct {
-	boardID uuid.UUID
-
 	Title       string `json:"title" schema:"title,required"`
 	Description string `json:"description" schema:"description,required"`
 }
 
-func todoQuery(db *models.Client, req queryReq) *models.TodoQuery {
+func boardQuery(db *models.Client, req queryReq) *models.BoardQuery {
 	if req.Limit == 0 {
 		req.Limit = defaultPageSize
 	}
-	q := db.Todo.Query().Offset(req.Offset).Limit(req.Limit)
+	q := db.Board.Query().Offset(req.Offset).Limit(req.Limit)
 
-	ps := []predicate.Todo{todo.HasOwnerWith(board.ID(req.boardID))}
 	if req.Search != "" {
-		ps = append(ps, todo.TitleContains(req.Search))
+		q = q.Where(board.TitleContains(req.Search))
 	}
-	q = q.Where(ps...)
-	q = q.WithOwner()
 
 	if req.Order == "oldest" {
 		q = q.Order(models.Desc("create_time"))
@@ -133,7 +108,7 @@ func todoQuery(db *models.Client, req queryReq) *models.TodoQuery {
 	return q
 }
 
-func paginationData(req queryReq, todoLen int) fir.Data {
+func paginationData(req queryReq, boardLen int) fir.Data {
 	prev := req.Offset - defaultPageSize
 	hasPrevious := true
 	if prev < 0 || req.Offset == 0 {
@@ -141,7 +116,7 @@ func paginationData(req queryReq, todoLen int) fir.Data {
 	}
 	next := defaultPageSize + req.Offset
 	hasNext := true
-	if todoLen < defaultPageSize {
+	if boardLen < defaultPageSize {
 		hasNext = false
 	}
 	return fir.Data{
@@ -153,75 +128,62 @@ func paginationData(req queryReq, todoLen int) fir.Data {
 	}
 }
 
-func saveTodo(ctx context.Context, db *models.Client, req createReq) (*models.Todo, error) {
-	todo, err := db.Todo.
+func saveBoard(ctx context.Context, db *models.Client, req createReq) (*models.Board, error) {
+	board, err := db.Board.
 		Create().
 		SetTitle(req.Title).
 		SetDescription(req.Description).
-		SetOwnerID(req.boardID).
 		Save(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return todo, nil
+	return board, nil
 }
 
-func onTodoCreate(db *models.Client, event fir.Event) fir.Patchset {
+func onBoardCreate(db *models.Client, event fir.Event) fir.Patchset {
 	var req createReq
 	if err := event.DecodeFormParams(&req); err != nil {
 		return fir.PatchError(err, "error decoding request")
 	}
 
-	boardID, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "boardID"))
-	if err != nil {
-		return fir.PatchError(err, "error parsing board id")
-	}
-	req.boardID = boardID
-
-	todo, err := saveTodo(event.RequestContext(), db, req)
+	board, err := saveBoard(event.RequestContext(), db, req)
 	if err != nil {
 		return utils.PatchFormError(err)
 	}
 
 	return fir.Patchset{
 		fir.Navigate{
-			To: fmt.Sprintf("/%s/todos/%s/show", req.boardID.String(), todo.ID.String()),
+			To: fmt.Sprintf("/%s/show", board.ID.String()),
 		},
 	}
 }
 
-func onTodoQuery(db *models.Client, event fir.Event) fir.Patchset {
+func onBoardQuery(db *models.Client, event fir.Event) fir.Patchset {
 	var req queryReq
 	if err := event.DecodeFormParams(&req); err != nil {
 		return fir.PatchError(err, "error decoding request")
 	}
 
-	boardID, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "boardID"))
+	boards, err := boardQuery(db, req).All(event.RequestContext())
 	if err != nil {
-		return fir.PatchError(err, "error parsing board id")
-	}
-	req.boardID = boardID
-
-	todos, err := todoQuery(db, req).All(event.RequestContext())
-	if err != nil {
-		return fir.PatchError(err, "error querying todos")
+		return fir.PatchError(err, "error querying boards")
 	}
 
 	return fir.Patchset{
 		fir.Morph{
-			Selector: "#todolist",
+			Selector: "#boardlist",
 			Template: &fir.Template{
-				Name: "todolist",
-				Data: fir.Data{"todos": todos},
+				Name: "boardlist",
+				Data: fir.Data{"boards": boards},
 			},
 		},
 		fir.Morph{
 			Selector: "#pagination",
 			Template: &fir.Template{
 				Name: "pagination",
-				Data: paginationData(req, len(todos)),
+				Data: paginationData(req, len(boards)),
 			},
 		},
 	}

@@ -1,6 +1,6 @@
 // Code generated (@generated) by entc, DO NOT EDIT.
 
-package todo
+package board
 
 import (
 	"time"
@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	// Label holds the string label denoting the todo type in the database.
-	Label = "todo"
+	// Label holds the string label denoting the board type in the database.
+	Label = "board"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
 	// FieldCreateTime holds the string denoting the create_time field in the database.
@@ -21,20 +21,20 @@ const (
 	FieldTitle = "title"
 	// FieldDescription holds the string denoting the description field in the database.
 	FieldDescription = "description"
-	// EdgeOwner holds the string denoting the owner edge name in mutations.
-	EdgeOwner = "owner"
-	// Table holds the table name of the todo in the database.
-	Table = "todos"
-	// OwnerTable is the table that holds the owner relation/edge.
-	OwnerTable = "todos"
-	// OwnerInverseTable is the table name for the Board entity.
-	// It exists in this package in order to avoid circular dependency with the "board" package.
-	OwnerInverseTable = "boards"
-	// OwnerColumn is the table column denoting the owner relation/edge.
-	OwnerColumn = "board_todos"
+	// EdgeTodos holds the string denoting the todos edge name in mutations.
+	EdgeTodos = "todos"
+	// Table holds the table name of the board in the database.
+	Table = "boards"
+	// TodosTable is the table that holds the todos relation/edge.
+	TodosTable = "todos"
+	// TodosInverseTable is the table name for the Todo entity.
+	// It exists in this package in order to avoid circular dependency with the "todo" package.
+	TodosInverseTable = "todos"
+	// TodosColumn is the table column denoting the todos relation/edge.
+	TodosColumn = "board_todos"
 )
 
-// Columns holds all SQL columns for todo fields.
+// Columns holds all SQL columns for board fields.
 var Columns = []string{
 	FieldID,
 	FieldCreateTime,
@@ -43,21 +43,10 @@ var Columns = []string{
 	FieldDescription,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "todos"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"board_todos",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}

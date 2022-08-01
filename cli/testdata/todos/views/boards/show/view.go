@@ -2,13 +2,12 @@ package show
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/cli/testdata/todos/models"
-	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
+	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/utils"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi/v5"
@@ -21,7 +20,7 @@ type View struct {
 }
 
 func (v *View) Content() string {
-	return "views/todos/show"
+	return "views/boards/show"
 }
 
 func (v *View) Layout() string {
@@ -29,45 +28,44 @@ func (v *View) Layout() string {
 }
 
 func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
-	id, err := uuid.Parse(chi.URLParam(r, "todoID"))
+	id, err := uuid.Parse(chi.URLParam(r, "boardID"))
 	if err != nil {
-		return fir.PageError(err, "invalid todo id")
+		return fir.PageError(err, "invalid board id")
 	}
-	todo, err := v.DB.Todo.Query().
-		Where(todo.ID(id)).
-		WithOwner().
+	board, err := v.DB.Board.Query().
+		Where(board.ID(id)).
 		Only(r.Context())
 	if err != nil {
-		return fir.ErrNotFound(err, "todo not found")
+		return fir.ErrNotFound(err, "board not found")
 	}
 
-	return fir.Page{Data: structs.Map(todo)}
+	return fir.Page{Data: structs.Map(board)}
 }
 
 func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
-	var req updateTodoReq
+	var req updateBoardReq
 	err := fir.DecodeForm(&req, r)
 	if err != nil {
 		return fir.PageError(err, "error decoding request")
 	}
 
-	id, err := uuid.Parse(chi.URLParam(r, "todoID"))
+	id, err := uuid.Parse(chi.URLParam(r, "boardID"))
 	if err != nil {
-		return fir.PageError(err, "invalid todo id")
+		return fir.PageError(err, "invalid board id")
 	}
 	req.id = id
 
 	switch req.Action {
 	case "update":
-		todo, err := updateTodo(r.Context(), v.DB, req)
+		board, err := updateBoard(r.Context(), v.DB, req)
 		if err != nil {
 			return utils.PageFormError(err)
 		}
-		return fir.Page{Data: structs.Map(todo)}
+		return fir.Page{Data: structs.Map(board)}
 
 	case "delete":
-		if err := deleteTodo(r.Context(), v.DB, id); err != nil {
-			return fir.PageError(err, "error deleting todo")
+		if err := deleteBoard(r.Context(), v.DB, id); err != nil {
+			return fir.PageError(err, "error deleting board")
 		}
 		http.Redirect(w, r, "/", http.StatusFound)
 	default:
@@ -80,49 +78,49 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 
 func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	switch event.ID {
-	case "todo-update":
-		return onTodoUpdate(v.DB, event)
-	case "todo-delete":
-		return onTodoDelete(v.DB, event)
+	case "board-update":
+		return onBoardUpdate(v.DB, event)
+	case "board-delete":
+		return onBoardDelete(v.DB, event)
 	default:
 		log.Printf("unknown event: %s\n", event.ID)
 		return nil
 	}
 }
 
-type updateTodoReq struct {
+type updateBoardReq struct {
 	id          uuid.UUID
 	Action      string `json:"action" schema:"action"`
 	Title       string `json:"title" schema:"title"`
 	Description string `json:"description" schema:"description"`
 }
 
-func updateTodo(ctx context.Context, db *models.Client, req updateTodoReq) (*models.Todo, error) {
-	todo, err := db.Todo.
+func updateBoard(ctx context.Context, db *models.Client, req updateBoardReq) (*models.Board, error) {
+	board, err := db.Board.
 		UpdateOneID(req.id).
 		SetTitle(req.Title).
 		SetDescription(req.Description).
 		Save(ctx)
-	return todo, err
+	return board, err
 }
 
-func deleteTodo(ctx context.Context, db *models.Client, id uuid.UUID) error {
-	return db.Todo.DeleteOneID(id).Exec(ctx)
+func deleteBoard(ctx context.Context, db *models.Client, id uuid.UUID) error {
+	return db.Board.DeleteOneID(id).Exec(ctx)
 }
 
-func onTodoUpdate(db *models.Client, event fir.Event) fir.Patchset {
-	var req updateTodoReq
+func onBoardUpdate(db *models.Client, event fir.Event) fir.Patchset {
+	var req updateBoardReq
 	if err := event.DecodeFormParams(&req); err != nil {
 		return fir.PatchError(err)
 	}
 
-	id, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "todoID"))
+	id, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "boardID"))
 	if err != nil {
-		return fir.PatchError(err, "invalid todo id")
+		return fir.PatchError(err, "invalid board id")
 	}
 	req.id = id
 
-	todo, err := updateTodo(event.RequestContext(), db, req)
+	board, err := updateBoard(event.RequestContext(), db, req)
 	if err != nil {
 		return utils.PatchFormError(err)
 	}
@@ -130,33 +128,29 @@ func onTodoUpdate(db *models.Client, event fir.Event) fir.Patchset {
 	patchset := append(
 		fir.UnsetFormErrors("title", "description"),
 		fir.Morph{
-			Selector: "todo",
+			Selector: "board",
 			Template: &fir.Template{
-				Name: "todo",
-				Data: structs.Map(todo),
+				Name: "board",
+				Data: structs.Map(board),
 			},
 		})
 
 	return patchset
 }
 
-func onTodoDelete(db *models.Client, event fir.Event) fir.Patchset {
-	boardID, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "boardID"))
+func onBoardDelete(db *models.Client, event fir.Event) fir.Patchset {
+
+	id, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "boardID"))
 	if err != nil {
 		return fir.PatchError(err, "invalid board id")
 	}
 
-	id, err := uuid.Parse(chi.URLParamFromCtx(event.RequestContext(), "todoID"))
-	if err != nil {
-		return fir.PatchError(err, "invalid todo id")
-	}
-
-	if err := deleteTodo(event.RequestContext(), db, id); err != nil {
+	if err := deleteBoard(event.RequestContext(), db, id); err != nil {
 		return fir.PatchError(err)
 	}
 	return fir.Patchset{
 		fir.Navigate{
-			To: fmt.Sprintf("/%s/todos", boardID),
+			To: "/",
 		},
 	}
 }

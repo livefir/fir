@@ -1,5 +1,5 @@
 {{block "[[.modelName]]item" .}}
-<a id="[[.modelName]]item-{{.ID}}" href="/{{.ID}}">
+<a id="[[.modelName]]item-{{.ID}}" [[if .hasParent]]href="/{{.Edges.Owner.ID}}/[[.modelNamePlural]]/{{.ID}}/show"[[else]]href="/{{.ID}}/show"[[end]]>
     <div class="content box mt-2" style="text-decoration: none;">
         [[range .listItemFields -]]
 		 <p> {{.[[.StructField]]}} </p>

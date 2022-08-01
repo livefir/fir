@@ -11,8 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
 	"github.com/adnaan/fir/cli/testdata/todos/models/todo"
+	"github.com/google/uuid"
 )
 
 // TodoUpdate is the builder for updating Todo entities.
@@ -46,9 +48,34 @@ func (tu *TodoUpdate) SetDescription(s string) *TodoUpdate {
 	return tu
 }
 
+// SetOwnerID sets the "owner" edge to the Board entity by ID.
+func (tu *TodoUpdate) SetOwnerID(id uuid.UUID) *TodoUpdate {
+	tu.mutation.SetOwnerID(id)
+	return tu
+}
+
+// SetNillableOwnerID sets the "owner" edge to the Board entity by ID if the given value is not nil.
+func (tu *TodoUpdate) SetNillableOwnerID(id *uuid.UUID) *TodoUpdate {
+	if id != nil {
+		tu = tu.SetOwnerID(*id)
+	}
+	return tu
+}
+
+// SetOwner sets the "owner" edge to the Board entity.
+func (tu *TodoUpdate) SetOwner(b *Board) *TodoUpdate {
+	return tu.SetOwnerID(b.ID)
+}
+
 // Mutation returns the TodoMutation object of the builder.
 func (tu *TodoUpdate) Mutation() *TodoMutation {
 	return tu.mutation
+}
+
+// ClearOwner clears the "owner" edge to the Board entity.
+func (tu *TodoUpdate) ClearOwner() *TodoUpdate {
+	tu.mutation.ClearOwner()
+	return tu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -174,6 +201,41 @@ func (tu *TodoUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: todo.FieldDescription,
 		})
 	}
+	if tu.mutation.OwnerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   todo.OwnerTable,
+			Columns: []string{todo.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: board.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.OwnerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   todo.OwnerTable,
+			Columns: []string{todo.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: board.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{todo.Label}
@@ -211,9 +273,34 @@ func (tuo *TodoUpdateOne) SetDescription(s string) *TodoUpdateOne {
 	return tuo
 }
 
+// SetOwnerID sets the "owner" edge to the Board entity by ID.
+func (tuo *TodoUpdateOne) SetOwnerID(id uuid.UUID) *TodoUpdateOne {
+	tuo.mutation.SetOwnerID(id)
+	return tuo
+}
+
+// SetNillableOwnerID sets the "owner" edge to the Board entity by ID if the given value is not nil.
+func (tuo *TodoUpdateOne) SetNillableOwnerID(id *uuid.UUID) *TodoUpdateOne {
+	if id != nil {
+		tuo = tuo.SetOwnerID(*id)
+	}
+	return tuo
+}
+
+// SetOwner sets the "owner" edge to the Board entity.
+func (tuo *TodoUpdateOne) SetOwner(b *Board) *TodoUpdateOne {
+	return tuo.SetOwnerID(b.ID)
+}
+
 // Mutation returns the TodoMutation object of the builder.
 func (tuo *TodoUpdateOne) Mutation() *TodoMutation {
 	return tuo.mutation
+}
+
+// ClearOwner clears the "owner" edge to the Board entity.
+func (tuo *TodoUpdateOne) ClearOwner() *TodoUpdateOne {
+	tuo.mutation.ClearOwner()
+	return tuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -362,6 +449,41 @@ func (tuo *TodoUpdateOne) sqlSave(ctx context.Context) (_node *Todo, err error) 
 			Value:  value,
 			Column: todo.FieldDescription,
 		})
+	}
+	if tuo.mutation.OwnerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   todo.OwnerTable,
+			Columns: []string{todo.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: board.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.OwnerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   todo.OwnerTable,
+			Columns: []string{todo.OwnerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: board.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Todo{config: tuo.config}
 	_spec.Assign = _node.assignValues
