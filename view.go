@@ -214,12 +214,12 @@ func (v *viewHandler) reloadTemplates() {
 	var err error
 	if v.wc.disableTemplateCache {
 
-		v.viewTemplate, err = parseTemplate(v.wc.projectRoot, v.view)
+		v.viewTemplate, err = parseTemplate(v.wc.publicDir, v.view)
 		if err != nil {
 			panic(err)
 		}
 
-		v.errorViewTemplate, err = parseTemplate(v.wc.projectRoot, v.errorView)
+		v.errorViewTemplate, err = parseTemplate(v.wc.publicDir, v.errorView)
 		if err != nil {
 			panic(err)
 		}
@@ -541,7 +541,7 @@ loop:
 }
 
 // creates a html/template from the View type.
-func parseTemplate(projectRoot string, view View) (*template.Template, error) {
+func parseTemplate(publicDir string, view View) (*template.Template, error) {
 	// if both layout and content is empty show a default view.
 	if view.Layout() == "" && view.Content() == "" {
 		return template.Must(template.New("").
@@ -552,12 +552,12 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	if view.Layout() != "" && view.Content() == "" {
 		var layoutTemplate *template.Template
 		// check if layout is not a file or directory
-		if _, err := os.Stat(filepath.Join(projectRoot, view.Layout())); err != nil {
+		if _, err := os.Stat(filepath.Join(publicDir, view.Layout())); err != nil {
 			// is not a file but html content
 			layoutTemplate = template.Must(template.New("").Funcs(view.FuncMap()).Parse(view.Layout()))
 		} else {
 			// layout must be a file
-			viewLayoutPath := filepath.Join(projectRoot, view.Layout())
+			viewLayoutPath := filepath.Join(publicDir, view.Layout())
 			ok, err := isDirectory(viewLayoutPath)
 			if err == nil && ok {
 				return nil, fmt.Errorf("layout is a directory but it must be a file")
@@ -570,7 +570,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 			commonFiles := []string{viewLayoutPath}
 			// global partials
 			for _, p := range view.Partials() {
-				commonFiles = append(commonFiles, find(filepath.Join(projectRoot, p), view.Extensions())...)
+				commonFiles = append(commonFiles, find(filepath.Join(publicDir, p), view.Extensions())...)
 			}
 			layoutTemplate = template.Must(template.New(viewLayoutPath).
 				Funcs(view.FuncMap()).
@@ -582,7 +582,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	// if layout is empty and content is set
 	if view.Layout() == "" && view.Content() != "" {
 		// check if content is a not a file or directory
-		if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); err != nil {
+		if _, err := os.Stat(filepath.Join(publicDir, view.Content())); err != nil {
 			return template.Must(
 				template.New(
 					view.LayoutContentName()).
@@ -591,12 +591,12 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 			), nil
 		} else {
 			// is a file or directory
-			viewContentPath := filepath.Join(projectRoot, view.Content())
+			viewContentPath := filepath.Join(publicDir, view.Content())
 			var pageFiles []string
 			// view and its partials
 			pageFiles = append(pageFiles, find(viewContentPath, view.Extensions())...)
 			for _, p := range view.Partials() {
-				pageFiles = append(pageFiles, find(filepath.Join(projectRoot, p), view.Extensions())...)
+				pageFiles = append(pageFiles, find(filepath.Join(publicDir, p), view.Extensions())...)
 			}
 			return template.Must(template.New(filepath.Base(viewContentPath)).
 				Funcs(view.FuncMap()).
@@ -609,12 +609,12 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 	// 1. build layout
 	var layoutTemplate *template.Template
 	// check if layout is not a file or directory
-	if _, err := os.Stat(filepath.Join(projectRoot, view.Layout())); err != nil {
+	if _, err := os.Stat(filepath.Join(publicDir, view.Layout())); err != nil {
 		// is not a file but html content
 		layoutTemplate = template.Must(template.New("base").Funcs(view.FuncMap()).Parse(view.Layout()))
 	} else {
 		// layout must be a file
-		viewLayoutPath := filepath.Join(projectRoot, view.Layout())
+		viewLayoutPath := filepath.Join(publicDir, view.Layout())
 		ok, err := isDirectory(viewLayoutPath)
 		if err == nil && ok {
 			return nil, fmt.Errorf("layout is a directory but it must be a file")
@@ -627,7 +627,7 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 		commonFiles := []string{viewLayoutPath}
 		// global partials
 		for _, p := range view.Partials() {
-			commonFiles = append(commonFiles, find(filepath.Join(projectRoot, p), view.Extensions())...)
+			commonFiles = append(commonFiles, find(filepath.Join(publicDir, p), view.Extensions())...)
 		}
 		layoutTemplate = template.Must(
 			template.New(filepath.Base(viewLayoutPath)).
@@ -642,14 +642,14 @@ func parseTemplate(projectRoot string, view View) (*template.Template, error) {
 
 	// 2. add content
 	// check if content is a not a file or directory
-	if _, err := os.Stat(filepath.Join(projectRoot, view.Content())); err != nil {
+	if _, err := os.Stat(filepath.Join(publicDir, view.Content())); err != nil {
 		// content is not a file or directory but html content
 		viewTemplate = template.Must(layoutTemplate.Parse(view.Content()))
 	} else {
 		// content is a file or directory
 		var pageFiles []string
 		// view and its partials
-		pageFiles = append(pageFiles, find(filepath.Join(projectRoot, view.Content()), view.Extensions())...)
+		pageFiles = append(pageFiles, find(filepath.Join(publicDir, view.Content()), view.Extensions())...)
 
 		viewTemplate = template.Must(layoutTemplate.ParseFiles(pageFiles...))
 	}

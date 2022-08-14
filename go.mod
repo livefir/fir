@@ -1,6 +1,6 @@
 module github.com/adnaan/fir
 
-go 1.18
+go 1.19
 
 require (
 	entgo.io/ent v0.9.1
@@ -23,9 +23,11 @@ require (
 	github.com/matcornic/hermes/v2 v2.1.0
 	github.com/mattn/go-sqlite3 v1.14.13
 	github.com/ory/client-go v0.0.1-alpha.189
+	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/cobra v1.5.0
 	github.com/timshannon/bolthold v0.0.0-20210913165410-232392fc8a6a
 	golang.org/x/exp v0.0.0-20220518171630-0b5c67f07fdf
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
 	golang.org/x/text v0.3.7
 )
 
@@ -60,7 +62,6 @@ require (
 	github.com/vanng822/go-premailer v0.0.0-20191214114701-be27abe028fe // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.0.0-20220513210258-46612604a0f9 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect

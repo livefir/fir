@@ -30,10 +30,10 @@ import (
 func main() {
 	ctx := context.Background()
 	// project root for reloading template files on file change during development
-	var projectRoot string
-	projectRootUsage := "project root directory that contains the template files."
-	flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
-	flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
+	var publicDir string
+	publicDirUsage := "public directory that contains the html template files."
+	flag.StringVar(&publicDir, "public", ".", publicDirUsage)
+	flag.StringVar(&publicDir, "p", ".", publicDirUsage+" (shortand)")
 	// load config
 	configFile := flag.String("config", "env.local", "path to config file")
 	envPrefix := os.Getenv("ENV_PREFIX")
@@ -75,7 +75,7 @@ func main() {
 	if cfg.Env != "production" {
 		mode = true
 	}
-	c := fir.NewController("fir-starter", fir.DevelopmentMode(mode), fir.ProjectRoot(projectRoot))
+	c := fir.NewController("fir-starter", fir.DevelopmentMode(mode))
 
 	// unauthenticated
 	// 404 and /
@@ -144,8 +144,8 @@ func main() {
 
 	// setup static assets handler
 	workDir, _ := os.Getwd()
-	if projectRoot != "" {
-		workDir = projectRoot
+	if publicDir != "" {
+		workDir = publicDir
 	}
 	public := http.Dir(filepath.Join(workDir, "./", "public", "assets"))
 	staticHandler(r, "/static", public)

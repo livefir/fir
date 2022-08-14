@@ -26,7 +26,7 @@ type controlOpt struct {
 	debugLog             bool
 	enableWatch          bool
 	watchExts            []string
-	projectRoot          string
+	publicDir            string
 	developmentMode      bool
 	errorView            View
 	cookieStore          *sessions.CookieStore
@@ -74,7 +74,7 @@ func EnableWatch(rootDir string, extensions ...string) Option {
 	return func(o *controlOpt) {
 		o.enableWatch = true
 		if len(extensions) > 0 {
-			o.projectRoot = rootDir
+			o.publicDir = rootDir
 			o.watchExts = extensions
 		}
 	}
@@ -86,10 +86,10 @@ func DevelopmentMode(enable bool) Option {
 	}
 }
 
-// ProjectRoot is for reloading template files on file change during development
-func ProjectRoot(projectRoot string) Option {
+// PublicDir is the path to directory containing the public html template files.
+func PublicDir(path string) Option {
 	return func(o *controlOpt) {
-		o.projectRoot = projectRoot
+		o.publicDir = path
 	}
 }
 
@@ -118,13 +118,13 @@ func NewController(name string, options ...Option) Controller {
 		option(o)
 	}
 
-	if o.projectRoot == "" {
-		var projectRoot string
-		projectRootUsage := "project root directory that contains the template files."
-		flag.StringVar(&projectRoot, "project", ".", projectRootUsage)
-		flag.StringVar(&projectRoot, "p", ".", projectRootUsage+" (shortand)")
+	if o.publicDir == "" {
+		var publicDir string
+		publicDirUsage := "public directory that contains the html template files."
+		flag.StringVar(&publicDir, "public", ".", publicDirUsage)
+		flag.StringVar(&publicDir, "p", ".", publicDirUsage+" (shortand)")
 		flag.Parse()
-		o.projectRoot = projectRoot
+		o.publicDir = publicDir
 	}
 
 	wc := &websocketController{
@@ -302,12 +302,12 @@ func (wc *websocketController) getUser(w http.ResponseWriter, r *http.Request) (
 }
 
 func (wc *websocketController) Handler(view View) http.HandlerFunc {
-	viewTemplate, err := parseTemplate(wc.projectRoot, view)
+	viewTemplate, err := parseTemplate(wc.publicDir, view)
 	if err != nil {
 		panic(err)
 	}
 
-	errorViewTemplate, err := parseTemplate(wc.projectRoot, wc.errorView)
+	errorViewTemplate, err := parseTemplate(wc.publicDir, wc.errorView)
 	if err != nil {
 		panic(err)
 	}
