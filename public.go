@@ -2,6 +2,7 @@ package fir
 
 import (
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -9,16 +10,16 @@ import (
 )
 
 type publicOpt struct {
-	inputDir   string
+	inDir      string
 	outDir     string
 	extensions []string
 }
 
 type PublicOption func(*publicOpt)
 
-func InputDir(path string) PublicOption {
+func InDir(path string) PublicOption {
 	return func(o *publicOpt) {
-		o.inputDir = path
+		o.inDir = path
 	}
 }
 
@@ -36,7 +37,7 @@ func Extensions(extensions []string) PublicOption {
 
 func GeneratePublic(options ...PublicOption) error {
 	opt := &publicOpt{
-		inputDir:   ".",
+		inDir:      ".",
 		outDir:     "./public",
 		extensions: []string{".html"},
 	}
@@ -49,30 +50,30 @@ func GeneratePublic(options ...PublicOption) error {
 		return err
 	}
 
-	ignore, err := gitignore.CompileIgnoreFile(".gitignore")
+	ignore, err := gitignore.CompileIgnoreFile(filepath.Join(opt.inDir, ".gitignore"))
 	if err != nil {
-		return err
+		log.Printf("[warning] failed to compile .gitignore: %v\n", err)
 	}
 
-	err = filepath.WalkDir(opt.inputDir, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(opt.inDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if d.IsDir() {
-			if d.Name() == filepath.Clean(opt.outDir) {
+			if d.Name() == filepath.Base(opt.outDir) {
 				return filepath.SkipDir
 			}
 			if d.Name() == ".git" {
 				return filepath.SkipDir
 			}
-			if ignore.MatchesPath(d.Name()) {
+			if ignore != nil && ignore.MatchesPath(d.Name()) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		if ignore.MatchesPath(path) {
+		if ignore != nil && ignore.MatchesPath(path) {
 			return nil
 		}
 
@@ -80,7 +81,12 @@ func GeneratePublic(options ...PublicOption) error {
 			return nil
 		}
 
-		outPath := filepath.Join(opt.outDir, path)
+		relpath, err := filepath.Rel(opt.inDir, path)
+		if err != nil {
+			return err
+		}
+
+		outPath := filepath.Join(opt.outDir, relpath)
 		if err := os.MkdirAll(filepath.Dir(outPath), os.ModePerm); err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package fir
 
 import (
+	"embed"
 	"flag"
 	"log"
 	"net/http"
@@ -30,6 +31,8 @@ type controlOpt struct {
 	developmentMode      bool
 	errorView            View
 	cookieStore          *sessions.CookieStore
+	embedFS              embed.FS
+	hasEmbedFS           bool
 }
 
 type Option func(*controlOpt)
@@ -55,6 +58,13 @@ func WithErrorView(view View) Option {
 func WithCookieStore(cookieStore *sessions.CookieStore) Option {
 	return func(o *controlOpt) {
 		o.cookieStore = cookieStore
+	}
+}
+
+func WithEmbedFS(fs embed.FS) Option {
+	return func(o *controlOpt) {
+		o.embedFS = fs
+		o.hasEmbedFS = true
 	}
 }
 
@@ -142,6 +152,12 @@ func NewController(name string, options ...Option) Controller {
 
 	if wc.enableWatch {
 		go watchTemplates(wc)
+	}
+
+	if wc.hasEmbedFS {
+		log.Println("read template files embedded in the binary")
+	} else {
+		log.Println("read template files from disk")
 	}
 	return wc
 }
@@ -302,12 +318,12 @@ func (wc *websocketController) getUser(w http.ResponseWriter, r *http.Request) (
 }
 
 func (wc *websocketController) Handler(view View) http.HandlerFunc {
-	viewTemplate, err := parseTemplate(wc.publicDir, view)
+	viewTemplate, err := parseTemplate(wc.controlOpt, view)
 	if err != nil {
 		panic(err)
 	}
 
-	errorViewTemplate, err := parseTemplate(wc.publicDir, wc.errorView)
+	errorViewTemplate, err := parseTemplate(wc.controlOpt, wc.errorView)
 	if err != nil {
 		panic(err)
 	}
