@@ -3,10 +3,8 @@ package fir
 import (
 	"embed"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -99,24 +97,7 @@ func NewController(name string, options ...Option) Controller {
 	}
 
 	o := &opt{
-		channelFunc: func(r *http.Request, viewID string) *string {
-			if viewID == "" {
-				viewID = "root"
-				if r.URL.Path != "/" {
-					viewID = strings.Replace(r.URL.Path, "/", "_", -1)
-				}
-			}
-
-			userID, ok := r.Context().Value(UserIDKey).(string)
-			if !ok || userID == "" {
-				log.Printf("[view] warning: no user id in request context\n")
-				userID = "anonymous"
-			}
-			channel := fmt.Sprintf("%s:%s", userID, viewID)
-
-			log.Println("client subscribed to channel: ", channel)
-			return &channel
-		},
+		channelFunc:       DefaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
 		watchExts:         DefaultWatchExtensions,
 		errorView:         &DefaultErrorView{},
@@ -175,6 +156,18 @@ func (c *controller) Handler(view View) http.HandlerFunc {
 		panic(err)
 	}
 
+	// non-blocking send even if there are no live connections(ws, sse) for this view in the current server instance.
+	// this is to ensure that sending to the stream is non-blocking. since channel can only be constructed
+	// within the scope of a live connection, publishing patch messages are only possible when there is a live connection.
+	// TODO: explain this better
+	streamCh := make(chan Patch)
+	go func() {
+		select {
+		case streamCh <- <-view.Stream():
+		default:
+		}
+	}()
+
 	mountData := make(Data)
 	return func(w http.ResponseWriter, r *http.Request) {
 		v := &viewHandler{
@@ -184,6 +177,7 @@ func (c *controller) Handler(view View) http.HandlerFunc {
 			errorViewTemplate: errorViewTemplate,
 			mountData:         mountData,
 			cntrl:             c,
+			streamCh:          streamCh,
 		}
 		if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
 			onPatchEvent(w, r, v)

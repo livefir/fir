@@ -212,6 +212,7 @@ type viewHandler struct {
 	errorViewTemplate *template.Template
 	mountData         Data
 	cntrl             *controller
+	streamCh          chan Patch
 }
 
 func (v *viewHandler) reloadTemplates() {

@@ -20,7 +20,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	// publisher
 	go func() {
-		for patch := range v.view.Stream() {
+		for patch := range v.streamCh {
 			v.cntrl.pubsub.Publish(r.Context(), channel, patch)
 		}
 	}()
