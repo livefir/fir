@@ -2,7 +2,6 @@ package fir
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -11,9 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/lithammer/shortuuid"
 )
 
 var DefaultViewExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
@@ -45,6 +41,7 @@ func (a *AppContext) NotActiveRoute(path, class string) string {
 }
 
 type View interface {
+	ID() string
 	// Settings
 	Content() string
 	Layout() string
@@ -60,6 +57,10 @@ type View interface {
 }
 
 type DefaultView struct{}
+
+func (d DefaultView) ID() string {
+	return ""
+}
 
 // Content returns either path to the content or a html string content
 func (d DefaultView) Content() string {
@@ -149,6 +150,10 @@ func (d DefaultView) Stream() <-chan Patch {
 
 type DefaultErrorView struct{}
 
+func (d DefaultErrorView) ID() string {
+	return ""
+}
+
 func (d DefaultErrorView) Content() string {
 	return `
 {{ define "content"}}
@@ -206,20 +211,19 @@ type viewHandler struct {
 	viewTemplate      *template.Template
 	errorViewTemplate *template.Template
 	mountData         Data
-	user              int
-	wc                *websocketController
+	cntrl             *controller
 }
 
 func (v *viewHandler) reloadTemplates() {
 	var err error
-	if v.wc.disableTemplateCache {
+	if v.cntrl.disableTemplateCache {
 
-		v.viewTemplate, err = parseTemplate(v.wc.controlOpt, v.view)
+		v.viewTemplate, err = parseTemplate(v.cntrl.opt, v.view)
 		if err != nil {
 			panic(err)
 		}
 
-		v.errorViewTemplate, err = parseTemplate(v.wc.controlOpt, v.errorView)
+		v.errorViewTemplate, err = parseTemplate(v.cntrl.opt, v.errorView)
 		if err != nil {
 			panic(err)
 		}
@@ -325,222 +329,7 @@ func buildOperation(t *template.Template, patch Patch) (Operation, error) {
 
 }
 
-func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
-	v.reloadTemplates()
-	var event Event
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&event)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if decoder.More() {
-		http.Error(w, "unknown fields in request body", http.StatusBadRequest)
-		return
-	}
-	event.requestContext = r.Context()
-	patchset := v.view.OnEvent(event)
-	if patchset == nil {
-		log.Printf("[view] warning: no patchset returned for event: %v\n", event)
-		patchset = Patchset{}
-	}
-
-	firErrorPatchExists := false
-
-	for _, patch := range patchset {
-		if patch.GetSelector() == "#fir-error" {
-			firErrorPatchExists = true
-		}
-	}
-
-	if !firErrorPatchExists {
-		// unset error patch
-		patchset = append([]Patch{morphError("")}, patchset...)
-	}
-
-	operations := make([]Operation, 0)
-	for _, patch := range patchset {
-		operation, err := buildOperation(v.viewTemplate, patch)
-		if err != nil {
-			if strings.ContainsAny("fir-error", err.Error()) {
-				continue
-			}
-			log.Printf("[view] buildOperation error: %v\n", err)
-			continue
-		}
-
-		operations = append(operations, operation)
-	}
-	json.NewEncoder(w).Encode(operations)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
-	v.reloadTemplates()
-
-	var err error
-	var page Page
-
-	if r.Method == "POST" {
-		page = v.view.OnPost(w, r)
-	} else {
-		page = v.view.OnGet(w, r)
-	}
-	v.mountData = page.Data
-	if v.mountData == nil {
-		v.mountData = make(Data)
-	}
-
-	v.mountData["app_name"] = v.wc.name
-	v.mountData["fir"] = &AppContext{
-		Name:    v.wc.name,
-		URLPath: r.URL.Path,
-	}
-
-	page.Data = v.mountData
-
-	if page.Code == 0 {
-		page.Code = http.StatusOK
-	}
-	if page.Message == "" {
-		page.Message = http.StatusText(page.Code)
-	}
-
-	if page.Code > 299 {
-		log.Printf("page error: %v\n", page.Error)
-		onRequestError(w, r, v, &page)
-		return
-	}
-
-	v.viewTemplate.Option("missingkey=zero")
-	var buf bytes.Buffer
-	err = v.viewTemplate.Execute(&buf, page.Data)
-	if err != nil {
-		log.Printf("OnGet viewTemplate.Execute error:  %v", err)
-		onRequestError(w, r, v, nil)
-	}
-	if v.wc.debugLog {
-		log.Printf("OnGet render view %+v, with data => \n %+v\n",
-			v.view.Content(), getJSON(page.Data))
-	}
-
-	w.WriteHeader(page.Code)
-	w.Write(buf.Bytes())
-
-}
-
-func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, page *Page) {
-	errorPage := v.errorView.OnGet(w, r)
-	if page == nil {
-		page = &errorPage
-	}
-	v.mountData = page.Data
-	if v.mountData == nil {
-		v.mountData = make(Data)
-	}
-	v.mountData["statusCode"] = page.Code
-	v.mountData["statusMessage"] = page.Message
-
-	page.Data = v.mountData
-
-	v.viewTemplate.Option("missingkey=zero")
-	var buf bytes.Buffer
-	err := v.errorViewTemplate.Execute(&buf, page.Data)
-	if err != nil {
-		log.Printf("err rendering error template: %v\n", err)
-		_, errWrite := w.Write([]byte("Something went wrong"))
-		if errWrite != nil {
-			panic(errWrite)
-		}
-	}
-
-	if v.wc.debugLog {
-		log.Printf("OnGet render error view %+v, with data => \n %+v\n",
-			v.view.Content(), getJSON(page.Data))
-	}
-
-	w.WriteHeader(page.Code)
-	w.Write(buf.Bytes())
-
-}
-
-func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
-	var topic *string
-	if v.wc.subscribeTopicFunc != nil {
-		topic = v.wc.subscribeTopicFunc(r)
-	}
-
-	c, err := v.wc.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		return
-	}
-	defer c.Close()
-
-	connID := shortuuid.New()
-	if topic != nil {
-		v.wc.addConnection(*topic, connID, c)
-	}
-
-	topicVal := ""
-	if topic != nil {
-		topicVal = *topic
-	}
-
-	done := make(chan struct{})
-
-	if v.view.Stream() != nil {
-		go func() {
-			for {
-				select {
-				case patch := <-v.view.Stream():
-					operation, err := buildOperation(v.viewTemplate, patch)
-					if err != nil {
-						continue
-					}
-					v.wc.writeJSON(topicVal, []Operation{operation})
-				case <-done:
-					return
-				}
-			}
-
-		}()
-	}
-
-loop:
-	for {
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("c.readMessage error: ", err)
-			break loop
-		}
-
-		event := new(Event)
-		err = json.NewDecoder(bytes.NewReader(message)).Decode(event)
-		if err != nil {
-			log.Printf("err: parsing event, msg %s \n", string(message))
-			continue
-		}
-
-		if event.ID == "" {
-			log.Printf("err: event %v, field event.id is required\n", event)
-			continue
-		}
-
-		v.reloadTemplates()
-	}
-	if v.view.Stream() != nil {
-		done <- struct{}{}
-	}
-	if topic != nil {
-		v.wc.removeConnection(*topic, connID)
-	}
-}
-
-func layoutSetContentEmpty(opt controlOpt, view View) (*template.Template, error) {
+func layoutSetContentEmpty(opt opt, view View) (*template.Template, error) {
 	viewLayoutPath := filepath.Join(opt.publicDir, view.Layout())
 	// is layout html content or a file/directory
 	if isFileHTML(viewLayoutPath, opt) {
@@ -568,7 +357,7 @@ func layoutSetContentEmpty(opt controlOpt, view View) (*template.Template, error
 	return template.Must(layoutTemplate.Clone()), nil
 }
 
-func layoutEmptyContentSet(opt controlOpt, view View) (*template.Template, error) {
+func layoutEmptyContentSet(opt opt, view View) (*template.Template, error) {
 	// is content html content or a file/directory
 	viewContentPath := filepath.Join(opt.publicDir, view.Content())
 	if isFileHTML(viewContentPath, opt) {
@@ -598,7 +387,7 @@ func layoutEmptyContentSet(opt controlOpt, view View) (*template.Template, error
 	return contentTemplate, nil
 }
 
-func layoutSetContentSet(opt controlOpt, view View) (*template.Template, error) {
+func layoutSetContentSet(opt opt, view View) (*template.Template, error) {
 	// 1. build layout template
 	viewLayoutPath := filepath.Join(opt.publicDir, view.Layout())
 	var layoutTemplate *template.Template
@@ -659,7 +448,7 @@ func layoutSetContentSet(opt controlOpt, view View) (*template.Template, error) 
 }
 
 // creates a html/template from the View type.
-func parseTemplate(opt controlOpt, view View) (*template.Template, error) {
+func parseTemplate(opt opt, view View) (*template.Template, error) {
 	// if both layout and content is empty show a default view.
 	if view.Layout() == "" && view.Content() == "" {
 		return template.Must(template.New("").
@@ -690,7 +479,7 @@ func UserError(err error) string {
 	return userMessage
 }
 
-func find(opt controlOpt, p string, extensions []string) []string {
+func find(opt opt, p string, extensions []string) []string {
 	var files []string
 	var fi fs.FileInfo
 	var err error
@@ -762,16 +551,7 @@ func contains(arr []string, s string) bool {
 	return false
 }
 
-func isDirectory(path string) (bool, error) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return false, err
-	}
-
-	return fileInfo.IsDir(), err
-}
-
-func isDir(path string, opt controlOpt) bool {
+func isDir(path string, opt opt) bool {
 	if opt.hasEmbedFS {
 		fileInfo, err := fs.Stat(opt.embedFS, path)
 		if err != nil {
@@ -789,7 +569,7 @@ func isDir(path string, opt controlOpt) bool {
 	return fileInfo.IsDir()
 }
 
-func isFileHTML(path string, opt controlOpt) bool {
+func isFileHTML(path string, opt opt) bool {
 	if opt.hasEmbedFS {
 		if _, err := fs.Stat(opt.embedFS, path); err != nil {
 			return true

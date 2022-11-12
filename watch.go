@@ -14,7 +14,7 @@ import (
 
 var DefaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
 
-func watchTemplates(wc *websocketController) {
+func watchTemplates(wc *controller) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -31,9 +31,10 @@ func watchTemplates(wc *websocketController) {
 				if event.Op&fsnotify.Write == fsnotify.Write ||
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
-					o := Operation{Op: reload}
+					// TODO replace with pubsub.Publish
+					//o := Operation{Op: reload}
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					wc.writeJSONAll([]Operation{o})
+					//wc.writeJSONAll([]Operation{o})
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:
