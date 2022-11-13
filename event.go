@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log"
 	"net/url"
 )
 
@@ -42,4 +43,28 @@ func getJSON(data Data) string {
 		return err.Error()
 	}
 	return string(b)
+}
+
+func getEventPatchset(event Event, view View) Patchset {
+	patchset := view.OnEvent(event)
+	if patchset == nil {
+		log.Printf("[view] warning: no patchset returned for event: %v\n", event)
+		patchset = Patchset{}
+	}
+
+	firErrorPatchExists := false
+
+	for _, patch := range patchset {
+		if patch.GetSelector() == "#fir-error" {
+			firErrorPatchExists = true
+		}
+	}
+
+	if !firErrorPatchExists {
+		// unset error patch
+		patchset = append([]Patch{morphError("")}, patchset...)
+	}
+
+	return patchset
+
 }

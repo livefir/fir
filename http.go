@@ -22,39 +22,32 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		http.Error(w, "unknown fields in request body", http.StatusBadRequest)
 		return
 	}
+	if event.ID == "" {
+		http.Error(w, "event id is missing", http.StatusBadRequest)
+		return
+	}
 	event.requestContext = r.Context()
-	patchset := v.view.OnEvent(event)
-	if patchset == nil {
-		log.Printf("[view] warning: no patchset returned for event: %v\n", event)
-		patchset = Patchset{}
-	}
-
-	firErrorPatchExists := false
-
-	for _, patch := range patchset {
-		if patch.GetSelector() == "#fir-error" {
-			firErrorPatchExists = true
-		}
-	}
-
-	if !firErrorPatchExists {
-		// unset error patch
-		patchset = append([]Patch{morphError("")}, patchset...)
-	}
-
+	patchset := getEventPatchset(event, v.view)
+	channel := *v.cntrl.channelFunc(r, v.view.ID())
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
+		err := v.cntrl.pubsub.Publish(r.Context(), channel, patch)
+		if err != nil {
+			log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
+		}
+
 		operation, err := buildOperation(v.viewTemplate, patch)
 		if err != nil {
 			if strings.ContainsAny("fir-error", err.Error()) {
 				continue
 			}
-			log.Printf("[view] buildOperation error: %v\n", err)
+			log.Printf("[onPatchEvent] buildOperation error: %v\n", err)
 			continue
 		}
 
 		operations = append(operations, operation)
 	}
+
 	json.NewEncoder(w).Encode(operations)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -107,8 +100,8 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 		onRequestError(w, r, v, nil)
 	}
 	if v.cntrl.debugLog {
-		log.Printf("OnGet render view %+v, with data => \n %+v\n",
-			v.view.Content(), getJSON(page.Data))
+		// log.Printf("OnGet render view %+v, with data => \n %+v\n",
+		// 	v.view.Content(), getJSON(page.Data))
 	}
 
 	w.WriteHeader(page.Code)

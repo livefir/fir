@@ -162,9 +162,8 @@ func (c *controller) Handler(view View) http.HandlerFunc {
 	// TODO: explain this better
 	streamCh := make(chan Patch)
 	go func() {
-		select {
-		case streamCh <- <-view.Stream():
-		default:
+		for patch := range view.Stream() {
+			streamCh <- patch
 		}
 	}()
 
