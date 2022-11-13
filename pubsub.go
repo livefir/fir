@@ -23,7 +23,7 @@ type PubsubAdapter interface {
 
 func NewPubsubInmem() PubsubAdapter {
 	return &pubsubInmem{
-		channelsSubs: make(map[string]map[*subscriptionInmem]struct{}),
+		channelsSubscriptions: make(map[string]map[*subscriptionInmem]struct{}),
 	}
 }
 
@@ -47,23 +47,23 @@ func (s *subscriptionInmem) Close() {
 }
 
 type pubsubInmem struct {
-	channelsSubs map[string]map[*subscriptionInmem]struct{}
+	channelsSubscriptions map[string]map[*subscriptionInmem]struct{}
 	sync.RWMutex
 }
 
-func (p *pubsubInmem) removeSubscription(sub *subscriptionInmem) {
-	sub.once.Do(func() {
-		close(sub.ch)
+func (p *pubsubInmem) removeSubscription(subscription *subscriptionInmem) {
+	subscription.once.Do(func() {
+		close(subscription.ch)
 	})
 
-	subs, ok := p.channelsSubs[sub.channel]
+	subscriptions, ok := p.channelsSubscriptions[subscription.channel]
 	if !ok {
 		return
 	}
-	delete(subs, sub)
-	log.Printf("removed subscribtion for channel %s, count: %d", sub.channel, len(subs))
-	if len(subs) == 0 {
-		delete(p.channelsSubs, sub.channel)
+	delete(subscriptions, subscription)
+	log.Printf("removed subscribtion for channel %s, count: %d", subscription.channel, len(subscriptions))
+	if len(subscriptions) == 0 {
+		delete(p.channelsSubscriptions, subscription.channel)
 	}
 }
 
@@ -73,13 +73,17 @@ func (p *pubsubInmem) Publish(ctx context.Context, channel string, patch Patch) 
 	if channel == "" {
 		return fmt.Errorf("channel is empty")
 	}
-	subscriptions, ok := p.channelsSubs[channel]
-	if !ok || len(subscriptions) == 0 {
+	subscriptions, ok := p.channelsSubscriptions[channel]
+	if !ok {
 		return fmt.Errorf("channel %s has no subscribers", channel)
 	}
+	if len(subscriptions) == 0 {
+		delete(p.channelsSubscriptions, channel)
+		return nil
+	}
 
-	for sub := range subscriptions {
-		go func(sub *subscriptionInmem) { sub.ch <- patch }(sub)
+	for subscription := range subscriptions {
+		go func(sub *subscriptionInmem) { sub.ch <- patch }(subscription)
 	}
 
 	return nil
@@ -98,10 +102,10 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 		pubsub:  p,
 	}
 
-	subs, ok := p.channelsSubs[channel]
+	subs, ok := p.channelsSubscriptions[channel]
 	if !ok {
 		subs = make(map[*subscriptionInmem]struct{})
-		p.channelsSubs[channel] = subs
+		p.channelsSubscriptions[channel] = subs
 	}
 
 	subs[sub] = struct{}{}
@@ -115,7 +119,7 @@ func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) int {
 	p.Lock()
 	defer p.Unlock()
 	count := 0
-	for channel := range p.channelsSubs {
+	for channel := range p.channelsSubscriptions {
 		matched, err := filepath.Match(pattern, channel)
 		if err != nil {
 			continue
@@ -126,4 +130,10 @@ func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) int {
 	}
 
 	return count
+}
+
+type subscriptionRedis struct {
+}
+
+type pubsubRedis struct {
 }
