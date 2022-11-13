@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -62,13 +63,19 @@ func (c *Counter) Count() int32 {
 	return c.count
 }
 
-func NewCounterView() *CounterView {
+func NewCounterView(pubsubAdapter fir.PubsubAdapter) *CounterView {
 	stream := make(chan fir.Patch)
 	ticker := time.NewTicker(time.Second)
-	c := &CounterView{stream: stream, model: &Counter{}}
+	c := &CounterView{stream: stream, model: &Counter{}, pubsubAdapter: pubsubAdapter}
+	pattern := fmt.Sprintf("*:%s", c.ID())
 
 	go func() {
 		for ; true; <-ticker.C {
+			if !c.pubsubAdapter.HasSubscribers(context.Background(), pattern) {
+				// if userID:viewID(*:viewID) channel pattern has no subscribers, skip costly operation
+				log.Printf("channel pattern %s has no subscribers", pattern)
+				continue
+			}
 			patch, err := c.model.Updated()
 			if err != nil {
 				continue
@@ -81,9 +88,14 @@ func NewCounterView() *CounterView {
 
 type CounterView struct {
 	fir.DefaultView
-	model  *Counter
-	stream chan fir.Patch
+	model         *Counter
+	stream        chan fir.Patch
+	pubsubAdapter fir.PubsubAdapter
 	sync.RWMutex
+}
+
+func (c *CounterView) ID() string {
+	return "counter"
 }
 
 func (c *CounterView) Stream() <-chan fir.Patch {
@@ -153,7 +165,8 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 }
 
 func main() {
-	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.Handler(NewCounterView()))
+	pubsubAdapter := fir.NewPubsubInmem()
+	controller := fir.NewController("counter_app", fir.DevelopmentMode(true), fir.WithPubsubAdapter(pubsubAdapter))
+	http.Handle("/", controller.Handler(NewCounterView(pubsubAdapter)))
 	http.ListenAndServe(":9867", nil)
 }
