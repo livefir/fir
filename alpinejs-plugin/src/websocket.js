@@ -1,4 +1,4 @@
-const reopenTimeouts = [2000, 5000, 10000, 30000, 60000];
+const reopenTimeouts = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000];
 
 export default websocket = (
     url,
@@ -59,7 +59,6 @@ export default websocket = (
             // console.log("socket disconnected")
         }
 
-
         socket.onclose = event => reOpenSocket();
         socket.onmessage = event => {
             try {
@@ -87,4 +86,17 @@ export default websocket = (
     }
 
     openSocket().then(() => { }).catch(e => console.error(e));
+
+    return {
+        emit(value) {
+            const send = () => socket.send(JSON.stringify(value));
+            if (socket.readyState !== WebSocket.OPEN) {
+                openSocket().then(() => { }).catch(e => console.error(e));
+                return false
+            } else {
+                send();
+                return true
+            }
+        }
+    }
 }

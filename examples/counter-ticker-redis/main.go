@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/adnaan/fir"
+	"github.com/go-redis/redis/v8"
 )
 
 type Counter struct {
@@ -153,7 +155,17 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 }
 
 func main() {
-	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
+	port := flag.String("port", "9867", "port to listen on")
+	controller := fir.NewController("counter_app",
+		fir.DevelopmentMode(true),
+		fir.WithPubsubAdapter(
+			fir.NewPubsubRedis(
+				redis.NewClient(&redis.Options{
+					Addr:     "localhost:6379",
+					Password: "", // no password set
+					DB:       0,  // use default DB
+				}),
+			)))
 	http.Handle("/", controller.Handler(NewCounterView()))
-	http.ListenAndServe(":9867", nil)
+	http.ListenAndServe(fmt.Sprintf(":%s", *port), nil)
 }

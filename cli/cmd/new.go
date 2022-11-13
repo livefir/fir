@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -37,4 +36,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// newCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	// @todo: litestack project -> sqlite, litestream, nats.io, bulmacss stack deployed to fly.io
+	// @todo: hello project -> a simple project with a custom helloview for local development.
 }

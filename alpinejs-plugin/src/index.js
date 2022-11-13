@@ -22,7 +22,7 @@ const Plugin = (Alpine) => {
     if (window.location.protocol === "https:") {
         connectURL = `wss://${window.location.host}${window.location.pathname}`
     }
-    websocket(connectURL, [], (patchOperation) => operations[patchOperation.op](patchOperation), updateStore);
+    const socket = websocket(connectURL, [], (patchOperation) => operations[patchOperation.op](patchOperation), updateStore);
 
     Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
         const val = evaluate(expression)
@@ -63,7 +63,6 @@ const Plugin = (Alpine) => {
                         formErrors.errors[input.getAttribute("name")] = iodine.getErrorMessage(isValid)
                     }
                 });
-
 
                 let formMethod = el.getAttribute("method")
                 if (!formMethod) {
@@ -173,44 +172,54 @@ const Plugin = (Alpine) => {
             cancelable: true,
         }
 
-
         el.dispatchEvent(new CustomEvent(startEventName, options))
         if (detail.id) {
             el.dispatchEvent(new CustomEvent(`${startEventName}:${detail.id}`, options))
             el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
         }
-
-        fetch(window.location.pathname, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-FIR-MODE': 'event'
-            },
-            body: JSON.stringify({
-                id: id,
-                params: params,
-            }),
-        })
-            .then(response => response.json())
-            .then(patchOperations => {
-                patchOperations.forEach(patchOperation => {
-                    operations[patchOperation.op](patchOperation)
-                });
+        const event = {
+            id: id,
+            params: params,
+        }
+        if (socket.emit(event)) {
+            el.dispatchEvent(new CustomEvent(endEventName, options))
+            if (detail.id) {
+                el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.id}`, options))
+                el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
+            }
+        } else {
+            fetch(window.location.pathname, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-FIR-MODE': 'event'
+                },
+                body: JSON.stringify({
+                    id: id,
+                    params: params,
+                }),
             })
-            .catch((error) => {
-                console.error(`${endEventName} error: ${error}, detail: ${detail}`, error,);
-            }).finally(() => {
-                el.dispatchEvent(new CustomEvent(endEventName, options))
-                if (detail.id) {
-                    el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.id}`, options))
-                    el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
-                }
-            });
+                .then(response => response.json())
+                .then(patchOperations => {
+                    patchOperations.forEach(patchOperation => {
+                        operations[patchOperation.op](patchOperation)
+                    });
+                })
+                .catch((error) => {
+                    console.error(`${endEventName} error: ${error}, detail: ${detail}`, error,);
+                }).finally(() => {
+                    el.dispatchEvent(new CustomEvent(endEventName, options))
+                    if (detail.id) {
+                        el.dispatchEvent(new CustomEvent(`${endEventName}:${detail.id}`, options))
+                        el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
+                    }
+                });
+        }
+
     }
 
     Alpine.plugin(morph)
 }
-
 
 const isObject = (obj) => {
     return Object.prototype.toString.call(obj) === '[object Object]';
