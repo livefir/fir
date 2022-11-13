@@ -17,7 +17,7 @@ func DefaultChannelFunc(r *http.Request, viewID string) *string {
 
 	userID, ok := r.Context().Value(UserIDKey).(string)
 	if !ok || userID == "" {
-		log.Printf("warning: no user id in request context. user is anonymous\n")
+		log.Printf("warning: no user id in request context. user is anonymous, viewID: %s \n", viewID)
 		userID = "anonymous"
 	}
 	channel := fmt.Sprintf("%s:%s", userID, viewID)
