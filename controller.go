@@ -37,6 +37,12 @@ func WithChannel(f func(r *http.Request, viewID string) *string) Option {
 	}
 }
 
+func WithPubsubAdapter(pubsub PubsubAdapter) Option {
+	return func(o *opt) {
+		o.pubsub = pubsub
+	}
+}
+
 func WithUpgrader(upgrader websocket.Upgrader) Option {
 	return func(o *opt) {
 		o.websocketUpgrader = upgrader

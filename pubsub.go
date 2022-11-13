@@ -2,23 +2,26 @@ package fir
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
 	"sync"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
 
 type Subscription interface {
-	C() <-chan Patch
+	C() <-chan []byte
 	Close()
 }
 
 type PubsubAdapter interface {
-	Publish(ctx context.Context, channel string, patch Patch) error
+	Publish(ctx context.Context, channel string, op Operation) error
 	Subscribe(ctx context.Context, channel string) (Subscription, error)
-	HasSubscribers(ctx context.Context, pattern string) int
+	HasSubscribers(ctx context.Context, pattern string) bool
 }
 
 func NewPubsubInmem() PubsubAdapter {
@@ -29,14 +32,14 @@ func NewPubsubInmem() PubsubAdapter {
 
 type subscriptionInmem struct {
 	channel string
-	ch      chan Patch
+	ch      chan []byte
 	once    sync.Once
 	pubsub  *pubsubInmem
 }
 
 // C returns a receive-only go channel of patches published
 // on the channel this subscription is subscribed to.
-func (s *subscriptionInmem) C() <-chan Patch {
+func (s *subscriptionInmem) C() <-chan []byte {
 	return s.ch
 }
 
@@ -67,7 +70,7 @@ func (p *pubsubInmem) removeSubscription(subscription *subscriptionInmem) {
 	}
 }
 
-func (p *pubsubInmem) Publish(ctx context.Context, channel string, patch Patch) error {
+func (p *pubsubInmem) Publish(ctx context.Context, channel string, op Operation) error {
 	p.Lock()
 	defer p.Unlock()
 	if channel == "" {
@@ -82,8 +85,14 @@ func (p *pubsubInmem) Publish(ctx context.Context, channel string, patch Patch) 
 		return nil
 	}
 
+	ops := []Operation{op}
+	opsBytes, err := json.Marshal(ops)
+	if err != nil {
+		return err
+	}
+
 	for subscription := range subscriptions {
-		go func(sub *subscriptionInmem) { sub.ch <- patch }(subscription)
+		go func(sub *subscriptionInmem) { sub.ch <- opsBytes }(subscription)
 	}
 
 	return nil
@@ -98,7 +107,7 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 
 	sub := &subscriptionInmem{
 		channel: channel,
-		ch:      make(chan Patch),
+		ch:      make(chan []byte),
 		pubsub:  p,
 	}
 
@@ -115,7 +124,7 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 	return sub, nil
 }
 
-func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) int {
+func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) bool {
 	p.Lock()
 	defer p.Unlock()
 	count := 0
@@ -129,11 +138,65 @@ func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) int {
 		}
 	}
 
-	return count
+	return count > 0
+}
+
+func NewPubsubRedis(client *redis.Client) PubsubAdapter {
+	return &pubsubRedis{client: client}
 }
 
 type subscriptionRedis struct {
+	channel string
+	ch      chan []byte
+	once    sync.Once
+	pubsub  *redis.PubSub
+}
+
+func (s *subscriptionRedis) C() <-chan []byte {
+	go func() {
+		for msg := range s.pubsub.Channel() {
+			s.ch <- []byte(msg.Payload)
+		}
+	}()
+	return s.ch
+}
+
+func (s *subscriptionRedis) Close() {
+	s.pubsub.Close()
+	s.once.Do(func() {
+		close(s.ch)
+	})
 }
 
 type pubsubRedis struct {
+	client *redis.Client
+}
+
+func (p *pubsubRedis) Publish(ctx context.Context, channel string, op Operation) error {
+	ops := []Operation{op}
+	opsBytes, err := json.Marshal(ops)
+	if err != nil {
+		return err
+	}
+	return p.client.Publish(ctx, channel, opsBytes).Err()
+}
+
+func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscription, error) {
+	if channel == "" {
+		return nil, fmt.Errorf("channel is empty")
+	}
+	pubsub := p.client.Subscribe(ctx, channel)
+	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan []byte)}, nil
+}
+
+func (p *pubsubRedis) HasSubscribers(ctx context.Context, pattern string) bool {
+	channels, err := p.client.PubSubChannels(ctx, pattern).Result()
+	if err != nil {
+		log.Printf("error getting channels for pattern: %v : err, %v", pattern, err)
+		return false
+	}
+	if len(channels) == 0 {
+		return false
+	}
+	return true
 }

@@ -31,11 +31,6 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	channel := *v.cntrl.channelFunc(r, v.view.ID())
 	operations := make([]Operation, 0)
 	for _, patch := range patchset {
-		err := v.cntrl.pubsub.Publish(r.Context(), channel, patch)
-		if err != nil {
-			log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
-		}
-
 		operation, err := buildOperation(v.viewTemplate, patch)
 		if err != nil {
 			if strings.ContainsAny("fir-error", err.Error()) {
@@ -43,6 +38,11 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 			}
 			log.Printf("[onPatchEvent] buildOperation error: %v\n", err)
 			continue
+		}
+
+		err = v.cntrl.pubsub.Publish(r.Context(), channel, operation)
+		if err != nil {
+			log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
 		}
 
 		operations = append(operations, operation)

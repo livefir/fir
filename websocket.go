@@ -2,10 +2,13 @@ package fir
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/websocket"
 )
 
 const UserIDKey = "key_user_id"
@@ -19,10 +22,20 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 	defer conn.Close()
 
+	ctx := context.Background()
+
 	// publisher
 	go func() {
 		for patch := range v.streamCh {
-			err := v.cntrl.pubsub.Publish(r.Context(), channel, patch)
+			operation, err := buildOperation(v.viewTemplate, patch)
+			if err != nil {
+				if strings.ContainsAny("fir-error", err.Error()) {
+					continue
+				}
+				log.Printf("[onWebsocket] buildOperation error: %v\n", err)
+				continue
+			}
+			err = v.cntrl.pubsub.Publish(ctx, channel, operation)
 			if err != nil {
 				log.Printf("[onWebsocket] error publishing patch: %v\n", err)
 			}
@@ -30,7 +43,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}()
 
 	// subscriber
-	subscription, err := v.cntrl.pubsub.Subscribe(r.Context(), channel)
+	subscription, err := v.cntrl.pubsub.Subscribe(ctx, channel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -38,24 +51,15 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	defer subscription.Close()
 
 	go func() {
-		for patch := range subscription.C() {
-			go func(patch Patch) {
-				log.Printf("[onWebsocket] sending patch to client:%v,  %+v\n", conn.RemoteAddr().String(), patch)
-				operation, err := buildOperation(v.viewTemplate, patch)
-				if err != nil {
-					if strings.ContainsAny("fir-error", err.Error()) {
-						return
-					}
-					log.Printf("[onWebsocket] buildOperation error: %v\n", err)
-					return
-				}
-
-				err = conn.WriteJSON([]Operation{operation})
+		for data := range subscription.C() {
+			go func(data []byte) {
+				log.Printf("[onWebsocket] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(data))
+				err = conn.WriteMessage(websocket.TextMessage, data)
 				if err != nil {
 					log.Printf("[onWebsocket] error: writing message for channel:%v, closing conn with err %v", channel, err)
 					conn.Close()
 				}
-			}(patch)
+			}(data)
 		}
 	}()
 
@@ -85,9 +89,18 @@ loop:
 
 		patchset := getEventPatchset(*event, v.view)
 		for _, patch := range patchset {
-			err := v.cntrl.pubsub.Publish(r.Context(), channel, patch)
+			operation, err := buildOperation(v.viewTemplate, patch)
 			if err != nil {
-				log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
+				if strings.ContainsAny("fir-error", err.Error()) {
+					continue
+				}
+				log.Printf("[onWebsocket][getEventPatchset] buildOperation error: %v\n", err)
+				continue
+			}
+
+			err = v.cntrl.pubsub.Publish(ctx, channel, operation)
+			if err != nil {
+				log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 			}
 		}
 	}
