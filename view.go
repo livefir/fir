@@ -348,7 +348,7 @@ func layoutSetContentEmpty(opt opt, view View) (*template.Template, error) {
 		commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, p), view.Extensions())...)
 	}
 
-	layoutTemplate := template.New(viewLayoutPath).Funcs(view.FuncMap())
+	layoutTemplate := template.New(filepath.Base(viewLayoutPath)).Funcs(view.FuncMap())
 	if opt.hasEmbedFS {
 		layoutTemplate = template.Must(layoutTemplate.ParseFS(opt.embedFS, commonFiles...))
 	} else {
@@ -378,7 +378,7 @@ func layoutEmptyContentSet(opt opt, view View) (*template.Template, error) {
 		pageFiles = append(pageFiles, find(opt, filepath.Join(opt.publicDir, p), view.Extensions())...)
 	}
 
-	contentTemplate := template.New(viewContentPath).Funcs(view.FuncMap())
+	contentTemplate := template.New(filepath.Base(viewContentPath)).Funcs(view.FuncMap())
 	if opt.hasEmbedFS {
 		contentTemplate = template.Must(contentTemplate.ParseFS(opt.embedFS, pageFiles...))
 	} else {
