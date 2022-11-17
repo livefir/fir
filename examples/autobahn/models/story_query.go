@@ -1,0 +1,998 @@
+// Code generated (@generated) by entc, DO NOT EDIT.
+
+package models
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math"
+
+	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/schema/field"
+	"github.com/adnaan/autobahn/models/board"
+	"github.com/adnaan/autobahn/models/predicate"
+	"github.com/adnaan/autobahn/models/story"
+	"github.com/google/uuid"
+)
+
+// StoryQuery is the builder for querying Story entities.
+type StoryQuery struct {
+	config
+	limit      *int
+	offset     *int
+	unique     *bool
+	order      []OrderFunc
+	fields     []string
+	predicates []predicate.Story
+	// eager-loading edges.
+	withOwner *BoardQuery
+	withFKs   bool
+	// intermediate query (i.e. traversal path).
+	sql  *sql.Selector
+	path func(context.Context) (*sql.Selector, error)
+}
+
+// Where adds a new predicate for the StoryQuery builder.
+func (sq *StoryQuery) Where(ps ...predicate.Story) *StoryQuery {
+	sq.predicates = append(sq.predicates, ps...)
+	return sq
+}
+
+// Limit adds a limit step to the query.
+func (sq *StoryQuery) Limit(limit int) *StoryQuery {
+	sq.limit = &limit
+	return sq
+}
+
+// Offset adds an offset step to the query.
+func (sq *StoryQuery) Offset(offset int) *StoryQuery {
+	sq.offset = &offset
+	return sq
+}
+
+// Unique configures the query builder to filter duplicate records on query.
+// By default, unique is set to true, and can be disabled using this method.
+func (sq *StoryQuery) Unique(unique bool) *StoryQuery {
+	sq.unique = &unique
+	return sq
+}
+
+// Order adds an order step to the query.
+func (sq *StoryQuery) Order(o ...OrderFunc) *StoryQuery {
+	sq.order = append(sq.order, o...)
+	return sq
+}
+
+// QueryOwner chains the current query on the "owner" edge.
+func (sq *StoryQuery) QueryOwner() *BoardQuery {
+	query := &BoardQuery{config: sq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := sq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := sq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(story.Table, story.FieldID, selector),
+			sqlgraph.To(board.Table, board.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, story.OwnerTable, story.OwnerColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// First returns the first Story entity from the query.
+// Returns a *NotFoundError when no Story was found.
+func (sq *StoryQuery) First(ctx context.Context) (*Story, error) {
+	nodes, err := sq.Limit(1).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(nodes) == 0 {
+		return nil, &NotFoundError{story.Label}
+	}
+	return nodes[0], nil
+}
+
+// FirstX is like First, but panics if an error occurs.
+func (sq *StoryQuery) FirstX(ctx context.Context) *Story {
+	node, err := sq.First(ctx)
+	if err != nil && !IsNotFound(err) {
+		panic(err)
+	}
+	return node
+}
+
+// FirstID returns the first Story ID from the query.
+// Returns a *NotFoundError when no Story ID was found.
+func (sq *StoryQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
+	if ids, err = sq.Limit(1).IDs(ctx); err != nil {
+		return
+	}
+	if len(ids) == 0 {
+		err = &NotFoundError{story.Label}
+		return
+	}
+	return ids[0], nil
+}
+
+// FirstIDX is like FirstID, but panics if an error occurs.
+func (sq *StoryQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := sq.FirstID(ctx)
+	if err != nil && !IsNotFound(err) {
+		panic(err)
+	}
+	return id
+}
+
+// Only returns a single Story entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when exactly one Story entity is not found.
+// Returns a *NotFoundError when no Story entities are found.
+func (sq *StoryQuery) Only(ctx context.Context) (*Story, error) {
+	nodes, err := sq.Limit(2).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	switch len(nodes) {
+	case 1:
+		return nodes[0], nil
+	case 0:
+		return nil, &NotFoundError{story.Label}
+	default:
+		return nil, &NotSingularError{story.Label}
+	}
+}
+
+// OnlyX is like Only, but panics if an error occurs.
+func (sq *StoryQuery) OnlyX(ctx context.Context) *Story {
+	node, err := sq.Only(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return node
+}
+
+// OnlyID is like Only, but returns the only Story ID in the query.
+// Returns a *NotSingularError when exactly one Story ID is not found.
+// Returns a *NotFoundError when no entities are found.
+func (sq *StoryQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
+	if ids, err = sq.Limit(2).IDs(ctx); err != nil {
+		return
+	}
+	switch len(ids) {
+	case 1:
+		id = ids[0]
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = &NotSingularError{story.Label}
+	}
+	return
+}
+
+// OnlyIDX is like OnlyID, but panics if an error occurs.
+func (sq *StoryQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := sq.OnlyID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
+// All executes the query and returns a list of Stories.
+func (sq *StoryQuery) All(ctx context.Context) ([]*Story, error) {
+	if err := sq.prepareQuery(ctx); err != nil {
+		return nil, err
+	}
+	return sq.sqlAll(ctx)
+}
+
+// AllX is like All, but panics if an error occurs.
+func (sq *StoryQuery) AllX(ctx context.Context) []*Story {
+	nodes, err := sq.All(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return nodes
+}
+
+// IDs executes the query and returns a list of Story IDs.
+func (sq *StoryQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	if err := sq.Select(story.FieldID).Scan(ctx, &ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// IDsX is like IDs, but panics if an error occurs.
+func (sq *StoryQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := sq.IDs(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return ids
+}
+
+// Count returns the count of the given query.
+func (sq *StoryQuery) Count(ctx context.Context) (int, error) {
+	if err := sq.prepareQuery(ctx); err != nil {
+		return 0, err
+	}
+	return sq.sqlCount(ctx)
+}
+
+// CountX is like Count, but panics if an error occurs.
+func (sq *StoryQuery) CountX(ctx context.Context) int {
+	count, err := sq.Count(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return count
+}
+
+// Exist returns true if the query has elements in the graph.
+func (sq *StoryQuery) Exist(ctx context.Context) (bool, error) {
+	if err := sq.prepareQuery(ctx); err != nil {
+		return false, err
+	}
+	return sq.sqlExist(ctx)
+}
+
+// ExistX is like Exist, but panics if an error occurs.
+func (sq *StoryQuery) ExistX(ctx context.Context) bool {
+	exist, err := sq.Exist(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return exist
+}
+
+// Clone returns a duplicate of the StoryQuery builder, including all associated steps. It can be
+// used to prepare common query builders and use them differently after the clone is made.
+func (sq *StoryQuery) Clone() *StoryQuery {
+	if sq == nil {
+		return nil
+	}
+	return &StoryQuery{
+		config:     sq.config,
+		limit:      sq.limit,
+		offset:     sq.offset,
+		order:      append([]OrderFunc{}, sq.order...),
+		predicates: append([]predicate.Story{}, sq.predicates...),
+		withOwner:  sq.withOwner.Clone(),
+		// clone intermediate query.
+		sql:  sq.sql.Clone(),
+		path: sq.path,
+	}
+}
+
+// WithOwner tells the query-builder to eager-load the nodes that are connected to
+// the "owner" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StoryQuery) WithOwner(opts ...func(*BoardQuery)) *StoryQuery {
+	query := &BoardQuery{config: sq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	sq.withOwner = query
+	return sq
+}
+
+// GroupBy is used to group vertices by one or more fields/columns.
+// It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		CreateTime time.Time `json:"create_time,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Story.Query().
+//		GroupBy(story.FieldCreateTime).
+//		Aggregate(models.Count()).
+//		Scan(ctx, &v)
+func (sq *StoryQuery) GroupBy(field string, fields ...string) *StoryGroupBy {
+	group := &StoryGroupBy{config: sq.config}
+	group.fields = append([]string{field}, fields...)
+	group.path = func(ctx context.Context) (prev *sql.Selector, err error) {
+		if err := sq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		return sq.sqlQuery(ctx), nil
+	}
+	return group
+}
+
+// Select allows the selection one or more fields/columns for the given query,
+// instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		CreateTime time.Time `json:"create_time,omitempty"`
+//	}
+//
+//	client.Story.Query().
+//		Select(story.FieldCreateTime).
+//		Scan(ctx, &v)
+func (sq *StoryQuery) Select(fields ...string) *StorySelect {
+	sq.fields = append(sq.fields, fields...)
+	return &StorySelect{StoryQuery: sq}
+}
+
+func (sq *StoryQuery) prepareQuery(ctx context.Context) error {
+	for _, f := range sq.fields {
+		if !story.ValidColumn(f) {
+			return &ValidationError{Name: f, err: fmt.Errorf("models: invalid field %q for query", f)}
+		}
+	}
+	if sq.path != nil {
+		prev, err := sq.path(ctx)
+		if err != nil {
+			return err
+		}
+		sq.sql = prev
+	}
+	return nil
+}
+
+func (sq *StoryQuery) sqlAll(ctx context.Context) ([]*Story, error) {
+	var (
+		nodes       = []*Story{}
+		withFKs     = sq.withFKs
+		_spec       = sq.querySpec()
+		loadedTypes = [1]bool{
+			sq.withOwner != nil,
+		}
+	)
+	if sq.withOwner != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, story.ForeignKeys...)
+	}
+	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
+		node := &Story{config: sq.config}
+		nodes = append(nodes, node)
+		return node.scanValues(columns)
+	}
+	_spec.Assign = func(columns []string, values []interface{}) error {
+		if len(nodes) == 0 {
+			return fmt.Errorf("models: Assign called without calling ScanValues")
+		}
+		node := nodes[len(nodes)-1]
+		node.Edges.loadedTypes = loadedTypes
+		return node.assignValues(columns, values)
+	}
+	if err := sqlgraph.QueryNodes(ctx, sq.driver, _spec); err != nil {
+		return nil, err
+	}
+	if len(nodes) == 0 {
+		return nodes, nil
+	}
+
+	if query := sq.withOwner; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*Story)
+		for i := range nodes {
+			if nodes[i].board_stories == nil {
+				continue
+			}
+			fk := *nodes[i].board_stories
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(board.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "board_stories" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.Owner = n
+			}
+		}
+	}
+
+	return nodes, nil
+}
+
+func (sq *StoryQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := sq.querySpec()
+	_spec.Node.Columns = sq.fields
+	if len(sq.fields) > 0 {
+		_spec.Unique = sq.unique != nil && *sq.unique
+	}
+	return sqlgraph.CountNodes(ctx, sq.driver, _spec)
+}
+
+func (sq *StoryQuery) sqlExist(ctx context.Context) (bool, error) {
+	n, err := sq.sqlCount(ctx)
+	if err != nil {
+		return false, fmt.Errorf("models: check existence: %w", err)
+	}
+	return n > 0, nil
+}
+
+func (sq *StoryQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := &sqlgraph.QuerySpec{
+		Node: &sqlgraph.NodeSpec{
+			Table:   story.Table,
+			Columns: story.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeUUID,
+				Column: story.FieldID,
+			},
+		},
+		From:   sq.sql,
+		Unique: true,
+	}
+	if unique := sq.unique; unique != nil {
+		_spec.Unique = *unique
+	}
+	if fields := sq.fields; len(fields) > 0 {
+		_spec.Node.Columns = make([]string, 0, len(fields))
+		_spec.Node.Columns = append(_spec.Node.Columns, story.FieldID)
+		for i := range fields {
+			if fields[i] != story.FieldID {
+				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
+			}
+		}
+	}
+	if ps := sq.predicates; len(ps) > 0 {
+		_spec.Predicate = func(selector *sql.Selector) {
+			for i := range ps {
+				ps[i](selector)
+			}
+		}
+	}
+	if limit := sq.limit; limit != nil {
+		_spec.Limit = *limit
+	}
+	if offset := sq.offset; offset != nil {
+		_spec.Offset = *offset
+	}
+	if ps := sq.order; len(ps) > 0 {
+		_spec.Order = func(selector *sql.Selector) {
+			for i := range ps {
+				ps[i](selector)
+			}
+		}
+	}
+	return _spec
+}
+
+func (sq *StoryQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(sq.driver.Dialect())
+	t1 := builder.Table(story.Table)
+	columns := sq.fields
+	if len(columns) == 0 {
+		columns = story.Columns
+	}
+	selector := builder.Select(t1.Columns(columns...)...).From(t1)
+	if sq.sql != nil {
+		selector = sq.sql
+		selector.Select(selector.Columns(columns...)...)
+	}
+	if sq.unique != nil && *sq.unique {
+		selector.Distinct()
+	}
+	for _, p := range sq.predicates {
+		p(selector)
+	}
+	for _, p := range sq.order {
+		p(selector)
+	}
+	if offset := sq.offset; offset != nil {
+		// limit is mandatory for offset clause. We start
+		// with default value, and override it below if needed.
+		selector.Offset(*offset).Limit(math.MaxInt32)
+	}
+	if limit := sq.limit; limit != nil {
+		selector.Limit(*limit)
+	}
+	return selector
+}
+
+// StoryGroupBy is the group-by builder for Story entities.
+type StoryGroupBy struct {
+	config
+	fields []string
+	fns    []AggregateFunc
+	// intermediate query (i.e. traversal path).
+	sql  *sql.Selector
+	path func(context.Context) (*sql.Selector, error)
+}
+
+// Aggregate adds the given aggregation functions to the group-by query.
+func (sgb *StoryGroupBy) Aggregate(fns ...AggregateFunc) *StoryGroupBy {
+	sgb.fns = append(sgb.fns, fns...)
+	return sgb
+}
+
+// Scan applies the group-by query and scans the result into the given value.
+func (sgb *StoryGroupBy) Scan(ctx context.Context, v interface{}) error {
+	query, err := sgb.path(ctx)
+	if err != nil {
+		return err
+	}
+	sgb.sql = query
+	return sgb.sqlScan(ctx, v)
+}
+
+// ScanX is like Scan, but panics if an error occurs.
+func (sgb *StoryGroupBy) ScanX(ctx context.Context, v interface{}) {
+	if err := sgb.Scan(ctx, v); err != nil {
+		panic(err)
+	}
+}
+
+// Strings returns list of strings from group-by.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Strings(ctx context.Context) ([]string, error) {
+	if len(sgb.fields) > 1 {
+		return nil, errors.New("models: StoryGroupBy.Strings is not achievable when grouping more than 1 field")
+	}
+	var v []string
+	if err := sgb.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// StringsX is like Strings, but panics if an error occurs.
+func (sgb *StoryGroupBy) StringsX(ctx context.Context) []string {
+	v, err := sgb.Strings(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// String returns a single string from a group-by query.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) String(ctx context.Context) (_ string, err error) {
+	var v []string
+	if v, err = sgb.Strings(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StoryGroupBy.Strings returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// StringX is like String, but panics if an error occurs.
+func (sgb *StoryGroupBy) StringX(ctx context.Context) string {
+	v, err := sgb.String(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Ints returns list of ints from group-by.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Ints(ctx context.Context) ([]int, error) {
+	if len(sgb.fields) > 1 {
+		return nil, errors.New("models: StoryGroupBy.Ints is not achievable when grouping more than 1 field")
+	}
+	var v []int
+	if err := sgb.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// IntsX is like Ints, but panics if an error occurs.
+func (sgb *StoryGroupBy) IntsX(ctx context.Context) []int {
+	v, err := sgb.Ints(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Int returns a single int from a group-by query.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Int(ctx context.Context) (_ int, err error) {
+	var v []int
+	if v, err = sgb.Ints(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StoryGroupBy.Ints returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// IntX is like Int, but panics if an error occurs.
+func (sgb *StoryGroupBy) IntX(ctx context.Context) int {
+	v, err := sgb.Int(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Float64s returns list of float64s from group-by.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Float64s(ctx context.Context) ([]float64, error) {
+	if len(sgb.fields) > 1 {
+		return nil, errors.New("models: StoryGroupBy.Float64s is not achievable when grouping more than 1 field")
+	}
+	var v []float64
+	if err := sgb.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// Float64sX is like Float64s, but panics if an error occurs.
+func (sgb *StoryGroupBy) Float64sX(ctx context.Context) []float64 {
+	v, err := sgb.Float64s(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Float64 returns a single float64 from a group-by query.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Float64(ctx context.Context) (_ float64, err error) {
+	var v []float64
+	if v, err = sgb.Float64s(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StoryGroupBy.Float64s returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// Float64X is like Float64, but panics if an error occurs.
+func (sgb *StoryGroupBy) Float64X(ctx context.Context) float64 {
+	v, err := sgb.Float64(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Bools returns list of bools from group-by.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Bools(ctx context.Context) ([]bool, error) {
+	if len(sgb.fields) > 1 {
+		return nil, errors.New("models: StoryGroupBy.Bools is not achievable when grouping more than 1 field")
+	}
+	var v []bool
+	if err := sgb.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// BoolsX is like Bools, but panics if an error occurs.
+func (sgb *StoryGroupBy) BoolsX(ctx context.Context) []bool {
+	v, err := sgb.Bools(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Bool returns a single bool from a group-by query.
+// It is only allowed when executing a group-by query with one field.
+func (sgb *StoryGroupBy) Bool(ctx context.Context) (_ bool, err error) {
+	var v []bool
+	if v, err = sgb.Bools(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StoryGroupBy.Bools returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// BoolX is like Bool, but panics if an error occurs.
+func (sgb *StoryGroupBy) BoolX(ctx context.Context) bool {
+	v, err := sgb.Bool(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func (sgb *StoryGroupBy) sqlScan(ctx context.Context, v interface{}) error {
+	for _, f := range sgb.fields {
+		if !story.ValidColumn(f) {
+			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
+		}
+	}
+	selector := sgb.sqlQuery()
+	if err := selector.Err(); err != nil {
+		return err
+	}
+	rows := &sql.Rows{}
+	query, args := selector.Query()
+	if err := sgb.driver.Query(ctx, query, args, rows); err != nil {
+		return err
+	}
+	defer rows.Close()
+	return sql.ScanSlice(rows, v)
+}
+
+func (sgb *StoryGroupBy) sqlQuery() *sql.Selector {
+	selector := sgb.sql.Select()
+	aggregation := make([]string, 0, len(sgb.fns))
+	for _, fn := range sgb.fns {
+		aggregation = append(aggregation, fn(selector))
+	}
+	// If no columns were selected in a custom aggregation function, the default
+	// selection is the fields used for "group-by", and the aggregation functions.
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(sgb.fields)+len(sgb.fns))
+		for _, f := range sgb.fields {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	return selector.GroupBy(selector.Columns(sgb.fields...)...)
+}
+
+// StorySelect is the builder for selecting fields of Story entities.
+type StorySelect struct {
+	*StoryQuery
+	// intermediate query (i.e. traversal path).
+	sql *sql.Selector
+}
+
+// Scan applies the selector query and scans the result into the given value.
+func (ss *StorySelect) Scan(ctx context.Context, v interface{}) error {
+	if err := ss.prepareQuery(ctx); err != nil {
+		return err
+	}
+	ss.sql = ss.StoryQuery.sqlQuery(ctx)
+	return ss.sqlScan(ctx, v)
+}
+
+// ScanX is like Scan, but panics if an error occurs.
+func (ss *StorySelect) ScanX(ctx context.Context, v interface{}) {
+	if err := ss.Scan(ctx, v); err != nil {
+		panic(err)
+	}
+}
+
+// Strings returns list of strings from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Strings(ctx context.Context) ([]string, error) {
+	if len(ss.fields) > 1 {
+		return nil, errors.New("models: StorySelect.Strings is not achievable when selecting more than 1 field")
+	}
+	var v []string
+	if err := ss.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// StringsX is like Strings, but panics if an error occurs.
+func (ss *StorySelect) StringsX(ctx context.Context) []string {
+	v, err := ss.Strings(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// String returns a single string from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) String(ctx context.Context) (_ string, err error) {
+	var v []string
+	if v, err = ss.Strings(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StorySelect.Strings returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// StringX is like String, but panics if an error occurs.
+func (ss *StorySelect) StringX(ctx context.Context) string {
+	v, err := ss.String(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Ints returns list of ints from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Ints(ctx context.Context) ([]int, error) {
+	if len(ss.fields) > 1 {
+		return nil, errors.New("models: StorySelect.Ints is not achievable when selecting more than 1 field")
+	}
+	var v []int
+	if err := ss.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// IntsX is like Ints, but panics if an error occurs.
+func (ss *StorySelect) IntsX(ctx context.Context) []int {
+	v, err := ss.Ints(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Int returns a single int from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Int(ctx context.Context) (_ int, err error) {
+	var v []int
+	if v, err = ss.Ints(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StorySelect.Ints returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// IntX is like Int, but panics if an error occurs.
+func (ss *StorySelect) IntX(ctx context.Context) int {
+	v, err := ss.Int(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Float64s returns list of float64s from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Float64s(ctx context.Context) ([]float64, error) {
+	if len(ss.fields) > 1 {
+		return nil, errors.New("models: StorySelect.Float64s is not achievable when selecting more than 1 field")
+	}
+	var v []float64
+	if err := ss.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// Float64sX is like Float64s, but panics if an error occurs.
+func (ss *StorySelect) Float64sX(ctx context.Context) []float64 {
+	v, err := ss.Float64s(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Float64 returns a single float64 from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Float64(ctx context.Context) (_ float64, err error) {
+	var v []float64
+	if v, err = ss.Float64s(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StorySelect.Float64s returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// Float64X is like Float64, but panics if an error occurs.
+func (ss *StorySelect) Float64X(ctx context.Context) float64 {
+	v, err := ss.Float64(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Bools returns list of bools from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Bools(ctx context.Context) ([]bool, error) {
+	if len(ss.fields) > 1 {
+		return nil, errors.New("models: StorySelect.Bools is not achievable when selecting more than 1 field")
+	}
+	var v []bool
+	if err := ss.Scan(ctx, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// BoolsX is like Bools, but panics if an error occurs.
+func (ss *StorySelect) BoolsX(ctx context.Context) []bool {
+	v, err := ss.Bools(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// Bool returns a single bool from a selector. It is only allowed when selecting one field.
+func (ss *StorySelect) Bool(ctx context.Context) (_ bool, err error) {
+	var v []bool
+	if v, err = ss.Bools(ctx); err != nil {
+		return
+	}
+	switch len(v) {
+	case 1:
+		return v[0], nil
+	case 0:
+		err = &NotFoundError{story.Label}
+	default:
+		err = fmt.Errorf("models: StorySelect.Bools returned %d results when one was expected", len(v))
+	}
+	return
+}
+
+// BoolX is like Bool, but panics if an error occurs.
+func (ss *StorySelect) BoolX(ctx context.Context) bool {
+	v, err := ss.Bool(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func (ss *StorySelect) sqlScan(ctx context.Context, v interface{}) error {
+	rows := &sql.Rows{}
+	query, args := ss.sql.Query()
+	if err := ss.driver.Query(ctx, query, args, rows); err != nil {
+		return err
+	}
+	defer rows.Close()
+	return sql.ScanSlice(rows, v)
+}

@@ -1,0 +1,17 @@
+{{define "content"}}
+<div x-data class="columns mt-5">
+  <div class="column is-4">{{template "createstory" .}}</div>
+  <div class="column is-8">
+    {{template "toolbar" .}}
+    {{block "storylist" .}}
+    <div id="storylist">
+      {{range .stories}}
+      {{template "storyitem" .}}
+      {{else}}
+      Nothing here
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}

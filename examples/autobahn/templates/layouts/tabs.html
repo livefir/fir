@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <title>{{.app_name}}</title>
+    {{template "header" .}}
+</head>
+
+<body>
+    <div class="columns is-mobile">
+        <div class="column is-8 is-offset-2">
+            {{template "navbar" .}}
+            <div class="" style="min-height: 101vh !important;">
+                <div x-data class="my-2" style="min-height: 500px">
+                    <div class="tabs px-3">
+                        <ul>
+                            <li @click="$fir.navigate('/')" class='{{.fir.ActiveRoute "/" "is-active"}}'><a>Stories</a>
+                            </li>
+                            <li @click="$fir.navigate('/roadmap')" class='{{.fir.ActiveRoute "/roadmap" "is-active"}}'>
+                                <a>Roadmap</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {{template "content" .}}
+                </div>
+
+            </div>
+            {{template "footer" .}}
+        </div>
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+{{block "storyitem" .}}
+<a id="storyitem-{{.ID}}" href="/{{.Edges.Owner.ID}}/stories/{{.ID}}/show">
+    <div class="content box mt-2" style="text-decoration: none;">
+        <p> {{.Title}} </p>
+    </div>
+</a>
+{{end}}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <title>{{.app_name}}</title>
+    {{template "header" .}}
+</head>
+
+<body>
+    <div class="columns is-mobile">
+        <div class="column is-8 is-offset-2">
+            {{template "navbar" .}}
+            <div class="" style="min-height: 101vh !important;">
+                {{block "fir-error" .}}
+                <div id="fir-error" class="mt-5 columns is-mobile is-centered {{ if not .error}}is-hidden{{end}}">
+                    <div class="column is-half">
+                        <div class="notification is-small is-danger is-light has-text-centered">
+                            {{ with .error }}
+                            <p>{{.}}</p>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+                {{template "content" .}}
+            </div>
+            {{template "footer" .}}
+        </div>
+
+    </div>
+</body>
+
+</html>
