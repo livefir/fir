@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/entc/gen"
 	"github.com/Masterminds/sprig"
 	pluralize "github.com/gertd/go-pluralize"
+	"github.com/yosssi/gohtml"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -245,6 +246,8 @@ func execTextTemplate(inFile, outFile string, vars map[string]any) {
 	if filepath.Ext(outFile) == ".go" {
 		inFileData, err = format.Source(buf.Bytes())
 		checkerr(err)
+	} else if filepath.Ext(outFile) == ".html" {
+		inFileData = gohtml.FormatBytes(buf.Bytes())
 	} else {
 		inFileData = buf.Bytes()
 	}
