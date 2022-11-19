@@ -239,12 +239,8 @@ func buildPatchOperations(t *template.Template, patchset Patchset) []byte {
 				Selector: p.GetSelector(),
 				Value:    p.GetTemplate().Data,
 			})
-		case reload:
-			patches = append(patches, patch{OpVal: reload})
-		case resetForm:
-			patches = append(patches, patch{OpVal: resetForm, Selector: p.GetSelector()})
-		case navigate:
-			patches = append(patches, patch{OpVal: navigate, Value: p.GetSelector()})
+		case navigate, reload, resetForm:
+			patches = append(patches, patch{OpVal: p.Op(), Selector: p.GetSelector()})
 		case morph, after, before, appendOp, prepend, remove:
 			var buf bytes.Buffer
 			err := t.ExecuteTemplate(&buf, p.GetTemplate().Name, p.GetTemplate().Data)
