@@ -64,9 +64,9 @@ func (c *Counter) Count() int32 {
 }
 
 func NewCounterView(pubsubAdapter fir.PubsubAdapter) *CounterView {
-	stream := make(chan fir.Patch)
+	publisher := make(chan fir.Patchset)
 	ticker := time.NewTicker(time.Second)
-	c := &CounterView{stream: stream, model: &Counter{}, pubsubAdapter: pubsubAdapter}
+	c := &CounterView{publisher: publisher, model: &Counter{}, pubsubAdapter: pubsubAdapter}
 	pattern := fmt.Sprintf("*:%s", c.ID())
 
 	go func() {
@@ -80,7 +80,7 @@ func NewCounterView(pubsubAdapter fir.PubsubAdapter) *CounterView {
 			if err != nil {
 				continue
 			}
-			stream <- patch
+			publisher <- fir.Patchset{patch}
 		}
 	}()
 	return c
@@ -89,7 +89,7 @@ func NewCounterView(pubsubAdapter fir.PubsubAdapter) *CounterView {
 type CounterView struct {
 	fir.DefaultView
 	model         *Counter
-	stream        chan fir.Patch
+	publisher     chan fir.Patchset
 	pubsubAdapter fir.PubsubAdapter
 	sync.RWMutex
 }
@@ -98,8 +98,8 @@ func (c *CounterView) ID() string {
 	return "counter"
 }
 
-func (c *CounterView) Stream() <-chan fir.Patch {
-	return c.stream
+func (c *CounterView) Publisher() <-chan fir.Patchset {
+	return c.publisher
 }
 
 func (c *CounterView) Content() string {

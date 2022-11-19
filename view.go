@@ -1,44 +1,15 @@
 package fir
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 )
 
 var DefaultViewExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
-
-type Page struct {
-	Data    Data   `json:"data"`
-	Code    int    `json:"statusCode"`
-	Message string `json:"statusMessage"`
-	Error   error  `json:"-"`
-}
-
-type AppContext struct {
-	Name    string
-	URLPath string
-}
-
-func (a *AppContext) ActiveRoute(path, class string) string {
-	if a.URLPath == path {
-		return class
-	}
-	return ""
-}
-
-func (a *AppContext) NotActiveRoute(path, class string) string {
-	if a.URLPath != path {
-		return class
-	}
-	return ""
-}
 
 type View interface {
 	ID() string
@@ -53,7 +24,7 @@ type View interface {
 	OnGet(http.ResponseWriter, *http.Request) Page
 	OnPost(http.ResponseWriter, *http.Request) Page
 	OnEvent(event Event) Patchset
-	Stream() <-chan Patch
+	Publisher() <-chan Patchset
 }
 
 type DefaultView struct{}
@@ -144,7 +115,7 @@ func (d DefaultView) OnEvent(event Event) Patchset {
 	return Patchset{}
 }
 
-func (d DefaultView) Stream() <-chan Patch {
+func (d DefaultView) Publisher() <-chan Patchset {
 	return nil
 }
 
@@ -201,7 +172,7 @@ func (d DefaultErrorView) OnEvent(event Event) Patchset {
 	return Patchset{}
 }
 
-func (d DefaultErrorView) Stream() <-chan Patch {
+func (d DefaultErrorView) Publisher() <-chan Patchset {
 	return nil
 }
 
@@ -212,7 +183,7 @@ type viewHandler struct {
 	errorViewTemplate *template.Template
 	mountData         Data
 	cntrl             *controller
-	streamCh          chan Patch
+	streamCh          chan Patchset
 }
 
 func (v *viewHandler) reloadTemplates() {
@@ -229,105 +200,6 @@ func (v *viewHandler) reloadTemplates() {
 			panic(err)
 		}
 	}
-}
-
-func buildDOMPatch(t *template.Template, patch Patch) (Operation, error) {
-	var op Op
-	var patchTemplate *Template
-	var selector string
-
-	switch v := patch.(type) {
-	case Morph:
-		op = v.Op()
-		patchTemplate = v.Template
-		selector = v.Selector
-	case After:
-		op = v.Op()
-		patchTemplate = v.Template
-		selector = v.Selector
-	case Before:
-		op = v.Op()
-		patchTemplate = v.Template
-		selector = v.Selector
-	case Append:
-		op = v.Op()
-		patchTemplate = v.Template
-		selector = v.Selector
-	case Prepend:
-		op = v.Op()
-		patchTemplate = v.Template
-		selector = v.Selector
-	case Remove:
-		op = v.Op()
-		patchTemplate = v.Template
-		selector = v.Selector
-	}
-
-	if patchTemplate == nil {
-		return Operation{}, fmt.Errorf("error: patch %v template is nil", patch.Op())
-	}
-	if selector == "" {
-		return Operation{}, fmt.Errorf("error: patch %v selector is empty", patch.Op())
-	}
-
-	var buf bytes.Buffer
-	err := t.ExecuteTemplate(&buf, patchTemplate.Name, patchTemplate.Data)
-	if err != nil {
-		// if s.wc.debugLog {
-		// 	log.Printf("[controller][error] %v with data => \n %+v\n", err, getJSON(data))
-		// }
-		return Operation{}, err
-	}
-	// if s.wc.debugLog {
-	// 	log.Printf("[controller]rendered template %+v, with data => \n %+v\n", tmpl, getJSON(data))
-	// }
-	html := buf.String()
-	buf.Reset()
-	return Operation{
-		Op:       op,
-		Selector: selector,
-		Value:    html,
-	}, nil
-}
-
-func buildStorePatch(patch Patch) (Operation, error) {
-	storePatch := patch.(Store)
-	if storePatch.Name == "" {
-		return Operation{}, fmt.Errorf("error: patch %v name is empty", patch.Op())
-	}
-	if storePatch.Data == nil {
-		return Operation{}, fmt.Errorf("error: patch %v data is nil", patch.Op())
-	}
-
-	return Operation{
-		Op:       updateStore,
-		Selector: storePatch.Name,
-		Value:    storePatch.Data,
-	}, nil
-}
-
-func buildOperation(t *template.Template, patch Patch) (Operation, error) {
-	switch patch.Op() {
-	case morph, after, before, appendOp, prepend, remove:
-		operation, err := buildDOMPatch(t, patch)
-		if err != nil {
-			return Operation{}, err
-		}
-		return operation, nil
-	case reload:
-		return Operation{Op: reload}, nil
-	case resetForm:
-		p := patch.(ResetForm)
-		return Operation{Op: resetForm, Selector: p.Selector}, nil
-	case navigate:
-		p := patch.(Navigate)
-		return Operation{Op: navigate, Value: p.To}, nil
-	case updateStore:
-		return buildStorePatch(patch)
-	default:
-		return Operation{}, fmt.Errorf("operation unknown")
-	}
-
 }
 
 func layoutSetContentEmpty(opt opt, view View) (*template.Template, error) {
@@ -478,107 +350,4 @@ func UserError(err error) string {
 		userMessage = userError.Error()
 	}
 	return userMessage
-}
-
-func find(opt opt, p string, extensions []string) []string {
-	var files []string
-	var fi fs.FileInfo
-	var err error
-
-	if opt.hasEmbedFS {
-		fi, err = fs.Stat(opt.embedFS, p)
-		if err != nil {
-			return files
-		}
-	} else {
-		fi, err = os.Stat(p)
-		if err != nil {
-			return files
-		}
-	}
-
-	if !fi.IsDir() {
-		if !contains(extensions, filepath.Ext(p)) {
-			return files
-		}
-		files = append(files, p)
-		return files
-	}
-
-	if opt.hasEmbedFS {
-		err = fs.WalkDir(opt.embedFS, p, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if contains(extensions, filepath.Ext(d.Name())) {
-				files = append(files, path)
-			}
-			return nil
-		})
-
-		if err != nil {
-			panic(err)
-		}
-
-	} else {
-
-		err = filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if contains(extensions, filepath.Ext(d.Name())) {
-				files = append(files, path)
-			}
-			return nil
-		})
-
-		if err != nil {
-			panic(err)
-		}
-
-	}
-
-	return files
-}
-
-func contains(arr []string, s string) bool {
-	for _, a := range arr {
-		if a == s {
-			return true
-		}
-	}
-	return false
-}
-
-func isDir(path string, opt opt) bool {
-	if opt.hasEmbedFS {
-		fileInfo, err := fs.Stat(opt.embedFS, path)
-		if err != nil {
-			fmt.Println("[warning]isDir warn: ", err)
-			return false
-		}
-		return fileInfo.IsDir()
-	}
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		fmt.Println("[warning]isDir error: ", err)
-		return false
-	}
-
-	return fileInfo.IsDir()
-}
-
-func isFileHTML(path string, opt opt) bool {
-	if opt.hasEmbedFS {
-		if _, err := fs.Stat(opt.embedFS, path); err != nil {
-			return true
-		}
-		return false
-	}
-	if _, err := os.Stat(path); err != nil {
-		return true
-	}
-	return false
 }

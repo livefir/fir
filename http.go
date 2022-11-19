@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 )
 
 func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
@@ -29,30 +28,11 @@ func onPatchEvent(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	event.requestContext = r.Context()
 	patchset := getEventPatchset(event, v.view)
 	channel := *v.cntrl.channelFunc(r, v.view.ID())
-	operations := make([]Operation, 0)
-	for _, patch := range patchset {
-		operation, err := buildOperation(v.viewTemplate, patch)
-		if err != nil {
-			if strings.ContainsAny("fir-error", err.Error()) {
-				continue
-			}
-			log.Printf("[onPatchEvent] buildOperation error: %v\n", err)
-			continue
-		}
-
-		err = v.cntrl.pubsub.Publish(r.Context(), channel, operation)
-		if err != nil {
-			log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
-		}
-
-		operations = append(operations, operation)
-	}
-
-	json.NewEncoder(w).Encode(operations)
+	err = v.cntrl.pubsub.Publish(r.Context(), channel, patchset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
 	}
+	w.Write(buildPatchOperations(v.viewTemplate, patchset))
 }
 
 func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
