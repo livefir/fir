@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 
@@ -43,17 +44,25 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	go func() {
 		for patchset := range subscription.C() {
-			go func(patchset Patchset) {
-				message := buildPatchOperations(v.viewTemplate, patchset)
-				log.Printf("[onWebsocket] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
-				err = conn.WriteMessage(websocket.TextMessage, message)
-				if err != nil {
-					log.Printf("[onWebsocket] error: writing message for channel:%v, closing conn with err %v", channel, err)
-					conn.Close()
-				}
-			}(patchset)
+			go writePatchOperations(*conn, channel, v.viewTemplate, patchset)
 		}
 	}()
+
+	if v.cntrl.opt.developmentMode {
+		// subscriber for reload operations in development mode. see watch.go
+		reloadSubscriber, err := v.cntrl.pubsub.Subscribe(ctx, devReloadChannel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer reloadSubscriber.Close()
+
+		go func() {
+			for patchset := range reloadSubscriber.C() {
+				go writePatchOperations(*conn, devReloadChannel, v.viewTemplate, patchset)
+			}
+		}()
+	}
 
 loop:
 	for {
@@ -85,4 +94,15 @@ loop:
 			log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 		}
 	}
+}
+
+func writePatchOperations(conn websocket.Conn, channel string, t *template.Template, patchset Patchset) error {
+	message := buildPatchOperations(t, patchset)
+	log.Printf("[writePatchOperations] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
+	err := conn.WriteMessage(websocket.TextMessage, message)
+	if err != nil {
+		log.Printf("[writePatchOperations] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		conn.Close()
+	}
+	return err
 }
