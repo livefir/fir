@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	gitignore "github.com/sabhiram/go-gitignore"
+	"golang.org/x/exp/slices"
 )
 
 type publicOpt struct {
@@ -15,26 +16,35 @@ type publicOpt struct {
 	extensions []string
 }
 
+// PublicOption is a function that can be used to configure generation of public directory using GeneratePublic.
 type PublicOption func(*publicOpt)
 
+// InDir sets the input directory for the public directory.
 func InDir(path string) PublicOption {
 	return func(o *publicOpt) {
 		o.inDir = path
 	}
 }
 
+// OutputDir sets the output directory for the public directory.
 func OutDir(path string) PublicOption {
 	return func(o *publicOpt) {
 		o.outDir = path
 	}
 }
 
+// Extension adds an extension to the list of extensions that will be copied over.
 func Extensions(extensions []string) PublicOption {
 	return func(o *publicOpt) {
-		o.extensions = extensions
+		for _, ext := range extensions {
+			if !slices.Contains(o.extensions, ext) {
+				o.extensions = append(o.extensions, ext)
+			}
+		}
 	}
 }
 
+// GeneratePublic generates the public directory which can be then embedded into the binary.
 func GeneratePublic(options ...PublicOption) error {
 	opt := &publicOpt{
 		inDir:      ".",
@@ -77,7 +87,7 @@ func GeneratePublic(options ...PublicOption) error {
 			return nil
 		}
 
-		if !contains(opt.extensions, filepath.Ext(path)) {
+		if !slices.Contains(opt.extensions, filepath.Ext(path)) {
 			return nil
 		}
 

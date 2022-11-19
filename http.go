@@ -52,7 +52,7 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 
 	v.mountData["app_name"] = v.cntrl.name
-	v.mountData["fir"] = &AppContext{
+	v.mountData["fir"] = &PageContext{
 		Name:    v.cntrl.name,
 		URLPath: r.URL.Path,
 	}

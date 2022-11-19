@@ -7,6 +7,7 @@ import (
 	"log"
 )
 
+// Op is the type of patch operation
 type Op string
 
 const (
@@ -24,12 +25,15 @@ const (
 
 // Patch is an interface for all patch operations
 type Patch interface {
+	// Op returns the patch operation
 	Op() Op
+	// GetSelector returns the selector for the patch operation
 	GetSelector() string
+	// GetTemplate returns the template for the patch operation
 	GetTemplate() *Template
 }
 
-// Patchset is a set of patches to be applied to the DOM
+// Patchset is a set of patche operations to be applied to the DOM
 type Patchset []Patch
 
 type patch struct {
@@ -57,10 +61,13 @@ func (p *patch) GetTemplate() *Template {
 
 // Template is a html/template to be rendered
 type Template struct {
+	// Name is the name of the template
 	Name string `json:"name"`
-	Data any    `json:"data"`
+	// Data is the data to be passed to the template
+	Data any `json:"data"`
 }
 
+// Morph is a patch operation to morph a DOM element
 type Morph struct {
 	Selector string
 	Template *Template
@@ -78,6 +85,7 @@ func (m Morph) GetTemplate() *Template {
 	return m.Template
 }
 
+// After is a patch operation to insert a DOM element after a selector
 type After struct {
 	Selector string
 	Template *Template
@@ -95,6 +103,7 @@ func (a After) GetTemplate() *Template {
 	return a.Template
 }
 
+// Before is a patch operation to insert a DOM element before a selector
 type Before struct {
 	Selector string
 	Template *Template
@@ -112,6 +121,7 @@ func (b Before) GetTemplate() *Template {
 	return b.Template
 }
 
+// Append is a patch operation to append a DOM element to a selector
 type Append struct {
 	Selector string
 	Template *Template
@@ -129,6 +139,7 @@ func (a Append) GetTemplate() *Template {
 	return a.Template
 }
 
+// Prepend is a patch operation to prepend a DOM element to a selector
 type Prepend struct {
 	Selector string
 	Template *Template
@@ -146,6 +157,7 @@ func (p Prepend) GetTemplate() *Template {
 	return p.Template
 }
 
+// Remove is a patch operation to remove a DOM element
 type Remove struct {
 	Selector string
 	Template *Template
@@ -163,6 +175,7 @@ func (r Remove) GetTemplate() *Template {
 	return r.Template
 }
 
+// Store is a patch operation to update alpine.js store in the browser
 type Store struct {
 	Name string
 	Data any
@@ -183,6 +196,7 @@ func (s Store) GetTemplate() *Template {
 	}
 }
 
+// Reload is a patch operation to reload the page in development mode
 type Reload struct{}
 
 func (r Reload) GetSelector() string {
@@ -197,6 +211,7 @@ func (r Reload) GetTemplate() *Template {
 	return nil
 }
 
+// ResetForm is a patch operation to reset a form
 type ResetForm struct {
 	Selector string
 }
@@ -213,6 +228,7 @@ func (r ResetForm) GetTemplate() *Template {
 	return nil
 }
 
+// Navigate is a patch operation to navigate to a new page
 type Navigate struct {
 	To string
 }

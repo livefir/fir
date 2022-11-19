@@ -11,8 +11,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const UserIDKey = "key_user_id"
-
 func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	channel := *v.cntrl.channelFunc(r, v.view.ID())
 

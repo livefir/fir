@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/exp/slices"
 )
 
 func find(opt opt, p string, extensions []string) []string {
@@ -25,7 +27,7 @@ func find(opt opt, p string, extensions []string) []string {
 	}
 
 	if !fi.IsDir() {
-		if !contains(extensions, filepath.Ext(p)) {
+		if !slices.Contains(extensions, filepath.Ext(p)) {
 			return files
 		}
 		files = append(files, p)
@@ -38,7 +40,7 @@ func find(opt opt, p string, extensions []string) []string {
 				return err
 			}
 
-			if contains(extensions, filepath.Ext(d.Name())) {
+			if slices.Contains(extensions, filepath.Ext(d.Name())) {
 				files = append(files, path)
 			}
 			return nil
@@ -55,7 +57,7 @@ func find(opt opt, p string, extensions []string) []string {
 				return err
 			}
 
-			if contains(extensions, filepath.Ext(d.Name())) {
+			if slices.Contains(extensions, filepath.Ext(d.Name())) {
 				files = append(files, path)
 			}
 			return nil
@@ -68,15 +70,6 @@ func find(opt opt, p string, extensions []string) []string {
 	}
 
 	return files
-}
-
-func contains(arr []string, s string) bool {
-	for _, a := range arr {
-		if a == s {
-			return true
-		}
-	}
-	return false
 }
 
 func isDir(path string, opt opt) bool {
