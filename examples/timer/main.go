@@ -9,15 +9,15 @@ import (
 )
 
 func NewTimer() *Timer {
-	stream := make(chan fir.Patch)
+	publisher := make(chan fir.Patchset)
 	ticker := time.NewTicker(time.Second)
-	t := &Timer{stream: stream}
+	t := &Timer{publisher: publisher}
 	go func() {
 		for ; true; <-ticker.C {
-			stream <- fir.Store{
+			publisher <- fir.Patchset{fir.Store{
 				Name: "fir",
 				Data: map[string]any{"ts": time.Now().String()},
-			}
+			}}
 		}
 	}()
 	return t
@@ -25,7 +25,7 @@ func NewTimer() *Timer {
 
 type Timer struct {
 	fir.DefaultView
-	stream chan fir.Patch
+	publisher chan fir.Patchset
 }
 
 func (t *Timer) Content() string {
@@ -38,8 +38,8 @@ func (t *Timer) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	}
 }
 
-func (t *Timer) Stream() <-chan fir.Patch {
-	return t.stream
+func (t *Timer) Publisher() <-chan fir.Patchset {
+	return t.publisher
 }
 
 func main() {

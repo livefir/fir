@@ -166,9 +166,9 @@ func (c *controller) Handler(view View) http.HandlerFunc {
 	// this is to ensure that sending to the stream is non-blocking. since channel can only be constructed
 	// within the scope of a live connection, publishing patch messages are only possible when there is a live connection.
 	// TODO: explain this better
-	streamCh := make(chan Patch)
+	streamCh := make(chan Patchset)
 	go func() {
-		for patch := range view.Stream() {
+		for patch := range view.Publisher() {
 			streamCh <- patch
 		}
 	}()

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -26,16 +25,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	// publisher
 	go func() {
-		for patch := range v.streamCh {
-			operation, err := buildOperation(v.viewTemplate, patch)
-			if err != nil {
-				if strings.ContainsAny("fir-error", err.Error()) {
-					continue
-				}
-				log.Printf("[onWebsocket] buildOperation error: %v\n", err)
-				continue
-			}
-			err = v.cntrl.pubsub.Publish(ctx, channel, operation)
+		for patchset := range v.streamCh {
+			err = v.cntrl.pubsub.Publish(ctx, channel, patchset)
 			if err != nil {
 				log.Printf("[onWebsocket] error publishing patch: %v\n", err)
 			}
@@ -51,15 +42,16 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	defer subscription.Close()
 
 	go func() {
-		for data := range subscription.C() {
-			go func(data []byte) {
-				log.Printf("[onWebsocket] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(data))
-				err = conn.WriteMessage(websocket.TextMessage, data)
+		for patchset := range subscription.C() {
+			go func(patchset Patchset) {
+				message := buildPatchOperations(v.viewTemplate, patchset)
+				log.Printf("[onWebsocket] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
+				err = conn.WriteMessage(websocket.TextMessage, message)
 				if err != nil {
 					log.Printf("[onWebsocket] error: writing message for channel:%v, closing conn with err %v", channel, err)
 					conn.Close()
 				}
-			}(data)
+			}(patchset)
 		}
 	}()
 
@@ -88,20 +80,9 @@ loop:
 		log.Printf("[onWebsocket] received event: %+v\n", event)
 
 		patchset := getEventPatchset(*event, v.view)
-		for _, patch := range patchset {
-			operation, err := buildOperation(v.viewTemplate, patch)
-			if err != nil {
-				if strings.ContainsAny("fir-error", err.Error()) {
-					continue
-				}
-				log.Printf("[onWebsocket][getEventPatchset] buildOperation error: %v\n", err)
-				continue
-			}
-
-			err = v.cntrl.pubsub.Publish(ctx, channel, operation)
-			if err != nil {
-				log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
-			}
+		err = v.cntrl.pubsub.Publish(ctx, channel, patchset)
+		if err != nil {
+			log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 		}
 	}
 }
