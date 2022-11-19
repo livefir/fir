@@ -1,6 +1,7 @@
 package fir
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log"
@@ -13,6 +14,8 @@ import (
 )
 
 var DefaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
+
+const devReloadChannel = "dev_reload"
 
 func watchTemplates(wc *controller) {
 	watcher, err := fsnotify.NewWatcher()
@@ -31,10 +34,8 @@ func watchTemplates(wc *controller) {
 				if event.Op&fsnotify.Write == fsnotify.Write ||
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
-					// TODO replace with pubsub.Publish
-					//o := Operation{Op: reload}
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					//wc.writeJSONAll([]Operation{o})
+					wc.pubsub.Publish(context.Background(), devReloadChannel, Patchset{Reload{}})
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:
