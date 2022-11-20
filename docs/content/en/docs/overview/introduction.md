@@ -1,62 +1,81 @@
 ---
 title: "Introduction"
-description: "The Fir toolkit offers a Go library, an Alpine.js plugin and a model-view generator CLI to build progressively enhanced reactive web interfaces with mostly server-rendered HTML."
-lead: "The Fir toolkit offers a Go library, an Alpine.js plugin and a model-view generator CLI to build progressively enhanced reactive web interfaces with mostly server-rendered HTML."
-date: 2020-10-06T08:48:57+00:00
-lastmod: 2020-10-06T08:48:57+00:00
+description: ""
+lead: ""
+date: 2022-11-20T18:05:16+01:00
+lastmod: 2022-11-20T18:05:16+01:00
 draft: false
 images: []
 menu:
   docs:
-    parent: "overview"
-weight: 100
+    parent: ""
+    identifier: "introduction-c10be8ad434e49b824ec1ba93352f840"
+weight: 999
 toc: true
 ---
 
-A Go toolkit to build reactive web interfaces.
+Fir is a toolkit to build server-rendered HTML apps and progressively enhance them to enable real-time user experiences. The toolkit is meant for developers who want to build real-time web apps using Go, server-rendered HTML(html/template), CSS and sprinkles of declarative javascript(alpine.js). It can be used to build: static websites like a landing page or a blog,  interactive CRUD apps like ticket helpdesks, real-time apps like metrics dashboards or social media streams.
 
-## Why does it exist ?
+The toolkit consists of a Go server library, an alpine.js plugin, and a CLI. The server library can render HTML over both HTTP and real-time connections(websockets, HTTP/2) while the alpine.js plugin provides a declarative API to enhance plain HTML to support real-time user interaction. The CLI can generate HTML views and SQL ORMs from entgo schemas(similar to Django, Rails, Phoenix frameworks). 
 
-Wants to provide a way to build moderately complex reactive apps for folks who are comfortable with Go.
+The big idea behind Fir is to enhance Go’s standard html template engine with alpine.js to  patch only parts of an HTML on user interaction and without page reloads. A Fir app can start as a simple HTML app which works without javascript depending on browser’s capability(form submissions) to handle user interactions but requires page reloads. This server-rendered HTML app can later be enhanced using sprinkles of declarative javascript provided by the companion alpine.js plugin. After the enhancement, user interactions(clicks, form submits) are sent over a real-time connection(websocket, HTTP/2) and change operations(patching the DOM, updating state, navigation etc.) are applied on the client without page reloads. The server library has the capability to publish these page change operations to all connected clients(multiple devices, multiple tabs etc.) which enables a real-time user experience. When real-time connections are not available, the client falls back to using standard HTTP while still providing user interactions without page reloads.
 
-The library is a result of a series of experiments to build reactive apps in Go: [gomodest-template](https://github.com/adnaan/gomodest-template). It works by `patching` the DOM on user events using [morphdom](https://github.com/patrick-steele-idem/morphdom).
+Consider the following html/template page:
 
-## What is it ?
+```go
+<form name="newTodo" method="post">
+	<input name="text" class="input" type="text" required/>
+	 <button type="submit" value="Submit">Submit</button>
+</form>
+<div id="todos">
+{{ range .todos }}
+	<div id="{{.ID}}"> {{.Text}} </div>
+{{ end }}
+</div>
+```
 
-- Its a toolkit: a Go library, a CLI and an alpine.js plugin
-- Focuses only on the view layer.
-- Ships with an Alpinejs plugin for user interactions(click, submit, navigate ) etc.
+On form submission, server’s template engine hydrates the page template with updated `todos` and renders the new html page as http response. 
 
-## Who is it for ?
+To avoid a page reload and update only the changed part of the page (i.e `{{range .todos}} .Text {{end}}` ), we need a client javascript function which can fetch the updated part from the server and patch the relevant section of the DOM. Also, the server’s template engine should be capable of re-rendering only the changed part of the template. A Go html template page can be composed of reusable parts enclosed in a `template`or `block` expression. Fir builds on top of Go’s standard capability by providing a way to re-render a `template/block` part and patching the targeted part of the page without a page reload while using only a bit of javascript. 
 
-- Suitable for Go developers who want to build moderately complex apps, internal tools, prototypes etc.
-- Skills needed: Go, HTML, CSS, Alpine.js.
+```go
+<form name="newTodo" method="post">
+	<input name="text" class="input" type="text" required/>
+	 <button type="submit" value="Submit">Submit</button>
+</form>
+<div id="todos">
+**{{ block "todos" . }}**
+ {{ range .todos }}
+	<div id="{{.ID}}"> {{.Text}} </div>
+ {{ end }}
+**{{ end }}**
+</div>
+```
 
-## What can you do with it ?
+In the above page, `range` is enclosed in a `block` expression. The `block` section of the page can now be re-rendered by looking it up by name in the template tree. Fir’s alpine.js plugin can enhance this page by preventing the form submission request and sending a json event instead. On receiving the event, Fir server re-renders the `todos` `block` and sends back a html snippet. The fir alpine.js plugin replaces the content of the `todos` `div`  with the returned html snippet.
 
-- Build reactive webapps using Go, html/template and sprinkles of declarative javascript(alpine.js)
-- Update parts of the web page on user interaction without reloading the page over regular http: clicks, form submits etc.
-- Stream page updates over a persistent connection(WS, SSE): notifications, live tickers, chat messages etc.
-- Use the CLI to generate html using [entgo schema](https://entgo.io/docs/schema-def)
+```go
+<form **x-data @submit.prevent="$fir.submit"** name="newTodo" method="post">
+	<input name="text" class="input" type="text" required/>
+	 <button type="submit" value="Submit">Submit</button>
+</form>
+<div id="todos">
+{{ block "todos" . }}
+ {{ range .todos }}
+	<div id="{{.ID}}"> {{.Text}} </div>
+ {{ end }}
+{{ end }}
+</div>
+```
 
-## Is it like hotwire or is it like phoenix liveview ?
+`x-data` attribute on the `newTodo` form declares it as a new Alpine component. `@submit.prevent` is a `x-on` [directive](https://alpinejs.dev/directives/on) which prevents the form submission and calls `$fir.submit` [custom magic function](https://alpinejs.dev/advanced/extending#magic-functions) instead. The `$fir.submit` function reads the Form element data and sends a `fir.Event` over a real-time connection or a regular fetch call if a real-time connection is unavailable. The event is handled on the server and a `patch` operation is sent back. The patch operation is then applied the DOM by the alpine.js plugin.
 
-It borrows the idea of patching DOM on user interaction events from [phoenix live view](https://hex.pm/packages/phoenix_live_view). But instead of streaming DOM diffs over websocket and sticthing it back on the client, it takes the [hotwire](https://hotwired.dev/) approach of re-rendering html templates on the server and sending back a patch DOM operation to the javascript client over standard HTTP.
-
-Live patching of the DOM(over websockets, sse) is also available but only for server driven DOM patching.(notifications, live ticker etc.)
-
-## Principles
-
-- **Library** and not a framework. It’s a Go **library** to build reactive user interfaces.
-- **Nothing crazy tech**: It is built on nothing crazy tech: Go, html/template and Alpinejs. It’s just plain old html templates sprinkled with a bit of javascript.
-- Keep Go code free of html/css: Use `html/template` to hydrate html pages.
-- Keep Javascript to the minimum: Alpinejs provides declarative constructs to wire up moderately complex logic. The `fir` JS client provides additional Alpinejs functions and directives to achieve this goal.
-- Have a simple lifecycle:
-  - Stages: Render html page -> Handle UI change events → Update parts of the html.
-- Be SEO friendly: First page render is done fully on the server side. Real-time interaction is done once the page has been rendered.
-- Have a low learning curve: For a Go user the only new thing to learn would be Alpinejs. And yes: HTML & CSS
-- No custom template engine: Writing our own template engine can enable in-memory html diffing and minimal change partial for the client, but it also means maintaining a new non standard template engine.
-
-## Status
-
-Work in progress. The current focus is to get to a developer experience which is acceptable to the community. Roadmap to v1.0.0 is still uncertain.
+```go
+fir.Morph{
+		Selector: "#todos",
+		Template: &fir.Block{
+			Name: "todos",
+			Data: fir.Data{"todos": todos},
+		},
+},
+```

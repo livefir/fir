@@ -70,6 +70,13 @@ func WithEmbedFS(fs embed.FS) ControllerOption {
 	}
 }
 
+// WithPublicDir is the path to directory containing the public html template files.
+func WithPublicDir(path string) ControllerOption {
+	return func(o *opt) {
+		o.publicDir = path
+	}
+}
+
 // DisableTemplateCache is an option to disable template caching. This is useful for development.
 func DisableTemplateCache() ControllerOption {
 	return func(o *opt) {
@@ -99,13 +106,6 @@ func EnableWatch(rootDir string, extensions ...string) ControllerOption {
 func DevelopmentMode(enable bool) ControllerOption {
 	return func(o *opt) {
 		o.developmentMode = enable
-	}
-}
-
-// PublicDir is the path to directory containing the public html template files.
-func PublicDir(path string) ControllerOption {
-	return func(o *opt) {
-		o.publicDir = path
 	}
 }
 

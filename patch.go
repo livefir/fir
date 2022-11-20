@@ -67,6 +67,8 @@ type Template struct {
 	Data any `json:"data"`
 }
 
+type Block = Template
+
 // Morph is a patch operation to morph a DOM element
 type Morph struct {
 	Selector string

@@ -83,7 +83,7 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 		},
 		fir.Morph{
 			Selector: "#todos",
-			Template: &fir.Template{
+			Template: &fir.Block{
 				Name: "todos",
 				Data: fir.Data{"todos": todos},
 			},

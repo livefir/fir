@@ -40,6 +40,8 @@ toc: true
 ### Op
 ### GetSelector
 ### GetTemplate
+## Template
+### Block
 ## List of patch operations
 ### After
 ### Append
@@ -60,4 +62,39 @@ toc: true
 ### RequestContext
 ## Controller
 ## Controller Options
-
+### WithChannelFunc
+### WithPubsubAdapter
+### WithWebsocketUpgrader
+### WithErrorView
+### WithEmbedFs
+### WithPublicDir
+### DisableTemplateCache
+### EnableDebugLog
+### EnableWatch
+### DevelopmentMode
+## Subscription
+### C
+### Close
+## PubsubAdapter
+### Publish
+### Subscribe
+### HasSubscribers
+### NewPubsubInmem
+### NewPubsubRedis
+## Annotations(entgo)
+### CreateForm
+### UpdateForm
+### ListItem
+## Utility functions
+### DecodeForm
+### DecodeURLValues
+### DefaultChannelFunc
+### DefaultFuncMap
+### GeneratePublicDir
+### MinMax
+### UserError
+## Globals
+### UserIDKey
+### DefaultUserErrorMessage
+### DefaultViewExtensions
+### DefaultWatchExtensions

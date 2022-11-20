@@ -8,7 +8,8 @@ type Page struct {
 	Error   error  `json:"-"`
 }
 
-// PageContext is a struct that holds the data for the app context
+// PageContext is a struct that holds controller data for the page. Its available as `.fir` in the template.
+// It provides helper functions for the template.
 type PageContext struct {
 	Name    string
 	URLPath string
