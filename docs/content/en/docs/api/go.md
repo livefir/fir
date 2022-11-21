@@ -85,6 +85,21 @@ toc: true
 ### CreateForm
 ### UpdateForm
 ### ListItem
+## Template functions
+### Sprig functions
+### ActiveRoute
+### NotActiveRoute
+## Error functions
+### PatchError
+### PatchFormError
+### UnsetPatchFormErrors
+### PageError
+### PageFormError
+### ErrInternalServer
+### ErrNotFound
+### ErrBadRequest
+### ErrUnauthorized
+### UserError
 ## Utility functions
 ### DecodeForm
 ### DecodeURLValues
@@ -92,7 +107,6 @@ toc: true
 ### DefaultFuncMap
 ### GeneratePublicDir
 ### MinMax
-### UserError
 ## Globals
 ### UserIDKey
 ### DefaultUserErrorMessage

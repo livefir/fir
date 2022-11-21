@@ -98,8 +98,8 @@ func PageError(err error, userMessage ...string) Page {
 	}
 }
 
-// UnsetFormError returns a patchset that unsets the error for a form.
-func UnsetFormErrors(fields ...string) Patchset {
+// UnsetPatchFormErrors returns a patchset that unsets the error for a form.
+func UnsetPatchFormErrors(fields ...string) Patchset {
 	var patchset Patchset
 
 	for _, field := range fields {
