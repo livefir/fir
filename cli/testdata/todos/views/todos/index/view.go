@@ -212,16 +212,16 @@ func onTodoQuery(db *models.Client, event fir.Event) fir.Patchset {
 	return fir.Patchset{
 		fir.Morph{
 			Selector: "#todolist",
-			Template: &fir.Template{
-				Name: "todolist",
-				Data: map[string]any{"todos": todos},
+			HTML: &fir.Render{
+				Template: "todolist",
+				Data:     map[string]any{"todos": todos},
 			},
 		},
 		fir.Morph{
 			Selector: "#pagination",
-			Template: &fir.Template{
-				Name: "pagination",
-				Data: paginationData(req, len(todos)),
+			HTML: &fir.Render{
+				Template: "pagination",
+				Data:     paginationData(req, len(todos)),
 			},
 		},
 	}

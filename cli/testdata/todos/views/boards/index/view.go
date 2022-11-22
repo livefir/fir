@@ -174,16 +174,16 @@ func onBoardQuery(db *models.Client, event fir.Event) fir.Patchset {
 	return fir.Patchset{
 		fir.Morph{
 			Selector: "#boardlist",
-			Template: &fir.Template{
-				Name: "boardlist",
-				Data: map[string]any{"boards": boards},
+			HTML: &fir.Render{
+				Template: "boardlist",
+				Data:     map[string]any{"boards": boards},
 			},
 		},
 		fir.Morph{
 			Selector: "#pagination",
-			Template: &fir.Template{
-				Name: "pagination",
-				Data: paginationData(req, len(boards)),
+			HTML: &fir.Render{
+				Template: "pagination",
+				Data:     paginationData(req, len(boards)),
 			},
 		},
 	}

@@ -20,9 +20,9 @@ toc: true
 ### DefaultView
 ### DefaultErrorView
 ## Event
-## Render
 ## Page
 ## Patch
+### Render
 ### Patchset
 ### After
 ### Append

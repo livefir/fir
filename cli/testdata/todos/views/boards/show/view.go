@@ -129,9 +129,9 @@ func onBoardUpdate(db *models.Client, event fir.Event) fir.Patchset {
 		fir.UnsetFormErrors("title", "description"),
 		fir.Morph{
 			Selector: "board",
-			Template: &fir.Template{
-				Name: "board",
-				Data: structs.Map(board),
+			HTML: &fir.Render{
+				Template: "board",
+				Data:     structs.Map(board),
 			},
 		})
 

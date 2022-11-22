@@ -274,7 +274,7 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
    fir.Morph{
     Selector: "#tasks",
     HTML: &fir.Render{
-     Name: "tasks",
+     Template: "tasks",
      Data: map[string]any{"tasks": t.tasks},
     },
    },
@@ -342,7 +342,7 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
    fir.Morph{
     Selector: "#tasks",
     HTML: &fir.Render{
-     Name: "tasks",
+     Template: "tasks",
      Data: map[string]any{"tasks": t.tasks},
     },
    },
