@@ -131,9 +131,9 @@ func onTodoUpdate(db *models.Client, event fir.Event) fir.Patchset {
 		fir.UnsetFormErrors("title", "description"),
 		fir.Morph{
 			Selector: "todo",
-			Template: &fir.Template{
-				Name: "todo",
-				Data: structs.Map(todo),
+			HTML: &fir.Render{
+				Template: "todo",
+				Data:     structs.Map(todo),
 			},
 		})
 

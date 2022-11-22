@@ -16,7 +16,7 @@ func PageFormError(err error) fir.Page {
 			userError = errors.Unwrap(validError.Unwrap())
 		}
 		return fir.Page{
-			Data: fir.Data{
+			Data: map[string]any{
 				fmt.Sprintf("%sError", validError.Name): userError.Error(),
 			},
 		}
@@ -35,9 +35,9 @@ func PatchFormError(err error) fir.Patchset {
 		return fir.Patchset{
 			fir.Morph{
 				Selector: fmt.Sprintf("#%s-error", validError.Name),
-				Template: &fir.Template{
-					Name: fmt.Sprintf("%s-error", validError.Name),
-					Data: fir.Data{
+				HTML: &fir.Render{
+					Template: fmt.Sprintf("%s-error", validError.Name),
+					Data: map[string]any{
 						fmt.Sprintf("%sError", validError.Name): userError.Error(),
 					},
 				},

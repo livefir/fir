@@ -55,7 +55,7 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.ErrInternalServer(err)
 	}
 
-	data := fir.Data{"[[.modelNamePlural]]": [[.modelNamePlural]]}
+	data := map[string]any{"[[.modelNamePlural]]": [[.modelNamePlural]]}
 	for k, v := range paginationData(req, len([[.modelNamePlural]])) {
 		data[k] = v
 	}
@@ -151,7 +151,7 @@ func [[.modelName]]Query(db *models.Client, req queryReq) *models.[[.modelNameTi
 	return q
 }
 
-func paginationData(req queryReq, [[.modelName]]Len int) fir.Data {
+func paginationData(req queryReq, [[.modelName]]Len int) map[string]any {
 	prev := req.Offset - defaultPageSize
 	hasPrevious := true
 	if prev < 0 || req.Offset == 0 {
@@ -162,7 +162,7 @@ func paginationData(req queryReq, [[.modelName]]Len int) fir.Data {
 	if [[.modelName]]Len < defaultPageSize {
 		hasNext = false
 	}
-	return fir.Data{
+	return map[string]any{
 		"prev":        prev,
 		"next":        next,
 		"hasPrevious": hasPrevious,
@@ -243,15 +243,15 @@ func on[[.modelNameTitled]]Query(db *models.Client, event fir.Event) fir.Patchse
 	return fir.Patchset{
 		fir.Morph{
 			Selector: "#[[.modelName]]list",
-			Template: &fir.Template{
-				Name: "[[.modelName]]list",
-				Data: fir.Data{"[[.modelNamePlural]]": [[.modelNamePlural]]},
+			HTML: &fir.Render{
+				Template: "[[.modelName]]list",
+				Data: map[string]any{"[[.modelNamePlural]]": [[.modelNamePlural]]},
 			},
 		},
 		fir.Morph{
 			Selector: "#pagination",
-			Template: &fir.Template{
-				Name: "pagination",
+			HTML: &fir.Render{
+				Template: "pagination",
 				Data: paginationData(req, len([[.modelNamePlural]])),
 			},
 		},

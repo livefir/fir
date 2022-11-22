@@ -36,7 +36,7 @@ func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
 		return fir.Page{}
 	}
-	return fir.Page{Data: fir.Data{"todos": todos}}
+	return fir.Page{Data: map[string]any{"todos": todos}}
 }
 
 func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
@@ -77,15 +77,15 @@ func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {
 	return fir.Patchset{
 		fir.Store{
 			Name: "formData",
-			Data: fir.Data{
+			Data: map[string]any{
 				"textError": "",
 			},
 		},
 		fir.Morph{
 			Selector: "#todos",
-			Template: &fir.Template{
-				Name: "todos",
-				Data: fir.Data{"todos": todos},
+			HTML: &fir.Render{
+				Template: "todos",
+				Data:     map[string]any{"todos": todos},
 			},
 		},
 	}

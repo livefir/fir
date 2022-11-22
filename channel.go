@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// UserIDKey is the key for the user id in the request context. It is used in the default channel function.
+const UserIDKey = "key_user_id"
+
 func DefaultChannelFunc(r *http.Request, viewID string) *string {
 	if viewID == "" {
 		viewID = "root"

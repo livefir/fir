@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Controller is an interface which encapsulates a group of views. It routes requests to the appropriate view.
+// It routes events to the appropriate view. It also provides a way to register views.
 type Controller interface {
 	Handler(view View) http.HandlerFunc
 }
@@ -29,52 +31,68 @@ type opt struct {
 	pubsub               PubsubAdapter
 }
 
-type Option func(*opt)
+// ControllerOption is an option for the controller.
+type ControllerOption func(*opt)
 
-func WithChannel(f func(r *http.Request, viewID string) *string) Option {
+// WithChannelFunc is an option to set a function to construct the channel name for the controller's views.
+func WithChannel(f func(r *http.Request, viewID string) *string) ControllerOption {
 	return func(o *opt) {
 		o.channelFunc = f
 	}
 }
 
-func WithPubsubAdapter(pubsub PubsubAdapter) Option {
+// WithPubsubAdapter is an option to set a pubsub adapter for the controller's views.
+func WithPubsubAdapter(pubsub PubsubAdapter) ControllerOption {
 	return func(o *opt) {
 		o.pubsub = pubsub
 	}
 }
 
-func WithUpgrader(upgrader websocket.Upgrader) Option {
+// WithWebsocketUpgrader is an option to set the websocket upgrader for the controller
+func WithWebsocketUpgrader(upgrader websocket.Upgrader) ControllerOption {
 	return func(o *opt) {
 		o.websocketUpgrader = upgrader
 	}
 }
 
-func WithErrorView(view View) Option {
+// WithErrorView is an option to set a view to render error messages.
+func WithErrorView(view View) ControllerOption {
 	return func(o *opt) {
 		o.errorView = view
 	}
 }
 
-func WithEmbedFS(fs embed.FS) Option {
+// WithEmbedFS is an option to set the embed.FS for the controller.
+func WithEmbedFS(fs embed.FS) ControllerOption {
 	return func(o *opt) {
 		o.embedFS = fs
 		o.hasEmbedFS = true
 	}
 }
 
-func DisableTemplateCache() Option {
+// WithPublicDir is the path to directory containing the public html template files.
+func WithPublicDir(path string) ControllerOption {
+	return func(o *opt) {
+		o.publicDir = path
+	}
+}
+
+// DisableTemplateCache is an option to disable template caching. This is useful for development.
+func DisableTemplateCache() ControllerOption {
 	return func(o *opt) {
 		o.disableTemplateCache = true
 	}
 }
 
-func EnableDebugLog() Option {
+// EnableDebugLog is an option to enable debug logging.
+func EnableDebugLog() ControllerOption {
 	return func(o *opt) {
 		o.debugLog = true
 	}
 }
 
-func EnableWatch(rootDir string, extensions ...string) Option {
+// EnableWatch is an option to enable watching template files for changes.
+func EnableWatch(rootDir string, extensions ...string) ControllerOption {
 	return func(o *opt) {
 		o.enableWatch = true
 		if len(extensions) > 0 {
@@ -84,20 +102,15 @@ func EnableWatch(rootDir string, extensions ...string) Option {
 	}
 }
 
-func DevelopmentMode(enable bool) Option {
+// DevelopmentMode is an option to enable development mode. It enables debug logging, template watching, and disables template caching.
+func DevelopmentMode(enable bool) ControllerOption {
 	return func(o *opt) {
 		o.developmentMode = enable
 	}
 }
 
-// PublicDir is the path to directory containing the public html template files.
-func PublicDir(path string) Option {
-	return func(o *opt) {
-		o.publicDir = path
-	}
-}
-
-func NewController(name string, options ...Option) Controller {
+// NewController creates a new controller.
+func NewController(name string, options ...ControllerOption) Controller {
 	if name == "" {
 		panic("controller name is required")
 	}
@@ -151,6 +164,7 @@ type controller struct {
 	opt
 }
 
+// Handler returns an http.HandlerFunc that handles the view.
 func (c *controller) Handler(view View) http.HandlerFunc {
 	viewTemplate, err := parseTemplate(c.opt, view)
 	if err != nil {
@@ -173,7 +187,7 @@ func (c *controller) Handler(view View) http.HandlerFunc {
 		}
 	}()
 
-	mountData := make(Data)
+	mountData := make(map[string]any)
 	return func(w http.ResponseWriter, r *http.Request) {
 		v := &viewHandler{
 			view:              view,

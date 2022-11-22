@@ -25,7 +25,7 @@ var publicCmd = &cobra.Command{
 	It preserves the paths of the html files enabling a flexible project structure. The generated public directory
 	can be embedded in the binary as is.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var opts []fir.PublicOption
+		var opts []fir.PublicDirOption
 		if inDir != "" {
 			opts = append(opts, fir.InDir(inDir))
 		}
@@ -38,7 +38,7 @@ var publicCmd = &cobra.Command{
 			opts = append(opts, fir.Extensions(extensions))
 		}
 
-		if err := fir.GeneratePublic(opts...); err != nil {
+		if err := fir.GeneratePublicDir(opts...); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}

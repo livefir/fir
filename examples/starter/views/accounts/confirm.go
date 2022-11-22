@@ -29,7 +29,7 @@ func (h *ConfirmView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.PageError(err, "failed to confirm signup email")
 	}
 	return fir.Page{
-		Data: fir.Data{
+		Data: map[string]any{
 			"confirmed": true,
 		}}
 }

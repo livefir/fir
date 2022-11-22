@@ -39,9 +39,9 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 
 		return fir.Patchset{fir.Morph{
 			Selector: "#signin_container",
-			Template: &fir.Template{
-				Name: "signin_container",
-				Data: fir.Data{"sent_magic_link": true},
+			HTML: &fir.Render{
+				Template: "signin_container",
+				Data:     map[string]any{"sent_magic_link": true},
 			},
 		}}
 	default:
@@ -56,7 +56,7 @@ func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	}
 
 	return fir.Page{
-		Data: fir.Data{
+		Data: map[string]any{
 			"is_logged_in": true,
 		},
 	}

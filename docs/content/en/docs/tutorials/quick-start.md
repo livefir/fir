@@ -133,7 +133,7 @@ type TaskView struct {
 func (t *TaskView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
  t.RLock()
  defer t.RUnlock()
- return fir.Page{Data: fir.Data{"tasks": t.tasks}}
+ return fir.Page{Data: map[string]any{"tasks": t.tasks}}
 }
 
 func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
@@ -146,7 +146,7 @@ func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
  }
 
  t.tasks = append(t.tasks, task)
- return fir.Page{Data: fir.Data{"tasks": t.tasks}}
+ return fir.Page{Data: map[string]any{"tasks": t.tasks}}
 }
 
 func (*TaskView) Content() string {
@@ -273,9 +273,9 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
   return fir.Patchset{
    fir.Morph{
     Selector: "#tasks",
-    Template: &fir.Template{
-     Name: "tasks",
-     Data: fir.Data{"tasks": t.tasks},
+    HTML: &fir.Render{
+     Template: "tasks",
+     Data: map[string]any{"tasks": t.tasks},
     },
    },
   }
@@ -311,7 +311,7 @@ type TaskView struct {
 func (t *TaskView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
  t.RLock()
  defer t.RUnlock()
- return fir.Page{Data: fir.Data{"tasks": t.tasks}}
+ return fir.Page{Data: map[string]any{"tasks": t.tasks}}
 }
 
 func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
@@ -324,7 +324,7 @@ func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
  }
 
  t.tasks = append(t.tasks, task)
- return fir.Page{Data: fir.Data{"tasks": t.tasks}}
+ return fir.Page{Data: map[string]any{"tasks": t.tasks}}
 }
 
 func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
@@ -341,9 +341,9 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
   return fir.Patchset{
    fir.Morph{
     Selector: "#tasks",
-    Template: &fir.Template{
-     Name: "tasks",
-     Data: fir.Data{"tasks": t.tasks},
+    HTML: &fir.Render{
+     Template: "tasks",
+     Data: map[string]any{"tasks": t.tasks},
     },
    },
   }

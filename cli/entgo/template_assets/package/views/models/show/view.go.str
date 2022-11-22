@@ -138,8 +138,8 @@ func on[[.modelNameTitled]]Update(db *models.Client, event fir.Event) fir.Patchs
 		fir.UnsetFormErrors("title", "description"),
 		fir.Morph{
 			Selector: "[[.modelName]]",
-			Template: &fir.Template{
-				Name: "[[.modelName]]",
+			HTML: &fir.Render{
+				Template: "[[.modelName]]",
 				Data: structs.Map([[.modelName]]),
 			},
 		})

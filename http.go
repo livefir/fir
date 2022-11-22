@@ -48,11 +48,11 @@ func onRequest(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 	}
 	v.mountData = page.Data
 	if v.mountData == nil {
-		v.mountData = make(Data)
+		v.mountData = make(map[string]any)
 	}
 
 	v.mountData["app_name"] = v.cntrl.name
-	v.mountData["fir"] = &AppContext{
+	v.mountData["fir"] = &PageContext{
 		Name:    v.cntrl.name,
 		URLPath: r.URL.Path,
 	}
@@ -96,7 +96,7 @@ func onRequestError(w http.ResponseWriter, r *http.Request, v *viewHandler, page
 	}
 	v.mountData = page.Data
 	if v.mountData == nil {
-		v.mountData = make(Data)
+		v.mountData = make(map[string]any)
 	}
 	v.mountData["statusCode"] = page.Code
 	v.mountData["statusMessage"] = page.Message

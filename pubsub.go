@@ -13,17 +13,25 @@ import (
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
 
+// Subscription is a subscription to a channel.
 type Subscription interface {
+	// C returns a receive-only go channel of patches published
 	C() <-chan Patchset
+	// Close closes the subscription.
 	Close()
 }
 
+// PubsubAdapter is an interface for a pubsub adapter. It allows to publish and subscribe Patchset to views.
 type PubsubAdapter interface {
+	// Publish publishes a patchset to a channel.
 	Publish(ctx context.Context, channel string, patchset Patchset) error
+	// Subscribe subscribes to a channel.
 	Subscribe(ctx context.Context, channel string) (Subscription, error)
+	// HasSubscribers returns true if there are subscribers to the given pattern.
 	HasSubscribers(ctx context.Context, pattern string) bool
 }
 
+// NewPubsubInmem creates a new in-memory pubsub adapter.s
 func NewPubsubInmem() PubsubAdapter {
 	return &pubsubInmem{
 		channelsSubscriptions: make(map[string]map[*subscriptionInmem]struct{}),
@@ -135,6 +143,7 @@ func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) bool {
 	return count > 0
 }
 
+// NewPubsubRedis creates a new redis pubsub adapter.
 func NewPubsubRedis(client *redis.Client) PubsubAdapter {
 	return &pubsubRedis{client: client}
 }
