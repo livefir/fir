@@ -19,9 +19,11 @@ toc: true
 ## View
 ### DefaultView
 ### DefaultErrorView
-## Page
+## Event
 ## Render
+## Page
 ## Patch
+### Patchset
 ### After
 ### Append
 ### Before
@@ -32,8 +34,6 @@ toc: true
 ### Remove
 ### ResetForm
 ### Store
-## Patchset
-## Event
 ## Controller
 ### WithChannelFunc
 ### WithPubsubAdapter

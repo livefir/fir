@@ -69,13 +69,3 @@ In the above page, `range` is enclosed in a `block` expression. The `block` sect
 ```
 
 `x-data` attribute on the `newTodo` form declares it as a new Alpine component. `@submit.prevent` is a `x-on` [directive](https://alpinejs.dev/directives/on) which prevents the form submission and calls `$fir.submit` [custom magic function](https://alpinejs.dev/advanced/extending#magic-functions) instead. The `$fir.submit` function reads the Form element data and sends a `fir.Event` over a real-time connection or a regular fetch call if a real-time connection is unavailable. The event is handled on the server and a `patch` operation is sent back. The patch operation is then applied the DOM by the alpine.js plugin.
-
-```go
-fir.Morph{
-		Selector: "#todos",
-		Template: &fir.Block{
-			Name: "todos",
-			Data: map[string]any{"todos": todos},
-		},
-},
-```

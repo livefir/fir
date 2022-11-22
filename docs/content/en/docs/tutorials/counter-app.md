@@ -288,8 +288,8 @@ When the `+` button is clicked, an event `inc` is sent to the server which sends
 func morphCount(c int32) fir.Patch {
  return fir.Morph{
   Selector: "#count",
-  Template: &fir.Template{
-   Name: "count",
+  HTML: &fir.Render{
+   Template: "count",
    Data: map[string]any{"count": c},
   },
  }
@@ -346,8 +346,8 @@ type Counter struct {
 func morphCount(c int32) fir.Patch {
  return fir.Morph{
   Selector: "#count",
-  Template: &fir.Template{
-   Name: "count",
+  HTML: &fir.Render{
+   Template: "count",
    Data: map[string]any{"count": c},
   },
  }
@@ -545,8 +545,8 @@ type Counter struct {
 func morphCount(c int32) fir.Patch {
  return fir.Morph{
   Selector: "#count",
-  Template: &fir.Template{
-   Name: "count",
+  HTML: &fir.Render{
+   Template: "count",
    Data: map[string]any{"count": c},
   },
  }
