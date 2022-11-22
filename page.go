@@ -2,10 +2,10 @@ package fir
 
 // Page is a struct that holds the data for a page
 type Page struct {
-	Data    Data   `json:"data"`
-	Code    int    `json:"statusCode"`
-	Message string `json:"statusMessage"`
-	Error   error  `json:"-"`
+	Data    map[string]any `json:"data"`
+	Code    int            `json:"statusCode"`
+	Message string         `json:"statusMessage"`
+	Error   error          `json:"-"`
 }
 
 // PageContext is a struct that holds controller data for the page. Its available as `.fir` in the template.

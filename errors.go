@@ -54,9 +54,9 @@ func ErrUnauthorized(err error, userMessage ...string) Page {
 func morphError(err string) Patch {
 	return Morph{
 		Selector: "#fir-error",
-		Template: &Template{
-			Name: "fir-error",
-			Data: Data{"error": err}},
+		HTML: &Render{
+			Template: "fir-error",
+			Data:     map[string]any{"error": err}},
 	}
 }
 
@@ -87,7 +87,7 @@ func PageError(err error, userMessage ...string) Page {
 		log.Printf("[controller] page error: %s, message: %s\n", err, msg)
 	}
 
-	data := Data{"error": msg}
+	data := map[string]any{"error": msg}
 	if msg == "" {
 		data = nil
 	}
@@ -105,9 +105,9 @@ func UnsetPatchFormErrors(fields ...string) Patchset {
 	for _, field := range fields {
 		patchset = append(patchset, Morph{
 			Selector: fmt.Sprintf("#%s-error", field),
-			Template: &Template{
-				Name: fmt.Sprintf("%s-error", field),
-				Data: Data{
+			HTML: &Render{
+				Template: fmt.Sprintf("%s-error", field),
+				Data: map[string]any{
 					fmt.Sprintf("#%sError", field): "",
 				},
 			},

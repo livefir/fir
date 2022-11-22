@@ -46,7 +46,7 @@ type viewHandler struct {
 	errorView         View
 	viewTemplate      *template.Template
 	errorViewTemplate *template.Template
-	mountData         Data
+	mountData         map[string]any
 	cntrl             *controller
 	streamCh          chan Patchset
 }

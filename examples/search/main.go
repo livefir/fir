@@ -53,15 +53,16 @@ func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 		if err := event.DecodeParams(req); err != nil {
 			return fir.PatchError(err, "failed to decode search request")
 		}
-		return fir.Patchset{fir.Morph{
-			Selector: "#cities",
-			Template: &fir.Block{
-				Name: "cities",
-				Data: fir.Data{
-					"cities": getCities(req.Query),
+		return fir.Patchset{
+			fir.Morph{
+				Selector: "#cities",
+				HTML: &fir.Render{
+					Template: "cities",
+					Data: map[string]any{
+						"cities": getCities(req.Query),
+					},
 				},
-			},
-		}}
+			}}
 	default:
 		log.Printf("warning:handler not found for event => \n %+v\n", event)
 	}

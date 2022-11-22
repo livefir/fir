@@ -187,7 +187,7 @@ func (c *controller) Handler(view View) http.HandlerFunc {
 		}
 	}()
 
-	mountData := make(Data)
+	mountData := make(map[string]any)
 	return func(w http.ResponseWriter, r *http.Request) {
 		v := &viewHandler{
 			view:              view,

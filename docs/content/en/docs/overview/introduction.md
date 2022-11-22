@@ -75,7 +75,7 @@ fir.Morph{
 		Selector: "#todos",
 		Template: &fir.Block{
 			Name: "todos",
-			Data: fir.Data{"todos": todos},
+			Data: map[string]any{"todos": todos},
 		},
 },
 ```

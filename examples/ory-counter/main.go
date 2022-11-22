@@ -52,9 +52,9 @@ type Counter struct {
 func morphCount(c int32) fir.Patch {
 	return fir.Morph{
 		Selector: "#count",
-		Template: &fir.Template{
-			Name: "count",
-			Data: fir.Data{"count": c},
+		HTML: &fir.Render{
+			Template: "count",
+			Data:     map[string]any{"count": c},
 		},
 	}
 }
@@ -110,7 +110,7 @@ func (c *CounterView) Content() string {
 
 func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	return fir.Page{
-		Data: fir.Data{
+		Data: map[string]any{
 			"count": c.model.Value(),
 		}}
 }

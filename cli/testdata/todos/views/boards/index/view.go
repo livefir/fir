@@ -40,7 +40,7 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.ErrInternalServer(err)
 	}
 
-	data := fir.Data{"boards": boards}
+	data := map[string]any{"boards": boards}
 	for k, v := range paginationData(req, len(boards)) {
 		data[k] = v
 	}
@@ -108,7 +108,7 @@ func boardQuery(db *models.Client, req queryReq) *models.BoardQuery {
 	return q
 }
 
-func paginationData(req queryReq, boardLen int) fir.Data {
+func paginationData(req queryReq, boardLen int) map[string]any {
 	prev := req.Offset - defaultPageSize
 	hasPrevious := true
 	if prev < 0 || req.Offset == 0 {
@@ -119,7 +119,7 @@ func paginationData(req queryReq, boardLen int) fir.Data {
 	if boardLen < defaultPageSize {
 		hasNext = false
 	}
-	return fir.Data{
+	return map[string]any{
 		"prev":        prev,
 		"next":        next,
 		"hasPrevious": hasPrevious,
@@ -176,7 +176,7 @@ func onBoardQuery(db *models.Client, event fir.Event) fir.Patchset {
 			Selector: "#boardlist",
 			Template: &fir.Template{
 				Name: "boardlist",
-				Data: fir.Data{"boards": boards},
+				Data: map[string]any{"boards": boards},
 			},
 		},
 		fir.Morph{

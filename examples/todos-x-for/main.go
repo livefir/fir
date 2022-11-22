@@ -38,7 +38,7 @@ func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 		return fir.Page{}
 	}
 	b, _ := json.Marshal(todos)
-	return fir.Page{Data: fir.Data{"todos": string(b)}}
+	return fir.Page{Data: map[string]any{"todos": string(b)}}
 }
 
 func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {

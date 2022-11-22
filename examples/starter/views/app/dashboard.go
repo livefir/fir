@@ -22,7 +22,7 @@ func (d *DashboardView) Layout() string {
 
 func (d *DashboardView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	return fir.Page{
-		Data: fir.Data{
+		Data: map[string]any{
 			"is_logged_in": true,
 		}}
 }

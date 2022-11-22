@@ -29,18 +29,18 @@ type Patch interface {
 	Op() Op
 	// GetSelector returns the selector for the patch operation
 	GetSelector() string
-	// GetTemplate returns the template for the patch operation
-	GetTemplate() *Template
+	// GetRender returns the template for the patch operation
+	GetRender() *Render
 }
 
 // Patchset is a set of patche operations to be applied to the DOM
 type Patchset []Patch
 
 type patch struct {
-	OpVal    Op        `json:"op"`
-	Selector string    `json:"selector"`
-	Template *Template `json:"template,omitempty"`
-	Value    any       `json:"value,omitempty"`
+	OpVal    Op      `json:"op"`
+	Selector string  `json:"selector"`
+	Render   *Render `json:"render,omitempty"`
+	Value    any     `json:"value,omitempty"`
 }
 
 func (p *patch) Op() Op {
@@ -55,24 +55,22 @@ func (p *patch) GetSelector() string {
 	return p.Selector
 }
 
-func (p *patch) GetTemplate() *Template {
-	return p.Template
+func (p *patch) GetRender() *Render {
+	return p.Render
 }
 
-// Template is a html/template to be rendered
-type Template struct {
-	// Name is the name of the template
-	Name string `json:"name"`
+// Render is a html/template to be rendered
+type Render struct {
+	// Template is the name of the template
+	Template string `json:"template"`
 	// Data is the data to be passed to the template
 	Data any `json:"data"`
 }
 
-type Block = Template
-
 // Morph is a patch operation to morph a DOM element
 type Morph struct {
 	Selector string
-	Template *Template
+	HTML     *Render
 }
 
 func (m Morph) Op() Op {
@@ -83,14 +81,14 @@ func (m Morph) GetSelector() string {
 	return m.Selector
 }
 
-func (m Morph) GetTemplate() *Template {
-	return m.Template
+func (m Morph) GetRender() *Render {
+	return m.HTML
 }
 
 // After is a patch operation to insert a DOM element after a selector
 type After struct {
 	Selector string
-	Template *Template
+	HTML     *Render
 }
 
 func (a After) Op() Op {
@@ -101,14 +99,14 @@ func (a After) GetSelector() string {
 	return a.Selector
 }
 
-func (a After) GetTemplate() *Template {
-	return a.Template
+func (a After) GetRender() *Render {
+	return a.HTML
 }
 
 // Before is a patch operation to insert a DOM element before a selector
 type Before struct {
 	Selector string
-	Template *Template
+	HTML     *Render
 }
 
 func (b Before) GetSelector() string {
@@ -119,14 +117,14 @@ func (b Before) Op() Op {
 	return before
 }
 
-func (b Before) GetTemplate() *Template {
-	return b.Template
+func (b Before) GetRender() *Render {
+	return b.HTML
 }
 
 // Append is a patch operation to append a DOM element to a selector
 type Append struct {
 	Selector string
-	Template *Template
+	HTML     *Render
 }
 
 func (a Append) GetSelector() string {
@@ -137,14 +135,14 @@ func (a Append) Op() Op {
 	return appendOp
 }
 
-func (a Append) GetTemplate() *Template {
-	return a.Template
+func (a Append) GetRender() *Render {
+	return a.HTML
 }
 
 // Prepend is a patch operation to prepend a DOM element to a selector
 type Prepend struct {
 	Selector string
-	Template *Template
+	HTML     *Render
 }
 
 func (p Prepend) GetSelector() string {
@@ -155,14 +153,14 @@ func (p Prepend) Op() Op {
 	return prepend
 }
 
-func (p Prepend) GetTemplate() *Template {
-	return p.Template
+func (p Prepend) GetRender() *Render {
+	return p.HTML
 }
 
 // Remove is a patch operation to remove a DOM element
 type Remove struct {
 	Selector string
-	Template *Template
+	HTML     *Render
 }
 
 func (r Remove) GetSelector() string {
@@ -173,8 +171,8 @@ func (r Remove) Op() Op {
 	return remove
 }
 
-func (r Remove) GetTemplate() *Template {
-	return r.Template
+func (r Remove) GetRender() *Render {
+	return r.HTML
 }
 
 // Store is a patch operation to update alpine.js store in the browser
@@ -191,10 +189,10 @@ func (s Store) Op() Op {
 	return updateStore
 }
 
-func (s Store) GetTemplate() *Template {
-	return &Template{
-		Name: s.Name,
-		Data: s.Data,
+func (s Store) GetRender() *Render {
+	return &Render{
+		Template: s.Name,
+		Data:     s.Data,
 	}
 }
 
@@ -209,7 +207,7 @@ func (r Reload) Op() Op {
 	return reload
 }
 
-func (r Reload) GetTemplate() *Template {
+func (r Reload) GetRender() *Render {
 	return nil
 }
 
@@ -226,7 +224,7 @@ func (r ResetForm) Op() Op {
 	return resetForm
 }
 
-func (r ResetForm) GetTemplate() *Template {
+func (r ResetForm) GetRender() *Render {
 	return nil
 }
 
@@ -243,7 +241,7 @@ func (n Navigate) Op() Op {
 	return navigate
 }
 
-func (n Navigate) GetTemplate() *Template {
+func (n Navigate) GetRender() *Render {
 	return nil
 }
 
@@ -255,15 +253,15 @@ func buildPatchOperations(t *template.Template, patchset Patchset) []byte {
 			patches = append(patches, patch{
 				OpVal:    updateStore,
 				Selector: p.GetSelector(),
-				Value:    p.GetTemplate().Data,
+				Value:    p.GetRender().Data,
 			})
 		case navigate, reload, resetForm:
 			patches = append(patches, patch{OpVal: p.Op(), Selector: p.GetSelector()})
 		case morph, after, before, appendOp, prepend, remove:
 			var buf bytes.Buffer
-			err := t.ExecuteTemplate(&buf, p.GetTemplate().Name, p.GetTemplate().Data)
+			err := t.ExecuteTemplate(&buf, p.GetRender().Template, p.GetRender().Data)
 			if err != nil {
-				log.Printf("buildPatchOperations error: %+v, %v \n", err, p.GetTemplate())
+				log.Printf("buildPatchOperations error: %+v, %v \n", err, p.GetRender())
 				continue
 			}
 

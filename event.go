@@ -8,9 +8,6 @@ import (
 	"net/url"
 )
 
-// Data is a map of data to be passed to the template
-type Data map[string]any
-
 // Event is a struct that holds the data for an event
 type Event struct {
 	// Name is the name of the event
@@ -45,7 +42,7 @@ func (e Event) RequestContext() context.Context {
 	return e.requestContext
 }
 
-func getJSON(data Data) string {
+func getJSON(data map[string]any) string {
 	b, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
 		return err.Error()

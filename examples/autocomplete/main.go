@@ -56,9 +56,9 @@ func (s *Search) OnEvent(event fir.Event) fir.Patchset {
 		return fir.Patchset{
 			fir.Morph{
 				Selector: "#list_cities",
-				Template: &fir.Template{
-					Name: "cities",
-					Data: fir.Data{
+				HTML: &fir.Render{
+					Template: "cities",
+					Data: map[string]any{
 						"cities": getCities(req.Query),
 					},
 				},

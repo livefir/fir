@@ -52,7 +52,7 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.ErrInternalServer(err)
 	}
 
-	data := fir.Data{"todos": todos}
+	data := map[string]any{"todos": todos}
 	for k, v := range paginationData(req, len(todos)) {
 		data[k] = v
 	}
@@ -133,7 +133,7 @@ func todoQuery(db *models.Client, req queryReq) *models.TodoQuery {
 	return q
 }
 
-func paginationData(req queryReq, todoLen int) fir.Data {
+func paginationData(req queryReq, todoLen int) map[string]any {
 	prev := req.Offset - defaultPageSize
 	hasPrevious := true
 	if prev < 0 || req.Offset == 0 {
@@ -144,7 +144,7 @@ func paginationData(req queryReq, todoLen int) fir.Data {
 	if todoLen < defaultPageSize {
 		hasNext = false
 	}
-	return fir.Data{
+	return map[string]any{
 		"prev":        prev,
 		"next":        next,
 		"hasPrevious": hasPrevious,
@@ -214,7 +214,7 @@ func onTodoQuery(db *models.Client, event fir.Event) fir.Patchset {
 			Selector: "#todolist",
 			Template: &fir.Template{
 				Name: "todolist",
-				Data: fir.Data{"todos": todos},
+				Data: map[string]any{"todos": todos},
 			},
 		},
 		fir.Morph{

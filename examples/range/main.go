@@ -22,7 +22,7 @@ func (r *Range) Content() string {
 
 func (r *Range) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
 	return fir.Page{
-		Data: fir.Data{
+		Data: map[string]any{
 			"total": 0,
 		}}
 }

@@ -15,34 +15,13 @@ toc: true
 ---
 
 
+
 ## View
-### ID
-### Content
-### Layout
-### LayoutContentName
-### Partials
-### Extensions
-### FuncMap
-### OnGet
-### OnPost
-### OnEvent
-### Publisher
-## DefaultView
-## DefaultErrorView
+### DefaultView
+### DefaultErrorView
 ## Page
-### Data
-### Code
-### Message
-### Error
-## PageContext
-## Data
+## Render
 ## Patch
-### Op
-### GetSelector
-### GetTemplate
-## Template
-### Block
-## List of patch operations
 ### After
 ### Append
 ### Before
@@ -55,13 +34,7 @@ toc: true
 ### Store
 ## Patchset
 ## Event
-### ID
-### Params
-### DecodeParams
-### DecodeFormParams
-### RequestContext
 ## Controller
-## Controller Options
 ### WithChannelFunc
 ### WithPubsubAdapter
 ### WithWebsocketUpgrader
@@ -73,14 +46,7 @@ toc: true
 ### EnableWatch
 ### DevelopmentMode
 ## Subscription
-### C
-### Close
 ## PubsubAdapter
-### Publish
-### Subscribe
-### HasSubscribers
-### NewPubsubInmem
-### NewPubsubRedis
 ## Annotations(entgo)
 ### CreateForm
 ### UpdateForm

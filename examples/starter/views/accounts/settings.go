@@ -48,7 +48,7 @@ func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 	}
 
 	return fir.Page{
-		Data: fir.Data{
+		Data: map[string]any{
 			"is_logged_in": true,
 			"email":        acc.Email(),
 			"name":         name,
@@ -84,9 +84,9 @@ func (s *SettingsView) UpdateProfile(event fir.Event) fir.Patchset {
 
 	patchset = append(patchset, fir.Morph{
 		Selector: "#account_form",
-		Template: &fir.Template{
-			Name: "account_form",
-			Data: fir.Data{
+		HTML: &fir.Render{
+			Template: "account_form",
+			Data: map[string]any{
 				"name":  req.Name,
 				"email": acc.Email(),
 			},

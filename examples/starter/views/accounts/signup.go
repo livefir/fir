@@ -47,9 +47,9 @@ func (s *SignupView) OnEvent(event fir.Event) fir.Patchset {
 		}
 		return fir.Patchset{fir.Morph{
 			Selector: "#signup_container",
-			Template: &fir.Template{
-				Name: "signup_container",
-				Data: fir.Data{
+			HTML: &fir.Render{
+				Template: "signup_container",
+				Data: map[string]any{
 					"sent_confirmation": true,
 				}},
 		}}
@@ -64,7 +64,7 @@ func (s *SignupView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.Page{}
 	}
 
-	return fir.Page{Data: fir.Data{
+	return fir.Page{Data: map[string]any{
 		"is_logged_in": true,
 	},
 	}

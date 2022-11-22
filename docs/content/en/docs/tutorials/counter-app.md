@@ -232,13 +232,13 @@ Running the above code, show render two buttons but nothing else. We want to sho
 
 ```go
 func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) (fir.Page) {
- return fir.Status{Code: 200}, fir.Data{
+ return fir.Status{Code: 200}, map[string]any{
   "count": c.Value(),
  }
 }
 ```
 
-By default, `fir.Data` was zero value. After overriding `OnGet` we are initialising it with a `count` value. The page is then passed through `html/template` and rendered. This is the standard way of rendering html templates in Go so this should be recongisable.
+By default, `map[string]any` was zero value. After overriding `OnGet` we are initialising it with a `count` value. The page is then passed through `html/template` and rendered. This is the standard way of rendering html templates in Go so this should be recongisable.
 
 ```html
 {{block "count" .}}<div id="count">{{.count}}</div>{{end}}
@@ -290,7 +290,7 @@ func morphCount(c int32) fir.Patch {
   Selector: "#count",
   Template: &fir.Template{
    Name: "count",
-   Data: fir.Data{"count": c},
+   Data: map[string]any{"count": c},
   },
  }
 }
@@ -348,7 +348,7 @@ func morphCount(c int32) fir.Patch {
   Selector: "#count",
   Template: &fir.Template{
    Name: "count",
-   Data: fir.Data{"count": c},
+   Data: map[string]any{"count": c},
   },
  }
 }
@@ -372,7 +372,7 @@ type CounterView struct {
 
 func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
  return fir.Page{
-  Data: fir.Data{
+  Data: map[string]any{
    "count": c.model.Value(),
   }}
 }
@@ -547,7 +547,7 @@ func morphCount(c int32) fir.Patch {
   Selector: "#count",
   Template: &fir.Template{
    Name: "count",
-   Data: fir.Data{"count": c},
+   Data: map[string]any{"count": c},
   },
  }
 }
@@ -576,7 +576,7 @@ func (c *Counter) Updated() (fir.Patch, error) {
  }
  return fir.Store{
   Name: "fir",
-  Data: fir.Data{
+  Data: map[string]any{
    "count_updated": time.Since(c.updated).Seconds(),
   },
  }, nil
@@ -659,7 +659,7 @@ func (c *CounterView) Layout() string {
 
 func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
  return fir.Page{
-  Data: fir.Data{
+  Data: map[string]any{
    "count": c.model.Count(),
   }}
 }
