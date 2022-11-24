@@ -20,8 +20,8 @@ func (d *DashboardView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (d *DashboardView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
-	return fir.Page{
+func (d *DashboardView) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
+	return fir.Pagedata{
 		Data: map[string]any{
 			"is_logged_in": true,
 		}}

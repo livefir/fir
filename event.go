@@ -2,9 +2,8 @@ package fir
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"log"
+	"net/http"
 	"net/url"
 )
 
@@ -13,8 +12,9 @@ type Event struct {
 	// Name is the name of the event
 	ID string `json:"id"`
 	// Params is the json rawmessage to be passed to the event
-	Params         json.RawMessage `json:"params"`
-	requestContext context.Context
+	Params   json.RawMessage `json:"params"`
+	request  *http.Request
+	response http.ResponseWriter
 }
 
 // String returns the string representation of the event
@@ -36,10 +36,11 @@ func (e Event) DecodeFormParams(v any) error {
 	}
 	return decoder.Decode(v, urlValues)
 }
-
-// RequestContext returns the request context
-func (e Event) RequestContext() context.Context {
-	return e.requestContext
+func (e Event) Request() *http.Request {
+	return e.request
+}
+func (e Event) Response() http.ResponseWriter {
+	return e.response
 }
 
 func getJSON(data map[string]any) string {
@@ -48,28 +49,4 @@ func getJSON(data map[string]any) string {
 		return err.Error()
 	}
 	return string(b)
-}
-
-func getEventPatchset(event Event, view View) Patchset {
-	patchset := view.OnEvent(event)
-	if patchset == nil {
-		log.Printf("[view] warning: no patchset returned for event: %v\n", event)
-		patchset = Patchset{}
-	}
-
-	firErrorPatchExists := false
-
-	for _, patch := range patchset {
-		if patch.GetSelector() == "#fir-error" {
-			firErrorPatchExists = true
-		}
-	}
-
-	if !firErrorPatchExists {
-		// unset error patch
-		patchset = append([]Patch{morphError("")}, patchset...)
-	}
-
-	return patchset
-
 }

@@ -28,7 +28,7 @@ func (v *View) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	id, err := uuid.Parse(chi.URLParam(r, "todoID"))
 	if err != nil {
 		return fir.PageError(err, "invalid todo id")
@@ -41,10 +41,10 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.ErrNotFound(err, "todo not found")
 	}
 
-	return fir.Page{Data: structs.Map(todo)}
+	return fir.Pagedata{Data: structs.Map(todo)}
 }
 
-func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
+func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	var req updateTodoReq
 	err := fir.DecodeForm(&req, r)
 	if err != nil {
@@ -63,7 +63,7 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 		if err != nil {
 			return utils.PageFormError(err)
 		}
-		return fir.Page{Data: structs.Map(todo)}
+		return fir.Pagedata{Data: structs.Map(todo)}
 
 	case "delete":
 		if err := deleteTodo(r.Context(), v.DB, id); err != nil {
@@ -75,7 +75,7 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 
 	}
 
-	return fir.Page{}
+	return fir.Pagedata{}
 }
 
 func (v *View) OnEvent(event fir.Event) fir.Patchset {

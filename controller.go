@@ -12,7 +12,7 @@ import (
 // Controller is an interface which encapsulates a group of views. It routes requests to the appropriate view.
 // It routes events to the appropriate view. It also provides a way to register views.
 type Controller interface {
-	Handler(view View) http.HandlerFunc
+	Route(opts ...RouteOption) http.HandlerFunc
 }
 
 type opt struct {
@@ -25,10 +25,10 @@ type opt struct {
 	watchExts            []string
 	publicDir            string
 	developmentMode      bool
-	errorView            View
 	embedFS              embed.FS
 	hasEmbedFS           bool
 	pubsub               PubsubAdapter
+	appName              string
 }
 
 // ControllerOption is an option for the controller.
@@ -52,13 +52,6 @@ func WithPubsubAdapter(pubsub PubsubAdapter) ControllerOption {
 func WithWebsocketUpgrader(upgrader websocket.Upgrader) ControllerOption {
 	return func(o *opt) {
 		o.websocketUpgrader = upgrader
-	}
-}
-
-// WithErrorView is an option to set a view to render error messages.
-func WithErrorView(view View) ControllerOption {
-	return func(o *opt) {
-		o.errorView = view
 	}
 }
 
@@ -119,8 +112,8 @@ func NewController(name string, options ...ControllerOption) Controller {
 		channelFunc:       DefaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
 		watchExts:         DefaultWatchExtensions,
-		errorView:         &DefaultErrorView{},
 		pubsub:            NewPubsubInmem(),
+		appName:           name,
 	}
 
 	for _, option := range options {
@@ -165,46 +158,23 @@ type controller struct {
 }
 
 // Handler returns an http.HandlerFunc that handles the view.
-func (c *controller) Handler(view View) http.HandlerFunc {
-	viewTemplate, err := parseTemplate(c.opt, view)
-	if err != nil {
-		panic(err)
+func (c *controller) Route(opts ...RouteOption) http.HandlerFunc {
+	defaultRouteOpt := &routeOpt{
+		layoutContentName: "content",
+		partials:          []string{"./templates/partials"},
+		funcMap:           DefaultFuncMap(),
+		extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
+		eventSender:       make(chan Event),
+		onLoad: func(event Event, render RouteRenderer) error {
+			return nil
+		},
+	}
+	for _, option := range opts {
+		option(defaultRouteOpt)
 	}
 
-	errorViewTemplate, err := parseTemplate(c.opt, c.errorView)
-	if err != nil {
-		panic(err)
-	}
-
-	// non-blocking send even if there are no live connections(ws, sse) for this view in the current server instance.
-	// this is to ensure that sending to the stream is non-blocking. since channel can only be constructed
-	// within the scope of a live connection, publishing patch messages are only possible when there is a live connection.
-	// TODO: explain this better
-	streamCh := make(chan Patchset)
-	go func() {
-		for patch := range view.Publisher() {
-			streamCh <- patch
-		}
-	}()
-
-	mountData := make(map[string]any)
+	rt := newRoute(c, defaultRouteOpt)
 	return func(w http.ResponseWriter, r *http.Request) {
-		v := &viewHandler{
-			view:              view,
-			errorView:         c.errorView,
-			viewTemplate:      viewTemplate,
-			errorViewTemplate: errorViewTemplate,
-			mountData:         mountData,
-			cntrl:             c,
-			streamCh:          streamCh,
-		}
-		if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
-			onPatchEvent(w, r, v)
-		} else if r.Header.Get("Connection") == "Upgrade" &&
-			r.Header.Get("Upgrade") == "websocket" {
-			onWebsocket(w, r, v)
-		} else {
-			onRequest(w, r, v)
-		}
+		rt.handle(w, r)
 	}
 }

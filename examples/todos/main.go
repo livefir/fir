@@ -31,12 +31,12 @@ func (t *TodosView) Content() string {
 	return "app.html"
 }
 
-func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+func (t *TodosView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Pagedata {
 	var todos []Todo
 	if err := t.db.Find(&todos, &bolthold.Query{}); err != nil {
-		return fir.Page{}
+		return fir.Pagedata{}
 	}
-	return fir.Page{Data: map[string]any{"todos": todos}}
+	return fir.Pagedata{Data: map[string]any{"todos": todos}}
 }
 
 func (t *TodosView) OnEvent(event fir.Event) fir.Patchset {

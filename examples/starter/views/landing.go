@@ -20,11 +20,11 @@ func (l *LandingView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (l *LandingView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
+func (l *LandingView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Pagedata {
 	if _, err := l.Auth.CurrentAccount(r); err != nil {
-		return fir.Page{}
+		return fir.Pagedata{}
 	}
-	return fir.Page{
+	return fir.Pagedata{
 		Data: map[string]any{
 			"is_logged_in": true,
 		}}

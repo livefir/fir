@@ -34,7 +34,7 @@ func OutDir(path string) PublicDirOption {
 }
 
 // Extension adds an extension to the list of extensions that will be copied over.
-func Extensions(extensions []string) PublicDirOption {
+func PublicFileExtensions(extensions []string) PublicDirOption {
 	return func(o *publicOpt) {
 		for _, ext := range extensions {
 			if !slices.Contains(o.extensions, ext) {

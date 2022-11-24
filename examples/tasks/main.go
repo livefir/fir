@@ -17,13 +17,13 @@ type TaskView struct {
 	sync.RWMutex
 }
 
-func (t *TaskView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
+func (t *TaskView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Pagedata {
 	t.RLock()
 	defer t.RUnlock()
-	return fir.Page{Data: map[string]any{"tasks": t.tasks}}
+	return fir.Pagedata{Data: map[string]any{"tasks": t.tasks}}
 }
 
-func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
+func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Pagedata {
 	t.Lock()
 	defer t.Unlock()
 
@@ -33,7 +33,7 @@ func (t *TaskView) OnPost(_ http.ResponseWriter, r *http.Request) fir.Page {
 	}
 
 	t.tasks = append(t.tasks, task)
-	return fir.Page{Data: map[string]any{"tasks": t.tasks}}
+	return fir.Pagedata{Data: map[string]any{"tasks": t.tasks}}
 }
 
 func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {

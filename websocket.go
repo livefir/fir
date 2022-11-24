@@ -11,10 +11,15 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
-	channel := *v.cntrl.channelFunc(r, v.view.ID())
+func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
+	channel := route.channelFunc(r, route.id)
+	if channel == nil {
+		log.Printf("[onWebsocket] error: channel is empty")
+		http.Error(w, "channel is empty", http.StatusUnauthorized)
+		return
+	}
 
-	conn, err := v.cntrl.websocketUpgrader.Upgrade(w, r, nil)
+	conn, err := route.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
@@ -22,18 +27,17 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	ctx := context.Background()
 
-	// publisher
+	// eventSender
 	go func() {
-		for patchset := range v.streamCh {
-			err = v.cntrl.pubsub.Publish(ctx, channel, patchset)
-			if err != nil {
-				log.Printf("[onWebsocket] error publishing patch: %v\n", err)
-			}
+		for event := range route.eventSender {
+			event.request = r
+			event.response = w
+			route.onEvents[event.ID](event, patchSocketRenderer(ctx, conn, *channel, route))
 		}
 	}()
 
-	// subscriber
-	subscription, err := v.cntrl.pubsub.Subscribe(ctx, channel)
+	// subscribers
+	subscription, err := route.pubsub.Subscribe(ctx, *channel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -42,13 +46,13 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 	go func() {
 		for patchset := range subscription.C() {
-			go writePatchOperations(*conn, channel, v.viewTemplate, patchset)
+			go writePatchOperations(conn, *channel, route.template, patchset)
 		}
 	}()
 
-	if v.cntrl.opt.developmentMode {
+	if route.developmentMode {
 		// subscriber for reload operations in development mode. see watch.go
-		reloadSubscriber, err := v.cntrl.pubsub.Subscribe(ctx, devReloadChannel)
+		reloadSubscriber, err := route.pubsub.Subscribe(ctx, devReloadChannel)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -57,7 +61,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, v *viewHandler) {
 
 		go func() {
 			for patchset := range reloadSubscriber.C() {
-				go writePatchOperations(*conn, devReloadChannel, v.viewTemplate, patchset)
+				go writePatchOperations(conn, devReloadChannel, route.template, patchset)
 			}
 		}()
 	}
@@ -70,8 +74,8 @@ loop:
 			break loop
 		}
 
-		event := new(Event)
-		err = json.NewDecoder(bytes.NewReader(message)).Decode(event)
+		var event Event
+		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
 		if err != nil {
 			log.Printf("[onWebsocket] err: parsing event, msg %s \n", string(message))
 			continue
@@ -82,19 +86,17 @@ loop:
 			continue
 		}
 
-		v.reloadTemplates()
+		event.request = r
+		event.response = w
 
 		log.Printf("[onWebsocket] received event: %+v\n", event)
 
-		patchset := getEventPatchset(*event, v.view)
-		err = v.cntrl.pubsub.Publish(ctx, channel, patchset)
-		if err != nil {
-			log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
-		}
+		route.onEvents[event.ID](event, patchSocketRenderer(ctx, conn, *channel, route))
+
 	}
 }
 
-func writePatchOperations(conn websocket.Conn, channel string, t *template.Template, patchset Patchset) error {
+func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []Patch) error {
 	message := buildPatchOperations(t, patchset)
 	log.Printf("[writePatchOperations] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
 	err := conn.WriteMessage(websocket.TextMessage, message)

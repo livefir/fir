@@ -8,14 +8,14 @@ import (
 	"github.com/adnaan/fir/cli/testdata/todos/models"
 )
 
-func PageFormError(err error) fir.Page {
+func PageFormError(err error) fir.Pagedata {
 	var validError *models.ValidationError
 	if errors.As(err, &validError) {
 		userError := validError.Unwrap()
 		if errors.Unwrap(validError.Unwrap()) != nil {
 			userError = errors.Unwrap(validError.Unwrap())
 		}
-		return fir.Page{
+		return fir.Pagedata{
 			Data: map[string]any{
 				fmt.Sprintf("%sError", validError.Name): userError.Error(),
 			},

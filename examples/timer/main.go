@@ -32,8 +32,8 @@ func (t *Timer) Content() string {
 	return "app.html"
 }
 
-func (t *Timer) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
-	return fir.Page{
+func (t *Timer) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Pagedata {
+	return fir.Pagedata{
 		Data: map[string]any{"ts": time.Now().String()},
 	}
 }

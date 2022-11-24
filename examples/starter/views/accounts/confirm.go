@@ -22,13 +22,13 @@ func (h *ConfirmView) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (h *ConfirmView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (h *ConfirmView) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	token := chi.URLParam(r, "token")
 	err := h.Auth.ConfirmSignupEmail(r.Context(), token)
 	if err != nil {
 		return fir.PageError(err, "failed to confirm signup email")
 	}
-	return fir.Page{
+	return fir.Pagedata{
 		Data: map[string]any{
 			"confirmed": true,
 		}}

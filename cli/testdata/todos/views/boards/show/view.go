@@ -27,7 +27,7 @@ func (v *View) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	id, err := uuid.Parse(chi.URLParam(r, "boardID"))
 	if err != nil {
 		return fir.PageError(err, "invalid board id")
@@ -39,10 +39,10 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		return fir.ErrNotFound(err, "board not found")
 	}
 
-	return fir.Page{Data: structs.Map(board)}
+	return fir.Pagedata{Data: structs.Map(board)}
 }
 
-func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
+func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	var req updateBoardReq
 	err := fir.DecodeForm(&req, r)
 	if err != nil {
@@ -61,7 +61,7 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 		if err != nil {
 			return utils.PageFormError(err)
 		}
-		return fir.Page{Data: structs.Map(board)}
+		return fir.Pagedata{Data: structs.Map(board)}
 
 	case "delete":
 		if err := deleteBoard(r.Context(), v.DB, id); err != nil {
@@ -73,7 +73,7 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 
 	}
 
-	return fir.Page{}
+	return fir.Pagedata{}
 }
 
 func (v *View) OnEvent(event fir.Event) fir.Patchset {

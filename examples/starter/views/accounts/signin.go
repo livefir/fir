@@ -50,23 +50,23 @@ func (s *SigninView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (s *SigninView) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	if _, err := s.Auth.CurrentAccount(r); err != nil {
-		return fir.Page{}
+		return fir.Pagedata{}
 	}
 
-	return fir.Page{
+	return fir.Pagedata{
 		Data: map[string]any{
 			"is_logged_in": true,
 		},
 	}
 }
 
-func (s *SigninView) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
+func (s *SigninView) OnPost(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	return s.LoginSubmit(w, r)
 }
 
-func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) fir.Page {
+func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	var email, password string
 	_ = r.ParseForm()
 	for k, v := range r.Form {
@@ -103,5 +103,5 @@ func (s *SigninView) LoginSubmit(w http.ResponseWriter, r *http.Request) fir.Pag
 
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 
-	return fir.Page{}
+	return fir.Pagedata{}
 }

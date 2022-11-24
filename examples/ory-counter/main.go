@@ -108,8 +108,8 @@ func (c *CounterView) Content() string {
 	</html>`
 }
 
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Page {
-	return fir.Page{
+func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Pagedata {
+	return fir.Pagedata{
 		Data: map[string]any{
 			"count": c.model.Value(),
 		}}

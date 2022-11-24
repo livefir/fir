@@ -35,7 +35,7 @@ var publicCmd = &cobra.Command{
 		}
 
 		if len(extensions) != 0 {
-			opts = append(opts, fir.Extensions(extensions))
+			opts = append(opts, fir.PublicFileExtensions(extensions))
 		}
 
 		if err := fir.GeneratePublicDir(opts...); err != nil {

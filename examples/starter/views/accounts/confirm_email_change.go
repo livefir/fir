@@ -22,7 +22,7 @@ func (c *ConfirmEmailChangeView) Layout() string {
 	return "./templates/layouts/app.html"
 }
 
-func (c *ConfirmEmailChangeView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (c *ConfirmEmailChangeView) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	token := chi.URLParam(r, "token")
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := c.Auth.GetAccount(r.Context(), userID)
@@ -36,5 +36,5 @@ func (c *ConfirmEmailChangeView) OnGet(w http.ResponseWriter, r *http.Request) f
 
 	redirectTo := "/account"
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
-	return fir.Page{}
+	return fir.Pagedata{}
 }

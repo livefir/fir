@@ -28,7 +28,7 @@ func (v *View) Layout() string {
 	return "./templates/layouts/index.html"
 }
 
-func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	var req queryReq
 	err := fir.DecodeURLValues(&req, r)
 	if err != nil {
@@ -45,10 +45,10 @@ func (v *View) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		data[k] = v
 	}
 
-	return fir.Page{Data: data}
+	return fir.Pagedata{Data: data}
 }
 
-func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
+func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	var req createReq
 	err := fir.DecodeForm(&req, r)
 	if err != nil {
@@ -62,7 +62,7 @@ func (v *View) OnPost(w http.ResponseWriter, r *http.Request) fir.Page {
 
 	http.Redirect(w, r, fmt.Sprintf("/%s/show", board.ID.String()), http.StatusFound)
 
-	return fir.Page{}
+	return fir.Pagedata{}
 }
 
 func (v *View) OnEvent(event fir.Event) fir.Patchset {

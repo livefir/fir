@@ -34,7 +34,7 @@ func (s *SettingsView) OnEvent(event fir.Event) fir.Patchset {
 	return nil
 }
 
-func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
+func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Pagedata {
 	userID, _ := r.Context().Value(authn.AccountIDKey).(string)
 	acc, err := s.Auth.GetAccount(r.Context(), userID)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s *SettingsView) OnGet(w http.ResponseWriter, r *http.Request) fir.Page {
 		name, _ = m.String("name")
 	}
 
-	return fir.Page{
+	return fir.Pagedata{
 		Data: map[string]any{
 			"is_logged_in": true,
 			"email":        acc.Email(),
