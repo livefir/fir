@@ -52,7 +52,7 @@ func(t *TodosPage) OnEvent(render *PatchRenderer, event Event) error {
 }
 
 
-opts := fir.RenderOption[]{
+opts := fir.PageOption[]{
   fir.EventSender(ch),
   fir.ID("todos"),
   fir.Layout("layout.html"),

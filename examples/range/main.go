@@ -12,44 +12,33 @@ type CountRequest struct {
 	Count string `json:"count"`
 }
 
-type Range struct {
-	fir.DefaultView
-}
+type index struct{}
 
-func (r *Range) Content() string {
-	return "app.html"
+func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
+	return r(fir.M{"total": 0})
 }
-
-func (r *Range) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Pagedata {
-	return fir.Pagedata{
-		Data: map[string]any{
-			"total": 0,
-		}}
-}
-
-func (r *Range) OnEvent(event fir.Event) fir.Patchset {
-	switch event.ID {
-	case "update":
-		req := new(CountRequest)
-		if err := event.DecodeParams(req); err != nil {
-			return fir.PatchError(err, "failed to decode update request")
-		}
-		count, err := strconv.Atoi(req.Count)
-		if err != nil {
-			return fir.PatchError(err, "failed to parse count")
-		}
-		return fir.Patchset{
-			fir.Store{Name: "fir", Data: map[string]any{"total": count * 10}},
-		}
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
+func (i *index) update(e fir.Event, r fir.PatchRenderer) error {
+	req := new(CountRequest)
+	if err := e.DecodeParams(req); err != nil {
+		return err
 	}
-	return nil
+	count, err := strconv.Atoi(req.Count)
+	if err != nil {
+		return err
+	}
+	return r(fir.Morph("#total", "total", fir.M{"total": count * 10}))
+}
+func (i *index) Options() []fir.RouteOption {
+	return []fir.RouteOption{
+		fir.Content("app.html"),
+		fir.OnLoad(i.load),
+		fir.OnEvent("update", i.update),
+	}
 }
 
 func main() {
 	c := fir.NewController("fir-range", fir.DevelopmentMode(true))
-	http.Handle("/", c.Handler(&Range{}))
+	http.Handle("/", c.Route(&index{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

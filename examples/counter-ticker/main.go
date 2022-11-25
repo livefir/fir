@@ -49,8 +49,8 @@ func (c *Counter) Count() int32 {
 	return c.count
 }
 
-func newCounterIndex(pubsub fir.PubsubAdapter) *counterIndex {
-	c := &counterIndex{
+func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
+	c := &index{
 		model:       &Counter{},
 		pubsub:      pubsub,
 		eventSender: make(chan fir.Event),
@@ -73,38 +73,38 @@ func newCounterIndex(pubsub fir.PubsubAdapter) *counterIndex {
 	return c
 }
 
-type counterIndex struct {
+type index struct {
 	model       *Counter
 	pubsub      fir.PubsubAdapter
 	eventSender chan fir.Event
 	id          string
 }
 
-func (c *counterIndex) Options() []fir.RouteOption {
+func (i *index) Options() []fir.RouteOption {
 	return []fir.RouteOption{
-		fir.ID(c.id),
+		fir.ID(i.id),
 		fir.Content(content),
 		fir.Layout(layout),
-		fir.OnLoad(c.onLoad),
-		fir.OnEvent("inc", c.inc),
-		fir.OnEvent("dec", c.dec),
-		fir.OnEvent("updated", c.updated),
-		fir.EventSender(c.eventSender),
+		fir.OnLoad(i.load),
+		fir.OnEvent("inc", i.inc),
+		fir.OnEvent("dec", i.dec),
+		fir.OnEvent("updated", i.updated),
+		fir.EventSender(i.eventSender),
 	}
 }
 
-func (c *counterIndex) onLoad(e fir.Event, r fir.RouteRenderer) error {
-	return r(fir.M{"count": c.model.Count()})
+func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
+	return r(fir.M{"count": i.model.Count()})
 }
 
-func (c *counterIndex) inc(e fir.Event, r fir.PatchRenderer) error {
-	return r(c.model.Inc())
+func (i *index) inc(e fir.Event, r fir.PatchRenderer) error {
+	return r(i.model.Inc())
 }
 
-func (c *counterIndex) dec(e fir.Event, r fir.PatchRenderer) error {
-	return r(c.model.Dec())
+func (i *index) dec(e fir.Event, r fir.PatchRenderer) error {
+	return r(i.model.Dec())
 }
-func (c *counterIndex) updated(e fir.Event, r fir.PatchRenderer) error {
+func (i *index) updated(e fir.Event, r fir.PatchRenderer) error {
 	var data map[string]any
 	err := e.DecodeParams(&data)
 	if err != nil {
@@ -154,6 +154,6 @@ var layout = `<!DOCTYPE html>
 func main() {
 	pubsubAdapter := fir.NewPubsubInmem()
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true), fir.WithPubsubAdapter(pubsubAdapter))
-	http.Handle("/", controller.Route(newCounterIndex(pubsubAdapter)))
+	http.Handle("/", controller.Route(NewCounterIndex(pubsubAdapter)))
 	http.ListenAndServe(":9867", nil)
 }

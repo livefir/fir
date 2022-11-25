@@ -38,40 +38,30 @@ type QueryRequest struct {
 	Query string `json:"query"`
 }
 
-type Search struct {
-	fir.DefaultView
-}
+type index struct{}
 
-func (s *Search) Content() string {
-	return "app.html"
+func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
+	return r(fir.M{"cities": cities})
 }
-
-func (s *Search) OnEvent(event fir.Event) fir.Patchset {
-	switch event.ID {
-	case "search":
-		req := new(QueryRequest)
-		if err := event.DecodeParams(req); err != nil {
-			return fir.PatchError(err, "failed to decode search request")
-		}
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#cities",
-				HTML: &fir.Render{
-					Template: "cities",
-					Data: map[string]any{
-						"cities": getCities(req.Query),
-					},
-				},
-			}}
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
+func (i *index) query(e fir.Event, r fir.PatchRenderer) error {
+	req := new(QueryRequest)
+	if err := e.DecodeParams(req); err != nil {
+		return err
 	}
-	return nil
+	return r(fir.Morph("#cities", "cities", fir.M{"cities": getCities(req.Query)}))
+}
+
+func (i *index) Options() []fir.RouteOption {
+	return []fir.RouteOption{
+		fir.Content("app.html"),
+		fir.OnEvent("query", i.query),
+		fir.OnLoad(i.load),
+	}
 }
 
 func main() {
 	c := fir.NewController("fir-search", fir.DevelopmentMode(true))
-	http.Handle("/", c.Handler(&Search{}))
+	http.Handle("/", c.Route(&index{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

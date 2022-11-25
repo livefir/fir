@@ -38,21 +38,21 @@ type queryRequest struct {
 	Query string `json:"query"`
 }
 
-type search struct{}
+type index struct{}
 
-func (s *search) Options() []fir.RouteOption {
+func (i *index) Options() []fir.RouteOption {
 	return []fir.RouteOption{
 		fir.Content("app.html"),
-		fir.OnEvent("query", s.query),
-		fir.OnLoad(s.onLoad),
+		fir.OnEvent("query", i.query),
+		fir.OnLoad(i.load),
 	}
 }
 
-func (s *search) onLoad(e fir.Event, r fir.RouteRenderer) error {
+func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
 	return r(fir.M{"cities": cities})
 }
 
-func (s *search) query(e fir.Event, r fir.PatchRenderer) error {
+func (i *index) query(e fir.Event, r fir.PatchRenderer) error {
 	req := new(queryRequest)
 	if err := e.DecodeParams(req); err != nil {
 		return err
@@ -63,7 +63,7 @@ func (s *search) query(e fir.Event, r fir.PatchRenderer) error {
 
 func main() {
 	c := fir.NewController("fir-autocomplete", fir.DevelopmentMode(true))
-	http.Handle("/", c.Route(&search{}))
+	http.Handle("/", c.Route(&index{}))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

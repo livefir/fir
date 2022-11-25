@@ -20,13 +20,7 @@ type Counter struct {
 }
 
 func morphCount(c int32) fir.Patch {
-	return fir.Morph{
-		Selector: "#count",
-		HTML: &fir.Render{
-			Template: "count",
-			Data:     map[string]any{"count": c},
-		},
-	}
+	return fir.Morph("#count", "count", fir.M{"count": c})
 }
 
 func (c *Counter) Inc() fir.Patch {
@@ -45,18 +39,10 @@ func (c *Counter) Dec() fir.Patch {
 	return morphCount(c.count)
 }
 
-func (c *Counter) Updated() (fir.Patch, error) {
+func (c *Counter) Updated() float64 {
 	c.RLock()
 	defer c.RUnlock()
-	if c.updated.IsZero() {
-		return nil, fmt.Errorf("time is zero")
-	}
-	return fir.Store{
-		Name: "fir",
-		Data: map[string]any{
-			"count_updated": time.Since(c.updated).Seconds(),
-		},
-	}, nil
+	return time.Since(c.updated).Seconds()
 }
 
 func (c *Counter) Count() int32 {
@@ -65,47 +51,71 @@ func (c *Counter) Count() int32 {
 	return c.count
 }
 
-func NewCounterView(pubsubAdapter fir.PubsubAdapter) *CounterView {
-	publisher := make(chan fir.Patchset)
+func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
+	c := &index{
+		model:       &Counter{},
+		pubsub:      pubsub,
+		eventSender: make(chan fir.Event),
+		id:          "counter",
+	}
+
 	ticker := time.NewTicker(time.Second)
-	c := &CounterView{publisher: publisher, model: &Counter{}, pubsubAdapter: pubsubAdapter}
-	pattern := fmt.Sprintf("*:%s", c.ID())
+	pattern := fmt.Sprintf("*:%s", c.id)
 
 	go func() {
 		for ; true; <-ticker.C {
-			if !c.pubsubAdapter.HasSubscribers(context.Background(), pattern) {
+			if !c.pubsub.HasSubscribers(context.Background(), pattern) {
 				// if userID:viewID(*:viewID) channel pattern has no subscribers, skip costly operation
 				log.Printf("channel pattern %s has no subscribers", pattern)
 				continue
 			}
-			patch, err := c.model.Updated()
-			if err != nil {
-				continue
-			}
-			publisher <- fir.Patchset{patch}
+			c.eventSender <- fir.NewEvent("updated", fir.M{"count_updated": c.model.Updated()})
 		}
 	}()
 	return c
 }
 
-type CounterView struct {
-	fir.DefaultView
-	model         *Counter
-	publisher     chan fir.Patchset
-	pubsubAdapter fir.PubsubAdapter
-	sync.RWMutex
+type index struct {
+	model       *Counter
+	pubsub      fir.PubsubAdapter
+	eventSender chan fir.Event
+	id          string
 }
 
-func (c *CounterView) ID() string {
-	return "counter"
+func (i *index) Options() []fir.RouteOption {
+	return []fir.RouteOption{
+		fir.ID(i.id),
+		fir.Content(content),
+		fir.Layout(layout),
+		fir.OnLoad(i.load),
+		fir.OnEvent("inc", i.inc),
+		fir.OnEvent("dec", i.dec),
+		fir.OnEvent("updated", i.updated),
+		fir.EventSender(i.eventSender),
+	}
 }
 
-func (c *CounterView) Publisher() <-chan fir.Patchset {
-	return c.publisher
+func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
+	return r(fir.M{"count": i.model.Count()})
 }
 
-func (c *CounterView) Content() string {
-	return `
+func (i *index) inc(e fir.Event, r fir.PatchRenderer) error {
+	return r(i.model.Inc())
+}
+
+func (i *index) dec(e fir.Event, r fir.PatchRenderer) error {
+	return r(i.model.Dec())
+}
+func (i *index) updated(e fir.Event, r fir.PatchRenderer) error {
+	var data map[string]any
+	err := e.DecodeParams(&data)
+	if err != nil {
+		return err
+	}
+	return r(fir.Store("fir", data))
+}
+
+var content = `
 {{define "content" }} 
 <div class="my-6" style="height: 500px">
 	<div class="columns is-mobile is-centered is-vcentered">
@@ -123,10 +133,8 @@ func (c *CounterView) Content() string {
 	</div>
 </div>
 {{end}}`
-}
 
-func (c *CounterView) Layout() string {
-	return `<!DOCTYPE html>
+var layout = `<!DOCTYPE html>
 	<html lang="en">
 	
 	<head>
@@ -144,27 +152,6 @@ func (c *CounterView) Layout() string {
 	</body>
 	
 	</html>`
-}
-
-func (c *CounterView) OnGet(_ http.ResponseWriter, _ *http.Request) fir.Pagedata {
-	return fir.Pagedata{
-		Data: map[string]any{
-			"count": c.model.Count(),
-		}}
-}
-
-func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
-	switch event.ID {
-	case "inc":
-		return fir.Patchset{c.model.Inc()}
-	case "dec":
-		return fir.Patchset{c.model.Dec()}
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
-	}
-
-	return nil
-}
 
 func main() {
 	port := flag.String("port", "9867", "port to listen on")
@@ -176,9 +163,7 @@ func main() {
 			DB:       0,  // use default DB
 		}),
 	)
-	controller := fir.NewController("counter_app",
-		fir.DevelopmentMode(true),
-		fir.WithPubsubAdapter(pubsubAdapter))
-	http.Handle("/", controller.Handler(NewCounterView(pubsubAdapter)))
-	http.ListenAndServe(fmt.Sprintf(":%s", *port), nil)
+	controller := fir.NewController("counter_app", fir.DevelopmentMode(true), fir.WithPubsubAdapter(pubsubAdapter))
+	http.Handle("/", controller.Route(NewCounterIndex(pubsubAdapter)))
+	http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
 }

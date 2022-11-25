@@ -160,13 +160,14 @@ type controller struct {
 // Handler returns an http.HandlerFunc that handles the view.
 func (c *controller) Route(route Route) http.HandlerFunc {
 	defaultRouteOpt := &routeOpt{
+		content:           "Hello Fir App!",
 		layoutContentName: "content",
 		partials:          []string{"./templates/partials"},
 		funcMap:           DefaultFuncMap(),
 		extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
 		eventSender:       make(chan Event),
 		onLoad: func(event Event, render RouteRenderer) error {
-			return nil
+			return render(nil)
 		},
 	}
 	for _, option := range route.Options() {

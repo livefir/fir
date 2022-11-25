@@ -37,45 +37,44 @@ var content = `<!DOCTYPE html>
 
 </html>`
 
-type counter struct {
+type index struct {
 	value int32
 }
 
-func (c *counter) onLoad(e fir.Event, r fir.RouteRenderer) error {
-	return r(fir.M{"count": atomic.LoadInt32(&c.value)})
+func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
+	return r(fir.M{"count": atomic.LoadInt32(&i.value)})
 }
 
-func (c *counter) onInc(e fir.Event, r fir.PatchRenderer) error {
+func (i *index) inc(e fir.Event, r fir.PatchRenderer) error {
 	return r(
 		fir.Morph(
 			"#count",
 			"count",
-			fir.M{"count": atomic.AddInt32(&c.value, 1)},
+			fir.M{"count": atomic.AddInt32(&i.value, 1)},
 		))
 }
 
-func (c *counter) onDec(e fir.Event, r fir.PatchRenderer) error {
+func (i *index) dec(e fir.Event, r fir.PatchRenderer) error {
 	return r(
 		fir.Morph(
 			"#count",
 			"count",
-			fir.M{"count": atomic.AddInt32(&c.value, -1)},
+			fir.M{"count": atomic.AddInt32(&i.value, -1)},
 		))
 }
 
-func (c *counter) Options() []fir.RouteOption {
+func (i *index) Options() []fir.RouteOption {
 	return []fir.RouteOption{
 		fir.ID("counter"),
 		fir.Content(content),
-		fir.OnLoad(c.onLoad),
-		fir.OnEvent("inc", c.onInc),
-		fir.OnEvent("dec", c.onDec),
+		fir.OnLoad(i.load),
+		fir.OnEvent("inc", i.inc),
+		fir.OnEvent("dec", i.dec),
 	}
 }
 
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
-	c := &counter{}
-	http.Handle("/", controller.Route(c))
+	http.Handle("/", controller.Route(&index{}))
 	http.ListenAndServe(":9867", nil)
 }
