@@ -57,7 +57,7 @@ func (s *search) query(e fir.Event, r fir.PatchRenderer) error {
 	if err := e.DecodeParams(req); err != nil {
 		return err
 	}
-	return r(fir.Morph("#cities", "cities", fir.M{"cities": getCities(req.Query)}))
+	return r(fir.Morph("#list_cities", "cities", fir.M{"cities": getCities(req.Query)}))
 
 }
 

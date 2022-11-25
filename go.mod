@@ -23,6 +23,7 @@ require (
 	github.com/ory/client-go v0.0.1-alpha.189
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/cobra v1.5.0
+	github.com/tdewolff/minify/v2 v2.12.4
 	github.com/timshannon/bolthold v0.0.0-20210913165410-232392fc8a6a
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20220518171630-0b5c67f07fdf
@@ -61,6 +62,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
+	github.com/tdewolff/parse/v2 v2.6.4 // indirect
 	github.com/vanng822/css v0.0.0-20190504095207-a21e860bcd04 // indirect
 	github.com/vanng822/go-premailer v0.0.0-20191214114701-be27abe028fe // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect

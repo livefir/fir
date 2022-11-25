@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"html/template"
+	"io"
 	"log"
+
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/html"
 )
 
 // Op is the type of patch operation
@@ -162,11 +166,20 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 
 func buildTemplateValue(t *template.Template, name string, data any) (string, error) {
 	var buf bytes.Buffer
+	defer buf.Reset()
 	err := t.ExecuteTemplate(&buf, name, data)
 	if err != nil {
 		return "", err
 	}
-	value := buf.String()
-	buf.Reset()
+	m := minify.New()
+	m.Add("text/html", &html.Minifier{})
+	r := m.Reader("text/html", &buf)
+	var buf1 bytes.Buffer
+	defer buf1.Reset()
+	_, err = io.Copy(&buf1, r)
+	if err != nil {
+		return "", err
+	}
+	value := buf1.String()
 	return value, nil
 }
