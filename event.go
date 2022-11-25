@@ -3,9 +3,24 @@ package fir
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 )
+
+func NewEvent(id string, params any) Event {
+	data, err := json.Marshal(params)
+	if err != nil {
+		log.Printf("error marshaling event params: %v, %v, %v \n,", id, params, err)
+		return Event{
+			ID: id,
+		}
+	}
+	return Event{
+		ID:     id,
+		Params: data,
+	}
+}
 
 // Event is a struct that holds the data for an event
 type Event struct {

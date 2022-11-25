@@ -156,6 +156,7 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 		log.Printf("buildPatchOperations marshal error: %+v, %v \n", renderedPatchset, err)
 		return nil
 	}
+	log.Println("buildPatchOperations", string(data))
 	return data
 }
 

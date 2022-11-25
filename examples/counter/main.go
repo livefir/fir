@@ -15,7 +15,7 @@ var content = `<!DOCTYPE html>
 	<meta charset="UTF-8">
 	<meta name="description" content="A counter app">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-	<script defer src="http://localhost:8000/cdn.js"></script>
+	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
 	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
@@ -63,7 +63,7 @@ func (c *counter) onDec(e fir.Event, r fir.PatchRenderer) error {
 		))
 }
 
-func (c *counter) opts() []fir.RouteOption {
+func (c *counter) Options() []fir.RouteOption {
 	return []fir.RouteOption{
 		fir.ID("counter"),
 		fir.Content(content),
@@ -76,6 +76,6 @@ func (c *counter) opts() []fir.RouteOption {
 func main() {
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
 	c := &counter{}
-	http.Handle("/", controller.Route(c.opts()...))
+	http.Handle("/", controller.Route(c))
 	http.ListenAndServe(":9867", nil)
 }

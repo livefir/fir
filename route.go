@@ -34,6 +34,10 @@ type routeOpt struct {
 	opt
 }
 
+type Route interface {
+	Options() []RouteOption
+}
+
 type RouteOption func(*routeOpt)
 
 func ID(id string) RouteOption {

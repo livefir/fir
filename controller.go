@@ -12,7 +12,7 @@ import (
 // Controller is an interface which encapsulates a group of views. It routes requests to the appropriate view.
 // It routes events to the appropriate view. It also provides a way to register views.
 type Controller interface {
-	Route(opts ...RouteOption) http.HandlerFunc
+	Route(route Route) http.HandlerFunc
 }
 
 type opt struct {
@@ -158,7 +158,7 @@ type controller struct {
 }
 
 // Handler returns an http.HandlerFunc that handles the view.
-func (c *controller) Route(opts ...RouteOption) http.HandlerFunc {
+func (c *controller) Route(route Route) http.HandlerFunc {
 	defaultRouteOpt := &routeOpt{
 		layoutContentName: "content",
 		partials:          []string{"./templates/partials"},
@@ -169,7 +169,7 @@ func (c *controller) Route(opts ...RouteOption) http.HandlerFunc {
 			return nil
 		},
 	}
-	for _, option := range opts {
+	for _, option := range route.Options() {
 		option(defaultRouteOpt)
 	}
 

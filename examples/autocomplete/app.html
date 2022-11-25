@@ -24,7 +24,7 @@
                         @input="$fir.emit('query',{query: $event.target.value})">
                 </div>
                 {{ block "cities" .}}
-                <datalist id="list_cities">
+                <datalist id="cities">
                     {{range .cities}}
                     <option value="{{.}}"></option>
                     {{end}}
