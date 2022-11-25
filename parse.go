@@ -10,7 +10,7 @@ import (
 func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
 	pageLayoutPath := filepath.Join(opt.publicDir, opt.layout)
 	// is layout html content or a file/directory
-	if isFileHTML(pageLayoutPath, opt) {
+	if isFileOrString(pageLayoutPath, opt) {
 		return template.Must(template.New("").Funcs(opt.funcMap).Parse(opt.layout)), nil
 	}
 
@@ -38,7 +38,7 @@ func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
 func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
 	// is content html content or a file/directory
 	pageContentPath := filepath.Join(opt.publicDir, opt.content)
-	if isFileHTML(pageContentPath, opt) {
+	if isFileOrString(pageContentPath, opt) {
 		return template.Must(
 			template.New(
 				opt.layoutContentName).
@@ -70,7 +70,7 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 	pageLayoutPath := filepath.Join(opt.publicDir, opt.layout)
 	var layoutTemplate *template.Template
 	// is layout,  html content or a file/directory
-	if isFileHTML(pageLayoutPath, opt) {
+	if isFileOrString(pageLayoutPath, opt) {
 		layoutTemplate = template.Must(template.New("base").Funcs(opt.funcMap).Parse(opt.layout))
 	} else {
 		// layout must be  a file or directory
@@ -102,7 +102,7 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 	// check if content is a not a file or directory
 	var pageTemplate *template.Template
 	pageContentPath := filepath.Join(opt.publicDir, opt.content)
-	if isFileHTML(pageContentPath, opt) {
+	if isFileOrString(pageContentPath, opt) {
 		pageTemplate = template.Must(layoutTemplate.Parse(opt.content))
 	} else {
 		var pageFiles []string

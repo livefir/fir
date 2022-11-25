@@ -38,32 +38,34 @@ type queryRequest struct {
 	Query string `json:"query"`
 }
 
-type index struct{}
+func index() []fir.RouteOption {
+	load := func(e fir.Event, r fir.RouteRenderer) error {
+		return r(fir.M{"cities": cities})
+	}
 
-func (i *index) Options() []fir.RouteOption {
+	query := func(e fir.Event, r fir.PatchRenderer) error {
+		req := new(queryRequest)
+		if err := e.DecodeParams(req); err != nil {
+			return err
+		}
+		return r(fir.Morph(
+			"#list_cities",
+			"cities",
+			fir.M{
+				"cities": getCities(req.Query),
+			}))
+	}
+
 	return []fir.RouteOption{
 		fir.Content("app.html"),
-		fir.OnEvent("query", i.query),
-		fir.OnLoad(i.load),
+		fir.OnEvent("query", query),
+		fir.OnLoad(load),
 	}
-}
-
-func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
-	return r(fir.M{"cities": cities})
-}
-
-func (i *index) query(e fir.Event, r fir.PatchRenderer) error {
-	req := new(queryRequest)
-	if err := e.DecodeParams(req); err != nil {
-		return err
-	}
-	return r(fir.Morph("#list_cities", "cities", fir.M{"cities": getCities(req.Query)}))
-
 }
 
 func main() {
-	c := fir.NewController("fir-autocomplete", fir.DevelopmentMode(true))
-	http.Handle("/", c.Route(&index{}))
+	c := fir.NewController("autocomplete", fir.DevelopmentMode(true))
+	http.Handle("/", c.RouteFunc(index))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

@@ -13,6 +13,7 @@ import (
 // It routes events to the appropriate view. It also provides a way to register views.
 type Controller interface {
 	Route(route Route) http.HandlerFunc
+	RouteFunc(options RouteFunc) http.HandlerFunc
 }
 
 type opt struct {
@@ -157,20 +158,33 @@ type controller struct {
 	opt
 }
 
-// Handler returns an http.HandlerFunc that handles the view.
+var defaultRouteOpt = &routeOpt{
+	content:           "Hello Fir App!",
+	layoutContentName: "content",
+	partials:          []string{"./routes/partials"},
+	funcMap:           DefaultFuncMap(),
+	extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
+	eventSender:       make(chan Event),
+	onLoad: func(event Event, render RouteRenderer) error {
+		return render(nil)
+	},
+}
+
+// RouteFunc returns an http.HandlerFunc that renders the route
 func (c *controller) Route(route Route) http.HandlerFunc {
-	defaultRouteOpt := &routeOpt{
-		content:           "Hello Fir App!",
-		layoutContentName: "content",
-		partials:          []string{"./templates/partials"},
-		funcMap:           DefaultFuncMap(),
-		extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
-		eventSender:       make(chan Event),
-		onLoad: func(event Event, render RouteRenderer) error {
-			return render(nil)
-		},
-	}
 	for _, option := range route.Options() {
+		option(defaultRouteOpt)
+	}
+
+	rt := newRoute(c, defaultRouteOpt)
+	return func(w http.ResponseWriter, r *http.Request) {
+		rt.handle(w, r)
+	}
+}
+
+// RouteFunc returns an http.HandlerFunc that renders the route
+func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
+	for _, option := range opts() {
 		option(defaultRouteOpt)
 	}
 

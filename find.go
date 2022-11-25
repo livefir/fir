@@ -90,7 +90,7 @@ func isDir(path string, opt routeOpt) bool {
 	return fileInfo.IsDir()
 }
 
-func isFileHTML(path string, opt routeOpt) bool {
+func isFileOrString(path string, opt routeOpt) bool {
 	if opt.hasEmbedFS {
 		if _, err := fs.Stat(opt.embedFS, path); err != nil {
 			return true
