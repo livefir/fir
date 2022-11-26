@@ -37,43 +37,68 @@ type Patch struct {
 	Value any `json:"value,omitempty"`
 }
 
-func Morph(selector, templateName string, data any) Patch {
+type TemplateRenderer interface {
+	Name() string
+	Data() any
+}
+
+type templateRenderer struct {
+	name string
+	data any
+}
+
+func (t *templateRenderer) Name() string {
+	return t.name
+}
+
+func (t *templateRenderer) Data() any {
+	return t.data
+}
+
+func Template(name string, data any) TemplateRenderer {
+	return &templateRenderer{name: name, data: data}
+}
+func Block(name string, data any) TemplateRenderer {
+	return Template(name, data)
+}
+
+func Morph(selector string, t TemplateRenderer) Patch {
 	return Patch{
 		Op:       morph,
 		Selector: &selector,
-		Value:    map[string]any{"name": templateName, "data": data},
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	}
 }
 
-func After(selector, templateName string, data any) Patch {
+func After(selector string, t TemplateRenderer) Patch {
 	return Patch{
 		Op:       after,
 		Selector: &selector,
-		Value:    map[string]any{"name": templateName, "data": data},
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	}
 }
 
-func Before(selector, templateName string, data any) Patch {
+func Before(selector string, t TemplateRenderer) Patch {
 	return Patch{
 		Op:       before,
 		Selector: &selector,
-		Value:    map[string]any{"name": templateName, "data": data},
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	}
 }
 
-func Append(selector, templateName string, data any) Patch {
+func Append(selector string, t TemplateRenderer) Patch {
 	return Patch{
 		Op:       appendOp,
 		Selector: &selector,
-		Value:    map[string]any{"name": templateName, "data": data},
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	}
 }
 
-func Prepend(selector, templateName string, data any) Patch {
+func Prepend(selector string, t TemplateRenderer) Patch {
 	return Patch{
 		Op:       prepend,
 		Selector: &selector,
-		Value:    map[string]any{"name": templateName, "data": data},
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	}
 }
 
@@ -92,8 +117,9 @@ func Reload() Patch {
 
 func Store(name string, data any) Patch {
 	return Patch{
-		Op:    updateStore,
-		Value: data,
+		Op:       updateStore,
+		Selector: &name,
+		Value:    data,
 	}
 }
 

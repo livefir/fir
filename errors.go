@@ -16,7 +16,7 @@ func getUserMessage(status int, userMessage []string) string {
 }
 
 func morphError(err string) Patch {
-	return Morph("#fir-error", "fir-error", M{"error": err})
+	return Morph("#fir-error", Template("fir-error", M{"error": err}))
 }
 
 // PatchError returns a patchset that sets an error for selector #fir-error.
@@ -59,8 +59,7 @@ func UnsetPatchFormErrors(fields ...string) []Patch {
 	for _, field := range fields {
 		m := Morph(
 			fmt.Sprintf("#%s-error", field),
-			fmt.Sprintf("%s-error", field),
-			M{fmt.Sprintf("#%sError", field): ""},
+			Template(fmt.Sprintf("%s-error", field), M{fmt.Sprintf("#%sError", field): ""}),
 		)
 		patchset = append(patchset, m)
 	}

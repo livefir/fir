@@ -39,23 +39,19 @@ type queryRequest struct {
 }
 
 func index() []fir.RouteOption {
-
-	load := func(e fir.Event, r fir.RouteRenderer) error {
-		return r(fir.M{"cities": cities})
-	}
-
-	query := func(e fir.Event, r fir.PatchRenderer) error {
-		req := new(queryRequest)
-		if err := e.DecodeParams(req); err != nil {
-			return err
-		}
-		return r(fir.Morph("#cities", "cities", fir.M{"cities": getCities(req.Query)}))
-	}
-
 	return []fir.RouteOption{
 		fir.Content("app.html"),
-		fir.OnEvent("query", query),
-		fir.OnLoad(load),
+		fir.OnLoad(func(e fir.Event, r fir.RouteRenderer) error {
+			return r(fir.M{"cities": cities})
+		}),
+		fir.OnEvent("query", func(e fir.Event, r fir.PatchRenderer) error {
+			req := new(queryRequest)
+			if err := e.DecodeParams(req); err != nil {
+				return err
+			}
+			cities := fir.M{"cities": getCities(req.Query)}
+			return r(fir.Morph("#cities", fir.Block("cities", cities)))
+		}),
 	}
 }
 

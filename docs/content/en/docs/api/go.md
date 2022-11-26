@@ -51,7 +51,6 @@ func(t *TodosPage) OnEvent(render *PatchRenderer, event Event) error {
   )
 }
 
-
 opts := fir.PageOption[]{
   fir.EventSender(ch),
   fir.ID("todos"),
@@ -70,7 +69,29 @@ ch := make(chan Event)
 c.Page(&TodosPage{ch: ch}, opts)
 ```
 
+{{ fir-block "cities" .}}
+<datalist>
+{{range .cities}}
+  <option value="{{.}}"></option>
+{{end}}
+</datalist>
+{{ end }}
 
+fir.Block("todos",fir.M{"todos": todos})
+fir.Template("todos",fir.M{"todos":todos}).Morph("#todos")
+fir.Block("todos",fir,M{"todos":toods}).Morph("#todos")
+fir.Navigate()
+fir.Store()
+fir.Remove("#todos")
+
+
+Morph("#todos").ExecTemplate("todo",fir.M{"todos":todos})
+ExecTemplate("todo",fir.M{"todos":todos}).Morph("#todos")
+Exec("todos").Data(fir.M{"todos":todos}).Morph("#todos")
+Morph("#todos").HTML(fir.ExecTemplate("todos",fir.M{"todos":todos}))
+Template("todos").Morph("#todos",fir.M{"todos":todos})
+Selector("#todos").Morph().Template("todos",fir.M{"todos":todos}) 
+Morph(#todos",Template("todos"),fir.M{"todos":todos})
 
 ```
 

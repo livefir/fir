@@ -43,17 +43,15 @@ func index() []fir.RouteOption {
 		return r(fir.M{"cities": cities})
 	}
 
-	query := func(e fir.Event, r fir.PatchRenderer) error {
+	query := func(e fir.Event, render fir.PatchRenderer) error {
 		req := new(queryRequest)
 		if err := e.DecodeParams(req); err != nil {
 			return err
 		}
-		return r(fir.Morph(
-			"#list_cities",
-			"cities",
-			fir.M{
-				"cities": getCities(req.Query),
-			}))
+		data := fir.M{"cities": getCities(req.Query)}
+		return render(fir.Morph(
+			"#cities",
+			fir.Block("cities", data)))
 	}
 
 	return []fir.RouteOption{

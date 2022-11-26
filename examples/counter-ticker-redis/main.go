@@ -20,7 +20,7 @@ type Counter struct {
 }
 
 func morphCount(c int32) fir.Patch {
-	return fir.Morph("#count", "count", fir.M{"count": c})
+	return fir.Morph("#count", fir.Block("count", fir.M{"count": c}))
 }
 
 func (c *Counter) Inc() fir.Patch {

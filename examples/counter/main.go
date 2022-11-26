@@ -48,8 +48,7 @@ func index() []fir.RouteOption {
 		return r(
 			fir.Morph(
 				"#count",
-				"count",
-				fir.M{"count": atomic.AddInt32(&value, 1)},
+				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, 1)}),
 			))
 	}
 
@@ -57,8 +56,7 @@ func index() []fir.RouteOption {
 		return r(
 			fir.Morph(
 				"#count",
-				"count",
-				fir.M{"count": atomic.AddInt32(&value, -1)},
+				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, -1)}),
 			))
 	}
 
