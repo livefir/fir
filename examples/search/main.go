@@ -41,9 +41,6 @@ type queryRequest struct {
 func index() []fir.RouteOption {
 	return []fir.RouteOption{
 		fir.Content("app.html"),
-		fir.OnLoad(func(e fir.Event, r fir.RouteRenderer) error {
-			return r(fir.M{"cities": cities})
-		}),
 		fir.OnEvent("query", func(e fir.Event, r fir.PatchRenderer) error {
 			req := new(queryRequest)
 			if err := e.DecodeParams(req); err != nil {

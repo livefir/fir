@@ -62,6 +62,10 @@ func Block(name string, data any) TemplateRenderer {
 	return Template(name, data)
 }
 
+func HTML(html string) TemplateRenderer {
+	return Template("_fir_html", html)
+}
+
 func Morph(selector string, t TemplateRenderer) Patch {
 	return Patch{
 		Op:       morph,
@@ -193,16 +197,21 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 func buildTemplateValue(t *template.Template, name string, data any) (string, error) {
 	var buf bytes.Buffer
 	defer buf.Reset()
-	err := t.ExecuteTemplate(&buf, name, data)
-	if err != nil {
-		return "", err
+	if name == "_fir_html" {
+		buf.WriteString(data.(string))
+	} else {
+		err := t.ExecuteTemplate(&buf, name, data)
+		if err != nil {
+			return "", err
+		}
 	}
+
 	m := minify.New()
 	m.Add("text/html", &html.Minifier{})
 	r := m.Reader("text/html", &buf)
 	var buf1 bytes.Buffer
 	defer buf1.Reset()
-	_, err = io.Copy(&buf1, r)
+	_, err := io.Copy(&buf1, r)
 	if err != nil {
 		return "", err
 	}

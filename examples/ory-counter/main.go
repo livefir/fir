@@ -87,10 +87,7 @@ func (i *index) onInc(e fir.Event, r fir.PatchRenderer) error {
 	return r(
 		fir.Morph(
 			"#count",
-			fir.Block(
-				"count",
-				fir.M{"count": atomic.AddInt32(&i.value, 1)},
-			),
+			fir.Block("count", fir.M{"count": atomic.AddInt32(&i.value, 1)}),
 		))
 }
 
@@ -98,10 +95,7 @@ func (i *index) onDec(e fir.Event, r fir.PatchRenderer) error {
 	return r(
 		fir.Morph(
 			"#count",
-			fir.Block(
-				"count",
-				fir.M{"count": atomic.AddInt32(&i.value, -1)},
-			),
+			fir.Block("count", fir.M{"count": atomic.AddInt32(&i.value, -1)}),
 		))
 }
 
