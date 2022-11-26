@@ -50,7 +50,7 @@ func buildTemplates(node *gen.Type, projectPath, modelsPkg string) {
 	pluralize := pluralize.NewClient()
 	pluralizedModelName := pluralize.Plural(modelName)
 
-	fmt.Println(">> generating views for schema: ", modelName)
+	fmt.Println(">> generating pages for schema: ", modelName)
 	nodeHasParent := false
 	nodeParentName := ""
 	var children []string
@@ -71,7 +71,7 @@ func buildTemplates(node *gen.Type, projectPath, modelsPkg string) {
 	}
 
 	annotationError := fmt.Sprintf(`
-error: fir view annotations not found for: %s
+error: fir page annotations not found for: %s
 
 The generator requires the three annotations to be present in the entgo schema.
 e.g.
@@ -95,7 +95,7 @@ See the fir documentation for more information.
 `, modelName)
 
 	if len(node.Annotations) == 0 {
-		fmt.Printf("  >> skip generating views for schema: %s. view annotations not found. see cli docs for details.\n", modelName)
+		fmt.Printf("  >> skip generating pages for schema: %s. page annotations not found. see cli docs for details.\n", modelName)
 		return
 	}
 
@@ -179,7 +179,7 @@ See the fir documentation for more information.
 
 	data := map[string]any{
 		"pkgName":               pluralizedModelName,
-		"content":               filepath.Join("./views", pluralizedModelName),
+		"content":               filepath.Join("./pages", pluralizedModelName),
 		"layout":                "./templates/layouts/index.html",
 		"modelName":             modelName,
 		"modelNamePlural":       pluralizedModelName,
@@ -207,7 +207,7 @@ See the fir documentation for more information.
 		}
 		outPath := strings.TrimPrefix(path, pkgPrefix)
 		outPath = strings.TrimSuffix(outPath, ".str")
-		outPath = strings.Replace(outPath, "views/models", "views/"+pluralizedModelName, -1)
+		outPath = strings.Replace(outPath, "pages/models", "pages/"+pluralizedModelName, -1)
 		outPath = strings.Replace(outPath, "model", modelName, -1)
 		outPath = filepath.Join(projectPath, outPath)
 
