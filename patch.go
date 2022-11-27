@@ -108,14 +108,14 @@ func Prepend(selector string, t TemplateRenderer) Patch {
 
 func Remove(selector string) Patch {
 	return Patch{
-		Op:       morph,
+		Op:       remove,
 		Selector: &selector,
 	}
 }
 
 func Reload() Patch {
 	return Patch{
-		Op: morph,
+		Op: reload,
 	}
 }
 
@@ -200,6 +200,7 @@ func buildTemplateValue(t *template.Template, name string, data any) (string, er
 	if name == "_fir_html" {
 		buf.WriteString(data.(string))
 	} else {
+		t.Option("missingkey=zero")
 		err := t.ExecuteTemplate(&buf, name, data)
 		if err != nil {
 			return "", err

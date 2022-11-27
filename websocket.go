@@ -32,7 +32,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 		for event := range route.eventSender {
 			event.request = r
 			event.response = w
-			route.onEvents[event.ID](event, patchSocketRenderer(ctx, conn, *channel, route))
+
+			onEventFunc, ok := route.onEvents[event.ID]
+			if !ok {
+				log.Printf("[onWebsocket] err: event %v, event.id not found\n", event)
+				continue
+			}
+			onEventFunc(event, patchSocketRenderer(ctx, conn, *channel, route))
+
 		}
 	}()
 
@@ -90,9 +97,16 @@ loop:
 		event.response = w
 
 		log.Printf("[onWebsocket] received event: %+v\n", event)
-
-		route.onEvents[event.ID](event, patchSocketRenderer(ctx, conn, *channel, route))
-
+		onEventFunc, ok := route.onEvents[event.ID]
+		if !ok {
+			log.Printf("[onWebsocket] err: event %v, event.id not found\n", event)
+			continue
+		}
+		err = onEventFunc(event, patchSocketRenderer(ctx, conn, *channel, route))
+		if err != nil {
+			log.Printf("[onWebsocket] err: event %v, %v\n", event, err)
+			continue
+		}
 	}
 }
 

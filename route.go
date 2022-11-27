@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -15,8 +14,9 @@ import (
 type M map[string]any
 
 type OnLoadFunc func(event Event, render RouteRenderer) error
+type OnFormFunc = OnLoadFunc
 type OnEventFunc func(event Event, render PatchRenderer) error
-type RouteRenderer func(data any) error
+type RouteRenderer func(data map[string]any) error
 type PatchRenderer func(patch ...Patch) error
 
 type routeOpt struct {
@@ -129,8 +129,13 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 }
 
 func routeRenderer(w http.ResponseWriter, r *http.Request, route *route) RouteRenderer {
-	return func(data any) error {
+	return func(data map[string]any) error {
 		route.parseTemplate()
+		if data == nil {
+			data = make(map[string]any)
+		}
+		data["app_name"] = route.appName
+
 		route.template.Option("missingkey=zero")
 		var buf bytes.Buffer
 		err := route.template.Execute(&buf, data)
@@ -150,6 +155,7 @@ func routeRenderer(w http.ResponseWriter, r *http.Request, route *route) RouteRe
 func patchSocketRenderer(ctx context.Context, conn *websocket.Conn, channel string, route *route) PatchRenderer {
 	return func(patchset ...Patch) error {
 		route.parseTemplate()
+
 		err := route.pubsub.Publish(ctx, channel, patchset...)
 		if err != nil {
 			log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
@@ -217,22 +223,29 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 					formAction = k
 				}
 			}
-			body, err := ioutil.ReadAll(r.Body)
-			defer r.Body.Close()
+			err := r.ParseForm()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			urlValues := r.PostForm
+			params, err := json.Marshal(urlValues)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			event := Event{
-				ID:       formAction,
-				Params:   body,
-				request:  r,
-				response: w,
+				ID:        formAction,
+				Params:    params,
+				request:   r,
+				response:  w,
+				urlValues: urlValues,
+				IsForm:    true,
 			}
 
 			err = rt.routeOpt.onForms[event.ID](event, routeRenderer(w, r, rt))
 			if err != nil {
-				log.Printf("error in OnForm: %v, %v,  %v", formAction, event, err)
+				log.Printf("error in OnForm: %v, %+v, %v", formAction, event, err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -240,7 +253,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			event := Event{ID: rt.routeOpt.id, request: r, response: w}
 			err := rt.routeOpt.onLoad(event, routeRenderer(w, r, rt))
 			if err != nil {
-				log.Printf("error in OnGet: %v", err)
+				log.Printf("error in onLoad: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

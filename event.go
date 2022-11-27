@@ -27,9 +27,11 @@ type Event struct {
 	// Name is the name of the event
 	ID string `json:"id"`
 	// Params is the json rawmessage to be passed to the event
-	Params   json.RawMessage `json:"params"`
-	request  *http.Request
-	response http.ResponseWriter
+	Params    json.RawMessage `json:"params"`
+	IsForm    bool            `json:"isForm"`
+	request   *http.Request
+	response  http.ResponseWriter
+	urlValues url.Values
 }
 
 // String returns the string representation of the event
@@ -40,6 +42,16 @@ func (e Event) String() string {
 
 // DecodeParams decodes the event params into the given struct
 func (e Event) DecodeParams(v any) error {
+	if e.IsForm {
+		if len(e.urlValues) == 0 {
+			var urlValues url.Values
+			if err := json.NewDecoder(bytes.NewReader(e.Params)).Decode(&urlValues); err != nil {
+				return err
+			}
+			e.urlValues = urlValues
+		}
+		return decoder.Decode(v, e.urlValues)
+	}
 	return json.NewDecoder(bytes.NewReader(e.Params)).Decode(v)
 }
 
@@ -47,6 +59,7 @@ func (e Event) DecodeParams(v any) error {
 func (e Event) DecodeFormParams(v any) error {
 	var urlValues url.Values
 	if err := json.NewDecoder(bytes.NewReader(e.Params)).Decode(&urlValues); err != nil {
+		log.Println("error decoding form params", err)
 		return err
 	}
 	return decoder.Decode(v, urlValues)

@@ -1,3 +1,22 @@
-{{define "content"}}
-Hello Twitter !
-{{end}}
+{{ define "content" }}
+    <form
+        x-data
+        id="createTweet"
+        method="post"
+        @submit.prevent="$fir.submit"
+    >
+        <input
+            type="text"
+            name="body"
+            placeholder="a new tweet"
+        />
+        <button type="submit">Submit</button>
+    </form>
+    <div id="tweets">
+        {{ range .tweets }}
+            {{ block "tweet" . }}
+                <li>{{ .Body }}</li>
+            {{ end }}
+        {{ end }}
+    </div>
+{{ end }}
