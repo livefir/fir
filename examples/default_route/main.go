@@ -8,6 +8,6 @@ import (
 
 func main() {
 	c := fir.NewController("default", fir.DevelopmentMode(true))
-	http.Handle("/", c.RouteFunc(func() []fir.RouteOption { return nil }))
+	http.Handle("/", c.RouteFunc(func() fir.RouteOptions { return nil }))
 	http.ListenAndServe(":9867", nil)
 }

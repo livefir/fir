@@ -65,8 +65,8 @@ func createTweetEvent(db *bolthold.Store) fir.OnEventFunc {
 }
 
 func Route(db *bolthold.Store) fir.RouteFunc {
-	return func() []fir.RouteOption {
-		return []fir.RouteOption{
+	return func() fir.RouteOptions {
+		return fir.RouteOptions{
 			fir.ID("app"),
 			fir.Content("routes/app/page.html"),
 			fir.Layout("routes/layout.html"),

@@ -99,8 +99,8 @@ func (i *index) onDec(e fir.Event, r fir.PatchRenderer) error {
 		))
 }
 
-func (i *index) Options() []fir.RouteOption {
-	return []fir.RouteOption{
+func (i *index) Options() fir.RouteOptions {
+	return fir.RouteOptions{
 		fir.ID("counter"),
 		fir.Content(content),
 		fir.OnLoad(i.onLoad),

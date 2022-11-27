@@ -12,8 +12,8 @@ type countRequest struct {
 	Count string `json:"count"`
 }
 
-func index() []fir.RouteOption {
-	return []fir.RouteOption{
+func index() fir.RouteOptions {
+	return fir.RouteOptions{
 		fir.Content("app.html"),
 		fir.OnLoad(func(e fir.Event, r fir.RouteRenderer) error {
 			return r(fir.M{"total": 0})

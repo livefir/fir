@@ -37,7 +37,7 @@ var content = `<!DOCTYPE html>
 
 </html>`
 
-func index() []fir.RouteOption {
+func index() fir.RouteOptions {
 	var value int32
 
 	load := func(e fir.Event, r fir.RouteRenderer) error {
@@ -60,7 +60,7 @@ func index() []fir.RouteOption {
 			))
 	}
 
-	return []fir.RouteOption{
+	return fir.RouteOptions{
 		fir.ID("counter"),
 		fir.Content(content),
 		fir.OnLoad(load),

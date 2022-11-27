@@ -82,8 +82,8 @@ type index struct {
 	id          string
 }
 
-func (i *index) Options() []fir.RouteOption {
-	return []fir.RouteOption{
+func (i *index) Options() fir.RouteOptions {
+	return fir.RouteOptions{
 		fir.ID(i.id),
 		fir.Content(content),
 		fir.Layout(layout),

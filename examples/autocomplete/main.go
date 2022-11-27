@@ -38,7 +38,7 @@ type queryRequest struct {
 	Query string `json:"query"`
 }
 
-func index() []fir.RouteOption {
+func index() fir.RouteOptions {
 	load := func(e fir.Event, r fir.RouteRenderer) error {
 		return r(fir.M{"cities": cities})
 	}
@@ -54,7 +54,7 @@ func index() []fir.RouteOption {
 			fir.Block("cities", data)))
 	}
 
-	return []fir.RouteOption{
+	return fir.RouteOptions{
 		fir.Content("app.html"),
 		fir.OnEvent("query", query),
 		fir.OnLoad(load),

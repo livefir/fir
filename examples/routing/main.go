@@ -6,15 +6,15 @@ import (
 	"github.com/adnaan/fir"
 )
 
-func home() []fir.RouteOption {
-	return []fir.RouteOption{
+func home() fir.RouteOptions {
+	return fir.RouteOptions{
 		fir.Content("./routes/page.html"),
 		fir.Layout("./routes/layout.html"),
 	}
 }
 
-func about() []fir.RouteOption {
-	return []fir.RouteOption{
+func about() fir.RouteOptions {
+	return fir.RouteOptions{
 		fir.Content("./routes/about"),
 		fir.Layout("./routes/layout.html"),
 	}

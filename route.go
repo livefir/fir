@@ -34,9 +34,10 @@ type routeOpt struct {
 	opt
 }
 
-type RouteFunc func() []RouteOption
+type RouteOptions []RouteOption
+type RouteFunc func() RouteOptions
 type Route interface {
-	Options() []RouteOption
+	Options() RouteOptions
 }
 
 type RouteOption func(*routeOpt)

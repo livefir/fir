@@ -7,7 +7,7 @@ import (
 	"github.com/adnaan/fir"
 )
 
-func app() []fir.RouteOption {
+func app() fir.RouteOptions {
 	var value int32
 
 	load := func(e fir.Event, r fir.RouteRenderer) error {
@@ -30,7 +30,7 @@ func app() []fir.RouteOption {
 			))
 	}
 
-	return []fir.RouteOption{
+	return fir.RouteOptions{
 		fir.ID("app"),
 		fir.Content("app.html"),
 		fir.OnLoad(load),

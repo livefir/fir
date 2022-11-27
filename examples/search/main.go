@@ -38,8 +38,8 @@ type queryRequest struct {
 	Query string `json:"query"`
 }
 
-func index() []fir.RouteOption {
-	return []fir.RouteOption{
+func index() fir.RouteOptions {
+	return fir.RouteOptions{
 		fir.Content("app.html"),
 		fir.OnEvent("query", func(e fir.Event, r fir.PatchRenderer) error {
 			req := new(queryRequest)
