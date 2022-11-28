@@ -41,13 +41,13 @@ type queryRequest struct {
 func index() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.Content("app.html"),
-		fir.OnEvent("query", func(e fir.Event, r fir.PatchRenderer) error {
+		fir.OnEvent("query", func(ctx fir.Context) error {
 			req := new(queryRequest)
-			if err := e.DecodeParams(req); err != nil {
+			if err := ctx.DecodeParams(req); err != nil {
 				return err
 			}
 			cities := fir.M{"cities": getCities(req.Query)}
-			return r(fir.Morph("#cities", fir.Block("cities", cities)))
+			return ctx.Patch(fir.Morph("#cities", fir.Block("cities", cities)))
 		}),
 	}
 }

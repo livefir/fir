@@ -177,5 +177,11 @@ page.Patch(fir.Morph{
 
 ```
 
-routes/boards/index/
-routes/boards/show/
+.firErrors.message
+.firErrors.status
+.firErrors.newTodo.title
+
+fir.Errors(fir.M{"message": "error message", "status": 400, "log": "error log", "newTodo": fir.M{"title": "error title"}})
+fmt.Errorf("%v %w",err,fir.M{"status": 400, "newTodo": fir.M{"title": "error title"}})
+fmt.Errorf("%v %w",err,fir.M{"title": "error title"}) -> .firErrors.title
+err -> .firErrors.message

@@ -39,17 +39,17 @@ type queryRequest struct {
 }
 
 func index() fir.RouteOptions {
-	load := func(e fir.Event, r fir.RouteRenderer) error {
-		return r(fir.M{"cities": cities})
+	load := func(ctx fir.Context) error {
+		return &fir.M{"cities": cities}
 	}
 
-	query := func(e fir.Event, render fir.PatchRenderer) error {
+	query := func(ctx fir.Context) error {
 		req := new(queryRequest)
-		if err := e.DecodeParams(req); err != nil {
+		if err := ctx.DecodeParams(req); err != nil {
 			return err
 		}
 		data := fir.M{"cities": getCities(req.Query)}
-		return render(fir.Morph(
+		return ctx.Patch(fir.Morph(
 			"#cities",
 			fir.Block("cities", data)))
 	}

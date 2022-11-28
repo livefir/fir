@@ -10,20 +10,20 @@ import (
 func app() fir.RouteOptions {
 	var value int32
 
-	load := func(e fir.Event, r fir.RouteRenderer) error {
-		return r(fir.M{"count": atomic.LoadInt32(&value)})
+	load := func(ctx fir.Context) error {
+		return &fir.M{"count": atomic.LoadInt32(&value)}
 	}
 
-	inc := func(e fir.Event, r fir.PatchRenderer) error {
-		return r(
+	inc := func(ctx fir.Context) error {
+		return ctx.Patch(
 			fir.Morph(
 				"#count",
 				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, 1)}),
 			))
 	}
 
-	dec := func(e fir.Event, r fir.PatchRenderer) error {
-		return r(
+	dec := func(ctx fir.Context) error {
+		return ctx.Patch(
 			fir.Morph(
 				"#count",
 				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, -1)}),

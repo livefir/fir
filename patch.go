@@ -37,6 +37,13 @@ type Patch struct {
 	Value any `json:"value,omitempty"`
 }
 
+type patchlist []Patch
+
+func (pl *patchlist) Error() string {
+	b, _ := json.Marshal(pl)
+	return string(b)
+}
+
 type TemplateRenderer interface {
 	Name() string
 	Data() any
@@ -158,6 +165,8 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 			if *p.Selector == "#fir-error" {
 				firErrorPatchExists = true
 			}
+
+			log.Printf("%+v\n", tmpl)
 
 			var err error
 			p.Value, err = buildTemplateValue(t, tmpl["name"].(string), tmpl["data"])

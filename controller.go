@@ -5,7 +5,11 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"reflect"
+	"strings"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,6 +34,8 @@ type opt struct {
 	hasEmbedFS           bool
 	pubsub               PubsubAdapter
 	appName              string
+	formDecoder          *schema.Decoder
+	validator            *validator.Validate
 }
 
 // ControllerOption is an option for the controller.
@@ -71,6 +77,20 @@ func WithPublicDir(path string) ControllerOption {
 	}
 }
 
+// WithFormDecoder is an option to set the form decoder(gorilla/schema) for the controller.
+func WithFormDecoder(decoder *schema.Decoder) ControllerOption {
+	return func(o *opt) {
+		o.formDecoder = decoder
+	}
+}
+
+// WithValidator is an option to set the validator(go-playground/validator) for the controller.
+func WithValidator(validator *validator.Validate) ControllerOption {
+	return func(o *opt) {
+		o.validator = validator
+	}
+}
+
 // DisableTemplateCache is an option to disable template caching. This is useful for development.
 func DisableTemplateCache() ControllerOption {
 	return func(o *opt) {
@@ -109,12 +129,28 @@ func NewController(name string, options ...ControllerOption) Controller {
 		panic("controller name is required")
 	}
 
+	formDecoder := schema.NewDecoder()
+	formDecoder.IgnoreUnknownKeys(true)
+	formDecoder.SetAliasTag("json")
+
+	validate := validator.New()
+	// register function to get tag name from json tags.
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+
 	o := &opt{
 		channelFunc:       DefaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
 		watchExts:         DefaultWatchExtensions,
 		pubsub:            NewPubsubInmem(),
 		appName:           name,
+		formDecoder:       formDecoder,
+		validator:         validate,
 	}
 
 	for _, option := range options {
@@ -165,8 +201,8 @@ var defaultRouteOpt = &routeOpt{
 	funcMap:           DefaultFuncMap(),
 	extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
 	eventSender:       make(chan Event),
-	onLoad: func(event Event, render RouteRenderer) error {
-		return render(nil)
+	onLoad: func(ctx Context) error {
+		return nil
 	},
 }
 

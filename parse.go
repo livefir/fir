@@ -156,3 +156,15 @@ func UserError(err error) string {
 	}
 	return userMessage
 }
+
+func firErrors(err error) routeData {
+	m := routeData{"message": err.Error()}
+	if firErrorsMapErr := errors.Unwrap(err); firErrorsMapErr != nil {
+		firErrorsMap, ok := firErrorsMapErr.(*routeData)
+		if !ok {
+			return m
+		}
+		return *firErrorsMap
+	}
+	return m
+}

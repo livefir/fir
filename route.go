@@ -7,39 +7,13 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/websocket"
 )
 
 type M map[string]any
-
-type OnLoadFunc func(event Event, render RouteRenderer) error
-type OnFormFunc = OnLoadFunc
-type OnEventFunc func(event Event, render PatchRenderer) error
-type RouteRenderer func(data map[string]any) error
-type PatchRenderer func(patch ...Patch) error
-
-type routeOpt struct {
-	id                string
-	layout            string
-	content           string
-	layoutContentName string
-	partials          []string
-	extensions        []string
-	funcMap           template.FuncMap
-	eventSender       chan Event
-	onLoad            OnLoadFunc
-	onForms           map[string]OnLoadFunc
-	onEvents          map[string]OnEventFunc
-	opt
-}
-
+type OnEventFunc func(ctx Context) error
 type RouteOptions []RouteOption
 type RouteFunc func() RouteOptions
-type Route interface {
-	Options() RouteOptions
-}
-
+type Route interface{ Options() RouteOptions }
 type RouteOption func(*routeOpt)
 
 func ID(id string) RouteOption {
@@ -90,17 +64,9 @@ func EventSender(eventSender chan Event) RouteOption {
 	}
 }
 
-func OnLoad(onLoadFunc OnLoadFunc) RouteOption {
+func OnLoad(f OnEventFunc) RouteOption {
 	return func(opt *routeOpt) {
-		opt.onLoad = onLoadFunc
-	}
-}
-func OnForm(name string, onForm OnLoadFunc) RouteOption {
-	return func(opt *routeOpt) {
-		if opt.onForms == nil {
-			opt.onForms = make(map[string]OnLoadFunc)
-		}
-		opt.onForms[name] = onForm
+		opt.onLoad = f
 	}
 }
 
@@ -111,6 +77,39 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 		}
 		opt.onEvents[name] = onEventFunc
 	}
+}
+
+func OnForm(name string, onEventFunc OnEventFunc) RouteOption {
+	return func(opt *routeOpt) {
+		if opt.onForms == nil {
+			opt.onForms = make(map[string]OnEventFunc)
+		}
+		opt.onForms[name] = onEventFunc
+	}
+}
+
+type routeData map[string]any
+
+func (r *routeData) Error() string {
+	b, _ := json.Marshal(r)
+	return string(b)
+}
+
+type routeRenderer func(data routeData) error
+type patchRenderer func(patch ...Patch) error
+type routeOpt struct {
+	id                string
+	layout            string
+	content           string
+	layoutContentName string
+	partials          []string
+	extensions        []string
+	funcMap           template.FuncMap
+	eventSender       chan Event
+	onLoad            OnEventFunc
+	onForms           map[string]OnEventFunc
+	onEvents          map[string]OnEventFunc
+	opt
 }
 
 type route struct {
@@ -129,35 +128,30 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	return rt
 }
 
-func routeRenderer(w http.ResponseWriter, r *http.Request, route *route) RouteRenderer {
-	return func(data map[string]any) error {
-		route.parseTemplate()
-		if data == nil {
-			data = make(map[string]any)
-		}
-		data["app_name"] = route.appName
-
-		route.template.Option("missingkey=zero")
+func renderRoute(ctx Context) routeRenderer {
+	return func(data routeData) error {
+		ctx.route.parseTemplate()
+		ctx.route.template.Option("missingkey=zero")
 		var buf bytes.Buffer
-		err := route.template.Execute(&buf, data)
+		err := ctx.route.template.Execute(&buf, data)
 		if err != nil {
 			return err
 		}
-		if route.debugLog {
+		if ctx.route.debugLog {
 			// log.Printf("OnGet render view %+v, with data => \n %+v\n",
 			// 	v.view.Content(), getJSON(route.Data))
 		}
 
-		w.Write(buf.Bytes())
+		ctx.response.Write(buf.Bytes())
 		return nil
 	}
 }
 
-func patchSocketRenderer(ctx context.Context, conn *websocket.Conn, channel string, route *route) PatchRenderer {
+func publishPatch(ctx context.Context, eventCtx Context) patchRenderer {
 	return func(patchset ...Patch) error {
-		route.parseTemplate()
-
-		err := route.pubsub.Publish(ctx, channel, patchset...)
+		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
+		eventCtx.route.parseTemplate()
+		err := eventCtx.route.pubsub.Publish(ctx, *channel, patchset...)
 		if err != nil {
 			log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 			return err
@@ -166,16 +160,16 @@ func patchSocketRenderer(ctx context.Context, conn *websocket.Conn, channel stri
 	}
 }
 
-func patchRenderer(w http.ResponseWriter, r *http.Request, route *route) PatchRenderer {
+func renderPatch(ctx Context) patchRenderer {
 	return func(patchset ...Patch) error {
-		route.parseTemplate()
-		channel := *route.channelFunc(r, route.id)
-		err := route.pubsub.Publish(r.Context(), channel, patchset...)
+		ctx.route.parseTemplate()
+		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
+		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, patchset...)
 		if err != nil {
 			log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
 			return err
 		}
-		w.Write(buildPatchOperations(route.template, patchset))
+		ctx.response.Write(buildPatchOperations(ctx.route.template, patchset))
 		return nil
 	}
 }
@@ -184,7 +178,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 	rt.parseTemplate()
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
-		// onWebsocket
+		// onWebsocket: upgrade to websocket
 		onWebsocket(w, r, rt)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
 		// onPatchEvent
@@ -205,23 +199,30 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		event.request = r
-		event.response = w
+		eventCtx := Context{
+			event:    event,
+			request:  r,
+			response: w,
+			route:    rt,
+		}
 
-		err = rt.routeOpt.onEvents[event.ID](event, patchRenderer(w, r, rt))
-		if err != nil {
-			log.Printf("error in OnEvent: %v,  %v", event.ID, err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		onEventFunc, ok := rt.onEvents[event.ID]
+		if !ok {
+			http.Error(w, "event id is not registered", http.StatusBadRequest)
 			return
 		}
+
+		handleOnEventResult(onEventFunc(eventCtx), eventCtx)
+
 	} else {
 		// onRequest
 		if r.Method == "POST" {
 			formAction := "default"
 			values := r.URL.Query()
 			if len(values) == 1 {
-				for k := range values {
-					formAction = k
+				id := values.Get("id")
+				if id != "" {
+					formAction = id
 				}
 			}
 			err := r.ParseForm()
@@ -236,30 +237,95 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			event := Event{
-				ID:        formAction,
-				Params:    params,
-				request:   r,
-				response:  w,
-				urlValues: urlValues,
-				IsForm:    true,
+				ID:     formAction,
+				Params: params,
+				IsForm: true,
 			}
 
-			err = rt.routeOpt.onForms[event.ID](event, routeRenderer(w, r, rt))
-			if err != nil {
-				log.Printf("error in OnForm: %v, %+v, %v", formAction, event, err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+			eventCtx := Context{
+				event:     event,
+				request:   r,
+				response:  w,
+				route:     rt,
+				urlValues: urlValues,
+			}
+
+			onEventFunc, ok := rt.onForms[event.ID]
+			if !ok {
+				http.Error(w, "form not found", http.StatusBadRequest)
 				return
 			}
+
+			handleOnRequestResult(onEventFunc(eventCtx), eventCtx)
+
 		} else {
-			event := Event{ID: rt.routeOpt.id, request: r, response: w}
-			err := rt.routeOpt.onLoad(event, routeRenderer(w, r, rt))
-			if err != nil {
-				log.Printf("error in onLoad: %v", err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			event := Event{ID: rt.routeOpt.id}
+			eventCtx := Context{
+				event:    event,
+				request:  r,
+				response: w,
+				route:    rt,
 			}
+			handleOnRequestResult(rt.onLoad(eventCtx), eventCtx)
 		}
 	}
+}
+
+func handleOnEventResult(err error, ctx Context) {
+	setError, unsetError := morphFirErrors(ctx.event.ID)
+
+	if err == nil {
+		renderPatch(ctx)(unsetError())
+		return
+	}
+
+	plDataVal, ok := err.(*patchlist)
+	if ok {
+		pldata := *plDataVal
+		pldata = append(pldata, unsetError())
+		renderPatch(ctx)(pldata...)
+		return
+	}
+
+	renderPatch(ctx)(setError(err))
+}
+
+func handleOnSocketEventResult(err error, ctx context.Context, eventCtx Context) {
+	setError, unsetError := morphFirErrors(eventCtx.event.ID)
+
+	if err == nil {
+		publishPatch(ctx, eventCtx)(unsetError())
+		return
+	}
+
+	plDataVal, ok := err.(*patchlist)
+	if ok {
+		pldata := *plDataVal
+		pldata = append(pldata, unsetError())
+		publishPatch(ctx, eventCtx)(pldata...)
+		return
+	}
+
+	publishPatch(ctx, eventCtx)(setError(err))
+}
+
+func handleOnRequestResult(err error, ctx Context) {
+	firData := routeData{"app_name": ctx.route.appName, "errors": M{}}
+	if err == nil {
+		renderRoute(ctx)(routeData{"fir": firData})
+		return
+	}
+
+	renderDataVal, ok := err.(*routeData)
+	if ok {
+		renderData := *renderDataVal
+		renderData["fir"] = firData
+		renderRoute(ctx)(renderData)
+		return
+	}
+
+	firData["errors"] = M{ctx.event.ID: err.Error()}
+	renderRoute(ctx)(routeData{"fir": firData})
 }
 
 func (rt *route) parseTemplate() {

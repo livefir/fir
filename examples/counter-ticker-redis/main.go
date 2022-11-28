@@ -95,24 +95,24 @@ func (i *index) Options() fir.RouteOptions {
 	}
 }
 
-func (i *index) load(e fir.Event, r fir.RouteRenderer) error {
-	return r(fir.M{"count": i.model.Count()})
+func (i *index) load(ctx fir.Context) error {
+	return &fir.M{"count": i.model.Count()}
 }
 
-func (i *index) inc(e fir.Event, r fir.PatchRenderer) error {
-	return r(i.model.Inc())
+func (i *index) inc(ctx fir.Context) error {
+	return ctx.Patch(i.model.Inc())
 }
 
-func (i *index) dec(e fir.Event, r fir.PatchRenderer) error {
-	return r(i.model.Dec())
+func (i *index) dec(ctx fir.Context) error {
+	return ctx.Patch(i.model.Dec())
 }
-func (i *index) updated(e fir.Event, r fir.PatchRenderer) error {
+func (i *index) updated(ctx fir.Context) error {
 	var data map[string]any
-	err := e.DecodeParams(&data)
+	err := ctx.DecodeParams(&data)
 	if err != nil {
 		return err
 	}
-	return r(fir.Store("fir", data))
+	return ctx.Patch(fir.Store("fir", data))
 }
 
 var content = `

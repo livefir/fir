@@ -27,11 +27,8 @@ type Event struct {
 	// Name is the name of the event
 	ID string `json:"id"`
 	// Params is the json rawmessage to be passed to the event
-	Params    json.RawMessage `json:"params"`
-	IsForm    bool            `json:"isForm"`
-	request   *http.Request
-	response  http.ResponseWriter
-	urlValues url.Values
+	Params json.RawMessage `json:"params"`
+	IsForm bool            `json:"isForm"`
 }
 
 // String returns the string representation of the event
@@ -40,35 +37,49 @@ func (e Event) String() string {
 	return string(data)
 }
 
-// DecodeParams decodes the event params into the given struct
-func (e Event) DecodeParams(v any) error {
-	if e.IsForm {
-		if len(e.urlValues) == 0 {
-			var urlValues url.Values
-			if err := json.NewDecoder(bytes.NewReader(e.Params)).Decode(&urlValues); err != nil {
-				return err
-			}
-			e.urlValues = urlValues
-		}
-		return decoder.Decode(v, e.urlValues)
-	}
-	return json.NewDecoder(bytes.NewReader(e.Params)).Decode(v)
+type Context struct {
+	event     Event
+	request   *http.Request
+	response  http.ResponseWriter
+	urlValues url.Values
+	route     *route
 }
 
-// DecodeFormParams decodes the event params into the given struct
-func (e Event) DecodeFormParams(v any) error {
-	var urlValues url.Values
-	if err := json.NewDecoder(bytes.NewReader(e.Params)).Decode(&urlValues); err != nil {
-		log.Println("error decoding form params", err)
-		return err
+// DecodeParams decodes the event params into the given struct
+func (c Context) DecodeParams(v any) error {
+	if c.event.IsForm {
+		if len(c.urlValues) == 0 {
+			var urlValues url.Values
+			if err := json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(&urlValues); err != nil {
+				return err
+			}
+			c.urlValues = urlValues
+		}
+		return c.route.formDecoder.Decode(v, c.urlValues)
 	}
-	return decoder.Decode(v, urlValues)
+	return json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(v)
 }
-func (e Event) Request() *http.Request {
-	return e.request
+
+func (c Context) Request() *http.Request {
+	return c.request
 }
-func (e Event) Response() http.ResponseWriter {
-	return e.response
+func (c Context) Response() http.ResponseWriter {
+	return c.response
+}
+
+func (c Context) Data(data map[string]any) error {
+	m := routeData{}
+	for k, v := range data {
+		m[k] = v
+	}
+	return &m
+}
+func (c *Context) Patch(patch ...Patch) error {
+	var pl patchlist
+	for _, p := range patch {
+		pl = append(pl, p)
+	}
+	return &pl
 }
 
 func getJSON(data map[string]any) string {

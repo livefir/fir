@@ -15,19 +15,19 @@ type countRequest struct {
 func index() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.Content("app.html"),
-		fir.OnLoad(func(e fir.Event, r fir.RouteRenderer) error {
-			return r(fir.M{"total": 0})
+		fir.OnLoad(func(ctx fir.Context) error {
+			return &fir.M{"total": 0}
 		}),
-		fir.OnEvent("update", func(e fir.Event, r fir.PatchRenderer) error {
+		fir.OnEvent("update", func(ctx fir.Context) error {
 			req := new(countRequest)
-			if err := e.DecodeParams(req); err != nil {
+			if err := ctx.DecodeParams(req); err != nil {
 				return err
 			}
 			count, err := strconv.Atoi(req.Count)
 			if err != nil {
 				return err
 			}
-			return r(fir.Store("fir", fir.M{"total": count * 10}))
+			return ctx.Patch(fir.Store("fir", fir.M{"total": count * 10}))
 		}),
 	}
 }

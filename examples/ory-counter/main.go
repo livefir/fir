@@ -79,20 +79,20 @@ type index struct {
 	value int32
 }
 
-func (i *index) onLoad(e fir.Event, r fir.RouteRenderer) error {
-	return r(fir.M{"count": atomic.LoadInt32(&i.value)})
+func (i *index) onLoad(ctx fir.Context) error {
+	return &fir.M{"count": atomic.LoadInt32(&i.value)}
 }
 
-func (i *index) onInc(e fir.Event, r fir.PatchRenderer) error {
-	return r(
+func (i *index) onInc(ctx fir.Context) error {
+	return ctx.Patch(
 		fir.Morph(
 			"#count",
 			fir.Block("count", fir.M{"count": atomic.AddInt32(&i.value, 1)}),
 		))
 }
 
-func (i *index) onDec(e fir.Event, r fir.PatchRenderer) error {
-	return r(
+func (i *index) onDec(ctx fir.Context) error {
+	return ctx.Patch(
 		fir.Morph(
 			"#count",
 			fir.Block("count", fir.M{"count": atomic.AddInt32(&i.value, -1)}),

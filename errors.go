@@ -66,3 +66,22 @@ func UnsetPatchFormErrors(fields ...string) []Patch {
 
 	return patchset
 }
+
+func MorphError(name string) (func(err error) Patch, func() Patch) {
+	selector := fmt.Sprintf("#%s", name)
+	return func(err error) Patch {
+			return Morph(selector, Block(name, M{name: err}))
+		}, func() Patch {
+			return Morph(selector, Block(name, M{name: ""}))
+		}
+}
+
+func morphFirErrors(eventID string) (func(err error) Patch, func() Patch) {
+	id := fmt.Sprintf("fir-errors-%s", eventID)
+	selector := fmt.Sprintf("#%s", id)
+	return func(err error) Patch {
+			return Morph(selector, Block(id, M{"fir": M{"errors": M{eventID: err.Error()}}}))
+		}, func() Patch {
+			return Morph(selector, Block(id, M{"fir": M{"errors": M{eventID: ""}}}))
+		}
+}

@@ -10,11 +10,11 @@ import (
 func app() fir.RouteOptions {
 	var value int32
 
-	load := func(e fir.Event, r fir.RouteRenderer) error {
+	load := func(ctx fir.Context) error {
 		return r(fir.M{"count": atomic.LoadInt32(&value)})
 	}
 
-	inc := func(e fir.Event, r fir.PatchRenderer) error {
+	inc := func(ctx fir.Context) error {
 		return r(
 			fir.Morph(
 				"#count",
@@ -22,7 +22,7 @@ func app() fir.RouteOptions {
 			))
 	}
 
-	dec := func(e fir.Event, r fir.PatchRenderer) error {
+	dec := func(ctx fir.Context) error {
 		return r(
 			fir.Morph(
 				"#count",
