@@ -14,6 +14,7 @@ type Context struct {
 	response  http.ResponseWriter
 	urlValues url.Values
 	route     *route
+	isOnLoad  bool
 }
 
 // DecodeParams decodes the event params into the given struct

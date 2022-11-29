@@ -126,6 +126,7 @@ func renderRoute(ctx Context) routeRenderer {
 		var buf bytes.Buffer
 		err := ctx.route.template.Execute(&buf, data)
 		if err != nil {
+			log.Printf("[renderRoute] error executing template: %v\n", err)
 			return err
 		}
 		if ctx.route.debugLog {
@@ -257,6 +258,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				request:  r,
 				response: w,
 				route:    rt,
+				isOnLoad: true,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		}
@@ -264,7 +266,11 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func getFirData(ctx Context) routeData {
-	return routeData{"app_name": ctx.route.appName, "errors": M{ctx.event.ID: M{}}}
+	errors := M{}
+	for k := range ctx.route.onEvents {
+		errors[k] = M{}
+	}
+	return routeData{"app_name": ctx.route.appName, "errors": errors}
 }
 
 func handleOnEventResult(err error, ctx Context) {
@@ -335,6 +341,7 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
 			}
 		}
+
 		renderRoute(ctx)(routeData{"fir": firData})
 		return
 	}
