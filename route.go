@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -181,7 +182,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 		// onWebsocket: upgrade to websocket
 		onWebsocket(w, r, rt)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
-		// onPatchEvent
+		// onEvents
 		var event Event
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
@@ -215,7 +216,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 		handleOnEventResult(onEventFunc(eventCtx), eventCtx)
 
 	} else {
-		// onRequest
+		// onForms
 		if r.Method == "POST" {
 			formAction := "default"
 			values := r.URL.Query()
@@ -256,9 +257,10 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			handleOnRequestResult(onEventFunc(eventCtx), eventCtx)
+			handleOnFormResult(onEventFunc(eventCtx), eventCtx)
 
 		} else {
+			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := Context{
 				event:    event,
@@ -266,9 +268,13 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				response: w,
 				route:    rt,
 			}
-			handleOnRequestResult(rt.onLoad(eventCtx), eventCtx)
+			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		}
 	}
+}
+
+func getFirData(ctx Context) routeData {
+	return routeData{"app_name": ctx.route.appName, "errors": M{ctx.event.ID: M{}}}
 }
 
 func handleOnEventResult(err error, ctx Context) {
@@ -279,11 +285,11 @@ func handleOnEventResult(err error, ctx Context) {
 		return
 	}
 
-	plDataVal, ok := err.(*patchlist)
+	patchlistDataVal, ok := err.(*patchlist)
 	if ok {
-		pldata := *plDataVal
-		pldata = append(pldata, unsetError())
-		renderPatch(ctx)(pldata...)
+		patchlistData := *patchlistDataVal
+		patchlistData = append(patchlistData, unsetError())
+		renderPatch(ctx)(patchlistData...)
 		return
 	}
 
@@ -292,40 +298,99 @@ func handleOnEventResult(err error, ctx Context) {
 
 func handleOnSocketEventResult(err error, ctx context.Context, eventCtx Context) {
 	setError, unsetError := morphFirErrors(eventCtx.event.ID)
-
 	if err == nil {
 		publishPatch(ctx, eventCtx)(unsetError())
 		return
 	}
 
-	plDataVal, ok := err.(*patchlist)
-	if ok {
-		pldata := *plDataVal
-		pldata = append(pldata, unsetError())
-		publishPatch(ctx, eventCtx)(pldata...)
+	patchlistDataVal, ok := err.(*patchlist)
+	if !ok {
+		publishPatch(ctx, eventCtx)(setError(err))
 		return
 	}
 
-	publishPatch(ctx, eventCtx)(setError(err))
+	patchlistData := *patchlistDataVal
+	patchlistData = append(patchlistData, unsetError())
+	publishPatch(ctx, eventCtx)(patchlistData...)
 }
 
-func handleOnRequestResult(err error, ctx Context) {
-	firData := routeData{"app_name": ctx.route.appName, "errors": M{}}
+func handleOnFormResult(err error, ctx Context) {
 	if err == nil {
+		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
+		return
+	}
+
+	onFormDataVal, ok := err.(*routeData)
+	if !ok {
+		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
+		return
+	}
+
+	onFormData := *onFormDataVal
+	onFormData["fir"] = getFirData(ctx)
+	renderRoute(ctx)(onFormData)
+}
+
+func handleOnLoadResult(err, onFormErr error, ctx Context) {
+	firData := getFirData(ctx)
+	if err == nil {
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			if !ok {
+				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
+			} else {
+				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+			}
+		}
 		renderRoute(ctx)(routeData{"fir": firData})
 		return
 	}
 
-	renderDataVal, ok := err.(*routeData)
-	if ok {
-		renderData := *renderDataVal
-		renderData["fir"] = firData
-		renderRoute(ctx)(renderData)
-		return
+	switch errVal := err.(type) {
+
+	case *routeData:
+		onLoadData := *errVal
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			if !ok {
+				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
+			} else {
+				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+			}
+		}
+		onLoadData["fir"] = firData
+		renderRoute(ctx)(onLoadData)
+	case *fieldErrors:
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			if !ok {
+				(*errVal)["onForm"] = onFormErr
+			} else {
+				for k, v := range *fieldErrorsVal {
+					(*errVal)[k] = v
+				}
+			}
+		}
+
+		firData["errors"] = M{ctx.event.ID: *errVal}
+		renderRoute(ctx)(routeData{"fir": firData})
+	default:
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			if !ok {
+				// err is not nil and not routeData and onFormErr is not nil and not fieldErrors
+				// merge err and onFormErr
+				firData["errors"] = M{ctx.event.ID: fmt.Errorf("%v %v", err, onFormErr)}
+			} else {
+				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+			}
+		} else {
+			firData["errors"] = M{ctx.event.ID: err.Error()}
+		}
+		renderRoute(ctx)(routeData{"fir": firData})
+
 	}
 
-	firData["errors"] = M{ctx.event.ID: err.Error()}
-	renderRoute(ctx)(routeData{"fir": firData})
 }
 
 func (rt *route) parseTemplate() {

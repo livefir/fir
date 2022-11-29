@@ -85,3 +85,13 @@ func morphFirErrors(eventID string) (func(err error) Patch, func() Patch) {
 			return Morph(selector, Block(id, M{"fir": M{"errors": M{eventID: ""}}}))
 		}
 }
+
+type fieldErrors map[string]error
+
+func (f fieldErrors) Error() string {
+	var errs []string
+	for field, err := range f {
+		errs = append(errs, fmt.Sprintf("%s: %s", field, err.Error()))
+	}
+	return strings.Join(errs, ", ")
+}

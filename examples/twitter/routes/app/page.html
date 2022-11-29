@@ -1,23 +1,23 @@
 {{ define "content" }}
     <form
+        x-data
         id="createTweet"
         method="post"
         action="/?id=createTweet"
         @submit.prevent="$fir.submit"
     >
-        {{ block "fir-errors-createTweet" . }}
-            <p id="fir-errors-createTweet">
-                {{ .fir.errors.createTweet }}
-            </p>
-        {{ end }}
-        {{ block "error" . }}
-            <p id="error">{{ .error }}</p>
-        {{ end }}
         <input
             type="text"
             name="body"
             placeholder="a new tweet"
         />
+        {{ block "fir-errors-createTweet-body" . }}
+            {{ with .fir.errors.createTweet.body }}
+                <p id="fir-errors-createTweet-body">
+                    {{ .fir.errors.createTweet.body }}
+                </p>
+            {{ end }}
+        {{ end }}
         <button type="submit">Submit</button>
     </form>
     <div id="tweets">

@@ -185,3 +185,26 @@ fir.Errors(fir.M{"message": "error message", "status": 400, "log": "error log", 
 fmt.Errorf("%v %w",err,fir.M{"status": 400, "newTodo": fir.M{"title": "error title"}})
 fmt.Errorf("%v %w",err,fir.M{"title": "error title"}) -> .firErrors.title
 err -> .firErrors.message
+fir.Morph("#titleError",fir.M{"error": err.Error()})
+
+FormError("title",err)
+
+setError, unsetError := fir.FieldError("title"))
+setError(err)
+unsetError()
+ctx.Patch(setError("title",err))
+ctx.FieldError("title",err)
+
+type Form struct {
+  Name string `json:"name"`
+  Email string `json:"email"`
+}
+
+func(f *Form) ValidationErrors()map[string]error{
+  return map[string]error{
+    "name": errors.New("name is required"),
+    "email": errors.New("email is required"),
+  }
+}
+
+
