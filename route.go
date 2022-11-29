@@ -209,7 +209,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// onForms
 		if r.Method == "POST" {
-			formAction := "default"
+			formAction := ""
 			values := r.URL.Query()
 			if len(values) == 1 {
 				id := values.Get("id")
@@ -217,6 +217,15 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 					formAction = id
 				}
 			}
+			if formAction == "" && len(rt.onEvents) > 1 {
+				http.Error(w, "form action[?id=myaction] is missing and default onEvent can't be selected since there is more than 1", http.StatusBadRequest)
+				return
+			} else if formAction == "" && len(rt.onEvents) == 1 {
+				for k := range rt.onEvents {
+					formAction = k
+				}
+			}
+
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -244,7 +253,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 
 			onEventFunc, ok := rt.onEvents[event.ID]
 			if !ok {
-				http.Error(w, "form not found", http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("onEvent handler for %s not found", event.ID), http.StatusBadRequest)
 				return
 			}
 
