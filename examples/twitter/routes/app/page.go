@@ -32,26 +32,6 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	return tweet, nil
 }
 
-func createTweetForm(db *bolthold.Store) fir.OnEventFunc {
-	return func(ctx fir.Context) error {
-		_, err := insertTweet(ctx, db)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
-func createTweetEvent(db *bolthold.Store) fir.OnEventFunc {
-	return func(ctx fir.Context) error {
-		tweet, err := insertTweet(ctx, db)
-		if err != nil {
-			return err
-		}
-		return ctx.Append("#tweets", fir.Block("tweet", tweet))
-	}
-}
-
 func load(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.Context) error {
 		var tweets []Tweet
@@ -62,6 +42,16 @@ func load(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+func createTweet(db *bolthold.Store) fir.OnEventFunc {
+	return func(ctx fir.Context) error {
+		tweet, err := insertTweet(ctx, db)
+		if err != nil {
+			return err
+		}
+		return ctx.Append("#tweets", fir.Block("tweet", tweet))
+	}
+}
+
 func Route(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
 		return fir.RouteOptions{
@@ -69,8 +59,7 @@ func Route(db *bolthold.Store) fir.RouteFunc {
 			fir.Content("routes/app/page.html"),
 			fir.Layout("routes/layout.html"),
 			fir.OnLoad(load(db)),
-			fir.OnForm("createTweet", createTweetForm(db)),
-			fir.OnEvent("createTweet", createTweetEvent(db)),
+			fir.OnEvent("createTweet", createTweet(db)),
 		}
 	}
 }

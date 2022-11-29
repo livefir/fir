@@ -80,15 +80,6 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 	}
 }
 
-func OnForm(name string, onEventFunc OnEventFunc) RouteOption {
-	return func(opt *routeOpt) {
-		if opt.onForms == nil {
-			opt.onForms = make(map[string]OnEventFunc)
-		}
-		opt.onForms[name] = onEventFunc
-	}
-}
-
 type routeData map[string]any
 
 func (r *routeData) Error() string {
@@ -108,7 +99,6 @@ type routeOpt struct {
 	funcMap           template.FuncMap
 	eventSender       chan Event
 	onLoad            OnEventFunc
-	onForms           map[string]OnEventFunc
 	onEvents          map[string]OnEventFunc
 	opt
 }
@@ -251,7 +241,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				urlValues: urlValues,
 			}
 
-			onEventFunc, ok := rt.onForms[event.ID]
+			onEventFunc, ok := rt.onEvents[event.ID]
 			if !ok {
 				http.Error(w, "form not found", http.StatusBadRequest)
 				return
@@ -320,15 +310,18 @@ func handleOnFormResult(err error, ctx Context) {
 		return
 	}
 
-	onFormDataVal, ok := err.(*routeData)
-	if !ok {
+	switch errVal := err.(type) {
+	case *routeData:
+		onFormData := *errVal
+		onFormData["fir"] = getFirData(ctx)
+		renderRoute(ctx)(onFormData)
+	case *patchlist:
+		// ignore patchlist
+		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
+	default:
 		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
-		return
 	}
 
-	onFormData := *onFormDataVal
-	onFormData["fir"] = getFirData(ctx)
-	renderRoute(ctx)(onFormData)
 }
 
 func handleOnLoadResult(err, onFormErr error, ctx Context) {
@@ -373,6 +366,17 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 		}
 
 		firData["errors"] = M{ctx.event.ID: *errVal}
+		renderRoute(ctx)(routeData{"fir": firData})
+	case *patchlist:
+		log.Printf("[warning] onLoad returned a []Patch and was ignored for route: %+v, onLoad must return either an error or call ctx.Data, ctx.KV \n", ctx.route)
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			if !ok {
+				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
+			} else {
+				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+			}
+		}
 		renderRoute(ctx)(routeData{"fir": firData})
 	default:
 		if onFormErr != nil {
