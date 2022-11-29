@@ -96,7 +96,7 @@ func (i *index) Options() fir.RouteOptions {
 }
 
 func (i *index) load(ctx fir.Context) error {
-	return &fir.M{"count": i.model.Count()}
+	return ctx.KV("count", i.model.Count())
 }
 
 func (i *index) inc(ctx fir.Context) error {
@@ -112,7 +112,7 @@ func (i *index) updated(ctx fir.Context) error {
 	if err != nil {
 		return err
 	}
-	return ctx.Patch(fir.Store("fir", data))
+	return ctx.Store("fir", data)
 }
 
 var content = `

@@ -3,6 +3,7 @@ package fir
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 )
@@ -36,6 +37,17 @@ func (c Context) Request() *http.Request {
 
 func (c Context) Response() http.ResponseWriter {
 	return c.response
+}
+
+func (c Context) Redirect(url string, status int) error {
+	if url == "" {
+		return errors.New("url is required")
+	}
+	if status < 300 || status > 308 {
+		return errors.New("status code must be between 300 and 308")
+	}
+	http.Redirect(c.response, c.request, url, status)
+	return nil
 }
 
 func (c Context) Data(data map[string]any) error {

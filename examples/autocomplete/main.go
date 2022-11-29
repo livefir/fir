@@ -40,7 +40,7 @@ type queryRequest struct {
 
 func index() fir.RouteOptions {
 	load := func(ctx fir.Context) error {
-		return &fir.M{"cities": cities}
+		return ctx.KV("cities", cities)
 	}
 
 	query := func(ctx fir.Context) error {
@@ -49,9 +49,9 @@ func index() fir.RouteOptions {
 			return err
 		}
 		data := fir.M{"cities": getCities(req.Query)}
-		return ctx.Patch(fir.Morph(
+		return ctx.Morph(
 			"#cities",
-			fir.Block("cities", data)))
+			fir.Block("cities", data))
 	}
 
 	return fir.RouteOptions{

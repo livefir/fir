@@ -41,23 +41,23 @@ func index() fir.RouteOptions {
 	var value int32
 
 	load := func(ctx fir.Context) error {
-		return &fir.M{"count": atomic.LoadInt32(&value)}
+		return ctx.KV("count", atomic.LoadInt32(&value))
 	}
 
 	inc := func(ctx fir.Context) error {
-		return ctx.Patch(
-			fir.Morph(
-				"#count",
-				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, 1)}),
-			))
+		return ctx.Morph(
+			"#count",
+			fir.Block("count",
+				fir.M{"count": atomic.AddInt32(&value, 1)}),
+		)
 	}
 
 	dec := func(ctx fir.Context) error {
-		return ctx.Patch(
-			fir.Morph(
-				"#count",
-				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, -1)}),
-			))
+		return ctx.Morph(
+			"#count",
+			fir.Block("count",
+				fir.M{"count": atomic.AddInt32(&value, -1)}),
+		)
 	}
 
 	return fir.RouteOptions{
