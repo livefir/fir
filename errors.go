@@ -3,10 +3,11 @@ package fir
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 )
 
-var DefaultUserErrorMessage = "internal error"
+var DefaultUserError = errors.New("internal error")
 
 func MorphError(name string) (func(err error) Patch, func() Patch) {
 	selector := fmt.Sprintf("#%s", name)
@@ -37,10 +38,11 @@ func (f fieldErrors) Error() string {
 	return strings.Join(errs, ", ")
 }
 
-func UserError(err error) error {
-	userMessage := DefaultUserErrorMessage
-	if userError := errors.Unwrap(err); userError != nil {
-		userMessage = userError.Error()
+func UserError(ctx Context, err error) error {
+	log.Printf("error: %v", err)
+	userError := DefaultUserError
+	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {
+		userError = wrappedUserError
 	}
-	return errors.New(userMessage)
+	return userError
 }
