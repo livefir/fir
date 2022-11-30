@@ -1,7 +1,6 @@
 package fir
 
 import (
-	"errors"
 	"fmt"
 	"html/template"
 	"path/filepath"
@@ -145,26 +144,4 @@ func parseTemplate(opt routeOpt) (*template.Template, error) {
 
 	// both layout and content are set
 	return layoutSetContentSet(opt)
-}
-
-var DefaultUserErrorMessage = "internal error"
-
-func UserError(err error) string {
-	userMessage := DefaultUserErrorMessage
-	if userError := errors.Unwrap(err); userError != nil {
-		userMessage = userError.Error()
-	}
-	return userMessage
-}
-
-func firErrors(err error) routeData {
-	m := routeData{"message": err.Error()}
-	if firErrorsMapErr := errors.Unwrap(err); firErrorsMapErr != nil {
-		firErrorsMap, ok := firErrorsMapErr.(*routeData)
-		if !ok {
-			return m
-		}
-		return *firErrorsMap
-	}
-	return m
 }

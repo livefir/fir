@@ -324,11 +324,11 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		fieldErrorsData := errVal
 		var patchlistData []Patch
 
-		for k, v := range fieldErrorsData {
+		for k, _ := range fieldErrorsData {
 			fieldErrorName := fmt.Sprintf("fir-errors-%s-%s", ctx.event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
-			firData["errors"] = M{ctx.event.ID: M{k: v.Error()}}
+			firData["errors"] = M{ctx.event.ID: M{k: UserError(err)}}
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", fieldErrorName),
 					Block(fieldErrorName, M{"fir": firData})))
@@ -344,7 +344,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		render(patchlistData...)
 		return
 	default:
-		render(setError(err))
+		render(setError(UserError(err)))
 		return
 	}
 }
@@ -364,9 +364,8 @@ func handleOnFormResult(err error, ctx Context) {
 		// ignore patchlist
 		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
 	default:
-		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
+		handleOnLoadResult(ctx.route.onLoad(ctx), UserError(err), ctx)
 	}
-
 }
 
 func handleOnLoadResult(err, onFormErr error, ctx Context) {
