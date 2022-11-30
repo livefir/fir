@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/adnaan/fir"
@@ -23,7 +24,10 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 		return nil, err
 	}
 	if len(tweet.Body) < 3 {
-		return nil, ctx.FieldError("body", errors.New("body must be at least 3 characters"))
+		// fir detects the wrapped error as an user error
+		// without wrapping a user error like this, fir will
+		// treat it as a server error and will send fir.DefaultUserError to the client
+		return nil, ctx.FieldError("body", fmt.Errorf("%w", errors.New("tweet is too short")))
 	}
 	tweet.CreatedAt = time.Now()
 	if err := db.Insert(bolthold.NextSequence(), tweet); err != nil {

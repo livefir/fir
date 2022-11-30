@@ -39,7 +39,7 @@ func (f fieldErrors) Error() string {
 }
 
 func UserError(ctx Context, err error) error {
-	log.Printf("error: %v", err)
+	log.Printf("ctx %+v , error: %v\n", ctx, err)
 	userError := DefaultUserError
 	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {
 		userError = wrappedUserError
