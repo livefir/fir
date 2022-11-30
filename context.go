@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -62,6 +63,26 @@ func (c Context) Data(data map[string]any) error {
 func (c Context) KV(k string, v any) error {
 	return &routeData{k: v}
 }
+
+func (c Context) MorphKV(name string, value any) error {
+	return c.Morph(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
+}
+
+// func (c Context) AppendKV(name string, value any) error {
+// 	return c.Append(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
+// }
+
+// func (c Context) AfterKV(name string, value any) error {
+// 	return c.After(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
+// }
+
+// func (c Context) BeforeKV(name string, value any) error {
+// 	return c.Before(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
+// }
+
+// func (c Context) PrependKV(name string, value any) error {
+// 	return c.Prepend(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
+// }
 
 func (c Context) Patch(patch ...Patch) error {
 	var pl patchlist

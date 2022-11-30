@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -43,7 +44,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 				continue
 			}
 
-			handleOnSocketEventResult(onEventFunc(eventCtx), ctx, eventCtx)
+			handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
 		}
 	}()
 
@@ -111,12 +112,17 @@ loop:
 			continue
 		}
 
-		handleOnSocketEventResult(onEventFunc(eventCtx), ctx, eventCtx)
+		handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
 	}
 }
 
 func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []Patch) error {
 	message := buildPatchOperations(t, patchset)
+	if len(message) == 0 {
+		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, patchset %+v", channel, patchset)
+		log.Println(err)
+		return err
+	}
 	log.Printf("[writePatchOperations] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
 	err := conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {

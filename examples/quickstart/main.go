@@ -15,17 +15,11 @@ func app() fir.RouteOptions {
 	}
 
 	inc := func(ctx fir.Context) error {
-		return ctx.Morph(
-			"#count",
-			fir.Block("count", fir.M{"count": atomic.AddInt32(&value, 1)}),
-		)
+		return ctx.MorphKV("count", atomic.AddInt32(&value, 1))
 	}
 
 	dec := func(ctx fir.Context) error {
-		return ctx.Morph(
-			"#count",
-			fir.Block("count", fir.M{"count": atomic.AddInt32(&value, -1)}),
-		)
+		return ctx.MorphKV("count", atomic.AddInt32(&value, -1))
 	}
 
 	return fir.RouteOptions{

@@ -166,12 +166,10 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 				firErrorPatchExists = true
 			}
 
-			log.Printf("%+v\n", tmpl)
-
 			var err error
 			p.Value, err = buildTemplateValue(t, tmpl["name"].(string), tmpl["data"])
 			if err != nil {
-				log.Printf("buildPatchOperations error: %v,%+v \n", err, tmpl)
+				log.Printf("[warning]buildPatchOperations error: %v,%+v \n", err, tmpl)
 				continue
 			}
 
@@ -194,12 +192,15 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 		}
 	}
 
+	if len(renderedPatchset) == 0 {
+		return nil
+	}
+
 	data, err := json.Marshal(renderedPatchset)
 	if err != nil {
 		log.Printf("buildPatchOperations marshal error: %+v, %v \n", renderedPatchset, err)
 		return nil
 	}
-	log.Println("buildPatchOperations", string(data))
 	return data
 }
 

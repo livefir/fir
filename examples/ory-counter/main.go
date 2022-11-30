@@ -79,31 +79,25 @@ type index struct {
 	value int32
 }
 
-func (i *index) onLoad(ctx fir.Context) error {
+func (i *index) load(ctx fir.Context) error {
 	return ctx.KV("count", atomic.LoadInt32(&i.value))
 }
 
-func (i *index) onInc(ctx fir.Context) error {
-	return ctx.Morph(
-		"#count",
-		fir.Block("count", fir.M{"count": atomic.AddInt32(&i.value, 1)}),
-	)
+func (i *index) inc(ctx fir.Context) error {
+	return ctx.MorphKV("count", atomic.AddInt32(&i.value, 1))
 }
 
-func (i *index) onDec(ctx fir.Context) error {
-	return ctx.Morph(
-		"#count",
-		fir.Block("count", fir.M{"count": atomic.AddInt32(&i.value, -1)}),
-	)
+func (i *index) dec(ctx fir.Context) error {
+	return ctx.MorphKV("count", atomic.AddInt32(&i.value, -1))
 }
 
 func (i *index) Options() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.ID("counter"),
 		fir.Content(content),
-		fir.OnLoad(i.onLoad),
-		fir.OnEvent("inc", i.onInc),
-		fir.OnEvent("dec", i.onDec),
+		fir.OnLoad(i.load),
+		fir.OnEvent("inc", i.inc),
+		fir.OnEvent("dec", i.dec),
 	}
 }
 

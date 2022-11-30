@@ -49,9 +49,7 @@ func index() fir.RouteOptions {
 			return err
 		}
 		data := fir.M{"cities": getCities(req.Query)}
-		return ctx.Morph(
-			"#cities",
-			fir.Block("cities", data))
+		return ctx.MorphKV("cities", data)
 	}
 
 	return fir.RouteOptions{

@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type M map[string]any
@@ -104,8 +105,9 @@ type routeOpt struct {
 }
 
 type route struct {
-	cntrl    *controller
-	template *template.Template
+	cntrl             *controller
+	template          *template.Template
+	firErrorTemplates []string
 	routeOpt
 }
 
@@ -204,7 +206,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handleOnEventResult(onEventFunc(eventCtx), eventCtx)
+		handleOnEventResult(onEventFunc(eventCtx), eventCtx, renderPatch(eventCtx))
 
 	} else {
 		// onForms
@@ -282,41 +284,69 @@ func getFirData(ctx Context) routeData {
 	return routeData{"app_name": ctx.route.appName, "errors": errors}
 }
 
-func handleOnEventResult(err error, ctx Context) {
+func handleOnEventResult(err error, ctx Context, render patchRenderer) {
+	firData := getFirData(ctx)
+	unsetErrors := M{}
+	for _, v := range ctx.route.firErrorTemplates {
+		unsetErrors[v] = struct{}{}
+	}
 	setError, unsetError := morphFirErrors(ctx.event.ID)
-
 	if err == nil {
-		renderPatch(ctx)(unsetError())
-		return
-	}
-
-	patchlistDataVal, ok := err.(*patchlist)
-	if ok {
-		patchlistData := *patchlistDataVal
+		var patchlistData []Patch
 		patchlistData = append(patchlistData, unsetError())
-		renderPatch(ctx)(patchlistData...)
+		for k := range unsetErrors {
+			firData["errors"] = M{ctx.event.ID: M{}}
+			patchlistData = append(patchlistData,
+				Morph(fmt.Sprintf("#%s", k),
+					Block(k, M{"fir": firData})))
+		}
+
+		render(patchlistData...)
 		return
 	}
 
-	renderPatch(ctx)(setError(err))
-}
+	switch errVal := err.(type) {
+	case *routeData:
+		render(Store("fir", *errVal))
+		return
+	case *patchlist:
+		patchlistData := *errVal
+		patchlistData = append(patchlistData, unsetError())
+		for k := range unsetErrors {
+			firData["errors"] = M{ctx.event.ID: M{}}
+			patchlistData = append(patchlistData,
+				Morph(fmt.Sprintf("#%s", k),
+					Block(k, M{"fir": firData})))
+		}
+		render(patchlistData...)
+		return
+	case fieldErrors:
+		fieldErrorsData := errVal
+		var patchlistData []Patch
 
-func handleOnSocketEventResult(err error, ctx context.Context, eventCtx Context) {
-	setError, unsetError := morphFirErrors(eventCtx.event.ID)
-	if err == nil {
-		publishPatch(ctx, eventCtx)(unsetError())
+		for k, v := range fieldErrorsData {
+			fieldErrorName := fmt.Sprintf("fir-errors-%s-%s", ctx.event.ID, k)
+			// eror is set, don't unset it
+			delete(unsetErrors, fieldErrorName)
+			firData["errors"] = M{ctx.event.ID: M{k: v.Error()}}
+			patchlistData = append(patchlistData,
+				Morph(fmt.Sprintf("#%s", fieldErrorName),
+					Block(fieldErrorName, M{"fir": firData})))
+		}
+		// unset errors that are not set
+		for k := range unsetErrors {
+			firData["errors"] = M{ctx.event.ID: M{}}
+			patchlistData = append(patchlistData,
+				Morph(fmt.Sprintf("#%s", k),
+					Block(k, M{"fir": firData})))
+		}
+
+		render(patchlistData...)
+		return
+	default:
+		render(setError(err))
 		return
 	}
-
-	patchlistDataVal, ok := err.(*patchlist)
-	if !ok {
-		publishPatch(ctx, eventCtx)(setError(err))
-		return
-	}
-
-	patchlistData := *patchlistDataVal
-	patchlistData = append(patchlistData, unsetError())
-	publishPatch(ctx, eventCtx)(patchlistData...)
 }
 
 func handleOnFormResult(err error, ctx Context) {
@@ -369,19 +399,19 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 		}
 		onLoadData["fir"] = firData
 		renderRoute(ctx)(onLoadData)
-	case *fieldErrors:
+	case fieldErrors:
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				(*errVal)["onForm"] = onFormErr
+				errVal["onForm"] = onFormErr
 			} else {
 				for k, v := range *fieldErrorsVal {
-					(*errVal)[k] = v
+					errVal[k] = v
 				}
 			}
 		}
 
-		firData["errors"] = M{ctx.event.ID: *errVal}
+		firData["errors"] = M{ctx.event.ID: errVal}
 		renderRoute(ctx)(routeData{"fir": firData})
 	case *patchlist:
 		log.Printf("[warning] onLoad returned a []Patch and was ignored for route: %+v, onLoad must return either an error or call ctx.Data, ctx.KV \n", ctx.route)
@@ -420,5 +450,20 @@ func (rt *route) parseTemplate() {
 		if err != nil {
 			panic(err)
 		}
+		rt.findFirErrorTemplates()
 	}
+}
+
+func (rt *route) findFirErrorTemplates() {
+	for _, t := range rt.template.Templates() {
+		if t.Name() == rt.layoutContentName {
+			for _, t1 := range t.Templates() {
+				if strings.Contains(t1.Name(), "fir-errors-") {
+					rt.firErrorTemplates = append(rt.firErrorTemplates, t1.Name())
+				}
+			}
+		}
+
+	}
+
 }

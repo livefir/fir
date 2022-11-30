@@ -12,11 +12,9 @@
             placeholder="a new tweet"
         />
         {{ block "fir-errors-createTweet-body" . }}
-            {{ with .fir.errors.createTweet.body }}
-                <p id="fir-errors-createTweet-body">
-                    {{ .fir.errors.createTweet.body }}
-                </p>
-            {{ end }}
+            <p id="fir-errors-createTweet-body">
+                {{ .fir.errors.createTweet.body }}
+            </p>
         {{ end }}
         <button type="submit">Submit</button>
     </form>
