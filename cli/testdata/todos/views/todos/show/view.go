@@ -3,7 +3,6 @@ package show
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/adnaan/fir"
@@ -12,6 +11,7 @@ import (
 	"github.com/adnaan/fir/cli/testdata/todos/utils"
 	"github.com/fatih/structs"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang/glog"
 	"github.com/google/uuid"
 )
 
@@ -85,7 +85,7 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	case "todo-delete":
 		return onTodoDelete(v.DB, event)
 	default:
-		log.Printf("unknown event: %s\n", event.ID)
+		glog.Errorf("unknown event: %s\n", event.ID)
 		return nil
 	}
 }

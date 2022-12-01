@@ -90,7 +90,7 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	case "[[.modelName]]-delete":
 		return on[[.modelNameTitled]]Delete(v.DB, event)
 	default:
-		log.Printf("unknown event: %s\n", event.ID)
+		glog.Errorf("unknown event: %s\n", event.ID)
 		return nil
 	}
 }

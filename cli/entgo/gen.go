@@ -197,7 +197,7 @@ See the fir documentation for more information.
 		"children":              children,
 	}
 
-	//log.Printf("%+v\n", data)
+	//glog.Errorf("%+v\n", data)
 
 	pkgPrefix := "template_assets/package"
 

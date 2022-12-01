@@ -100,7 +100,7 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	case "[[.modelName]]-query":
 		return on[[.modelNameTitled]]Query(v.DB, event)
 	default:
-		log.Printf("unknown event: %s\n", event.ID)
+		glog.Errorf("unknown event: %s\n", event.ID)
 		return nil
 	}
 }

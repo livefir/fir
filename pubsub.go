@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/golang/glog"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
@@ -161,7 +162,7 @@ func (s *subscriptionRedis) C() <-chan []Patch {
 			var patchset []Patch
 			err := json.Unmarshal([]byte(msg.Payload), &patchset)
 			if err != nil {
-				log.Printf("failed to unmarshal patches payload: %v", err)
+				glog.Errorf("failed to unmarshal patches payload: %v", err)
 				continue
 			}
 			s.ch <- patchset
@@ -202,7 +203,7 @@ func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscripti
 func (p *pubsubRedis) HasSubscribers(ctx context.Context, pattern string) bool {
 	channels, err := p.client.PubSubChannels(ctx, pattern).Result()
 	if err != nil {
-		log.Printf("error getting channels for pattern: %v : err, %v", pattern, err)
+		glog.Errorf("error getting channels for pattern: %v : err, %v", pattern, err)
 		return false
 	}
 	if len(channels) == 0 {

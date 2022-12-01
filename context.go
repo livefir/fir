@@ -128,7 +128,7 @@ func (c Context) FieldError(field string, err error) error {
 	if err == nil || field == "" {
 		return nil
 	}
-	return fieldErrors{field: UserError(c, err)}
+	return &fieldErrors{field: UserError(c, err)}
 }
 
 func (c Context) FieldErrors(fields map[string]error) error {
@@ -138,5 +138,5 @@ func (c Context) FieldErrors(fields map[string]error) error {
 			m[field] = UserError(c, err)
 		}
 	}
-	return m
+	return &m
 }

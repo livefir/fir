@@ -312,7 +312,7 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
  case "dec":
   return fir.Patchset{c.model.Dec()}
  default:
-  log.Printf("warning:handler not found for event => \n %+v\n", event)
+  glog.Errorf("warning:handler not found for event => \n %+v\n", event)
  }
  return nil
 }
@@ -384,7 +384,7 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
  case "dec":
   return fir.Patchset{c.model.Dec()}
  default:
-  log.Printf("warning:handler not found for event => \n %+v\n", event)
+  glog.Errorf("warning:handler not found for event => \n %+v\n", event)
  }
  return nil
 }
@@ -671,7 +671,7 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
  case "dec":
   return fir.Patchset{c.model.Dec()}
  default:
-  log.Printf("warning:handler not found for event => \n %+v\n", event)
+  glog.Errorf("warning:handler not found for event => \n %+v\n", event)
  }
 
  return nil

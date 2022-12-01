@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/golang/glog"
 )
 
 type M map[string]any
@@ -128,11 +129,11 @@ func renderRoute(ctx Context) routeRenderer {
 		var buf bytes.Buffer
 		err := ctx.route.template.Execute(&buf, data)
 		if err != nil {
-			log.Printf("[renderRoute] error executing template: %v\n", err)
+			glog.Errorf("[renderRoute] error executing template: %v\n", err)
 			return err
 		}
 		if ctx.route.debugLog {
-			// log.Printf("OnGet render view %+v, with data => \n %+v\n",
+			// glog.Errorf("OnGet render view %+v, with data => \n %+v\n",
 			// 	v.view.Content(), getJSON(route.Data))
 		}
 
@@ -147,7 +148,7 @@ func publishPatch(ctx context.Context, eventCtx Context) patchRenderer {
 		eventCtx.route.parseTemplate()
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, patchset...)
 		if err != nil {
-			log.Printf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
+			glog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 			return err
 		}
 		return nil
@@ -160,7 +161,7 @@ func renderPatch(ctx Context) patchRenderer {
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, patchset...)
 		if err != nil {
-			log.Printf("[onPatchEvent] error publishing patch: %v\n", err)
+			glog.Errorf("[onPatchEvent] error publishing patch: %v\n", err)
 			return err
 		}
 		ctx.response.Write(buildPatchOperations(ctx.route.template, patchset))
@@ -320,15 +321,15 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		}
 		render(patchlistData...)
 		return
-	case fieldErrors:
-		fieldErrorsData := errVal
+	case *fieldErrors:
+		fieldErrorsData := *errVal
 		var patchlistData []Patch
 
-		for k, _ := range fieldErrorsData {
+		for k, v := range fieldErrorsData {
 			fieldErrorName := fmt.Sprintf("fir-errors-%s-%s", ctx.event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
-			firData["errors"] = M{ctx.event.ID: M{k: UserError(ctx, err)}}
+			firData["errors"] = M{ctx.event.ID: M{k: v}}
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", fieldErrorName),
 					Block(fieldErrorName, M{"fir": firData})))
@@ -364,7 +365,7 @@ func handleOnFormResult(err error, ctx Context) {
 		// ignore patchlist
 		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
 	default:
-		handleOnLoadResult(ctx.route.onLoad(ctx), UserError(ctx, err), ctx)
+		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
 	}
 }
 
@@ -377,6 +378,7 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
 			} else {
 				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+				glog.Errorf("fieldErrors: %v", *fieldErrorsVal)
 			}
 		}
 
@@ -413,7 +415,7 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 		firData["errors"] = M{ctx.event.ID: errVal}
 		renderRoute(ctx)(routeData{"fir": firData})
 	case *patchlist:
-		log.Printf("[warning] onLoad returned a []Patch and was ignored for route: %+v, onLoad must return either an error or call ctx.Data, ctx.KV \n", ctx.route)
+		glog.Errorf("[warning] onLoad returned a []Patch and was ignored for route: %+v, onLoad must return either an error or call ctx.Data, ctx.KV \n", ctx.route)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {

@@ -3,11 +3,10 @@ package fir
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
-)
 
-var DefaultUserError = errors.New("internal error")
+	"github.com/golang/glog"
+)
 
 func MorphError(name string) (func(err error) Patch, func() Patch) {
 	selector := fmt.Sprintf("#%s", name)
@@ -39,8 +38,8 @@ func (f fieldErrors) Error() string {
 }
 
 func UserError(ctx Context, err error) error {
-	log.Printf("ctx %+v , error: %v\n", ctx, err)
-	userError := DefaultUserError
+	userError := err
+	glog.Errorf("ctx %+v , error: %v\n", ctx.event.ID, err)
 	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {
 		userError = wrappedUserError
 	}

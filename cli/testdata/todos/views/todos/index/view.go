@@ -3,10 +3,10 @@ package todos
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/adnaan/fir/cli/testdata/todos/models"
+	"github.com/golang/glog"
 
 	"github.com/adnaan/fir/cli/testdata/todos/models/board"
 	"github.com/adnaan/fir/cli/testdata/todos/models/predicate"
@@ -90,7 +90,7 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	case "todo-query":
 		return onTodoQuery(v.DB, event)
 	default:
-		log.Printf("unknown event: %s\n", event.ID)
+		glog.Errorf("unknown event: %s\n", event.ID)
 		return nil
 	}
 }

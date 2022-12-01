@@ -3,10 +3,10 @@ package boards
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/adnaan/fir/cli/testdata/todos/models"
+	"github.com/golang/glog"
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/cli/testdata/todos/models/board"
@@ -72,7 +72,7 @@ func (v *View) OnEvent(event fir.Event) fir.Patchset {
 	case "board-query":
 		return onBoardQuery(v.DB, event)
 	default:
-		log.Printf("unknown event: %s\n", event.ID)
+		glog.Errorf("unknown event: %s\n", event.ID)
 		return nil
 	}
 }

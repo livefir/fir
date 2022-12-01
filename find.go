@@ -1,11 +1,11 @@
 package fir
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/golang/glog"
 	"golang.org/x/exp/slices"
 )
 
@@ -76,14 +76,14 @@ func isDir(path string, opt routeOpt) bool {
 	if opt.hasEmbedFS {
 		fileInfo, err := fs.Stat(opt.embedFS, path)
 		if err != nil {
-			fmt.Println("[warning]isDir warn: ", err)
+			glog.Warningf("[warning]isDir warn: ", err)
 			return false
 		}
 		return fileInfo.IsDir()
 	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		fmt.Println("[warning]isDir error: ", err)
+		glog.Warningf("[warning]isDir error: ", err)
 		return false
 	}
 

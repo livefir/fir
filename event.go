@@ -2,13 +2,14 @@ package fir
 
 import (
 	"encoding/json"
-	"log"
+
+	"github.com/golang/glog"
 )
 
 func NewEvent(id string, params any) Event {
 	data, err := json.Marshal(params)
 	if err != nil {
-		log.Printf("error marshaling event params: %v, %v, %v \n,", id, params, err)
+		glog.Errorf("error marshaling event params: %v, %v, %v \n,", id, params, err)
 		return Event{
 			ID: id,
 		}

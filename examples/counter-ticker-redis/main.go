@@ -4,13 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/adnaan/fir"
 	"github.com/go-redis/redis/v8"
+	"github.com/golang/glog"
 )
 
 type Counter struct {
@@ -66,7 +66,7 @@ func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
 		for ; true; <-ticker.C {
 			if !c.pubsub.HasSubscribers(context.Background(), pattern) {
 				// if userID:viewID(*:viewID) channel pattern has no subscribers, skip costly operation
-				log.Printf("channel pattern %s has no subscribers", pattern)
+				glog.Errorf("channel pattern %s has no subscribers", pattern)
 				continue
 			}
 			c.eventSender <- fir.NewEvent("updated", fir.M{"count_updated": c.model.Updated()})

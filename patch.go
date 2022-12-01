@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"html/template"
 	"io"
-	"log"
 
+	"github.com/golang/glog"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
 )
@@ -158,7 +158,7 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 		case morph, after, before, appendOp, prepend:
 			tmpl, ok := p.Value.(map[string]any)
 			if !ok {
-				log.Printf("[buildPatchOperations] invalid patch template data: %v", p.Value)
+				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
 				continue
 			}
 
@@ -169,7 +169,7 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 			var err error
 			p.Value, err = buildTemplateValue(t, tmpl["name"].(string), tmpl["data"])
 			if err != nil {
-				log.Printf("[warning]buildPatchOperations error: %v,%+v \n", err, tmpl)
+				glog.Errorf("[warning]buildPatchOperations error: %v,%+v \n", err, tmpl)
 				continue
 			}
 
@@ -198,7 +198,7 @@ func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
 
 	data, err := json.Marshal(renderedPatchset)
 	if err != nil {
-		log.Printf("buildPatchOperations marshal error: %+v, %v \n", renderedPatchset, err)
+		glog.Errorf("buildPatchOperations marshal error: %+v, %v \n", renderedPatchset, err)
 		return nil
 	}
 	return data

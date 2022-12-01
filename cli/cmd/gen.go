@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -11,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 
 	"entgo.io/ent/entc"
@@ -31,12 +31,12 @@ var genCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		schemaPath, err := filepath.Abs(filepath.Join(projectPath, "schema"))
 		if err != nil {
-			log.Printf("schema path error: %v", err)
+			glog.Errorf("schema path error: %v", err)
 			cmd.Help()
 			return
 		}
 		if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
-			log.Printf("no schema directory found at path: %v\n", schemaPath)
+			glog.Errorf("no schema directory found at path: %v\n", schemaPath)
 			cmd.Help()
 			return
 		}
@@ -45,14 +45,14 @@ var genCmd = &cobra.Command{
 		if _, err := os.Stat(goModPath); !os.IsNotExist(err) {
 			goModBytes, err := ioutil.ReadFile(goModPath)
 			if err != nil {
-				log.Printf("error reading %s: %v\n.", goModPath, err)
+				glog.Errorf("error reading %s: %v\n.", goModPath, err)
 				return
 			}
 			module = modfile.ModulePath(goModBytes)
 		}
 
 		if module == "" {
-			log.Printf("module not set and go.mod doesn't exist %s\n", goModPath)
+			glog.Errorf("module not set and go.mod doesn't exist %s\n", goModPath)
 			cmd.Help()
 			return
 		}

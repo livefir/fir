@@ -9,13 +9,14 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 )
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 	channel := route.channelFunc(r, route.id)
 	if channel == nil {
-		log.Printf("[onWebsocket] error: channel is empty")
+		glog.Errorf("[onWebsocket] error: channel is empty")
 		http.Error(w, "channel is empty", http.StatusUnauthorized)
 		return
 	}
@@ -40,7 +41,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 
 			onEventFunc, ok := route.onEvents[event.ID]
 			if !ok {
-				log.Printf("[onWebsocket] err: event %v, event.id not found\n", event)
+				glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
 				continue
 			}
 
@@ -89,12 +90,12 @@ loop:
 		var event Event
 		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
 		if err != nil {
-			log.Printf("[onWebsocket] err: parsing event, msg %s \n", string(message))
+			glog.Errorf("[onWebsocket] err: parsing event, msg %s \n", string(message))
 			continue
 		}
 
 		if event.ID == "" {
-			log.Printf("[onWebsocket] err: event %v, field event.id is required\n", event)
+			glog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
 			continue
 		}
 
@@ -105,10 +106,10 @@ loop:
 			route:    route,
 		}
 
-		log.Printf("[onWebsocket] received event: %+v\n", event)
+		glog.Errorf("[onWebsocket] received event: %+v\n", event)
 		onEventFunc, ok := route.onEvents[event.ID]
 		if !ok {
-			log.Printf("[onWebsocket] err: event %v, event.id not found\n", event)
+			glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
 			continue
 		}
 
@@ -123,10 +124,10 @@ func writePatchOperations(conn *websocket.Conn, channel string, t *template.Temp
 		log.Println(err)
 		return err
 	}
-	log.Printf("[writePatchOperations] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
+	glog.Errorf("[writePatchOperations] sending patch op to client:%v,  %+v\n", conn.RemoteAddr().String(), string(message))
 	err := conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
-		log.Printf("[writePatchOperations] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		glog.Errorf("[writePatchOperations] error: writing message for channel:%v, closing conn with err %v", channel, err)
 		conn.Close()
 	}
 	return err
