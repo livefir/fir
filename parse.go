@@ -26,9 +26,9 @@ func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
 
 	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.funcMap)
 	if opt.hasEmbedFS {
-		layoutTemplate = template.Must(layoutTemplate.ParseFS(opt.embedFS, commonFiles...))
+		layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, commonFiles...))
 	} else {
-		layoutTemplate = template.Must(layoutTemplate.ParseFiles(commonFiles...))
+		layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFiles(commonFiles...))
 	}
 
 	return template.Must(layoutTemplate.Clone()), nil
@@ -56,9 +56,9 @@ func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
 
 	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.funcMap)
 	if opt.hasEmbedFS {
-		contentTemplate = template.Must(contentTemplate.ParseFS(opt.embedFS, pageFiles...))
+		contentTemplate = template.Must(contentTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, pageFiles...))
 	} else {
-		contentTemplate = template.Must(contentTemplate.ParseFiles(pageFiles...))
+		contentTemplate = template.Must(contentTemplate.Funcs(opt.funcMap).ParseFiles(pageFiles...))
 	}
 
 	return contentTemplate, nil
@@ -86,9 +86,9 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 
 		layoutTemplate = template.New(filepath.Base(pageLayoutPath)).Funcs(opt.funcMap)
 		if opt.hasEmbedFS {
-			layoutTemplate = template.Must(layoutTemplate.ParseFS(opt.embedFS, commonFiles...))
+			layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, commonFiles...))
 		} else {
-			layoutTemplate = template.Must(layoutTemplate.ParseFiles(commonFiles...))
+			layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFiles(commonFiles...))
 		}
 	}
 
@@ -108,9 +108,9 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 		// page and its partials
 		pageFiles = append(pageFiles, find(opt, filepath.Join(opt.publicDir, opt.content), opt.extensions)...)
 		if opt.hasEmbedFS {
-			pageTemplate = template.Must(layoutTemplate.ParseFS(opt.embedFS, pageFiles...))
+			pageTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, pageFiles...))
 		} else {
-			pageTemplate = template.Must(layoutTemplate.ParseFiles(pageFiles...))
+			pageTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFiles(pageFiles...))
 		}
 	}
 

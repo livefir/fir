@@ -17,17 +17,27 @@ func MorphError(name string) (func(err error) Patch, func() Patch) {
 		}
 }
 
-func morphFirErrors(eventID string) (func(err error) Patch, func() Patch) {
-	id := fmt.Sprintf("fir-errors-%s", eventID)
+func morphFirErrors(ctx Context) (func(err error) Patch, func() Patch) {
+	id := fmt.Sprintf("fir-errors-%s", ctx.event.ID)
 	selector := fmt.Sprintf("#%s", id)
 	return func(err error) Patch {
-			return Morph(selector, Block(id, M{"fir": M{"errors": M{eventID: err.Error()}}}))
+			errs := map[string]any{ctx.event.ID: err.Error()}
+			return Morph(selector, Block(id, M{"fir": newRouteContext(ctx, errs)}))
 		}, func() Patch {
-			return Morph(selector, Block(id, M{"fir": M{"errors": M{eventID: ""}}}))
+			errs := map[string]any{ctx.event.ID: nil}
+			return Morph(selector, Block(id, M{"fir": newRouteContext(ctx, errs)}))
 		}
 }
 
 type fieldErrors map[string]error
+
+func (f fieldErrors) toMap() map[string]string {
+	m := map[string]string{}
+	for field, err := range f {
+		m[field] = err.Error()
+	}
+	return m
+}
 
 func (f fieldErrors) Error() string {
 	var errs []string

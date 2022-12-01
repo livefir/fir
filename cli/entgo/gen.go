@@ -16,7 +16,7 @@ import (
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/yosssi/gohtml"
 	"golang.org/x/exp/slices"

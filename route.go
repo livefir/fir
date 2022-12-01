@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/tidwall/gjson"
 )
 
 type M map[string]any
@@ -18,6 +19,39 @@ type RouteOptions []RouteOption
 type RouteFunc func() RouteOptions
 type Route interface{ Options() RouteOptions }
 type RouteOption func(*routeOpt)
+
+func newRouteContext(ctx Context, errs map[string]any) *RouteContext {
+	return &RouteContext{
+		URLPath: ctx.request.URL.Path,
+		Name:    ctx.route.appName,
+		errors:  errs,
+	}
+}
+
+type RouteContext struct {
+	Name    string
+	URLPath string
+	errors  map[string]any
+}
+
+func (rc *RouteContext) ActiveRoute(path, class string) string {
+	if rc.URLPath == path {
+		return class
+	}
+	return ""
+}
+
+func (rc *RouteContext) NotActiveRoute(path, class string) string {
+	if rc.URLPath != path {
+		return class
+	}
+	return ""
+}
+
+func (rc *RouteContext) Error(path string) any {
+	data, _ := json.Marshal(rc.errors)
+	return gjson.GetBytes(data, path).Value()
+}
 
 func ID(id string) RouteOption {
 	return func(opt *routeOpt) {
@@ -277,29 +311,20 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getFirData(ctx Context) routeData {
-	errors := M{}
-	for k := range ctx.route.onEvents {
-		errors[k] = M{}
-	}
-	return routeData{"app_name": ctx.route.appName, "errors": errors}
-}
-
 func handleOnEventResult(err error, ctx Context, render patchRenderer) {
-	firData := getFirData(ctx)
-	unsetErrors := M{}
+	unsetErrors := map[string]any{}
 	for _, v := range ctx.route.firErrorTemplates {
 		unsetErrors[v] = struct{}{}
 	}
-	setError, unsetError := morphFirErrors(ctx.event.ID)
+	setError, unsetError := morphFirErrors(ctx)
 	if err == nil {
 		var patchlistData []Patch
 		patchlistData = append(patchlistData, unsetError())
 		for k := range unsetErrors {
-			firData["errors"] = M{ctx.event.ID: M{}}
+			errs := map[string]any{ctx.event.ID: nil}
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", k),
-					Block(k, M{"fir": firData})))
+					Block(k, M{"fir": newRouteContext(ctx, errs)})))
 		}
 
 		render(patchlistData...)
@@ -312,12 +337,16 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		return
 	case *patchlist:
 		patchlistData := *errVal
+		if ctx.event.IsForm {
+			patchlistData = append(patchlistData, ResetForm(fmt.Sprintf("#%s", ctx.event.ID)))
+		}
 		patchlistData = append(patchlistData, unsetError())
 		for k := range unsetErrors {
-			firData["errors"] = M{ctx.event.ID: M{}}
+			errs := map[string]any{ctx.event.ID: nil}
+
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", k),
-					Block(k, M{"fir": firData})))
+					Block(k, M{"fir": newRouteContext(ctx, errs)})))
 		}
 		render(patchlistData...)
 		return
@@ -329,17 +358,17 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 			fieldErrorName := fmt.Sprintf("fir-errors-%s-%s", ctx.event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
-			firData["errors"] = M{ctx.event.ID: M{k: v}}
+			errs := map[string]any{ctx.event.ID: map[string]any{k: v.Error()}}
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", fieldErrorName),
-					Block(fieldErrorName, M{"fir": firData})))
+					Block(fieldErrorName, M{"fir": newRouteContext(ctx, errs)})))
 		}
 		// unset errors that are not set
 		for k := range unsetErrors {
-			firData["errors"] = M{ctx.event.ID: M{}}
+			errs := map[string]any{ctx.event.ID: nil}
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", k),
-					Block(k, M{"fir": firData})))
+					Block(k, M{"fir": newRouteContext(ctx, errs)})))
 		}
 
 		render(patchlistData...)
@@ -352,53 +381,52 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 
 func handleOnFormResult(err error, ctx Context) {
 	if err == nil {
-		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
+		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 		return
 	}
 
 	switch errVal := err.(type) {
 	case *routeData:
 		onFormData := *errVal
-		onFormData["fir"] = getFirData(ctx)
+		onFormData["fir"] = newRouteContext(ctx, map[string]any{})
 		renderRoute(ctx)(onFormData)
 	case *patchlist:
 		// ignore patchlist
-		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
+		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 	default:
 		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
 	}
 }
 
 func handleOnLoadResult(err, onFormErr error, ctx Context) {
-	firData := getFirData(ctx)
 	if err == nil {
+		errs := make(map[string]any)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
+				errs = map[string]any{ctx.event.ID: onFormErr.Error()}
 			} else {
-				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
-				glog.Errorf("fieldErrors: %v", *fieldErrorsVal)
+				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
 			}
 		}
 
-		renderRoute(ctx)(routeData{"fir": firData})
+		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
 		return
 	}
 
 	switch errVal := err.(type) {
-
 	case *routeData:
 		onLoadData := *errVal
+		errs := make(map[string]any)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
+				errs = map[string]any{ctx.event.ID: onFormErr.Error()}
 			} else {
-				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
 			}
 		}
-		onLoadData["fir"] = firData
+		onLoadData["fir"] = newRouteContext(ctx, errs)
 		renderRoute(ctx)(onLoadData)
 	case fieldErrors:
 		if onFormErr != nil {
@@ -412,34 +440,35 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 			}
 		}
 
-		firData["errors"] = M{ctx.event.ID: errVal}
-		renderRoute(ctx)(routeData{"fir": firData})
+		errs := map[string]any{ctx.event.ID: errVal.toMap()}
+		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
 	case *patchlist:
 		glog.Errorf("[warning] onLoad returned a []Patch and was ignored for route: %+v, onLoad must return either an error or call ctx.Data, ctx.KV \n", ctx.route)
+		errs := make(map[string]any)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				firData["errors"] = M{ctx.event.ID: onFormErr.Error()}
+				errs = map[string]any{ctx.event.ID: onFormErr.Error()}
 			} else {
-				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
 			}
 		}
-		renderRoute(ctx)(routeData{"fir": firData})
+		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
 	default:
+		errs := make(map[string]any)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
 				// err is not nil and not routeData and onFormErr is not nil and not fieldErrors
 				// merge err and onFormErr
-				firData["errors"] = M{ctx.event.ID: fmt.Errorf("%v %v", err, onFormErr)}
+				errs = map[string]any{ctx.event.ID: fmt.Errorf("%v %v", err, onFormErr)}
 			} else {
-				firData["errors"] = M{ctx.event.ID: *fieldErrorsVal}
+				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
 			}
 		} else {
-			firData["errors"] = M{ctx.event.ID: err.Error()}
+			errs = map[string]any{ctx.event.ID: err.Error()}
 		}
-		renderRoute(ctx)(routeData{"fir": firData})
-
+		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
 	}
 
 }

@@ -16,6 +16,7 @@ type Context struct {
 	urlValues url.Values
 	route     *route
 	isOnLoad  bool
+	fromPath  string
 }
 
 // DecodeParams decodes the event params into the given struct
@@ -90,7 +91,6 @@ func (c Context) Patch(patch ...Patch) error {
 		pl = append(pl, p)
 	}
 	return &pl
-
 }
 
 func (c Context) Morph(selector string, t TemplateRenderer) error {

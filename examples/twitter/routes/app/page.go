@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/adnaan/fir"
@@ -52,6 +53,23 @@ func createTweet(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
+	type deleteReq struct {
+		TweetID uint64 `json:"tweetID"`
+	}
+	return func(ctx fir.Context) error {
+		req := new(deleteReq)
+		if err := ctx.DecodeParams(req); err != nil {
+			return err
+		}
+
+		if err := db.Delete(req.TweetID, &Tweet{}); err != nil {
+			return err
+		}
+		return ctx.Remove(fmt.Sprintf("#tweet-%d", req.TweetID))
+	}
+}
+
 func Route(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
 		return fir.RouteOptions{
@@ -60,6 +78,7 @@ func Route(db *bolthold.Store) fir.RouteFunc {
 			fir.Layout("routes/layout.html"),
 			fir.OnLoad(load(db)),
 			fir.OnEvent("createTweet", createTweet(db)),
+			fir.OnEvent("deleteTweet", deleteTweet(db)),
 		}
 	}
 }

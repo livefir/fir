@@ -1,4 +1,9 @@
 {{ define "content" }}
+    {{ block "fir-errors-deleteTweet" . }}
+        <p id="fir-errors-deleteTweet">
+            {{ .fir.Error "deleteTweet" }}
+        </p>
+    {{ end }}
     <form
         x-data
         id="createTweet"
@@ -13,15 +18,33 @@
         />
         {{ block "fir-errors-createTweet-body" . }}
             <p id="fir-errors-createTweet-body">
-                {{ .fir.errors.createTweet.body }}
+                {{ .fir.Error "createTweet.body" }}
             </p>
         {{ end }}
         <button type="submit">Submit</button>
     </form>
-    <div id="tweets">
+    <div
+        x-data
+        id="tweets"
+    >
         {{ range .tweets }}
             {{ block "tweet" . }}
-                <li>{{ .Body }}</li>
+                <div id="tweet-{{ .ID }}">
+                    <div>{{ .Body }}</div>
+                    <form
+                        id="deleteTweet"
+                        method="post"
+                        action="/?id=deleteTweet"
+                        @submit.prevent="$fir.submit"
+                    >
+                        <input
+                            type="hidden"
+                            name="tweetID"
+                            value="{{ .ID }}"
+                        />
+                        <button type="submit">Delete</button>
+                    </form>
+                </div>
             {{ end }}
         {{ end }}
     </div>
