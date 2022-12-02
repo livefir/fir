@@ -2,10 +2,10 @@ package fir
 
 import (
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/golang/glog"
 	gitignore "github.com/sabhiram/go-gitignore"
 	"golang.org/x/exp/slices"
 )
@@ -34,7 +34,7 @@ func OutDir(path string) PublicDirOption {
 }
 
 // Extension adds an extension to the list of extensions that will be copied over.
-func Extensions(extensions []string) PublicDirOption {
+func PublicFileExtensions(extensions []string) PublicDirOption {
 	return func(o *publicOpt) {
 		for _, ext := range extensions {
 			if !slices.Contains(o.extensions, ext) {
@@ -62,7 +62,7 @@ func GeneratePublicDir(options ...PublicDirOption) error {
 
 	ignore, err := gitignore.CompileIgnoreFile(filepath.Join(opt.inDir, ".gitignore"))
 	if err != nil {
-		log.Printf("[warning] failed to compile .gitignore: %v\n", err)
+		glog.Errorf("[warning] failed to compile .gitignore: %v\n", err)
 	}
 
 	err = filepath.WalkDir(opt.inDir, func(path string, d fs.DirEntry, err error) error {

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/golang/glog"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
@@ -16,15 +17,15 @@ import (
 // Subscription is a subscription to a channel.
 type Subscription interface {
 	// C returns a receive-only go channel of patches published
-	C() <-chan Patchset
+	C() <-chan []Patch
 	// Close closes the subscription.
 	Close()
 }
 
-// PubsubAdapter is an interface for a pubsub adapter. It allows to publish and subscribe Patchset to views.
+// PubsubAdapter is an interface for a pubsub adapter. It allows to publish and subscribe []Patch to views.
 type PubsubAdapter interface {
 	// Publish publishes a patchset to a channel.
-	Publish(ctx context.Context, channel string, patchset Patchset) error
+	Publish(ctx context.Context, channel string, patchset ...Patch) error
 	// Subscribe subscribes to a channel.
 	Subscribe(ctx context.Context, channel string) (Subscription, error)
 	// HasSubscribers returns true if there are subscribers to the given pattern.
@@ -40,14 +41,14 @@ func NewPubsubInmem() PubsubAdapter {
 
 type subscriptionInmem struct {
 	channel string
-	ch      chan Patchset
+	ch      chan []Patch
 	once    sync.Once
 	pubsub  *pubsubInmem
 }
 
 // C returns a receive-only go channel of patches published
 // on the channel this subscription is subscribed to.
-func (s *subscriptionInmem) C() <-chan Patchset {
+func (s *subscriptionInmem) C() <-chan []Patch {
 	return s.ch
 }
 
@@ -78,7 +79,7 @@ func (p *pubsubInmem) removeSubscription(subscription *subscriptionInmem) {
 	}
 }
 
-func (p *pubsubInmem) Publish(ctx context.Context, channel string, patchset Patchset) error {
+func (p *pubsubInmem) Publish(ctx context.Context, channel string, patchset ...Patch) error {
 	p.Lock()
 	defer p.Unlock()
 	if channel == "" {
@@ -109,7 +110,7 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 
 	sub := &subscriptionInmem{
 		channel: channel,
-		ch:      make(chan Patchset),
+		ch:      make(chan []Patch),
 		pubsub:  p,
 	}
 
@@ -150,23 +151,19 @@ func NewPubsubRedis(client *redis.Client) PubsubAdapter {
 
 type subscriptionRedis struct {
 	channel string
-	ch      chan Patchset
+	ch      chan []Patch
 	once    sync.Once
 	pubsub  *redis.PubSub
 }
 
-func (s *subscriptionRedis) C() <-chan Patchset {
+func (s *subscriptionRedis) C() <-chan []Patch {
 	go func() {
 		for msg := range s.pubsub.Channel() {
-			var patches []patch
-			err := json.Unmarshal([]byte(msg.Payload), &patches)
+			var patchset []Patch
+			err := json.Unmarshal([]byte(msg.Payload), &patchset)
 			if err != nil {
-				log.Printf("failed to unmarshal patches payload: %v", err)
+				glog.Errorf("failed to unmarshal patches payload: %v", err)
 				continue
-			}
-			var patchset Patchset
-			for _, p := range patches {
-				patchset = append(patchset, p.toPatch())
 			}
 			s.ch <- patchset
 		}
@@ -185,18 +182,9 @@ type pubsubRedis struct {
 	client *redis.Client
 }
 
-func (p *pubsubRedis) Publish(ctx context.Context, channel string, patchset Patchset) error {
+func (p *pubsubRedis) Publish(ctx context.Context, channel string, patchset ...Patch) error {
 
-	var patches []patch
-
-	for _, p := range patchset {
-		patches = append(patches, patch{
-			OpVal:    p.Op(),
-			Selector: p.GetSelector(),
-		})
-	}
-
-	patchesBytes, err := json.Marshal(patches)
+	patchesBytes, err := json.Marshal(patchset)
 	if err != nil {
 		return err
 	}
@@ -209,13 +197,13 @@ func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscripti
 		return nil, fmt.Errorf("channel is empty")
 	}
 	pubsub := p.client.Subscribe(ctx, channel)
-	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan Patchset)}, nil
+	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan []Patch)}, nil
 }
 
 func (p *pubsubRedis) HasSubscribers(ctx context.Context, pattern string) bool {
 	channels, err := p.client.PubSubChannels(ctx, pattern).Result()
 	if err != nil {
-		log.Printf("error getting channels for pattern: %v : err, %v", pattern, err)
+		glog.Errorf("error getting channels for pattern: %v : err, %v", pattern, err)
 		return false
 	}
 	if len(channels) == 0 {

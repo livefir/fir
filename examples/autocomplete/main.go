@@ -34,45 +34,34 @@ func getCities(str string) []string {
 	return result
 }
 
-type QueryRequest struct {
+type queryRequest struct {
 	Query string `json:"query"`
 }
 
-type Search struct {
-	fir.DefaultView
-}
-
-func (s *Search) Content() string {
-	return "app.html"
-}
-
-func (s *Search) OnEvent(event fir.Event) fir.Patchset {
-	switch event.ID {
-	case "query":
-		req := new(QueryRequest)
-		if err := event.DecodeParams(req); err != nil {
-			return fir.PatchError(err, "failed to decode query request")
-		}
-		return fir.Patchset{
-			fir.Morph{
-				Selector: "#list_cities",
-				HTML: &fir.Render{
-					Template: "cities",
-					Data: map[string]any{
-						"cities": getCities(req.Query),
-					},
-				},
-			},
-		}
-	default:
-		log.Printf("warning:handler not found for event => \n %+v\n", event)
+func index() fir.RouteOptions {
+	load := func(ctx fir.Context) error {
+		return ctx.KV("cities", cities)
 	}
-	return nil
+
+	query := func(ctx fir.Context) error {
+		req := new(queryRequest)
+		if err := ctx.DecodeParams(req); err != nil {
+			return err
+		}
+		data := fir.M{"cities": getCities(req.Query)}
+		return ctx.MorphKV("cities", data)
+	}
+
+	return fir.RouteOptions{
+		fir.Content("app.html"),
+		fir.OnEvent("query", query),
+		fir.OnLoad(load),
+	}
 }
 
 func main() {
-	c := fir.NewController("fir-autocomplete", fir.DevelopmentMode(true))
-	http.Handle("/", c.Handler(&Search{}))
+	c := fir.NewController("autocomplete", fir.DevelopmentMode(true))
+	http.Handle("/", c.RouteFunc(index))
 	log.Println("listening on http://localhost:9867")
 	http.ListenAndServe(":9867", nil)
 }

@@ -37,7 +37,7 @@ const Plugin = (Alpine) => {
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
             emit(id, params) {
-                post(el, id, params)
+                post(el, id, params, false)
             },
             navigate(to) {
                 if (!to) {
@@ -81,7 +81,7 @@ const Plugin = (Alpine) => {
                     let params = {};
                     formData.forEach((value, key) => params[key] = new Array(value));
 
-                    post(el, el.id, params)
+                    post(el, el.id, params, true)
                     if (formMethod.toLowerCase() === "get") {
                         const url = new URL(window.location);
                         formData.forEach((value, key) => url.searchParams.set(key, value));
@@ -148,7 +148,7 @@ const Plugin = (Alpine) => {
         store: (operation) => updateStore(operation.selector, operation.value)
     }
 
-    const post = (el, id, params) => {
+    const post = (el, id, params, isForm) => {
         let detail = {
             id: el.id,
             eventId: id,
@@ -180,6 +180,7 @@ const Plugin = (Alpine) => {
         const event = {
             id: id,
             params: params,
+            isForm: isForm,
         }
         if (socket.emit(event)) {
             el.dispatchEvent(new CustomEvent(endEventName, options))
@@ -194,10 +195,7 @@ const Plugin = (Alpine) => {
                     'Content-Type': 'application/json',
                     'X-FIR-MODE': 'event'
                 },
-                body: JSON.stringify({
-                    id: id,
-                    params: params,
-                }),
+                body: JSON.stringify(event),
             })
                 .then(response => response.json())
                 .then(patchOperations => {

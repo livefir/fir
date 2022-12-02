@@ -5,14 +5,19 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"reflect"
+	"strings"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
 )
 
 // Controller is an interface which encapsulates a group of views. It routes requests to the appropriate view.
 // It routes events to the appropriate view. It also provides a way to register views.
 type Controller interface {
-	Handler(view View) http.HandlerFunc
+	Route(route Route) http.HandlerFunc
+	RouteFunc(options RouteFunc) http.HandlerFunc
 }
 
 type opt struct {
@@ -25,10 +30,12 @@ type opt struct {
 	watchExts            []string
 	publicDir            string
 	developmentMode      bool
-	errorView            View
 	embedFS              embed.FS
 	hasEmbedFS           bool
 	pubsub               PubsubAdapter
+	appName              string
+	formDecoder          *schema.Decoder
+	validator            *validator.Validate
 }
 
 // ControllerOption is an option for the controller.
@@ -55,13 +62,6 @@ func WithWebsocketUpgrader(upgrader websocket.Upgrader) ControllerOption {
 	}
 }
 
-// WithErrorView is an option to set a view to render error messages.
-func WithErrorView(view View) ControllerOption {
-	return func(o *opt) {
-		o.errorView = view
-	}
-}
-
 // WithEmbedFS is an option to set the embed.FS for the controller.
 func WithEmbedFS(fs embed.FS) ControllerOption {
 	return func(o *opt) {
@@ -74,6 +74,20 @@ func WithEmbedFS(fs embed.FS) ControllerOption {
 func WithPublicDir(path string) ControllerOption {
 	return func(o *opt) {
 		o.publicDir = path
+	}
+}
+
+// WithFormDecoder is an option to set the form decoder(gorilla/schema) for the controller.
+func WithFormDecoder(decoder *schema.Decoder) ControllerOption {
+	return func(o *opt) {
+		o.formDecoder = decoder
+	}
+}
+
+// WithValidator is an option to set the validator(go-playground/validator) for the controller.
+func WithValidator(validator *validator.Validate) ControllerOption {
+	return func(o *opt) {
+		o.validator = validator
 	}
 }
 
@@ -115,12 +129,28 @@ func NewController(name string, options ...ControllerOption) Controller {
 		panic("controller name is required")
 	}
 
+	formDecoder := schema.NewDecoder()
+	formDecoder.IgnoreUnknownKeys(true)
+	formDecoder.SetAliasTag("json")
+
+	validate := validator.New()
+	// register function to get tag name from json tags.
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+
 	o := &opt{
 		channelFunc:       DefaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
 		watchExts:         DefaultWatchExtensions,
-		errorView:         &DefaultErrorView{},
 		pubsub:            NewPubsubInmem(),
+		appName:           name,
+		formDecoder:       formDecoder,
+		validator:         validate,
 	}
 
 	for _, option := range options {
@@ -164,47 +194,38 @@ type controller struct {
 	opt
 }
 
-// Handler returns an http.HandlerFunc that handles the view.
-func (c *controller) Handler(view View) http.HandlerFunc {
-	viewTemplate, err := parseTemplate(c.opt, view)
-	if err != nil {
-		panic(err)
+var defaultRouteOpt = &routeOpt{
+	content:           "Hello Fir App!",
+	layoutContentName: "content",
+	partials:          []string{"./routes/partials"},
+	funcMap:           DefaultFuncMap(),
+	extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
+	eventSender:       make(chan Event),
+	onLoad: func(ctx Context) error {
+		return nil
+	},
+}
+
+// RouteFunc returns an http.HandlerFunc that renders the route
+func (c *controller) Route(route Route) http.HandlerFunc {
+	for _, option := range route.Options() {
+		option(defaultRouteOpt)
 	}
 
-	errorViewTemplate, err := parseTemplate(c.opt, c.errorView)
-	if err != nil {
-		panic(err)
-	}
-
-	// non-blocking send even if there are no live connections(ws, sse) for this view in the current server instance.
-	// this is to ensure that sending to the stream is non-blocking. since channel can only be constructed
-	// within the scope of a live connection, publishing patch messages are only possible when there is a live connection.
-	// TODO: explain this better
-	streamCh := make(chan Patchset)
-	go func() {
-		for patch := range view.Publisher() {
-			streamCh <- patch
-		}
-	}()
-
-	mountData := make(map[string]any)
+	rt := newRoute(c, defaultRouteOpt)
 	return func(w http.ResponseWriter, r *http.Request) {
-		v := &viewHandler{
-			view:              view,
-			errorView:         c.errorView,
-			viewTemplate:      viewTemplate,
-			errorViewTemplate: errorViewTemplate,
-			mountData:         mountData,
-			cntrl:             c,
-			streamCh:          streamCh,
-		}
-		if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
-			onPatchEvent(w, r, v)
-		} else if r.Header.Get("Connection") == "Upgrade" &&
-			r.Header.Get("Upgrade") == "websocket" {
-			onWebsocket(w, r, v)
-		} else {
-			onRequest(w, r, v)
-		}
+		rt.handle(w, r)
+	}
+}
+
+// RouteFunc returns an http.HandlerFunc that renders the route
+func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
+	for _, option := range opts() {
+		option(defaultRouteOpt)
+	}
+
+	rt := newRoute(c, defaultRouteOpt)
+	return func(w http.ResponseWriter, r *http.Request) {
+		rt.handle(w, r)
 	}
 }

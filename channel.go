@@ -2,9 +2,10 @@ package fir
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/golang/glog"
 )
 
 // UserIDKey is the key for the user id in the request context. It is used in the default channel function.
@@ -20,7 +21,7 @@ func DefaultChannelFunc(r *http.Request, viewID string) *string {
 
 	userID, ok := r.Context().Value(UserIDKey).(string)
 	if !ok || userID == "" {
-		log.Printf("warning: no user id in request context. user is anonymous, viewID: %s \n", viewID)
+		glog.Warningf("warning: no user id in request context. user is anonymous, viewID: %s \n", viewID)
 		userID = "anonymous"
 	}
 	channel := fmt.Sprintf("%s:%s", userID, viewID)

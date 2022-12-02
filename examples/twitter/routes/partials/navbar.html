@@ -1,0 +1,38 @@
+{{ define "navbar" }}
+<nav x-data="{mobileOpen: false}" class="navbar has-shadow" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand px-4 py-2">
+        <a class="navbar-item" href="/">
+            <!--                <img src="/static/images/logo.svg" alt="logo">-->
+        </a>
+
+        <a role="button" id="navbar-burger" class="navbar-burger" aria-label="menu" aria-expanded="false"
+            @click="mobileOpen = !mobileOpen">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+    </div>
+
+
+    <div id="navbar-menu" class="navbar-menu" :class="mobileOpen && 'is-active'">
+        <div class="navbar-end">
+            <div class="navbar-item">
+                <div class="buttons">
+                    {{if .user}}
+                    <a class="button is-primary" href="/logout">
+                        <strong>Logout</strong>
+                    </a>
+                    {{else}}
+                    <a class="button is-primary" href="/login">
+                        <strong>Login</strong>
+                    </a>
+                    <a class="button is-light" href="/register">
+                        <strong>Register</strong>
+                    </a>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+{{ end }}

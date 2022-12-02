@@ -1,9 +1,0 @@
-assets/node_modules
-.idea
-*.db
-tmp
-.DS_Store
-bin
-*.local
-*.local.*
-public

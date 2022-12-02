@@ -1,118 +1,63 @@
 package fir
 
 import (
+	"errors"
 	"fmt"
-	"log"
-	"net/http"
 	"strings"
+
+	"github.com/golang/glog"
 )
 
-func getUserMessage(status int, userMessage []string) string {
-	msg := http.StatusText(status)
-	if len(userMessage) > 0 {
-		msg = strings.Join(userMessage, " ")
-	}
-	return msg
+func MorphError(name string) (func(err error) Patch, func() Patch) {
+	selector := fmt.Sprintf("#%s", name)
+	return func(err error) Patch {
+			return Morph(selector, Block(name, M{name: err}))
+		}, func() Patch {
+			return Morph(selector, Block(name, M{name: ""}))
+		}
 }
 
-// ErrInternalServer returns a Page with an internal server error.
-func ErrInternalServer(err error, userMessage ...string) Page {
-	return Page{
-		Code:    http.StatusInternalServerError,
-		Message: getUserMessage(http.StatusInternalServerError, userMessage),
-		Error:   err,
-	}
+func morphFirErrors(ctx Context) (func(err error) []Patch, func() []Patch) {
+	eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
+	eventNameSelector := fmt.Sprintf("#%s", eventIdName)
+	routeName := "fir-err-route"
+	routeNameSelector := fmt.Sprintf("#%s", routeName)
+	return func(err error) []Patch {
+			errs := map[string]any{ctx.event.ID: err.Error(), "route": err.Error()}
+			return []Patch{
+				Morph(eventNameSelector, Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
+				Morph(routeNameSelector, Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+		}, func() []Patch {
+			errs := map[string]any{ctx.event.ID: nil, "route": nil}
+			return []Patch{
+				Morph(eventNameSelector, Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
+				Morph(routeNameSelector, Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+		}
 }
 
-// ErrBadRequest returns a Page with a bad request error.
-func ErrBadRequest(err error, userMessage ...string) Page {
-	return Page{
-		Code:    http.StatusBadRequest,
-		Message: getUserMessage(http.StatusBadRequest, userMessage),
-		Error:   err,
+type fieldErrors map[string]error
+
+func (f fieldErrors) toMap() map[string]string {
+	m := map[string]string{}
+	for field, err := range f {
+		m[field] = err.Error()
 	}
+	return m
 }
 
-// ErrNotFound returns a Page with a not found error.
-func ErrNotFound(err error, userMessage ...string) Page {
-	return Page{
-		Code:    http.StatusNotFound,
-		Message: getUserMessage(http.StatusNotFound, userMessage),
-		Error:   err,
+func (f fieldErrors) Error() string {
+	var errs []string
+	for field, err := range f {
+		errs = append(errs, fmt.Sprintf("%s: %s", field, err.Error()))
 	}
+	return strings.Join(errs, ", ")
 }
 
-// ErrUnauthorized returns a Page with an unauthorized error.
-func ErrUnauthorized(err error, userMessage ...string) Page {
-	return Page{
-		Code:    http.StatusUnauthorized,
-		Message: getUserMessage(http.StatusUnauthorized, userMessage),
-		Error:   err,
+func UserError(ctx Context, err error) error {
+	userError := err
+	glog.Errorf("ctx %+v , error: %v\n", ctx.event.ID, err)
+	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {
+		userError = wrappedUserError
 	}
-}
-
-func morphError(err string) Patch {
-	return Morph{
-		Selector: "#fir-error",
-		HTML: &Render{
-			Template: "fir-error",
-			Data:     map[string]any{"error": err}},
-	}
-}
-
-// PatchError returns a patchset that sets an error for selector #fir-error.
-func PatchError(err error, userMessage ...string) Patchset {
-	msg := "internal error"
-	if err != nil && len(userMessage) == 0 {
-		msg = err.Error()
-		log.Printf("[controller] patch error: %s\n", err)
-	}
-	if len(userMessage) > 0 {
-		msg = strings.Join(userMessage, " ")
-		log.Printf("[controller] patch error: %s, message: %s\n", err, msg)
-	}
-	log.Printf("[controller] patch error: %s, %s\n", err, msg)
-	return Patchset{morphError(msg)}
-}
-
-// PageError returns a Page with an error.
-func PageError(err error, userMessage ...string) Page {
-	msg := "internal error"
-	if err != nil && len(userMessage) == 0 {
-		msg = err.Error()
-		log.Printf("[controller] page error: %s\n", err)
-	}
-	if len(userMessage) > 0 {
-		msg = strings.Join(userMessage, " ")
-		log.Printf("[controller] page error: %s, message: %s\n", err, msg)
-	}
-
-	data := map[string]any{"error": msg}
-	if msg == "" {
-		data = nil
-	}
-	return Page{
-		Code:  http.StatusOK,
-		Error: err,
-		Data:  data,
-	}
-}
-
-// UnsetPatchFormErrors returns a patchset that unsets the error for a form.
-func UnsetPatchFormErrors(fields ...string) Patchset {
-	var patchset Patchset
-
-	for _, field := range fields {
-		patchset = append(patchset, Morph{
-			Selector: fmt.Sprintf("#%s-error", field),
-			HTML: &Render{
-				Template: fmt.Sprintf("%s-error", field),
-				Data: map[string]any{
-					fmt.Sprintf("#%sError", field): "",
-				},
-			},
-		})
-	}
-
-	return patchset
+	return userError
 }
