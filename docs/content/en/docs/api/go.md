@@ -16,69 +16,128 @@ toc: true
 
 
 ## View
+
 ### DefaultView
+
 ### DefaultErrorView
+
 ## Event
+
 ## Page
+
 ## Patch
+
 ### Render
+
 ### Patchset
+
 ### After
+
 ### Append
+
 ### Before
+
 ### Morph
+
 ### Navigate
+
 ### Prepend
+
 ### Reload
+
 ### Remove
+
 ### ResetForm
+
 ### Store
+
 ## Controller
+
 ### WithChannelFunc
+
 ### WithPubsubAdapter
+
 ### WithWebsocketUpgrader
+
 ### WithErrorView
+
 ### WithEmbedFs
+
 ### WithPublicDir
+
 ### DisableTemplateCache
+
 ### EnableDebugLog
+
 ### EnableWatch
+
 ### DevelopmentMode
+
 ## Subscription
+
 ## PubsubAdapter
+
 ## Annotations(entgo)
+
 ### CreateForm
+
 ### UpdateForm
+
 ### ListItem
+
 ## Template functions
+
 ### Sprig functions
+
 ### ActiveRoute
+
 ### NotActiveRoute
+
 ## Error functions
+
 ### PatchError
+
 ### PatchFormError
+
 ### UnsetPatchFormErrors
+
 ### PageError
+
 ### PageFormError
+
 ### ErrInternalServer
+
 ### ErrNotFound
+
 ### ErrBadRequest
+
 ### ErrUnauthorized
+
 ### UserError
+
 ## Utility functions
+
 ### DecodeForm
+
 ### DecodeURLValues
+
 ### DefaultChannelFunc
+
 ### DefaultFuncMap
+
 ### GeneratePublicDir
+
 ### MinMax
+
 ## Globals
+
 ### UserIDKey
+
 ### DefaultUserErrorMessage
+
 ### DefaultViewExtensions
+
 ### DefaultWatchExtensions
-
-
 
 ```go
 
@@ -167,12 +226,12 @@ view -> layout -> page -> patch
 
 page.Render() -> Renders full page
 page.Patch(fir.Morph{
-			Selector: "#todos",
-			HTML: &fir.Render{
-				Template: "todos",
-				Data:     map[string]any{"todos": todos},
-			},
-		}) -> Renders partial page
+   Selector: "#todos",
+   HTML: &fir.Render{
+    Template: "todos",
+    Data:     map[string]any{"todos": todos},
+   },
+  }) -> Renders partial page
 
 
 ```
@@ -206,5 +265,3 @@ func(f *Form) ValidationErrors()map[string]error{
     "email": errors.New("email is required"),
   }
 }
-
-

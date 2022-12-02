@@ -16,7 +16,7 @@ toc: true
 
 Fir is a toolkit to build server-rendered HTML apps and progressively enhance them to enable real-time user experiences. The toolkit is meant for developers who want to build real-time web apps using Go, server-rendered HTML(html/template), CSS and sprinkles of declarative javascript(alpine.js). It can be used to build: static websites like a landing page or a blog,  interactive CRUD apps like ticket helpdesks, real-time apps like metrics dashboards or social media streams.
 
-The toolkit consists of a Go server library, an alpine.js plugin, and a CLI. The server library can render HTML over both HTTP and real-time connections(websockets, HTTP/2) while the alpine.js plugin provides a declarative API to enhance plain HTML to support real-time user interaction. The CLI can generate HTML views and SQL ORMs from entgo schemas(similar to Django, Rails, Phoenix frameworks). 
+The toolkit consists of a Go server library, an alpine.js plugin, and a CLI. The server library can render HTML over both HTTP and real-time connections(websockets, HTTP/2) while the alpine.js plugin provides a declarative API to enhance plain HTML to support real-time user interaction. The CLI can generate HTML views and SQL ORMs from entgo schemas(similar to Django, Rails, Phoenix frameworks).
 
 The big idea behind Fir is to enhance Go’s standard html template engine with alpine.js to  patch only parts of an HTML on user interaction and without page reloads. A Fir app can start as a simple HTML app which works without javascript depending on browser’s capability(form submissions) to handle user interactions but requires page reloads. This server-rendered HTML app can later be enhanced using sprinkles of declarative javascript provided by the companion alpine.js plugin. After the enhancement, user interactions(clicks, form submits) are sent over a real-time connection(websocket, HTTP/2) and change operations(patching the DOM, updating state, navigation etc.) are applied on the client without page reloads. The server library has the capability to publish these page change operations to all connected clients(multiple devices, multiple tabs etc.) which enables a real-time user experience. When real-time connections are not available, the client falls back to using standard HTTP while still providing user interactions without page reloads.
 
@@ -24,29 +24,29 @@ Consider the following html/template page:
 
 ```go
 <form name="newTodo" method="post">
-	<input name="text" class="input" type="text" required/>
-	 <button type="submit" value="Submit">Submit</button>
+ <input name="text" class="input" type="text" required/>
+  <button type="submit" value="Submit">Submit</button>
 </form>
 <div id="todos">
 {{ range .todos }}
-	<div id="{{.ID}}"> {{.Text}} </div>
+ <div id="{{.ID}}"> {{.Text}} </div>
 {{ end }}
 </div>
 ```
 
-On form submission, server’s template engine hydrates the page template with updated `todos` and renders the new html page as http response. 
+On form submission, server’s template engine hydrates the page template with updated `todos` and renders the new html page as http response.
 
-To avoid a page reload and update only the changed part of the page (i.e `{{range .todos}} .Text {{end}}` ), we need a client javascript function which can fetch the updated part from the server and patch the relevant section of the DOM. Also, the server’s template engine should be capable of re-rendering only the changed part of the template. A Go html template page can be composed of reusable parts enclosed in a `template`or `block` expression. Fir builds on top of Go’s standard capability by providing a way to re-render a `template/block` part and patching the targeted part of the page without a page reload while using only a bit of javascript. 
+To avoid a page reload and update only the changed part of the page (i.e `{{range .todos}} .Text {{end}}` ), we need a client javascript function which can fetch the updated part from the server and patch the relevant section of the DOM. Also, the server’s template engine should be capable of re-rendering only the changed part of the template. A Go html template page can be composed of reusable parts enclosed in a `template`or `block` expression. Fir builds on top of Go’s standard capability by providing a way to re-render a `template/block` part and patching the targeted part of the page without a page reload while using only a bit of javascript.
 
 ```go
 <form name="newTodo" method="post">
-	<input name="text" class="input" type="text" required/>
-	 <button type="submit" value="Submit">Submit</button>
+ <input name="text" class="input" type="text" required/>
+  <button type="submit" value="Submit">Submit</button>
 </form>
 <div id="todos">
 **{{ block "todos" . }}**
  {{ range .todos }}
-	<div id="{{.ID}}"> {{.Text}} </div>
+ <div id="{{.ID}}"> {{.Text}} </div>
  {{ end }}
 **{{ end }}**
 </div>
@@ -56,13 +56,13 @@ In the above page, `range` is enclosed in a `block` expression. The `block` sect
 
 ```go
 <form **x-data @submit.prevent="$fir.submit"** name="newTodo" method="post">
-	<input name="text" class="input" type="text" required/>
-	 <button type="submit" value="Submit">Submit</button>
+ <input name="text" class="input" type="text" required/>
+  <button type="submit" value="Submit">Submit</button>
 </form>
 <div id="todos">
 {{ block "todos" . }}
  {{ range .todos }}
-	<div id="{{.ID}}"> {{.Text}} </div>
+ <div id="{{.ID}}"> {{.Text}} </div>
  {{ end }}
 {{ end }}
 </div>

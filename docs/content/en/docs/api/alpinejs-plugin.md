@@ -15,15 +15,27 @@ toc: true
 ---
 
 ## Directives
+
 ### x-fir-store
+
 ## Magic Functions
+
 ### $fir.emit
+
 ### $fir.submit
+
 ### $fir.navigate
+
 ## Events
+
 ### fir:emit
+
 ### fir:emit-start
+
 ### fir:emit-end
+
 ### fir:submit
+
 ### fir:submit-start
+
 ### fir:submit-end
