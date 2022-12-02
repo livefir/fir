@@ -1,7 +1,7 @@
 {{ define "content" }}
-    {{ block "fir-errors-deleteTweet" . }}
-        <p id="fir-errors-deleteTweet">
-            {{ .fir.Error "deleteTweet" }}
+    {{ block "fir-error-route" . }}
+        <p id="fir-error-route">
+            {{ .fir.Error "route" }}
         </p>
     {{ end }}
     <form
@@ -10,14 +10,15 @@
         method="post"
         action="/?id=createTweet"
         @submit.prevent="$fir.submit"
+        style="margin-top:1rem;margin-bottom:1rem;"
     >
         <input
             type="text"
             name="body"
             placeholder="a new tweet"
         />
-        {{ block "fir-errors-createTweet-body" . }}
-            <p id="fir-errors-createTweet-body">
+        {{ block "fir-error-createTweet-body" . }}
+            <p id="fir-error-createTweet-body">
                 {{ .fir.Error "createTweet.body" }}
             </p>
         {{ end }}
@@ -29,8 +30,11 @@
     >
         {{ range .tweets }}
             {{ block "tweet" . }}
-                <div id="tweet-{{ .ID }}">
-                    <div>{{ .Body }}</div>
+                <div
+                    id="tweet-{{ .ID }}"
+                    style="display: flex;margin-top:1rem;margin-bottom:1rem;"
+                >
+                    <div style="margin-right:1rem">{{ .Body }}</div>
                     <form
                         id="deleteTweet"
                         method="post"
@@ -42,7 +46,7 @@
                             name="tweetID"
                             value="{{ .ID }}"
                         />
-                        <button type="submit">Delete</button>
+                        <button type="submit">X</button>
                     </form>
                 </div>
             {{ end }}

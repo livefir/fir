@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/tidwall/gjson"
+	"golang.org/x/exp/slices"
 )
 
 type M map[string]any
@@ -48,7 +49,17 @@ func (rc *RouteContext) NotActiveRoute(path, class string) string {
 	return ""
 }
 
-func (rc *RouteContext) Error(path string) any {
+func (rc *RouteContext) Error(paths ...string) any {
+	path := ""
+	if len(paths) == 0 {
+		path = "route"
+	} else {
+		for _, p := range paths {
+			p = strings.Trim(p, ".")
+			path += p + "."
+		}
+	}
+	path = strings.Trim(path, ".")
 	data, _ := json.Marshal(rc.errors)
 	return gjson.GetBytes(data, path).Value()
 }
@@ -165,10 +176,6 @@ func renderRoute(ctx Context) routeRenderer {
 		if err != nil {
 			glog.Errorf("[renderRoute] error executing template: %v\n", err)
 			return err
-		}
-		if ctx.route.debugLog {
-			// glog.Errorf("OnGet render view %+v, with data => \n %+v\n",
-			// 	v.view.Content(), getJSON(route.Data))
 		}
 
 		ctx.response.Write(buf.Bytes())
@@ -316,10 +323,9 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 	for _, v := range ctx.route.firErrorTemplates {
 		unsetErrors[v] = struct{}{}
 	}
-	setError, unsetError := morphFirErrors(ctx)
+
 	if err == nil {
 		var patchlistData []Patch
-		patchlistData = append(patchlistData, unsetError())
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchlistData = append(patchlistData,
@@ -338,12 +344,11 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 	case *patchlist:
 		patchlistData := *errVal
 		if ctx.event.IsForm {
-			patchlistData = append(patchlistData, ResetForm(fmt.Sprintf("#%s", ctx.event.ID)))
+			patchlistData = append(patchlistData,
+				ResetForm(fmt.Sprintf("#%s", ctx.event.ID)))
 		}
-		patchlistData = append(patchlistData, unsetError())
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
-
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", k),
 					Block(k, M{"fir": newRouteContext(ctx, errs)})))
@@ -355,10 +360,14 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		var patchlistData []Patch
 
 		for k, v := range fieldErrorsData {
-			fieldErrorName := fmt.Sprintf("fir-errors-%s-%s", ctx.event.ID, k)
+			fieldErrorName := fmt.Sprintf("fir-error-%s-%s", ctx.event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
-			errs := map[string]any{ctx.event.ID: map[string]any{k: v.Error()}}
+			errs := map[string]any{
+				ctx.event.ID: map[string]any{
+					k: v.Error()},
+				"route": v.Error(),
+			}
 			patchlistData = append(patchlistData,
 				Morph(fmt.Sprintf("#%s", fieldErrorName),
 					Block(fieldErrorName, M{"fir": newRouteContext(ctx, errs)})))
@@ -374,7 +383,29 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		render(patchlistData...)
 		return
 	default:
-		render(setError(UserError(ctx, err)))
+		var patchlistData []Patch
+		userErr := UserError(ctx, err)
+		errs := map[string]any{
+			ctx.event.ID: userErr.Error(),
+			"route":      userErr.Error()}
+
+		eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
+		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
+		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
+			patchlistData = append(patchlistData,
+				Morph(eventNameSelector,
+					Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})))
+		}
+
+		routeName := "fir-error-route"
+		routeNameSelector := fmt.Sprintf("#%s", routeName)
+		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
+			patchlistData = append(patchlistData,
+				Morph(routeNameSelector,
+					Block(routeName, M{"fir": newRouteContext(ctx, errs)})))
+		}
+
+		render(patchlistData...)
 		return
 	}
 }
@@ -404,9 +435,14 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				errs = map[string]any{ctx.event.ID: onFormErr.Error()}
+				errs = map[string]any{
+					ctx.event.ID: onFormErr.Error(),
+					"route":      onFormErr.Error()}
 			} else {
-				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.toMap(),
+					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+				}
 			}
 		}
 
@@ -421,36 +457,50 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				errs = map[string]any{ctx.event.ID: onFormErr.Error()}
+				errs = map[string]any{
+					ctx.event.ID: onFormErr.Error(),
+					"route":      onFormErr.Error()}
 			} else {
-				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.toMap(),
+					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+				}
 			}
 		}
 		onLoadData["fir"] = newRouteContext(ctx, errs)
 		renderRoute(ctx)(onLoadData)
 	case fieldErrors:
-		if onFormErr != nil {
-			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
-			if !ok {
-				errVal["onForm"] = onFormErr
-			} else {
-				for k, v := range *fieldErrorsVal {
-					errVal[k] = v
-				}
-			}
-		}
-
-		errs := map[string]any{ctx.event.ID: errVal.toMap()}
-		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
-	case *patchlist:
-		glog.Errorf("[warning] onLoad returned a []Patch and was ignored for route: %+v, onLoad must return either an error or call ctx.Data, ctx.KV \n", ctx.route)
 		errs := make(map[string]any)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
-				errs = map[string]any{ctx.event.ID: onFormErr.Error()}
+				errs = map[string]any{
+					ctx.event.ID: onFormErr.Error(),
+					"route":      onFormErr.Error()}
 			} else {
-				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.toMap(),
+					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+				}
+			}
+		}
+
+		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
+	case *patchlist:
+		glog.Errorf(`[warning] onLoad returned a []Patch and was ignored for route: %+v,
+		 onLoad must return either an error or call ctx.Data, ctx.KV \n`, ctx.route)
+		errs := make(map[string]any)
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			if !ok {
+				errs = map[string]any{
+					ctx.event.ID: onFormErr.Error(),
+					"route":      onFormErr.Error()}
+			} else {
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.toMap(),
+					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+				}
 			}
 		}
 		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
@@ -461,12 +511,21 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 			if !ok {
 				// err is not nil and not routeData and onFormErr is not nil and not fieldErrors
 				// merge err and onFormErr
-				errs = map[string]any{ctx.event.ID: fmt.Errorf("%v %v", err, onFormErr)}
+				mergedErr := fmt.Errorf("%v %v", err, onFormErr)
+				errs = map[string]any{
+					ctx.event.ID: mergedErr,
+					"route":      mergedErr,
+				}
 			} else {
-				errs = map[string]any{ctx.event.ID: fieldErrorsVal.toMap()}
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.toMap(),
+					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+				}
 			}
 		} else {
-			errs = map[string]any{ctx.event.ID: err.Error()}
+			errs = map[string]any{
+				ctx.event.ID: err.Error(),
+				"route":      err.Error()}
 		}
 		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
 	}
@@ -488,7 +547,7 @@ func (rt *route) findFirErrorTemplates() {
 	for _, t := range rt.template.Templates() {
 		if t.Name() == rt.layoutContentName {
 			for _, t1 := range t.Templates() {
-				if strings.Contains(t1.Name(), "fir-errors-") {
+				if strings.Contains(t1.Name(), "fir-error-") {
 					rt.firErrorTemplates = append(rt.firErrorTemplates, t1.Name())
 				}
 			}

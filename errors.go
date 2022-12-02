@@ -17,15 +17,21 @@ func MorphError(name string) (func(err error) Patch, func() Patch) {
 		}
 }
 
-func morphFirErrors(ctx Context) (func(err error) Patch, func() Patch) {
-	id := fmt.Sprintf("fir-errors-%s", ctx.event.ID)
-	selector := fmt.Sprintf("#%s", id)
-	return func(err error) Patch {
-			errs := map[string]any{ctx.event.ID: err.Error()}
-			return Morph(selector, Block(id, M{"fir": newRouteContext(ctx, errs)}))
-		}, func() Patch {
-			errs := map[string]any{ctx.event.ID: nil}
-			return Morph(selector, Block(id, M{"fir": newRouteContext(ctx, errs)}))
+func morphFirErrors(ctx Context) (func(err error) []Patch, func() []Patch) {
+	eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
+	eventNameSelector := fmt.Sprintf("#%s", eventIdName)
+	routeName := "fir-err-route"
+	routeNameSelector := fmt.Sprintf("#%s", routeName)
+	return func(err error) []Patch {
+			errs := map[string]any{ctx.event.ID: err.Error(), "route": err.Error()}
+			return []Patch{
+				Morph(eventNameSelector, Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
+				Morph(routeNameSelector, Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+		}, func() []Patch {
+			errs := map[string]any{ctx.event.ID: nil, "route": nil}
+			return []Patch{
+				Morph(eventNameSelector, Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
+				Morph(routeNameSelector, Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
 		}
 }
 

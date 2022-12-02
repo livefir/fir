@@ -16,7 +16,6 @@ type Context struct {
 	urlValues url.Values
 	route     *route
 	isOnLoad  bool
-	fromPath  string
 }
 
 // DecodeParams decodes the event params into the given struct
