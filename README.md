@@ -1,7 +1,5 @@
 # Fir
 
-A Go toolkit to build reactive web interfaces. 
+A Go toolkit to build reactive web interfaces using: Go, html/template and alpinejs. 
 
-Documentation: [adnaan.badr.in/fir](https://adnaan.badr.in/fir)
-
-All examples: [examples](./examples/)
+Status: This is a work in progress. Checkout examples to see what works today: [examples](./examples/)
