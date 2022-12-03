@@ -12,7 +12,7 @@ import (
 type Tweet struct {
 	ID          uint64    `json:"id" boltholdKey:"ID"`
 	Username    string    `json:"username"`
-	Body        string    `json:"body" validate:"min=3"`
+	Body        string    `json:"body"`
 	LikesCount  int       `json:"likes_count"`
 	RepostCount int       `json:"repost_count"`
 	CreatedAt   time.Time `json:"created_at"`
