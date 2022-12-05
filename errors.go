@@ -5,33 +5,34 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/adnaan/fir/patch"
 	"github.com/golang/glog"
 )
 
-func MorphError(name string) (func(err error) Patch, func() Patch) {
+func MorphError(name string) (func(err error) patch.Patch, func() patch.Patch) {
 	selector := fmt.Sprintf("#%s", name)
-	return func(err error) Patch {
-			return Morph(selector, Block(name, M{name: err}))
-		}, func() Patch {
-			return Morph(selector, Block(name, M{name: ""}))
+	return func(err error) patch.Patch {
+			return patch.Morph(selector, patch.Block(name, M{name: err}))
+		}, func() patch.Patch {
+			return patch.Morph(selector, patch.Block(name, M{name: ""}))
 		}
 }
 
-func morphFirErrors(ctx Context) (func(err error) []Patch, func() []Patch) {
+func morphFirErrors(ctx Context) (func(err error) []patch.Patch, func() []patch.Patch) {
 	eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
 	eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 	routeName := "fir-err-route"
 	routeNameSelector := fmt.Sprintf("#%s", routeName)
-	return func(err error) []Patch {
+	return func(err error) []patch.Patch {
 			errs := map[string]any{ctx.event.ID: err.Error(), "route": err.Error()}
-			return []Patch{
-				Morph(eventNameSelector, Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
-				Morph(routeNameSelector, Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
-		}, func() []Patch {
+			return []patch.Patch{
+				patch.Morph(eventNameSelector, patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
+				patch.Morph(routeNameSelector, patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+		}, func() []patch.Patch {
 			errs := map[string]any{ctx.event.ID: nil, "route": nil}
-			return []Patch{
-				Morph(eventNameSelector, Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
-				Morph(routeNameSelector, Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+			return []patch.Patch{
+				patch.Morph(eventNameSelector, patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
+				patch.Morph(routeNameSelector, patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
 		}
 }
 
@@ -53,7 +54,7 @@ func (f fieldErrors) Error() string {
 	return strings.Join(errs, ", ")
 }
 
-func UserError(ctx Context, err error) error {
+func userError(ctx Context, err error) error {
 	userError := err
 	glog.Errorf("ctx %+v , error: %v\n", ctx.event.ID, err)
 	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/adnaan/fir"
+	"github.com/adnaan/fir/patch"
 	"github.com/timshannon/bolthold"
 )
 
@@ -49,7 +50,7 @@ func createTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err != nil {
 			return err
 		}
-		return ctx.Append("#tweets", fir.Block("tweet", tweet))
+		return ctx.Append("#tweets", patch.Block("tweet", tweet))
 	}
 }
 

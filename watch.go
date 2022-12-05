@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/adnaan/fir/patch"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/exp/slices"
 )
@@ -36,7 +37,7 @@ func watchTemplates(wc *controller) {
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					wc.pubsub.Publish(context.Background(), devReloadChannel, Reload())
+					wc.pubsub.Publish(context.Background(), devReloadChannel, patch.Reload())
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/adnaan/fir/patch"
 )
 
 type Context struct {
@@ -65,7 +67,7 @@ func (c Context) KV(k string, v any) error {
 }
 
 func (c Context) MorphKV(name string, value any) error {
-	return c.Morph(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
+	return c.Morph(fmt.Sprintf("#%s", name), patch.Block(name, M{name: value}))
 }
 
 // func (c Context) AppendKV(name string, value any) error {
@@ -84,57 +86,57 @@ func (c Context) MorphKV(name string, value any) error {
 // 	return c.Prepend(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
 // }
 
-func (c Context) Patch(patch ...Patch) error {
-	var pl patchlist
-	for _, p := range patch {
+func (c Context) Patch(patches ...patch.Patch) error {
+	var pl patch.Set
+	for _, p := range patches {
 		pl = append(pl, p)
 	}
 	return &pl
 }
 
-func (c Context) Morph(selector string, t TemplateRenderer) error {
-	return c.Patch(Morph(selector, t))
+func (c Context) Morph(selector string, t patch.TemplateRenderer) error {
+	return c.Patch(patch.Morph(selector, t))
 }
-func (c Context) After(selector string, t TemplateRenderer) error {
-	return c.Patch(After(selector, t))
+func (c Context) After(selector string, t patch.TemplateRenderer) error {
+	return c.Patch(patch.After(selector, t))
 }
-func (c Context) Before(selector string, t TemplateRenderer) error {
-	return c.Patch(Before(selector, t))
+func (c Context) Before(selector string, t patch.TemplateRenderer) error {
+	return c.Patch(patch.Before(selector, t))
 }
-func (c Context) Append(selector string, t TemplateRenderer) error {
-	return c.Patch(Append(selector, t))
+func (c Context) Append(selector string, t patch.TemplateRenderer) error {
+	return c.Patch(patch.Append(selector, t))
 }
-func (c Context) Prepend(selector string, t TemplateRenderer) error {
-	return c.Patch(Prepend(selector, t))
+func (c Context) Prepend(selector string, t patch.TemplateRenderer) error {
+	return c.Patch(patch.Prepend(selector, t))
 }
 func (c Context) Remove(selector string) error {
-	return c.Patch(Remove(selector))
+	return c.Patch(patch.Remove(selector))
 }
 func (c Context) Navigate(url string) error {
-	return c.Patch(Navigate(url))
+	return c.Patch(patch.Navigate(url))
 }
 func (c Context) Store(name string, data any) error {
-	return c.Patch(Store(name, data))
+	return c.Patch(patch.Store(name, data))
 }
 func (c Context) Reload() error {
-	return c.Patch(Reload())
+	return c.Patch(patch.Reload())
 }
 func (c Context) ResetForm(selector string) error {
-	return c.Patch(ResetForm(selector))
+	return c.Patch(patch.ResetForm(selector))
 }
 
 func (c Context) FieldError(field string, err error) error {
 	if err == nil || field == "" {
 		return nil
 	}
-	return &fieldErrors{field: UserError(c, err)}
+	return &fieldErrors{field: userError(c, err)}
 }
 
 func (c Context) FieldErrors(fields map[string]error) error {
 	m := fieldErrors{}
 	for field, err := range fields {
 		if err != nil {
-			m[field] = UserError(c, err)
+			m[field] = userError(c, err)
 		}
 	}
 	return &m

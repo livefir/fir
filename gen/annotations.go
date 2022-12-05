@@ -1,4 +1,4 @@
-package fir
+package gen
 
 // CreateForm can be used to annotate an entgo schema field as input in a create form.
 type CreateForm struct {

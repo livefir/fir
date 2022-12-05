@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/adnaan/fir"
+	"github.com/adnaan/fir/patch"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
 )
@@ -19,11 +20,11 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func morphCount(c int32) fir.Patch {
-	return fir.Morph("#count", fir.Block("count", fir.M{"count": c}))
+func morphCount(c int32) patch.Patch {
+	return patch.Morph("#count", patch.Block("count", fir.M{"count": c}))
 }
 
-func (c *Counter) Inc() fir.Patch {
+func (c *Counter) Inc() patch.Patch {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
@@ -31,7 +32,7 @@ func (c *Counter) Inc() fir.Patch {
 	return morphCount(c.count)
 }
 
-func (c *Counter) Dec() fir.Patch {
+func (c *Counter) Dec() patch.Patch {
 	c.Lock()
 	defer c.Unlock()
 	c.count -= 1

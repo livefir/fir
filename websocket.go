@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/adnaan/fir/patch"
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 )
@@ -117,8 +118,8 @@ loop:
 	}
 }
 
-func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []Patch) error {
-	message := buildPatchOperations(t, patchset)
+func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []patch.Patch) error {
+	message := patch.RenderJSON(t, patchset)
 	if len(message) == 0 {
 		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, patchset %+v", channel, patchset)
 		log.Println(err)

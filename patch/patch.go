@@ -1,4 +1,4 @@
-package fir
+package patch
 
 import (
 	"bytes"
@@ -37,9 +37,9 @@ type Patch struct {
 	Value any `json:"value,omitempty"`
 }
 
-type patchlist []Patch
+type Set []Patch
 
-func (pl *patchlist) Error() string {
+func (pl *Set) Error() string {
 	b, _ := json.Marshal(pl)
 	return string(b)
 }
@@ -148,7 +148,7 @@ func Navigate(url string) Patch {
 	}
 }
 
-func buildPatchOperations(t *template.Template, patchset []Patch) []byte {
+func RenderJSON(t *template.Template, patchset []Patch) []byte {
 	var renderedPatchset []Patch
 	firErrorPatchExists := false
 	for _, p := range patchset {
