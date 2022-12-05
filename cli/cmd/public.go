@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/adnaan/fir"
+	"github.com/adnaan/fir/gen"
 	"github.com/spf13/cobra"
 )
 
@@ -25,20 +25,20 @@ var publicCmd = &cobra.Command{
 	It preserves the paths of the html files enabling a flexible project structure. The generated public directory
 	can be embedded in the binary as is.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var opts []fir.PublicDirOption
+		var opts []gen.PublicDirOption
 		if inDir != "" {
-			opts = append(opts, fir.InDir(inDir))
+			opts = append(opts, gen.InDir(inDir))
 		}
 
 		if outDir != "" {
-			opts = append(opts, fir.OutDir(outDir))
+			opts = append(opts, gen.OutDir(outDir))
 		}
 
 		if len(extensions) != 0 {
-			opts = append(opts, fir.PublicFileExtensions(extensions))
+			opts = append(opts, gen.PublicFileExtensions(extensions))
 		}
 
-		if err := fir.GeneratePublicDir(opts...); err != nil {
+		if err := gen.GeneratePublicDir(opts...); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
