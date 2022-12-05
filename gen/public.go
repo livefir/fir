@@ -1,4 +1,4 @@
-package fir
+package gen
 
 import (
 	"io/fs"

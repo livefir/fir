@@ -112,7 +112,7 @@ func EnableWatch(rootDir string, extensions ...string) ControllerOption {
 		o.enableWatch = true
 		if len(extensions) > 0 {
 			o.publicDir = rootDir
-			o.watchExts = extensions
+			o.watchExts = append(o.watchExts, extensions...)
 		}
 	}
 }
@@ -145,9 +145,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 	})
 
 	o := &opt{
-		channelFunc:       DefaultChannelFunc,
+		channelFunc:       defaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
-		watchExts:         DefaultWatchExtensions,
+		watchExts:         defaultWatchExtensions,
 		pubsub:            pubsub.NewInmem(),
 		appName:           name,
 		formDecoder:       formDecoder,
@@ -199,7 +199,7 @@ var defaultRouteOpt = &routeOpt{
 	content:           "Hello Fir App!",
 	layoutContentName: "content",
 	partials:          []string{"./routes/partials"},
-	funcMap:           DefaultFuncMap(),
+	funcMap:           defaultFuncMap(),
 	extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
 	eventSender:       make(chan Event),
 	onLoad: func(ctx Context) error {

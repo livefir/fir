@@ -14,8 +14,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// DefaultWatchExtensions is an array of default extensions to watch for changes.
-var DefaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
+// defaultWatchExtensions is an array of default extensions to watch for changes.
+var defaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
 
 const devReloadChannel = "dev_reload"
 

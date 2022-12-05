@@ -18,7 +18,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 )
 
-func DefaultFuncMap() template.FuncMap {
+func defaultFuncMap() template.FuncMap {
 	allFuncs := make(template.FuncMap)
 	for k, v := range sprig.FuncMap() {
 		allFuncs[k] = v

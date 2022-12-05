@@ -130,10 +130,17 @@ func Extensions(extensions ...string) RouteOption {
 	}
 }
 
-// FuncMap sets the template function map for the route's template engine
+// FuncMap appends to the default template function map for the route's template engine
 func FuncMap(funcMap template.FuncMap) RouteOption {
 	return func(opt *routeOpt) {
-		opt.funcMap = funcMap
+		mergedFuncMap := make(template.FuncMap)
+		for k, v := range opt.funcMap {
+			mergedFuncMap[k] = v
+		}
+		for k, v := range defaultFuncMap() {
+			mergedFuncMap[k] = v
+		}
+		opt.funcMap = mergedFuncMap
 	}
 }
 
