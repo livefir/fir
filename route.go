@@ -136,7 +136,7 @@ func (r *routeData) Error() string {
 }
 
 type routeRenderer func(data routeData) error
-type patchRenderer func(patch ...patch.Patch) error
+type patchRenderer func(patch ...patch.Op) error
 type routeOpt struct {
 	id                string
 	layout            string
@@ -185,7 +185,7 @@ func renderRoute(ctx Context) routeRenderer {
 }
 
 func publishPatch(ctx context.Context, eventCtx Context) patchRenderer {
-	return func(patchset ...patch.Patch) error {
+	return func(patchset ...patch.Op) error {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
 		eventCtx.route.parseTemplate()
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, patchset...)
@@ -198,7 +198,7 @@ func publishPatch(ctx context.Context, eventCtx Context) patchRenderer {
 }
 
 func renderPatch(ctx Context) patchRenderer {
-	return func(patchset ...patch.Patch) error {
+	return func(patchset ...patch.Op) error {
 		ctx.route.parseTemplate()
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, patchset...)
@@ -326,7 +326,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 	}
 
 	if err == nil {
-		var patchsetData []patch.Patch
+		var patchsetData []patch.Op
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
@@ -358,7 +358,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		return
 	case *fieldErrors:
 		fieldErrorsData := *errVal
-		var patchsetData []patch.Patch
+		var patchsetData []patch.Op
 
 		for k, v := range fieldErrorsData {
 			fieldErrorName := fmt.Sprintf("fir-error-%s-%s", ctx.event.ID, k)
@@ -384,7 +384,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		render(patchsetData...)
 		return
 	default:
-		var patchsetData []patch.Patch
+		var patchsetData []patch.Op
 		userErr := userError(ctx, err)
 		errs := map[string]any{
 			ctx.event.ID: userErr.Error(),

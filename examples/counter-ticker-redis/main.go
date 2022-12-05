@@ -10,6 +10,7 @@ import (
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/patch"
+	"github.com/adnaan/fir/pubsub"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
 )
@@ -20,11 +21,11 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func morphCount(c int32) patch.Patch {
+func morphCount(c int32) patch.Op {
 	return patch.Morph("#count", patch.Block("count", fir.M{"count": c}))
 }
 
-func (c *Counter) Inc() patch.Patch {
+func (c *Counter) Inc() patch.Op {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
@@ -32,7 +33,7 @@ func (c *Counter) Inc() patch.Patch {
 	return morphCount(c.count)
 }
 
-func (c *Counter) Dec() patch.Patch {
+func (c *Counter) Dec() patch.Op {
 	c.Lock()
 	defer c.Unlock()
 	c.count -= 1
@@ -52,7 +53,7 @@ func (c *Counter) Count() int32 {
 	return c.count
 }
 
-func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
+func NewCounterIndex(pubsub pubsub.Adapter) *index {
 	c := &index{
 		model:       &Counter{},
 		pubsub:      pubsub,
@@ -78,7 +79,7 @@ func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
 
 type index struct {
 	model       *Counter
-	pubsub      fir.PubsubAdapter
+	pubsub      pubsub.Adapter
 	eventSender chan fir.Event
 	id          string
 }
@@ -157,7 +158,7 @@ var layout = `<!DOCTYPE html>
 func main() {
 	port := flag.String("port", "9867", "port to listen on")
 
-	pubsubAdapter := fir.NewPubsubRedis(
+	pubsubAdapter := pubsub.NewRedis(
 		redis.NewClient(&redis.Options{
 			Addr:     "localhost:6379",
 			Password: "", // no password set

@@ -32,7 +32,7 @@ func (app *App) sessionMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		cookies := request.Header.Get("Cookie")
 
 		// check if we have a session
-		session, _, err := app.ory.V0alpha2Api.ToSession(request.Context()).Cookie(cookies).Execute()
+		session, _, err := app.ory.FrontendApi.ToSession(request.Context()).Cookie(cookies).Execute()
 		if (err != nil && session == nil) || (err == nil && !*session.Active) {
 			// this will redirect the user to the managed Ory Login UI
 			http.Redirect(writer, request, "/.ory/self-service/login/browser", http.StatusSeeOther)

@@ -86,7 +86,7 @@ func (c Context) MorphKV(name string, value any) error {
 // 	return c.Prepend(fmt.Sprintf("#%s", name), Block(name, M{name: value}))
 // }
 
-func (c Context) Patch(patches ...patch.Patch) error {
+func (c Context) Patch(patches ...patch.Op) error {
 	var pl patch.Set
 	for _, p := range patches {
 		pl = append(pl, p)

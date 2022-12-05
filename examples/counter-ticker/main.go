@@ -9,6 +9,7 @@ import (
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/patch"
+	"github.com/adnaan/fir/pubsub"
 	"github.com/golang/glog"
 )
 
@@ -18,11 +19,11 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func morphCount(c int32) patch.Patch {
+func morphCount(c int32) patch.Op {
 	return patch.Morph("#count", patch.Block("count", fir.M{"count": c}))
 }
 
-func (c *Counter) Inc() patch.Patch {
+func (c *Counter) Inc() patch.Op {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
@@ -30,7 +31,7 @@ func (c *Counter) Inc() patch.Patch {
 	return morphCount(c.count)
 }
 
-func (c *Counter) Dec() patch.Patch {
+func (c *Counter) Dec() patch.Op {
 	c.Lock()
 	defer c.Unlock()
 	c.count -= 1
@@ -50,7 +51,7 @@ func (c *Counter) Count() int32 {
 	return c.count
 }
 
-func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
+func NewCounterIndex(pubsub pubsub.Adapter) *index {
 	c := &index{
 		model:       &Counter{},
 		pubsub:      pubsub,
@@ -76,7 +77,7 @@ func NewCounterIndex(pubsub fir.PubsubAdapter) *index {
 
 type index struct {
 	model       *Counter
-	pubsub      fir.PubsubAdapter
+	pubsub      pubsub.Adapter
 	eventSender chan fir.Event
 	id          string
 }
@@ -153,7 +154,7 @@ var layout = `<!DOCTYPE html>
 	</html>`
 
 func main() {
-	pubsubAdapter := fir.NewPubsubInmem()
+	pubsubAdapter := pubsub.NewInmem()
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true), fir.WithPubsubAdapter(pubsubAdapter))
 	http.Handle("/", controller.Route(NewCounterIndex(pubsubAdapter)))
 	http.ListenAndServe(":9867", nil)

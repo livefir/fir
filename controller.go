@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/adnaan/fir/pubsub"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
@@ -32,7 +33,7 @@ type opt struct {
 	developmentMode      bool
 	embedFS              embed.FS
 	hasEmbedFS           bool
-	pubsub               PubsubAdapter
+	pubsub               pubsub.Adapter
 	appName              string
 	formDecoder          *schema.Decoder
 	validator            *validator.Validate
@@ -49,7 +50,7 @@ func WithChannel(f func(r *http.Request, viewID string) *string) ControllerOptio
 }
 
 // WithPubsubAdapter is an option to set a pubsub adapter for the controller's views.
-func WithPubsubAdapter(pubsub PubsubAdapter) ControllerOption {
+func WithPubsubAdapter(pubsub pubsub.Adapter) ControllerOption {
 	return func(o *opt) {
 		o.pubsub = pubsub
 	}
@@ -147,7 +148,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		channelFunc:       DefaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
 		watchExts:         DefaultWatchExtensions,
-		pubsub:            NewPubsubInmem(),
+		pubsub:            pubsub.NewInmem(),
 		appName:           name,
 		formDecoder:       formDecoder,
 		validator:         validate,

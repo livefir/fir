@@ -9,28 +9,19 @@ import (
 	"github.com/golang/glog"
 )
 
-func MorphError(name string) (func(err error) patch.Patch, func() patch.Patch) {
-	selector := fmt.Sprintf("#%s", name)
-	return func(err error) patch.Patch {
-			return patch.Morph(selector, patch.Block(name, M{name: err}))
-		}, func() patch.Patch {
-			return patch.Morph(selector, patch.Block(name, M{name: ""}))
-		}
-}
-
-func morphFirErrors(ctx Context) (func(err error) []patch.Patch, func() []patch.Patch) {
+func morphFirErrors(ctx Context) (func(err error) []patch.Op, func() []patch.Op) {
 	eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
 	eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 	routeName := "fir-err-route"
 	routeNameSelector := fmt.Sprintf("#%s", routeName)
-	return func(err error) []patch.Patch {
+	return func(err error) []patch.Op {
 			errs := map[string]any{ctx.event.ID: err.Error(), "route": err.Error()}
-			return []patch.Patch{
+			return []patch.Op{
 				patch.Morph(eventNameSelector, patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
 				patch.Morph(routeNameSelector, patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
-		}, func() []patch.Patch {
+		}, func() []patch.Op {
 			errs := map[string]any{ctx.event.ID: nil, "route": nil}
-			return []patch.Patch{
+			return []patch.Op{
 				patch.Morph(eventNameSelector, patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
 				patch.Morph(routeNameSelector, patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
 		}

@@ -118,7 +118,7 @@ loop:
 	}
 }
 
-func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []patch.Patch) error {
+func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []patch.Op) error {
 	message := patch.RenderJSON(t, patchset)
 	if len(message) == 0 {
 		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, patchset %+v", channel, patchset)

@@ -1,4 +1,4 @@
-package fir
+package pubsub
 
 import (
 	"context"
@@ -18,23 +18,23 @@ import (
 // Subscription is a subscription to a channel.
 type Subscription interface {
 	// C returns a receive-only go channel of patches published
-	C() <-chan []patch.Patch
+	C() <-chan []patch.Op
 	// Close closes the subscription.
 	Close()
 }
 
-// PubsubAdapter is an interface for a pubsub adapter. It allows to publish and subscribe []patch.Patch to views.
-type PubsubAdapter interface {
+// Adapter is an interface for a pubsub adapter. It allows to publish and subscribe []patch.Patch to views.
+type Adapter interface {
 	// Publish publishes a patchset to a channel.
-	Publish(ctx context.Context, channel string, patchset ...patch.Patch) error
+	Publish(ctx context.Context, channel string, patchset ...patch.Op) error
 	// Subscribe subscribes to a channel.
 	Subscribe(ctx context.Context, channel string) (Subscription, error)
 	// HasSubscribers returns true if there are subscribers to the given pattern.
 	HasSubscribers(ctx context.Context, pattern string) bool
 }
 
-// NewPubsubInmem creates a new in-memory pubsub adapter.s
-func NewPubsubInmem() PubsubAdapter {
+// NewInmem creates a new in-memory pubsub adapter.s
+func NewInmem() Adapter {
 	return &pubsubInmem{
 		channelsSubscriptions: make(map[string]map[*subscriptionInmem]struct{}),
 	}
@@ -42,14 +42,14 @@ func NewPubsubInmem() PubsubAdapter {
 
 type subscriptionInmem struct {
 	channel string
-	ch      chan []patch.Patch
+	ch      chan []patch.Op
 	once    sync.Once
 	pubsub  *pubsubInmem
 }
 
 // C returns a receive-only go channel of patches published
 // on the channel this subscription is subscribed to.
-func (s *subscriptionInmem) C() <-chan []patch.Patch {
+func (s *subscriptionInmem) C() <-chan []patch.Op {
 	return s.ch
 }
 
@@ -80,7 +80,7 @@ func (p *pubsubInmem) removeSubscription(subscription *subscriptionInmem) {
 	}
 }
 
-func (p *pubsubInmem) Publish(ctx context.Context, channel string, patchset ...patch.Patch) error {
+func (p *pubsubInmem) Publish(ctx context.Context, channel string, patchset ...patch.Op) error {
 	p.Lock()
 	defer p.Unlock()
 	if channel == "" {
@@ -111,7 +111,7 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 
 	sub := &subscriptionInmem{
 		channel: channel,
-		ch:      make(chan []patch.Patch),
+		ch:      make(chan []patch.Op),
 		pubsub:  p,
 	}
 
@@ -145,22 +145,22 @@ func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) bool {
 	return count > 0
 }
 
-// NewPubsubRedis creates a new redis pubsub adapter.
-func NewPubsubRedis(client *redis.Client) PubsubAdapter {
+// NewRedis creates a new redis pubsub adapter.
+func NewRedis(client *redis.Client) Adapter {
 	return &pubsubRedis{client: client}
 }
 
 type subscriptionRedis struct {
 	channel string
-	ch      chan []patch.Patch
+	ch      chan []patch.Op
 	once    sync.Once
 	pubsub  *redis.PubSub
 }
 
-func (s *subscriptionRedis) C() <-chan []patch.Patch {
+func (s *subscriptionRedis) C() <-chan []patch.Op {
 	go func() {
 		for msg := range s.pubsub.Channel() {
-			var patchset []patch.Patch
+			var patchset []patch.Op
 			err := json.Unmarshal([]byte(msg.Payload), &patchset)
 			if err != nil {
 				glog.Errorf("failed to unmarshal patches payload: %v", err)
@@ -183,7 +183,7 @@ type pubsubRedis struct {
 	client *redis.Client
 }
 
-func (p *pubsubRedis) Publish(ctx context.Context, channel string, patchset ...patch.Patch) error {
+func (p *pubsubRedis) Publish(ctx context.Context, channel string, patchset ...patch.Op) error {
 
 	patchesBytes, err := json.Marshal(patchset)
 	if err != nil {
@@ -198,7 +198,7 @@ func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscripti
 		return nil, fmt.Errorf("channel is empty")
 	}
 	pubsub := p.client.Subscribe(ctx, channel)
-	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan []patch.Patch)}, nil
+	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan []patch.Op)}, nil
 }
 
 func (p *pubsubRedis) HasSubscribers(ctx context.Context, pattern string) bool {
