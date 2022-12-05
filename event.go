@@ -6,6 +6,7 @@ import (
 	"github.com/golang/glog"
 )
 
+// NewEvent creates a new event
 func NewEvent(id string, params any) Event {
 	data, err := json.Marshal(params)
 	if err != nil {

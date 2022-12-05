@@ -17,13 +17,13 @@ func morphFirErrors(ctx Context) (func(err error) []patch.Op, func() []patch.Op)
 	return func(err error) []patch.Op {
 			errs := map[string]any{ctx.event.ID: err.Error(), "route": err.Error()}
 			return []patch.Op{
-				patch.Morph(eventNameSelector, patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
-				patch.Morph(routeNameSelector, patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+				patch.Morph(eventNameSelector, patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})),
+				patch.Morph(routeNameSelector, patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)}))}
 		}, func() []patch.Op {
 			errs := map[string]any{ctx.event.ID: nil, "route": nil}
 			return []patch.Op{
-				patch.Morph(eventNameSelector, patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})),
-				patch.Morph(routeNameSelector, patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)}))}
+				patch.Morph(eventNameSelector, patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})),
+				patch.Morph(routeNameSelector, patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)}))}
 		}
 }
 

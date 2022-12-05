@@ -48,7 +48,7 @@ func index() fir.RouteOptions {
 		if err := ctx.DecodeParams(req); err != nil {
 			return err
 		}
-		data := fir.M{"cities": getCities(req.Query)}
+		data := map[string]any{"cities": getCities(req.Query)}
 		return ctx.MorphKV("cities", data)
 	}
 

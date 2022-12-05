@@ -38,13 +38,16 @@ type Op struct {
 	Value any `json:"value,omitempty"`
 }
 
+// Set is a collection of patch operations
 type Set []Op
 
+// Set satisfied the Error interface
 func (pl *Set) Error() string {
 	b, _ := json.Marshal(pl)
 	return string(b)
 }
 
+// TemplateRenderer is an interface for rendering partial templates
 type TemplateRenderer interface {
 	Name() string
 	Data() any
@@ -55,25 +58,32 @@ type templateRenderer struct {
 	data any
 }
 
+// Name of the template
 func (t *templateRenderer) Name() string {
 	return t.name
 }
 
+// Data to be hydrated into the template
 func (t *templateRenderer) Data() any {
 	return t.data
 }
 
+// Template is a partial template
 func Template(name string, data any) TemplateRenderer {
 	return &templateRenderer{name: name, data: data}
 }
+
+// Block is a partial template and is an alias for Template(...)
 func Block(name string, data any) TemplateRenderer {
 	return Template(name, data)
 }
 
+// HTML is a utility function for rendering raw html
 func HTML(html string) TemplateRenderer {
 	return Template("_fir_html", html)
 }
 
+// Morph is a patch operation for morphing an element at the selector
 func Morph(selector string, t TemplateRenderer) Op {
 	return Op{
 		Type:     morph,
@@ -82,6 +92,7 @@ func Morph(selector string, t TemplateRenderer) Op {
 	}
 }
 
+// After is a patch operation for inserting an element after another element
 func After(selector string, t TemplateRenderer) Op {
 	return Op{
 		Type:     after,
@@ -90,6 +101,7 @@ func After(selector string, t TemplateRenderer) Op {
 	}
 }
 
+// Before is a patch operation for inserting an element before another element
 func Before(selector string, t TemplateRenderer) Op {
 	return Op{
 		Type:     before,
@@ -98,6 +110,7 @@ func Before(selector string, t TemplateRenderer) Op {
 	}
 }
 
+// Append is a patch operation for appending an element to another element
 func Append(selector string, t TemplateRenderer) Op {
 	return Op{
 		Type:     appendOp,
@@ -106,6 +119,7 @@ func Append(selector string, t TemplateRenderer) Op {
 	}
 }
 
+// Prepend is a patch operation for prepending an element to another element
 func Prepend(selector string, t TemplateRenderer) Op {
 	return Op{
 		Type:     prepend,
@@ -114,6 +128,7 @@ func Prepend(selector string, t TemplateRenderer) Op {
 	}
 }
 
+// Remove is a patch operation for removing an element from the dom
 func Remove(selector string) Op {
 	return Op{
 		Type:     remove,
@@ -121,12 +136,14 @@ func Remove(selector string) Op {
 	}
 }
 
+// Reload is a patch operation for reloading the page
 func Reload() Op {
 	return Op{
 		Type: reload,
 	}
 }
 
+// Store is a patch operation for updating the alpinejs store
 func Store(name string, data any) Op {
 	return Op{
 		Type:     updateStore,
@@ -135,6 +152,7 @@ func Store(name string, data any) Op {
 	}
 }
 
+// ResetForm is a patch operation for resetting a form
 func ResetForm(selector string) Op {
 	return Op{
 		Type:     resetForm,
@@ -142,6 +160,7 @@ func ResetForm(selector string) Op {
 	}
 }
 
+// Navigate is a patch operation for navigating the client to a new url
 func Navigate(url string) Op {
 	return Op{
 		Type:  navigate,
@@ -149,6 +168,7 @@ func Navigate(url string) Op {
 	}
 }
 
+// RenderJSON renders the patch operations to a json string
 func RenderJSON(t *template.Template, patchset []Op) []byte {
 	var renderedPatchset []Op
 	firErrorPatchExists := false
@@ -231,6 +251,7 @@ func buildTemplateValue(t *template.Template, name string, data any) (string, er
 	return value, nil
 }
 
+// MorphError is a utility function for setting and unsetting an error.
 func MorphError(name string) (func(err error) Op, func() Op) {
 	selector := fmt.Sprintf("#%s", name)
 	return func(err error) Op {

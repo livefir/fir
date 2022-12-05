@@ -15,12 +15,20 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type M map[string]any
-type OnEventFunc func(ctx Context) error
-type RouteOptions []RouteOption
-type RouteFunc func() RouteOptions
-type Route interface{ Options() RouteOptions }
+// RouteOption is a function that sets route options
 type RouteOption func(*routeOpt)
+
+// RouteOptions is a slice of RouteOption
+type RouteOptions []RouteOption
+
+// RouteFunc is a function that handles a route
+type RouteFunc func() RouteOptions
+
+// Route is an interface that represents a route
+type Route interface{ Options() RouteOptions }
+
+// OnEventFunc is a function that handles an http event request
+type OnEventFunc func(ctx Context) error
 
 func newRouteContext(ctx Context, errs map[string]any) *RouteContext {
 	return &RouteContext{
@@ -30,12 +38,14 @@ func newRouteContext(ctx Context, errs map[string]any) *RouteContext {
 	}
 }
 
+// RouteContext is a struct that holds route context data and is passed to the template
 type RouteContext struct {
 	Name    string
 	URLPath string
 	errors  map[string]any
 }
 
+// ActiveRoute returns the class if the route is active
 func (rc *RouteContext) ActiveRoute(path, class string) string {
 	if rc.URLPath == path {
 		return class
@@ -43,6 +53,7 @@ func (rc *RouteContext) ActiveRoute(path, class string) string {
 	return ""
 }
 
+// NotActive returns the class if the route is not active
 func (rc *RouteContext) NotActiveRoute(path, class string) string {
 	if rc.URLPath != path {
 		return class
@@ -50,6 +61,10 @@ func (rc *RouteContext) NotActiveRoute(path, class string) string {
 	return ""
 }
 
+// Error can be used to lookup an error by name
+// Example: {{.fir.Error "myevent.field"}} will return the error for the field myevent.field
+// Example: {{.fir.Error "myevent" "field"}} will return the error for the event myevent.field
+// It can be used in conjunction with ctx.FieldError to get the error for a field
 func (rc *RouteContext) Error(paths ...string) any {
 	path := ""
 	if len(paths) == 0 {
@@ -65,60 +80,81 @@ func (rc *RouteContext) Error(paths ...string) any {
 	return gjson.GetBytes(data, path).Value()
 }
 
+// ID  sets the route unique identifier. This is used to identify the route in pubsub.
 func ID(id string) RouteOption {
 	return func(opt *routeOpt) {
 		opt.id = id
 	}
 }
 
+// Layout sets the layout for the route's template engine
 func Layout(layout string) RouteOption {
 	return func(opt *routeOpt) {
 		opt.layout = layout
 	}
 }
 
+// Content sets the content for the route
 func Content(content string) RouteOption {
 	return func(opt *routeOpt) {
 		opt.content = content
 	}
 }
 
+// LayoutContentName sets the name of the template which contains the content.
+/*
+ {{define "layout"}}
+ {{ define "content" }}
+ {{ end }}
+ {{end}}
+
+ Here "content" is the default layout content name
+*/
 func LayoutContentName(name string) RouteOption {
 	return func(opt *routeOpt) {
 		opt.layoutContentName = name
 	}
 }
 
+// Partials sets the template partials for the route's template engine
 func Partials(partials ...string) RouteOption {
 	return func(opt *routeOpt) {
 		opt.partials = partials
 	}
 }
 
+// Extensions sets the template file extensions read for the route's template engine
 func Extensions(extensions ...string) RouteOption {
 	return func(opt *routeOpt) {
 		opt.extensions = extensions
 	}
 }
 
+// FuncMap sets the template function map for the route's template engine
 func FuncMap(funcMap template.FuncMap) RouteOption {
 	return func(opt *routeOpt) {
 		opt.funcMap = funcMap
 	}
 }
 
+// EventSender sets the event sender for the route. It can be used to send events for the route
+// without a corresponding user event. This is useful for sending events to the route event handler for use cases like:
+// sending notifications, sending emails, etc.
 func EventSender(eventSender chan Event) RouteOption {
 	return func(opt *routeOpt) {
 		opt.eventSender = eventSender
 	}
 }
 
+// OnLoad sets the route's onload event handler
 func OnLoad(f OnEventFunc) RouteOption {
 	return func(opt *routeOpt) {
 		opt.onLoad = f
 	}
 }
 
+// OnEvent registers an event handler for the route per unique event name. It can be called multiple times
+// to register multiple event handlers for the route.
 func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 	return func(opt *routeOpt) {
 		if opt.onEvents == nil {
@@ -331,7 +367,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
 				patch.Morph(fmt.Sprintf("#%s", k),
-					patch.Block(k, M{"fir": newRouteContext(ctx, errs)})))
+					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
 		render(patchsetData...)
@@ -352,7 +388,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
 				patch.Morph(fmt.Sprintf("#%s", k),
-					patch.Block(k, M{"fir": newRouteContext(ctx, errs)})))
+					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 		render(patchsetData...)
 		return
@@ -371,14 +407,14 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 			}
 			patchsetData = append(patchsetData,
 				patch.Morph(fmt.Sprintf("#%s", fieldErrorName),
-					patch.Block(fieldErrorName, M{"fir": newRouteContext(ctx, errs)})))
+					patch.Block(fieldErrorName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 		// unset errors that are not set
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
 				patch.Morph(fmt.Sprintf("#%s", k),
-					patch.Block(k, M{"fir": newRouteContext(ctx, errs)})))
+					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
 		render(patchsetData...)
@@ -395,7 +431,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
 			patchsetData = append(patchsetData,
 				patch.Morph(eventNameSelector,
-					patch.Block(eventIdName, M{"fir": newRouteContext(ctx, errs)})))
+					patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
 		routeName := "fir-error-route"
@@ -403,7 +439,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
 			patchsetData = append(patchsetData,
 				patch.Morph(routeNameSelector,
-					patch.Block(routeName, M{"fir": newRouteContext(ctx, errs)})))
+					patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
 		render(patchsetData...)

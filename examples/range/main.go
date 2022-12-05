@@ -27,7 +27,7 @@ func index() fir.RouteOptions {
 			if err != nil {
 				return err
 			}
-			return ctx.Store("fir", fir.M{"total": count * 10})
+			return ctx.Store("fir", map[string]any{"total": count * 10})
 		}),
 	}
 }

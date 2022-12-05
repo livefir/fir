@@ -20,7 +20,7 @@ type Counter struct {
 }
 
 func morphCount(c int32) patch.Op {
-	return patch.Morph("#count", patch.Block("count", fir.M{"count": c}))
+	return patch.Morph("#count", patch.Block("count", map[string]any{"count": c}))
 }
 
 func (c *Counter) Inc() patch.Op {
@@ -69,7 +69,7 @@ func NewCounterIndex(pubsub pubsub.Adapter) *index {
 				glog.Errorf("channel pattern %s has no subscribers", pattern)
 				continue
 			}
-			c.eventSender <- fir.NewEvent("updated", fir.M{"count_updated": c.model.Updated()})
+			c.eventSender <- fir.NewEvent("updated", map[string]any{"count_updated": c.model.Updated()})
 		}
 	}()
 	return c
