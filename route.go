@@ -260,7 +260,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 		r.Header.Get("Upgrade") == "websocket" {
 		// onWebsocket: upgrade to websocket
 		onWebsocket(w, r, rt)
-	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
+	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
 		decoder := json.NewDecoder(r.Body)
@@ -296,7 +296,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		// onForms
-		if r.Method == "POST" {
+		if r.Method == http.MethodPost {
 			formAction := ""
 			values := r.URL.Query()
 			if len(values) == 1 {
@@ -347,7 +347,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 
 			handleOnFormResult(onEventFunc(eventCtx), eventCtx)
 
-		} else {
+		} else if r.Method == http.MethodGet {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := Context{
@@ -358,6 +358,8 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				isOnLoad: true,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
+		} else {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }

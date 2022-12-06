@@ -45,7 +45,7 @@ func index() fir.RouteOptions {
 
 	query := func(ctx fir.Context) error {
 		req := new(queryRequest)
-		if err := ctx.DecodeParams(req); err != nil {
+		if err := ctx.Bind(req); err != nil {
 			return err
 		}
 		data := map[string]any{"cities": getCities(req.Query)}

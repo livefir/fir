@@ -21,7 +21,7 @@ type Tweet struct {
 
 func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	tweet := new(Tweet)
-	if err := ctx.DecodeParams(tweet); err != nil {
+	if err := ctx.Bind(tweet); err != nil {
 		return nil, err
 	}
 	if len(tweet.Body) < 3 {
@@ -60,7 +60,7 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 	}
 	return func(ctx fir.Context) error {
 		req := new(deleteReq)
-		if err := ctx.DecodeParams(req); err != nil {
+		if err := ctx.Bind(req); err != nil {
 			return err
 		}
 

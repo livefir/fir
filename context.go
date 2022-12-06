@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/adnaan/fir/patch"
+	"github.com/fatih/structs"
 )
 
 // Context is the context for a route handler.
@@ -22,8 +23,23 @@ type Context struct {
 	isOnLoad  bool
 }
 
-// DecodeParams decodes the event params into the given struct
-func (c Context) DecodeParams(v any) error {
+// Bind decodes the event params into the given struct
+func (c Context) Bind(v any) error {
+	if err := c.BindPathParams(v); err != nil {
+		return err
+	}
+
+	if err := c.BindQueryParams(v); err != nil {
+		return err
+	}
+	// if method is GET, bind query params without binding event params
+	if c.request.Method == http.MethodGet {
+		return nil
+	}
+	return c.BindEventParams(v)
+}
+
+func (c Context) BindEventParams(v any) error {
 	if c.event.IsForm {
 		if len(c.urlValues) == 0 {
 			var urlValues url.Values
@@ -35,6 +51,33 @@ func (c Context) DecodeParams(v any) error {
 		return c.route.formDecoder.Decode(v, c.urlValues)
 	}
 	return json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(v)
+}
+
+func (c Context) BindQueryParams(v any) error {
+	return c.route.formDecoder.Decode(v, c.request.URL.Query())
+}
+
+func (c Context) BindPathParams(v any) error {
+	s := structs.New(v)
+	for _, field := range s.Fields() {
+		if field.IsExported() {
+			if value := c.request.Context().Value(field.Tag("json")); value != nil {
+				err := field.Set(value)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+
+			if value := c.request.Context().Value(field.Name()); value != nil {
+				err := field.Set(value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // Request returns the http.Request for the current context
