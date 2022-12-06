@@ -7,31 +7,23 @@ import (
 	"github.com/adnaan/fir"
 )
 
-func app() fir.RouteOptions {
+func index() fir.RouteOptions {
 	var value int32
 
 	load := func(ctx fir.Context) error {
-		return r(fir.M{"count": atomic.LoadInt32(&value)})
+		return ctx.KV("count", atomic.LoadInt32(&value))
 	}
 
 	inc := func(ctx fir.Context) error {
-		return r(
-			fir.Morph(
-				"#count",
-				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, 1)}),
-			))
+		return ctx.MorphKV("count", atomic.AddInt32(&value, 1))
 	}
 
 	dec := func(ctx fir.Context) error {
-		return r(
-			fir.Morph(
-				"#count",
-				fir.Block("count", fir.M{"count": atomic.AddInt32(&value, -1)}),
-			))
+		return ctx.MorphKV("count", atomic.AddInt32(&value, -1))
 	}
 
 	return fir.RouteOptions{
-		fir.ID("app"),
+		fir.ID("counter"),
 		fir.Content("app.html"),
 		fir.OnLoad(load),
 		fir.OnEvent("inc", inc),
@@ -41,6 +33,6 @@ func app() fir.RouteOptions {
 
 func main() {
 	controller := fir.NewController("app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.RouteFunc(app))
+	http.Handle("/", controller.RouteFunc(index))
 	http.ListenAndServe(":9867", nil)
 }
