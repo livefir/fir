@@ -7,7 +7,7 @@ import (
 	"github.com/adnaan/fir"
 )
 
-func app() fir.RouteOptions {
+func index() fir.RouteOptions {
 	var value int32
 
 	load := func(ctx fir.Context) error {
@@ -23,7 +23,7 @@ func app() fir.RouteOptions {
 	}
 
 	return fir.RouteOptions{
-		fir.ID("app"),
+		fir.ID("counter"),
 		fir.Content("app.html"),
 		fir.OnLoad(load),
 		fir.OnEvent("inc", inc),
@@ -33,6 +33,6 @@ func app() fir.RouteOptions {
 
 func main() {
 	controller := fir.NewController("app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.RouteFunc(app))
+	http.Handle("/", controller.RouteFunc(index))
 	http.ListenAndServe(":9867", nil)
 }

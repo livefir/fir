@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>
+            {{ .app_name }}
+        </title>
+        <meta charset="UTF-8" />
+        <script
+            defer
+            src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"
+        ></script>
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"
+        ></script>
+    </head>
+    <body>
+        <div x-data>
+            {{ block "count" . }}
+                <div id="count">
+                    {{ .count }}
+                </div>
+            {{ end }}
+            <button @click="$fir.emit('inc')">+</button>
+            <button @click="$fir.emit('dec')">-</button>
+        </div>
+    </body>
+</html>
