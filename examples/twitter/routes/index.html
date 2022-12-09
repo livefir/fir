@@ -31,21 +31,16 @@
                         {{ .LikesCount }}
                     </div>
                     <form
-                        id="likeTweet"
                         method="post"
-                        action="/?id=likeTweet"
                         @submit.prevent="$fir.submit"
                         style="margin-right:1rem">
                         <input type="hidden" name="tweetID" value="{{ .ID }}" />
-                        <button type="submit">Like</button>
-                    </form>
-                    <form
-                        id="deleteTweet"
-                        method="post"
-                        action="/?id=deleteTweet"
-                        @submit.prevent="$fir.submit">
-                        <input type="hidden" name="tweetID" value="{{ .ID }}" />
-                        <button type="submit">X</button>
+                        <button formaction="/?id=likeTweet" type="submit">
+                            Like
+                        </button>
+                        <button formaction="/?id=deleteTweet" type="submit">
+                            Delete
+                        </button>
                     </form>
                 </div>
             {{ end }}

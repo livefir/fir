@@ -50,10 +50,13 @@ const Plugin = (Alpine) => {
                     console.error("Element is not a form. Can't submit event. Please use $fir.emit for non-form elements")
                     return
                 }
-                if (!el.id) {
-                    console.error("Form element has no id. Can't submit event. Please use $fir.emit for non-form elements")
+                
+                if (!el.id && !event.submitter && !event.submitter.formAction) {
+                    console.error(`Form element has niether id set nor it was sumbmitted by an event with formaction 
+                    set. Can't submit event. Please use $fir.emit for non-form elements`)
                     return
                 }
+
                 let inputs = [...el.querySelectorAll("input[data-rules]")];
                 let formErrors = { errors: {} }
                 inputs.map((input) => {
@@ -75,13 +78,19 @@ const Plugin = (Alpine) => {
                 Alpine.store(el.id, nextStore)
                 if (Object.keys(formErrors.errors).length == 0) {
                     let formData = new FormData(el);
+                    let eventID = el.id;
+                    if (event.submitter && event.submitter.formAction) {
+                        const url = new URL(event.submitter.formAction);
+                        if (url.searchParams.get("id")) {
+                            eventID = url.searchParams.get("id")
+                        }
+                    }
                     if (event.submitter && event.submitter.name) {
                         formData.append(event.submitter.name, event.submitter.value)
                     }
                     let params = {};
                     formData.forEach((value, key) => params[key] = new Array(value));
-
-                    post(el, el.id, params, true)
+                    post(el, eventID, params, true)
                     if (formMethod.toLowerCase() === "get") {
                         const url = new URL(window.location);
                         formData.forEach((value, key) => url.searchParams.set(key, value));
