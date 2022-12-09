@@ -1,4 +1,4 @@
-package app
+package routes
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/patch"
-	"github.com/golang/glog"
 	"github.com/timshannon/bolthold"
 )
 
@@ -25,7 +24,6 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	if err := ctx.Bind(tweet); err != nil {
 		return nil, err
 	}
-	glog.Errorf("tweet %+v", tweet)
 	if len(tweet.Body) < 3 {
 		return nil, ctx.FieldError("body", errors.New("tweet is too short"))
 	}
@@ -36,7 +34,7 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	return tweet, nil
 }
 
-func load(db *bolthold.Store) fir.OnEventFunc {
+func loadTweets(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.Context) error {
 		var tweets []Tweet
 		if err := db.Find(&tweets, &bolthold.Query{}); err != nil {
@@ -73,13 +71,13 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
-func Route(db *bolthold.Store) fir.RouteFunc {
+func Index(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
 		return fir.RouteOptions{
-			fir.ID("app"),
-			fir.Content("routes/app/page.html"),
+			fir.ID("index"),
+			fir.Content("routes/index.html"),
 			fir.Layout("routes/layout.html"),
-			fir.OnLoad(load(db)),
+			fir.OnLoad(loadTweets(db)),
 			fir.OnEvent("createTweet", createTweet(db)),
 			fir.OnEvent("deleteTweet", deleteTweet(db)),
 		}
