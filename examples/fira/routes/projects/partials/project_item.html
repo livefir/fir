@@ -1,0 +1,9 @@
+{{ block "projectitem" . }}
+    <a id="projectitem-{{ .ID }}" href="/{{ .ID }}/show">
+        <div class="content box mt-2" style="text-decoration: none;">
+            <p>
+                {{ .Title }}
+            </p>
+        </div>
+    </a>
+{{ end }}

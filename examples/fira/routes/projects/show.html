@@ -1,0 +1,118 @@
+{{ define "content" }}
+    <div
+        x-data="{loading: false,toggle(){this.loading = !this.loading}}"
+        class="columns is-mobile mt-5"
+    >
+        <div class="column is-three-fifths">
+            <nav
+                class="breadcrumb has-succeeds-separator"
+                aria-label="breadcrumbs"
+            >
+                <ul>
+                    <li>
+                        <a href="/"> Projects </a>
+                    </li>
+                    <li class="is-active">
+                        <a
+                            href="#"
+                            aria-current="page"
+                        >
+                            Edit
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <hr />
+            {{ block "project" . }}
+                <div id="project">
+                    <form
+                        method="post"
+                        id="project-update"
+                        @fir:submit:project-update.window="toggle"
+                        @submit.prevent="$fir.submit"
+                    >
+                        <div class="field">
+                            <input
+                                name="action"
+                                value="update"
+                                type="hidden"
+                            />
+                        </div>
+                        <div class="field">
+                            <label class="label"> Title </label>
+                            <div class="control">
+                                <input
+                                    name="title"
+                                    class="input"
+                                    type="text"
+                                    value="{{ .Title }}"
+                                    placeholder="Title"
+                                />
+                            </div>
+                            {{ block "title-error" . }}
+                                <div id="title-error">
+                                    <p class="help is-danger">
+                                        {{ .titleError }}
+                                    </p>
+                                </div>
+                            {{ end }}
+                        </div>
+                        <div class="field">
+                            <label class="label"> Description </label>
+                            <div class="control">
+                                <input
+                                    name="description"
+                                    class="input"
+                                    type="text"
+                                    value="{{ .Description }}"
+                                    placeholder="Description"
+                                />
+                            </div>
+                            {{ block "description-error" . }}
+                                <div id="title-error">
+                                    <p class="help is-danger">
+                                        {{ .descriptionError }}
+                                    </p>
+                                </div>
+                            {{ end }}
+                        </div>
+                        <div class="field">
+                            <div class="control">
+                                <button
+                                    type="submit"
+                                    :class="loading && 'is-loading'"
+                                    class="button is-link"
+                                >
+                                    Update
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <form
+                        method="post"
+                        id="project-delete"
+                        class="mt-2"
+                        @submit.prevent="$fir.submit"
+                    >
+                        <input
+                            name="action"
+                            value="delete"
+                            type="hidden"
+                        />
+                        <div class="control">
+                            <button
+                                type="submit"
+                                class="button is-danger"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            {{ end }}
+        </div>
+        <div class="column has-text-centered">
+            <a href="/{{ .ID }}/stories"> Stories </a>
+        </div>
+    </div>
+{{ end }}

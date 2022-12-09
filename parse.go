@@ -6,34 +6,6 @@ import (
 	"path/filepath"
 )
 
-func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
-	pageLayoutPath := filepath.Join(opt.publicDir, opt.layout)
-	// is layout html content or a file/directory
-	if isFileOrString(pageLayoutPath, opt) {
-		return template.Must(template.New("").Funcs(opt.funcMap).Parse(opt.layout)), nil
-	}
-
-	// layout must be  a file or directory
-	if !isDir(pageLayoutPath, opt) {
-		return nil, fmt.Errorf("layout %s is not a file or directory", pageLayoutPath)
-	}
-	// compile layout
-	commonFiles := []string{pageLayoutPath}
-	// global partials
-	for _, partial := range opt.partials {
-		commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
-	}
-
-	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.funcMap)
-	if opt.hasEmbedFS {
-		layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, commonFiles...))
-	} else {
-		layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFiles(commonFiles...))
-	}
-
-	return template.Must(layoutTemplate.Clone()), nil
-}
-
 func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
 	// is content html content or a file/directory
 	pageContentPath := filepath.Join(opt.publicDir, opt.content)
@@ -42,8 +14,7 @@ func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
 			template.New(
 				opt.layoutContentName).
 				Funcs(opt.funcMap).
-				Parse(opt.content),
-		), nil
+				Parse(opt.content)), nil
 	}
 	// content must be  a file or directory
 
@@ -64,32 +35,38 @@ func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
 	return contentTemplate, nil
 }
 
-func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
-	// 1. build layout template
+func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
 	pageLayoutPath := filepath.Join(opt.publicDir, opt.layout)
-	var layoutTemplate *template.Template
-	// is layout,  html content or a file/directory
+	// is layout html content or a file/directory
 	if isFileOrString(pageLayoutPath, opt) {
-		layoutTemplate = template.Must(template.New("base").Funcs(opt.funcMap).Parse(opt.layout))
+		return template.Must(template.New("").Funcs(opt.funcMap).Parse(opt.layout)), nil
+	}
+
+	// layout must be  a file
+	if isDir(pageLayoutPath, opt) {
+		return nil, fmt.Errorf("layout %s is a directory but must be a file", pageLayoutPath)
+	}
+	// compile layout
+	commonFiles := []string{pageLayoutPath}
+	// global partials
+	for _, partial := range opt.partials {
+		commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
+	}
+
+	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.funcMap)
+	if opt.hasEmbedFS {
+		layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, commonFiles...))
 	} else {
-		// layout must be  a file or directory
-		if isDir(pageLayoutPath, opt) {
-			return nil, fmt.Errorf("layout %s is a directory but must be a file", pageLayoutPath)
-		}
+		layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFiles(commonFiles...))
+	}
 
-		// compile layout
-		commonFiles := []string{pageLayoutPath}
-		// global partials
-		for _, partial := range opt.partials {
-			commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
-		}
+	return template.Must(layoutTemplate.Clone()), nil
+}
 
-		layoutTemplate = template.New(filepath.Base(pageLayoutPath)).Funcs(opt.funcMap)
-		if opt.hasEmbedFS {
-			layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, commonFiles...))
-		} else {
-			layoutTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFiles(commonFiles...))
-		}
+func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
+	layoutTemplate, err := layoutSetContentEmpty(opt)
+	if err != nil {
+		return nil, err
 	}
 
 	//log.Println("compiled layoutTemplate...")
@@ -102,7 +79,7 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 	var pageTemplate *template.Template
 	pageContentPath := filepath.Join(opt.publicDir, opt.content)
 	if isFileOrString(pageContentPath, opt) {
-		pageTemplate = template.Must(layoutTemplate.Parse(opt.content))
+		pageTemplate = template.Must(layoutTemplate.Parse((opt.content)))
 	} else {
 		var pageFiles []string
 		// page and its partials

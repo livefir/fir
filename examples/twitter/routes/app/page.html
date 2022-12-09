@@ -10,13 +10,8 @@
         method="post"
         action="/?id=createTweet"
         @submit.prevent="$fir.submit"
-        style="margin-top:1rem;margin-bottom:1rem;"
-    >
-        <input
-            type="text"
-            name="body"
-            placeholder="a new tweet"
-        />
+        style="margin-top:1rem;margin-bottom:1rem;">
+        <input type="text" name="body" placeholder="a new tweet" />
         {{ block "fir-error-createTweet-body" . }}
             <p id="fir-error-createTweet-body">
                 {{ .fir.Error "createTweet.body" }}
@@ -24,28 +19,19 @@
         {{ end }}
         <button type="submit">Submit</button>
     </form>
-    <div
-        x-data
-        id="tweets"
-    >
+    <div x-data id="tweets">
         {{ range .tweets }}
             {{ block "tweet" . }}
                 <div
                     id="tweet-{{ .ID }}"
-                    style="display: flex;margin-top:1rem;margin-bottom:1rem;"
-                >
+                    style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                     <div style="margin-right:1rem">{{ .Body }}</div>
                     <form
                         id="deleteTweet"
                         method="post"
                         action="/?id=deleteTweet"
-                        @submit.prevent="$fir.submit"
-                    >
-                        <input
-                            type="hidden"
-                            name="tweetID"
-                            value="{{ .ID }}"
-                        />
+                        @submit.prevent="$fir.submit">
+                        <input type="hidden" name="tweetID" value="{{ .ID }}" />
                         <button type="submit">X</button>
                     </form>
                 </div>

@@ -7,6 +7,7 @@ import (
 
 	"github.com/adnaan/fir"
 	"github.com/adnaan/fir/patch"
+	"github.com/golang/glog"
 	"github.com/timshannon/bolthold"
 )
 
@@ -24,6 +25,7 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	if err := ctx.Bind(tweet); err != nil {
 		return nil, err
 	}
+	glog.Errorf("tweet %+v", tweet)
 	if len(tweet.Body) < 3 {
 		return nil, ctx.FieldError("body", errors.New("tweet is too short"))
 	}

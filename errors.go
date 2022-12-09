@@ -10,7 +10,7 @@ import (
 )
 
 func morphFirErrors(ctx Context) (func(err error) []patch.Op, func() []patch.Op) {
-	eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
+	eventIdName := fmt.Sprintf("%s%s", firErrorPrefix, ctx.event.ID)
 	eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 	routeName := "fir-err-route"
 	routeNameSelector := fmt.Sprintf("#%s", routeName)

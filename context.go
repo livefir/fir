@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 
 	"github.com/adnaan/fir/patch"
 	"github.com/fatih/structs"
@@ -25,6 +26,9 @@ type Context struct {
 
 // Bind decodes the event params into the given struct
 func (c Context) Bind(v any) error {
+	if reflect.ValueOf(v).Kind() != reflect.Ptr {
+		return errors.New("bind value must be a pointer")
+	}
 	if err := c.BindPathParams(v); err != nil {
 		return err
 	}
@@ -32,10 +36,7 @@ func (c Context) Bind(v any) error {
 	if err := c.BindQueryParams(v); err != nil {
 		return err
 	}
-	// if method is GET, bind query params without binding event params
-	if c.request.Method == http.MethodGet {
-		return nil
-	}
+
 	return c.BindEventParams(v)
 }
 
@@ -61,7 +62,7 @@ func (c Context) BindPathParams(v any) error {
 	s := structs.New(v)
 	for _, field := range s.Fields() {
 		if field.IsExported() {
-			if value := c.request.Context().Value(field.Tag("json")); value != nil {
+			if value := c.request.Context().Value(field.Tag("json")); value != nil && !reflect.ValueOf(v).IsZero() {
 				err := field.Set(value)
 				if err != nil {
 					return err
@@ -69,7 +70,7 @@ func (c Context) BindPathParams(v any) error {
 				continue
 			}
 
-			if value := c.request.Context().Value(field.Name()); value != nil {
+			if value := c.request.Context().Value(field.Name()); value != nil && !reflect.ValueOf(v).IsZero() {
 				err := field.Set(value)
 				if err != nil {
 					return err

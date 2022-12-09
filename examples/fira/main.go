@@ -1,38 +1,30 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
-	"sync/atomic"
 
 	"github.com/adnaan/fir"
+	"github.com/adnaan/fir/examples/fira/ent"
+	projects "github.com/adnaan/fir/examples/fira/routes/projects"
 )
 
-func index() fir.RouteOptions {
-	var value int32
-
-	load := func(ctx fir.Context) error {
-		return ctx.KV("count", atomic.LoadInt32(&value))
-	}
-
-	inc := func(ctx fir.Context) error {
-		return ctx.MorphKV("count", atomic.AddInt32(&value, 1))
-	}
-
-	dec := func(ctx fir.Context) error {
-		return ctx.MorphKV("count", atomic.AddInt32(&value, -1))
-	}
-
-	return fir.RouteOptions{
-		fir.ID("counter"),
-		fir.Content("app.html"),
-		fir.OnLoad(load),
-		fir.OnEvent("inc", inc),
-		fir.OnEvent("dec", dec),
-	}
-}
-
 func main() {
+	db, err := ent.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	// db, err := ent.Open("sqlite3", "file:autobahn.db?cache=shared&_fk=1")
+	if err != nil {
+		log.Fatalf("failed opening connection to sqlite: %v", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	// Run the auto migration tool.
+	if err := db.Schema.Create(ctx); err != nil {
+		log.Fatalf("failed creating schema resources: %v", err)
+	}
+
 	controller := fir.NewController("app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.RouteFunc(index))
+	http.Handle("/", controller.RouteFunc(projects.Index(db)))
+	http.Handle("/{id}/show", controller.RouteFunc(projects.Show(db)))
 	http.ListenAndServe(":9867", nil)
 }
