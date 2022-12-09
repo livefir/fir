@@ -1,4 +1,4 @@
-package app
+package routes
 
 import (
 	"errors"
@@ -21,7 +21,7 @@ type Tweet struct {
 
 func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	tweet := new(Tweet)
-	if err := ctx.DecodeParams(tweet); err != nil {
+	if err := ctx.Bind(tweet); err != nil {
 		return nil, err
 	}
 	if len(tweet.Body) < 3 {
@@ -34,7 +34,7 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 	return tweet, nil
 }
 
-func load(db *bolthold.Store) fir.OnEventFunc {
+func loadTweets(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.Context) error {
 		var tweets []Tweet
 		if err := db.Find(&tweets, &bolthold.Query{}); err != nil {
@@ -54,13 +54,34 @@ func createTweet(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+func likeTweet(db *bolthold.Store) fir.OnEventFunc {
+	type likeReq struct {
+		TweetID uint64 `json:"tweetID"`
+	}
+	return func(ctx fir.Context) error {
+		req := new(likeReq)
+		if err := ctx.Bind(req); err != nil {
+			return err
+		}
+		var tweet Tweet
+		if err := db.Get(req.TweetID, &tweet); err != nil {
+			return err
+		}
+		tweet.LikesCount++
+		if err := db.Update(req.TweetID, &tweet); err != nil {
+			return err
+		}
+		return ctx.Morph(fmt.Sprintf("#tweet-%d", req.TweetID), patch.Block("tweet", tweet))
+	}
+}
+
 func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 	type deleteReq struct {
 		TweetID uint64 `json:"tweetID"`
 	}
 	return func(ctx fir.Context) error {
 		req := new(deleteReq)
-		if err := ctx.DecodeParams(req); err != nil {
+		if err := ctx.Bind(req); err != nil {
 			return err
 		}
 
@@ -71,15 +92,16 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
-func Route(db *bolthold.Store) fir.RouteFunc {
+func Index(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
 		return fir.RouteOptions{
-			fir.ID("app"),
-			fir.Content("routes/app/page.html"),
+			fir.ID("index"),
+			fir.Content("routes/index.html"),
 			fir.Layout("routes/layout.html"),
-			fir.OnLoad(load(db)),
+			fir.OnLoad(loadTweets(db)),
 			fir.OnEvent("createTweet", createTweet(db)),
 			fir.OnEvent("deleteTweet", deleteTweet(db)),
+			fir.OnEvent("likeTweet", likeTweet(db)),
 		}
 	}
 }

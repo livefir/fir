@@ -108,7 +108,7 @@ func (i *index) dec(ctx fir.Context) error {
 }
 func (i *index) updated(ctx fir.Context) error {
 	var data map[string]any
-	err := ctx.DecodeParams(&data)
+	err := ctx.Bind(&data)
 	if err != nil {
 		return err
 	}

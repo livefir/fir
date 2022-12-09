@@ -1,0 +1,54 @@
+{{ define "content" }}
+    {{ block "fir-error-route" . }}
+        <p id="fir-error-route">
+            {{ .fir.Error "route" }}
+        </p>
+    {{ end }}
+    <form
+        x-data
+        id="createTweet"
+        method="post"
+        action="/?id=createTweet"
+        @submit.prevent="$fir.submit"
+        style="margin-top:1rem;margin-bottom:1rem;">
+        <input type="text" name="body" placeholder="a new tweet" />
+        {{ block "fir-error-createTweet-body" . }}
+            <p id="fir-error-createTweet-body">
+                {{ .fir.Error "createTweet.body" }}
+            </p>
+        {{ end }}
+        <button type="submit">Submit</button>
+    </form>
+    <div x-data id="tweets">
+        {{ range .tweets }}
+            {{ block "tweet" . }}
+                <div
+                    id="tweet-{{ .ID }}"
+                    style="display: flex;margin-top:1rem;margin-bottom:1rem;">
+                    <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
+                    <div style="margin-right:1rem">
+                        likes:
+                        {{ .LikesCount }}
+                    </div>
+                    <form
+                        id="likeTweet"
+                        method="post"
+                        action="/?id=likeTweet"
+                        @submit.prevent="$fir.submit"
+                        style="margin-right:1rem">
+                        <input type="hidden" name="tweetID" value="{{ .ID }}" />
+                        <button type="submit">Like</button>
+                    </form>
+                    <form
+                        id="deleteTweet"
+                        method="post"
+                        action="/?id=deleteTweet"
+                        @submit.prevent="$fir.submit">
+                        <input type="hidden" name="tweetID" value="{{ .ID }}" />
+                        <button type="submit">X</button>
+                    </form>
+                </div>
+            {{ end }}
+        {{ end }}
+    </div>
+{{ end }}

@@ -11,9 +11,10 @@ import (
 
 	"github.com/adnaan/fir/patch"
 	"github.com/golang/glog"
-	"github.com/tidwall/gjson"
 	"golang.org/x/exp/slices"
 )
+
+var firErrorPrefix = "fir-error-"
 
 // RouteOption is a function that sets route options
 type RouteOption func(*routeOpt)
@@ -29,56 +30,6 @@ type Route interface{ Options() RouteOptions }
 
 // OnEventFunc is a function that handles an http event request
 type OnEventFunc func(ctx Context) error
-
-func newRouteContext(ctx Context, errs map[string]any) *RouteContext {
-	return &RouteContext{
-		URLPath: ctx.request.URL.Path,
-		Name:    ctx.route.appName,
-		errors:  errs,
-	}
-}
-
-// RouteContext is a struct that holds route context data and is passed to the template
-type RouteContext struct {
-	Name    string
-	URLPath string
-	errors  map[string]any
-}
-
-// ActiveRoute returns the class if the route is active
-func (rc *RouteContext) ActiveRoute(path, class string) string {
-	if rc.URLPath == path {
-		return class
-	}
-	return ""
-}
-
-// NotActive returns the class if the route is not active
-func (rc *RouteContext) NotActiveRoute(path, class string) string {
-	if rc.URLPath != path {
-		return class
-	}
-	return ""
-}
-
-// Error can be used to lookup an error by name
-// Example: {{.fir.Error "myevent.field"}} will return the error for the field myevent.field
-// Example: {{.fir.Error "myevent" "field"}} will return the error for the event myevent.field
-// It can be used in conjunction with ctx.FieldError to get the error for a field
-func (rc *RouteContext) Error(paths ...string) any {
-	path := ""
-	if len(paths) == 0 {
-		path = "route"
-	} else {
-		for _, p := range paths {
-			p = strings.Trim(p, ".")
-			path += p + "."
-		}
-	}
-	path = strings.Trim(path, ".")
-	data, _ := json.Marshal(rc.errors)
-	return gjson.GetBytes(data, path).Value()
-}
 
 // ID  sets the route unique identifier. This is used to identify the route in pubsub.
 func ID(id string) RouteOption {
@@ -260,7 +211,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 		r.Header.Get("Upgrade") == "websocket" {
 		// onWebsocket: upgrade to websocket
 		onWebsocket(w, r, rt)
-	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == "POST" {
+	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
 		decoder := json.NewDecoder(r.Body)
@@ -296,7 +247,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		// onForms
-		if r.Method == "POST" {
+		if r.Method == http.MethodPost {
 			formAction := ""
 			values := r.URL.Query()
 			if len(values) == 1 {
@@ -347,7 +298,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 
 			handleOnFormResult(onEventFunc(eventCtx), eventCtx)
 
-		} else {
+		} else if r.Method == http.MethodGet {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := Context{
@@ -358,6 +309,8 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				isOnLoad: true,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
+		} else {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -404,7 +357,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		var patchsetData []patch.Op
 
 		for k, v := range fieldErrorsData {
-			fieldErrorName := fmt.Sprintf("fir-error-%s-%s", ctx.event.ID, k)
+			fieldErrorName := fmt.Sprintf("%s%s-%s", firErrorPrefix, ctx.event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
 			errs := map[string]any{
@@ -433,7 +386,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 			ctx.event.ID: userErr.Error(),
 			"route":      userErr.Error()}
 
-		eventIdName := fmt.Sprintf("fir-error-%s", ctx.event.ID)
+		eventIdName := fmt.Sprintf("%s%s", firErrorPrefix, ctx.event.ID)
 		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
 			patchsetData = append(patchsetData,
@@ -441,7 +394,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 					patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
-		routeName := "fir-error-route"
+		routeName := fmt.Sprintf("%s-route", firErrorPrefix)
 		routeNameSelector := fmt.Sprintf("#%s", routeName)
 		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
 			patchsetData = append(patchsetData,
@@ -591,12 +544,11 @@ func (rt *route) findFirErrorTemplates() {
 	for _, t := range rt.template.Templates() {
 		if t.Name() == rt.layoutContentName {
 			for _, t1 := range t.Templates() {
-				if strings.Contains(t1.Name(), "fir-error-") {
+				if strings.Contains(t1.Name(), firErrorPrefix) {
 					rt.firErrorTemplates = append(rt.firErrorTemplates, t1.Name())
 				}
 			}
 		}
 
 	}
-
 }

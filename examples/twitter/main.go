@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/examples/twitter/routes/app"
+	"github.com/adnaan/fir/examples/twitter/routes"
 	"github.com/timshannon/bolthold"
 )
 
@@ -16,6 +16,6 @@ func main() {
 	}
 
 	controller := fir.NewController("app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.RouteFunc(app.Route(db)))
+	http.Handle("/", controller.RouteFunc(routes.Index(db)))
 	http.ListenAndServe(":9867", nil)
 }
