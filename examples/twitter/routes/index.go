@@ -54,6 +54,27 @@ func createTweet(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+func likeTweet(db *bolthold.Store) fir.OnEventFunc {
+	type likeReq struct {
+		TweetID uint64 `json:"tweetID"`
+	}
+	return func(ctx fir.Context) error {
+		req := new(likeReq)
+		if err := ctx.Bind(req); err != nil {
+			return err
+		}
+		var tweet Tweet
+		if err := db.Get(req.TweetID, &tweet); err != nil {
+			return err
+		}
+		tweet.LikesCount++
+		if err := db.Update(req.TweetID, &tweet); err != nil {
+			return err
+		}
+		return ctx.Morph(fmt.Sprintf("#tweet-%d", req.TweetID), patch.Block("tweet", tweet))
+	}
+}
+
 func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 	type deleteReq struct {
 		TweetID uint64 `json:"tweetID"`
@@ -80,6 +101,7 @@ func Index(db *bolthold.Store) fir.RouteFunc {
 			fir.OnLoad(loadTweets(db)),
 			fir.OnEvent("createTweet", createTweet(db)),
 			fir.OnEvent("deleteTweet", deleteTweet(db)),
+			fir.OnEvent("likeTweet", likeTweet(db)),
 		}
 	}
 }

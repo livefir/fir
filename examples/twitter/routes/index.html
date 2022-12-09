@@ -25,7 +25,20 @@
                 <div
                     id="tweet-{{ .ID }}"
                     style="display: flex;margin-top:1rem;margin-bottom:1rem;">
-                    <div style="margin-right:1rem">{{ .Body }}</div>
+                    <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
+                    <div style="margin-right:1rem">
+                        likes:
+                        {{ .LikesCount }}
+                    </div>
+                    <form
+                        id="likeTweet"
+                        method="post"
+                        action="/?id=likeTweet"
+                        @submit.prevent="$fir.submit"
+                        style="margin-right:1rem">
+                        <input type="hidden" name="tweetID" value="{{ .ID }}" />
+                        <button type="submit">Like</button>
+                    </form>
                     <form
                         id="deleteTweet"
                         method="post"
