@@ -49,7 +49,7 @@ func index() fir.RouteOptions {
 			return err
 		}
 		data := map[string]any{"cities": getCities(req.Query)}
-		return ctx.ReplaceKV("cities", data)
+		return ctx.DOM.ReplaceKV("cities", data)
 	}
 
 	return fir.RouteOptions{

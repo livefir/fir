@@ -1,0 +1,282 @@
+package dom
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"io"
+
+	"github.com/golang/glog"
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/html"
+)
+
+// NewPatcher creates a new dom patcher
+func NewPatcher() Patcher {
+	return &patcher{
+		patchset: Patchset{},
+	}
+}
+
+type Patcher interface {
+	// Replace patches the dom at the given selector with the rendered template
+	Replace(selector string, t TemplateRenderer) Patcher
+	// ReplaceKV is a convenience method to replace a dom element when template name and selector are the same
+	/* e.g.
+	{{ block "cities" .}}
+		<div id="cities">
+		{{range .cities}}
+		<div>{{.}}</div>
+		{{end}}
+	</div>
+	...
+	ctx.DOM.ReplaceKV("cities", cities)
+	{{end}} */
+	ReplaceKV(key string, value any) Patcher
+	// After patches the dom after the given selector with the rendered template
+	After(selector string, t TemplateRenderer) Patcher
+	// Before patches the dom before the given selector with the rendered template
+	Before(selector string, t TemplateRenderer) Patcher
+	// Append patches the dom after the given selector with the rendered template
+	Append(selector string, t TemplateRenderer) Patcher
+	// Prepend patches the dom before the given selector with the rendered template
+	Prepend(selector string, t TemplateRenderer) Patcher
+	// Remove patches the dom to remove the given selector
+	Remove(selector string) Patcher
+	// Reload patches the dom to reload the page
+	Reload() Patcher
+	// Store patches the dom to update the alpinejs store
+	Store(name string, data any) Patcher
+	// ResetForm patches the dom to reset the form
+	ResetForm(selector string) Patcher
+	// Navigate patches the dom to navigate to the given url
+	Navigate(url string) Patcher
+	// Patchset returns the patchset
+	Patchset() Patchset
+	// Error satisfies the error interface so that Context can return a Patcher
+	Error() string
+}
+
+var _ error = (Patcher)(nil)
+
+// PatchType is the type of patch operation
+type PatchType string
+
+const (
+	replace     PatchType = "replace"
+	after       PatchType = "after"
+	before      PatchType = "before"
+	appendOp    PatchType = "append"
+	prepend     PatchType = "prepend"
+	remove      PatchType = "remove"
+	reload      PatchType = "reload"
+	updateStore PatchType = "store"
+	resetForm   PatchType = "resetForm"
+	navigate    PatchType = "navigate"
+)
+
+// Patch is an interface for all patch operations
+type Patch struct {
+	// Type is the type of patch operation
+	Type PatchType `json:"op"`
+	// Selector is the css selector for the element to patch
+	Selector *string `json:"selector,omitempty"`
+	// Value is the value for the patch operation
+	Value any `json:"value,omitempty"`
+}
+
+// Patchset is a collection of patch operations
+type Patchset []Patch
+
+type patcher struct {
+	patchset Patchset
+}
+
+func (p *patcher) Replace(selector string, t TemplateRenderer) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     replace,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) ReplaceKV(key string, value any) Patcher {
+	selector := fmt.Sprintf("#%s", key)
+	t := NewTemplateRenderer(key, value)
+	p.patchset = append(p.patchset, Patch{
+		Type:     replace,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) After(selector string, t TemplateRenderer) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     after,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) Before(selector string, t TemplateRenderer) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     before,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) Append(selector string, t TemplateRenderer) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     appendOp,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) Prepend(selector string, t TemplateRenderer) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     prepend,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) Remove(selector string) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     remove,
+		Selector: &selector,
+	})
+	return p
+}
+
+func (p *patcher) Reload() Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type: reload,
+	})
+	return p
+}
+
+func (p *patcher) Store(name string, data any) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     updateStore,
+		Selector: &name,
+		Value:    data,
+	})
+	return p
+}
+
+func (p *patcher) ResetForm(selector string) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     resetForm,
+		Selector: &selector,
+	})
+	return p
+}
+
+func (p *patcher) Navigate(url string) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:  navigate,
+		Value: url,
+	})
+	return p
+}
+
+func (p *patcher) Patchset() Patchset {
+	return p.patchset
+}
+
+func (p *patcher) Error() string {
+	b, _ := json.Marshal(p.patchset)
+	return string(b)
+}
+
+// MarshalPatchset renders the patch operations to a json string
+func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
+	var renderedPatchset []Patch
+	firErrorPatchExists := false
+	for _, p := range patchset {
+		switch p.Type {
+		case updateStore, navigate, resetForm, reload, remove:
+			renderedPatchset = append(renderedPatchset, p)
+		case replace, after, before, appendOp, prepend:
+			tmpl, ok := p.Value.(map[string]any)
+			if !ok {
+				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
+				continue
+			}
+
+			if *p.Selector == "#fir-error" {
+				firErrorPatchExists = true
+			}
+
+			var err error
+			p.Value, err = buildTemplateValue(t, tmpl["name"].(string), tmpl["data"])
+			if err != nil {
+				glog.Errorf("[warning]buildPatchOperations error: %v,%+v \n", err, tmpl)
+				continue
+			}
+
+			renderedPatchset = append(renderedPatchset, p)
+		default:
+			continue
+		}
+	}
+
+	if !firErrorPatchExists {
+		// unset error patch
+		firError := "#fir-error"
+		tmplVal, err := buildTemplateValue(t, "fir-error", nil)
+		if err == nil {
+			renderedPatchset = append([]Patch{{
+				Type:     replace,
+				Selector: &firError,
+				Value:    tmplVal,
+			}}, renderedPatchset...)
+		}
+	}
+
+	if len(renderedPatchset) == 0 {
+		return nil
+	}
+
+	data, err := json.Marshal(renderedPatchset)
+	if err != nil {
+		glog.Errorf("buildPatchOperations marshal error: %+v, %v \n", renderedPatchset, err)
+		return nil
+	}
+	return data
+}
+
+func buildTemplateValue(t *template.Template, name string, data any) (string, error) {
+	var buf bytes.Buffer
+	defer buf.Reset()
+	if name == "_fir_html" {
+		buf.WriteString(data.(string))
+	} else {
+		t.Option("missingkey=zero")
+		err := t.ExecuteTemplate(&buf, name, data)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	m := minify.New()
+	m.Add("text/html", &html.Minifier{})
+	r := m.Reader("text/html", &buf)
+	var buf1 bytes.Buffer
+	defer buf1.Reset()
+	_, err := io.Copy(&buf1, r)
+	if err != nil {
+		return "", err
+	}
+	value := buf1.String()
+	return value, nil
+}

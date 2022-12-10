@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/adnaan/fir/patch"
+	"github.com/adnaan/fir/dom"
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 )
@@ -34,12 +34,13 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 	go func() {
 		for event := range route.eventSender {
 			eventCtx := Context{
-				event:    event,
+				Event:    event,
 				request:  r,
 				response: w,
 				route:    route,
+				DOM:      dom.NewPatcher(),
 			}
-
+			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 			onEventFunc, ok := route.onEvents[event.ID]
 			if !ok {
 				glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
@@ -101,10 +102,11 @@ loop:
 		}
 
 		eventCtx := Context{
-			event:    event,
+			Event:    event,
 			request:  r,
 			response: w,
 			route:    route,
+			DOM:      dom.NewPatcher(),
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)
@@ -118,8 +120,8 @@ loop:
 	}
 }
 
-func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset []patch.Op) error {
-	message := patch.RenderJSON(t, patchset)
+func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset dom.Patchset) error {
+	message := dom.MarshalPatchset(t, patchset)
 	if len(message) == 0 {
 		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, patchset %+v", channel, patchset)
 		log.Println(err)

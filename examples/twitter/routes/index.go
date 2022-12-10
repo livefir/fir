@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/patch"
 	"github.com/timshannon/bolthold"
 )
 
@@ -50,7 +49,7 @@ func createTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err != nil {
 			return err
 		}
-		return ctx.Append("#tweets", patch.Block("tweet", tweet))
+		return ctx.DOM.Append("#tweets", ctx.RenderBlock("tweet", tweet))
 	}
 }
 
@@ -71,7 +70,7 @@ func likeTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Update(req.TweetID, &tweet); err != nil {
 			return err
 		}
-		return ctx.Replace(fmt.Sprintf("#tweet-%d", req.TweetID), patch.Block("tweet", tweet))
+		return ctx.DOM.Replace(fmt.Sprintf("#tweet-%d", req.TweetID), ctx.RenderBlock("tweet", tweet))
 	}
 }
 
@@ -88,7 +87,7 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Delete(req.TweetID, &Tweet{}); err != nil {
 			return err
 		}
-		return ctx.Remove(fmt.Sprintf("#tweet-%d", req.TweetID))
+		return ctx.DOM.Remove(fmt.Sprintf("#tweet-%d", req.TweetID))
 	}
 }
 
