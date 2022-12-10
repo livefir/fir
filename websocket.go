@@ -40,7 +40,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 				route:    route,
 				DOM:      dom.NewPatcher(),
 			}
-
+			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 			onEventFunc, ok := route.onEvents[event.ID]
 			if !ok {
 				glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)

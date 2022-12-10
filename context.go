@@ -26,8 +26,18 @@ type Context struct {
 
 // Bind decodes the event params into the given struct
 func (c Context) Bind(v any) error {
-	if reflect.ValueOf(v).Kind() != reflect.Ptr {
-		return errors.New("bind value must be a pointer")
+	if v == nil {
+		return errors.New("bind value cannot be nil")
+	}
+	val := reflect.ValueOf(v)
+	if val.Kind() != reflect.Ptr {
+		return errors.New("bind value must be a pointer to a struct")
+	}
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem() // dereference the pointer
+		if val.Kind() != reflect.Struct {
+			return errors.New("bind value must be a pointer to a struct")
+		}
 	}
 	if err := c.BindPathParams(v); err != nil {
 		return err
@@ -40,25 +50,20 @@ func (c Context) Bind(v any) error {
 	return c.BindEventParams(v)
 }
 
-func (c Context) BindEventParams(v any) error {
-	if c.event.IsForm {
-		if len(c.urlValues) == 0 {
-			var urlValues url.Values
-			if err := json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(&urlValues); err != nil {
-				return err
-			}
-			c.urlValues = urlValues
-		}
-		return c.route.formDecoder.Decode(v, c.urlValues)
-	}
-	return json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(v)
-}
-
-func (c Context) BindQueryParams(v any) error {
-	return c.route.formDecoder.Decode(v, c.request.URL.Query())
-}
-
 func (c Context) BindPathParams(v any) error {
+	if v == nil {
+		return nil // nothing to bind
+	}
+	m, ok := v.(map[string]any)
+	if ok {
+		for k := range m {
+			if value := c.request.Context().Value(k); value != nil {
+				m[k] = value
+			}
+		}
+		v = m
+		return nil
+	}
 	s := structs.New(v)
 	for _, field := range s.Fields() {
 		if field.IsExported() {
@@ -79,6 +84,24 @@ func (c Context) BindPathParams(v any) error {
 		}
 	}
 	return nil
+}
+
+func (c Context) BindQueryParams(v any) error {
+	return c.route.formDecoder.Decode(v, c.request.URL.Query())
+}
+
+func (c Context) BindEventParams(v any) error {
+	if c.event.IsForm {
+		if len(c.urlValues) == 0 {
+			var urlValues url.Values
+			if err := json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(&urlValues); err != nil {
+				return err
+			}
+			c.urlValues = urlValues
+		}
+		return c.route.formDecoder.Decode(v, c.urlValues)
+	}
+	return json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(v)
 }
 
 // Request returns the http.Request for the current context

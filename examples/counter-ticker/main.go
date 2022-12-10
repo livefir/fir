@@ -68,10 +68,14 @@ func NewCounterIndex(pubsub pubsub.Adapter) *index {
 				glog.Errorf("channel pattern %s has no subscribers", pattern)
 				continue
 			}
-			c.eventSender <- fir.NewEvent("updated", map[string]any{"count_updated": c.model.Updated()})
+			c.eventSender <- fir.NewEvent("updated", countUpdate{CountUpdated: c.model.Updated()})
 		}
 	}()
 	return c
+}
+
+type countUpdate struct {
+	CountUpdated float64 `json:"count_updated"`
 }
 
 type index struct {
@@ -106,12 +110,12 @@ func (i *index) dec(ctx fir.Context) error {
 	return i.model.Dec(ctx)
 }
 func (i *index) updated(ctx fir.Context) error {
-	var data map[string]any
-	err := ctx.Bind(&data)
+	req := &countUpdate{}
+	err := ctx.Bind(req)
 	if err != nil {
 		return err
 	}
-	return ctx.DOM.Store("fir", data)
+	return ctx.DOM.Store("fir", req)
 }
 
 var content = `
