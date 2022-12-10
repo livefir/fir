@@ -71,7 +71,7 @@ func likeTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Update(req.TweetID, &tweet); err != nil {
 			return err
 		}
-		return ctx.Morph(fmt.Sprintf("#tweet-%d", req.TweetID), patch.Block("tweet", tweet))
+		return ctx.Replace(fmt.Sprintf("#tweet-%d", req.TweetID), patch.Block("tweet", tweet))
 	}
 }
 

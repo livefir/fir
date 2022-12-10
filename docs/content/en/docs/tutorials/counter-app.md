@@ -285,8 +285,8 @@ When the `+` button is clicked, an event `inc` is sent to the server which sends
 
 ```go
 
-func morphCount(c int32) fir.Patch {
- return fir.Morph{
+func replaceCount(c int32) fir.Patch {
+ return fir.Replace{
   Selector: "#count",
   HTML: &fir.Render{
    Template: "count",
@@ -296,11 +296,11 @@ func morphCount(c int32) fir.Patch {
 }
 
 func (c *Counter) Inc() fir.Patch {
- return morphCount(atomic.AddInt32(&c.count, 1))
+ return replaceCount(atomic.AddInt32(&c.count, 1))
 }
 
 func (c *Counter) Dec() fir.Patch {
- return morphCount(atomic.AddInt32(&c.count, -1))
+ return replaceCount(atomic.AddInt32(&c.count, -1))
 }
 
 ...
@@ -318,7 +318,7 @@ func (c *CounterView) OnEvent(event fir.Event) fir.Patchset {
 }
 ```
 
-`fir.Morph` is a `patch` which hydrates the new count value to the template `count`(i.e.  `{{block "count" .}}`{%endraw%}) on the server and instructs the javascript client library to update(morph) the `<div id="count">`.
+`fir.Replace` is a `patch` which hydrates the new count value to the template `count`(i.e.  `{{block "count" .}}`{%endraw%}) on the server and instructs the javascript client library to update(replace) the `<div id="count">`.
 
 The updated `main.go` should now be fully working counter example.
 
@@ -343,8 +343,8 @@ type Counter struct {
  count int32
 }
 
-func morphCount(c int32) fir.Patch {
- return fir.Morph{
+func replaceCount(c int32) fir.Patch {
+ return fir.Replace{
   Selector: "#count",
   HTML: &fir.Render{
    Template: "count",
@@ -354,11 +354,11 @@ func morphCount(c int32) fir.Patch {
 }
 
 func (c *Counter) Inc() fir.Patch {
- return morphCount(atomic.AddInt32(&c.count, 1))
+ return replaceCount(atomic.AddInt32(&c.count, 1))
 }
 
 func (c *Counter) Dec() fir.Patch {
- return morphCount(atomic.AddInt32(&c.count, -1))
+ return replaceCount(atomic.AddInt32(&c.count, -1))
 }
 
 func (c *Counter) Value() int32 {
@@ -484,7 +484,7 @@ http.Handle("/", controller.Handler(&CounterView{stream: make(chan fir.Patch)}))
 We can send a `patch` to the stream.
 
 ```go
-c.stream <- fir.Morph{...}
+c.stream <- fir.Replace{...}
 ```
 
 Lets expand the `counter` example to add a last updated ticker to the page. The ticker should update every second and tell us when was count last updated.
@@ -542,8 +542,8 @@ type Counter struct {
  sync.RWMutex
 }
 
-func morphCount(c int32) fir.Patch {
- return fir.Morph{
+func replaceCount(c int32) fir.Patch {
+ return fir.Replace{
   Selector: "#count",
   HTML: &fir.Render{
    Template: "count",
@@ -557,7 +557,7 @@ func (c *Counter) Inc() fir.Patch {
  defer c.Unlock()
  c.count += 1
  c.updated = time.Now()
- return morphCount(c.count)
+ return replaceCount(c.count)
 }
 
 func (c *Counter) Dec() fir.Patch {
@@ -565,7 +565,7 @@ func (c *Counter) Dec() fir.Patch {
  defer c.Unlock()
  c.count -= 1
  c.updated = time.Now()
- return morphCount(c.count)
+ return replaceCount(c.count)
 }
 
 func (c *Counter) Updated() (fir.Patch, error) {

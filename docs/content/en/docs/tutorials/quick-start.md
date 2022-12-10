@@ -271,7 +271,7 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
   defer t.Unlock()
   t.tasks = append(t.tasks, task)
   return fir.Patchset{
-   fir.Morph{
+   fir.Replace{
     Selector: "#tasks",
     HTML: &fir.Render{
      Template: "tasks",
@@ -339,7 +339,7 @@ func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
   defer t.Unlock()
   t.tasks = append(t.tasks, task)
   return fir.Patchset{
-   fir.Morph{
+   fir.Replace{
     Selector: "#tasks",
     HTML: &fir.Render{
      Template: "tasks",

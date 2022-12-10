@@ -21,8 +21,8 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func morphCount(c int32) patch.Op {
-	return patch.Morph("#count", patch.Block("count", map[string]any{"count": c}))
+func replaceCount(c int32) patch.Op {
+	return patch.Replace("#count", patch.Block("count", map[string]any{"count": c}))
 }
 
 func (c *Counter) Inc() patch.Op {
@@ -30,7 +30,7 @@ func (c *Counter) Inc() patch.Op {
 	defer c.Unlock()
 	c.count += 1
 	c.updated = time.Now()
-	return morphCount(c.count)
+	return replaceCount(c.count)
 }
 
 func (c *Counter) Dec() patch.Op {
@@ -38,7 +38,7 @@ func (c *Counter) Dec() patch.Op {
 	defer c.Unlock()
 	c.count -= 1
 	c.updated = time.Now()
-	return morphCount(c.count)
+	return replaceCount(c.count)
 }
 
 func (c *Counter) Updated() float64 {
