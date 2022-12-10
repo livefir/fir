@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/adnaan/fir/patch"
+	"github.com/adnaan/fir/dom"
 	"github.com/golang/glog"
 	"golang.org/x/exp/slices"
 )
@@ -130,7 +130,7 @@ func (r *routeData) Error() string {
 }
 
 type routeRenderer func(data routeData) error
-type patchRenderer func(patch ...patch.Op) error
+type patchRenderer func(patch ...dom.Patch) error
 type routeOpt struct {
 	id                string
 	layout            string
@@ -179,7 +179,7 @@ func renderRoute(ctx Context) routeRenderer {
 }
 
 func publishPatch(ctx context.Context, eventCtx Context) patchRenderer {
-	return func(patchset ...patch.Op) error {
+	return func(patchset ...dom.Patch) error {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
 		eventCtx.route.parseTemplate()
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, patchset...)
@@ -192,7 +192,7 @@ func publishPatch(ctx context.Context, eventCtx Context) patchRenderer {
 }
 
 func renderPatch(ctx Context) patchRenderer {
-	return func(patchset ...patch.Op) error {
+	return func(patchset ...dom.Patch) error {
 		ctx.route.parseTemplate()
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, patchset...)
@@ -200,7 +200,7 @@ func renderPatch(ctx Context) patchRenderer {
 			glog.Errorf("[onPatchEvent] error publishing patch: %v\n", err)
 			return err
 		}
-		ctx.response.Write(patch.RenderJSON(ctx.route.template, patchset))
+		ctx.response.Write(dom.MarshalPatchset(ctx.route.template, patchset))
 		return nil
 	}
 }
@@ -235,6 +235,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			request:  r,
 			response: w,
 			route:    rt,
+			DOM:      dom.NewPatcher(),
 		}
 
 		onEventFunc, ok := rt.onEvents[event.ID]
@@ -288,6 +289,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				response:  w,
 				route:     rt,
 				urlValues: urlValues,
+				DOM:       dom.NewPatcher(),
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -307,6 +309,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				response: w,
 				route:    rt,
 				isOnLoad: true,
+				DOM:      dom.NewPatcher(),
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
@@ -322,12 +325,12 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 	}
 
 	if err == nil {
-		var patchsetData []patch.Op
+		var patchsetData dom.Patchset
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
-				patch.Replace(fmt.Sprintf("#%s", k),
-					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
+				ctx.DOM.Replace(fmt.Sprintf("#%s", k),
+					ctx.RenderBlock(k, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
 		}
 
 		render(patchsetData...)
@@ -336,25 +339,23 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 
 	switch errVal := err.(type) {
 	case *routeData:
-		render(patch.Store("fir", *errVal))
+		render(ctx.DOM.Store("fir", *errVal).Patchset()...)
 		return
-	case *patch.Set:
-		patchsetData := *errVal
+	case dom.Patcher:
+		patchsetData := errVal.Patchset()
 		if ctx.event.IsForm {
-			patchsetData = append(patchsetData,
-				patch.ResetForm(fmt.Sprintf("#%s", ctx.event.ID)))
+			patchsetData = ctx.DOM.ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
 		}
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = append(patchsetData,
-				patch.Replace(fmt.Sprintf("#%s", k),
-					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
+			patchsetData = ctx.DOM.Replace(fmt.Sprintf("#%s", k),
+				ctx.RenderBlock(k, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()
 		}
 		render(patchsetData...)
 		return
 	case *fieldErrors:
 		fieldErrorsData := *errVal
-		var patchsetData []patch.Op
+		var patchsetData dom.Patchset
 
 		for k, v := range fieldErrorsData {
 			fieldErrorName := fmt.Sprintf("%s%s-%s", firErrorPrefix, ctx.event.ID, k)
@@ -366,21 +367,21 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 				"route": v.Error(),
 			}
 			patchsetData = append(patchsetData,
-				patch.Replace(fmt.Sprintf("#%s", fieldErrorName),
-					patch.Block(fieldErrorName, map[string]any{"fir": newRouteContext(ctx, errs)})))
+				ctx.DOM.Replace(fmt.Sprintf("#%s", fieldErrorName),
+					ctx.RenderBlock(fieldErrorName, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
 		}
 		// unset errors that are not set
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
-				patch.Replace(fmt.Sprintf("#%s", k),
-					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
+				ctx.DOM.Replace(fmt.Sprintf("#%s", k),
+					ctx.RenderBlock(k, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
 		}
 
 		render(patchsetData...)
 		return
 	default:
-		var patchsetData []patch.Op
+		var patchsetData dom.Patchset
 		userErr := userError(ctx, err)
 		errs := map[string]any{
 			ctx.event.ID: userErr.Error(),
@@ -390,16 +391,16 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
 			patchsetData = append(patchsetData,
-				patch.Replace(eventNameSelector,
-					patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})))
+				ctx.DOM.Replace(eventNameSelector,
+					ctx.RenderBlock(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
 		}
 
 		routeName := fmt.Sprintf("%s-route", firErrorPrefix)
 		routeNameSelector := fmt.Sprintf("#%s", routeName)
 		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
 			patchsetData = append(patchsetData,
-				patch.Replace(routeNameSelector,
-					patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)})))
+				ctx.DOM.Replace(routeNameSelector,
+					ctx.RenderBlock(routeName, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
 		}
 
 		render(patchsetData...)
@@ -418,8 +419,8 @@ func handleOnFormResult(err error, ctx Context) {
 		onFormData := *errVal
 		onFormData["fir"] = newRouteContext(ctx, map[string]any{})
 		renderRoute(ctx)(onFormData)
-	case *patch.Set:
-		// ignore patchset
+	case dom.Patcher:
+		// ignore patchset since this is a full page render
 		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 	default:
 		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
@@ -483,8 +484,8 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 		}
 
 		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})
-	case *patch.Set:
-		glog.Errorf(`[warning] onLoad returned a []patch.Patch and was ignored for route: %+v,
+	case dom.Patcher:
+		glog.Errorf(`[warning] onLoad returned a dom.Patchset and was ignored for route: %+v,
 		 onLoad must return either an error or call ctx.Data, ctx.KV \n`, ctx.route)
 		errs := make(map[string]any)
 		if onFormErr != nil {

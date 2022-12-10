@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adnaan/fir/patch"
+	"github.com/adnaan/fir/dom"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/exp/slices"
 )
@@ -26,6 +26,7 @@ func watchTemplates(wc *controller) {
 	}
 	defer watcher.Close()
 	done := make(chan bool)
+	patcher := dom.NewPatcher()
 	go func() {
 		for {
 			select {
@@ -37,7 +38,7 @@ func watchTemplates(wc *controller) {
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					wc.pubsub.Publish(context.Background(), devReloadChannel, patch.Reload())
+					wc.pubsub.Publish(context.Background(), devReloadChannel, patcher.Reload().Patchset()...)
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:

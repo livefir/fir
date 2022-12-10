@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/patch"
 	"github.com/adnaan/fir/pubsub"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
@@ -21,24 +20,24 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func replaceCount(c int32) patch.Op {
-	return patch.Replace("#count", patch.Block("count", map[string]any{"count": c}))
+func replaceCount(ctx fir.Context, c int32) error {
+	return ctx.DOM.Replace("#count", ctx.RenderBlock("count", map[string]any{"count": c}))
 }
 
-func (c *Counter) Inc() patch.Op {
+func (c *Counter) Inc(ctx fir.Context) error {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
 	c.updated = time.Now()
-	return replaceCount(c.count)
+	return replaceCount(ctx, c.count)
 }
 
-func (c *Counter) Dec() patch.Op {
+func (c *Counter) Dec(ctx fir.Context) error {
 	c.Lock()
 	defer c.Unlock()
 	c.count -= 1
 	c.updated = time.Now()
-	return replaceCount(c.count)
+	return replaceCount(ctx, c.count)
 }
 
 func (c *Counter) Updated() float64 {
@@ -102,11 +101,11 @@ func (i *index) load(ctx fir.Context) error {
 }
 
 func (i *index) inc(ctx fir.Context) error {
-	return ctx.Patch(i.model.Inc())
+	return i.model.Inc(ctx)
 }
 
 func (i *index) dec(ctx fir.Context) error {
-	return ctx.Patch(i.model.Dec())
+	return i.model.Dec(ctx)
 }
 func (i *index) updated(ctx fir.Context) error {
 	var data map[string]any
@@ -114,7 +113,7 @@ func (i *index) updated(ctx fir.Context) error {
 	if err != nil {
 		return err
 	}
-	return ctx.Store("fir", data)
+	return ctx.DOM.Store("fir", data)
 }
 
 var content = `
