@@ -15,10 +15,12 @@ toc: true
 ---
 
 ## Event
-## Context
-## Route
-## Controller
 
+## Context
+
+## Route
+
+## Controller
 
 ## Event
 
@@ -36,7 +38,7 @@ toc: true
 
 ### Before
 
-### Morph
+### Replace
 
 ### Navigate
 

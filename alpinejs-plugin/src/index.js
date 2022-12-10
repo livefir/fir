@@ -125,7 +125,7 @@ const Plugin = (Alpine) => {
     }
 
     const operations = {
-        morph: operation => selectAll(operation, (el, value) => {
+        replace: operation => selectAll(operation, (el, value) => {
             Alpine.morph(el, value, {
                 key(el) {
                     return el.id

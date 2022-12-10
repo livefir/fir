@@ -16,7 +16,7 @@ import (
 type OpType string
 
 const (
-	morph       OpType = "morph"
+	replace     OpType = "replace"
 	after       OpType = "after"
 	before      OpType = "before"
 	appendOp    OpType = "append"
@@ -83,10 +83,10 @@ func HTML(html string) TemplateRenderer {
 	return Template("_fir_html", html)
 }
 
-// Morph is a patch operation for morphing an element at the selector
-func Morph(selector string, t TemplateRenderer) Op {
+// Replace is a patch operation for replaceing an element at the selector
+func Replace(selector string, t TemplateRenderer) Op {
 	return Op{
-		Type:     morph,
+		Type:     replace,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	}
@@ -176,7 +176,7 @@ func RenderJSON(t *template.Template, patchset []Op) []byte {
 		switch p.Type {
 		case updateStore, navigate, resetForm, reload, remove:
 			renderedPatchset = append(renderedPatchset, p)
-		case morph, after, before, appendOp, prepend:
+		case replace, after, before, appendOp, prepend:
 			tmpl, ok := p.Value.(map[string]any)
 			if !ok {
 				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
@@ -206,7 +206,7 @@ func RenderJSON(t *template.Template, patchset []Op) []byte {
 		tmplVal, err := buildTemplateValue(t, "fir-error", nil)
 		if err == nil {
 			renderedPatchset = append([]Op{{
-				Type:     morph,
+				Type:     replace,
 				Selector: &firError,
 				Value:    tmplVal,
 			}}, renderedPatchset...)
@@ -251,12 +251,12 @@ func buildTemplateValue(t *template.Template, name string, data any) (string, er
 	return value, nil
 }
 
-// MorphError is a utility function for setting and unsetting an error.
-func MorphError(name string) (func(err error) Op, func() Op) {
+// ReplaceError is a utility function for setting and unsetting an error.
+func ReplaceError(name string) (func(err error) Op, func() Op) {
 	selector := fmt.Sprintf("#%s", name)
 	return func(err error) Op {
-			return Morph(selector, Block(name, map[string]any{name: err}))
+			return Replace(selector, Block(name, map[string]any{name: err}))
 		}, func() Op {
-			return Morph(selector, Block(name, map[string]any{name: ""}))
+			return Replace(selector, Block(name, map[string]any{name: ""}))
 		}
 }

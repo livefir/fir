@@ -117,9 +117,9 @@ func (c Context) KV(k string, v any) error {
 	return &routeData{k: v}
 }
 
-// MorphKV is a shortcut for Morph(k, Block(k, v))
-func (c Context) MorphKV(name string, value any) error {
-	return c.Morph(fmt.Sprintf("#%s", name), patch.Block(name, map[string]any{name: value}))
+// ReplaceKV is a shortcut for Replace(k, Block(k, v))
+func (c Context) ReplaceKV(name string, value any) error {
+	return c.Replace(fmt.Sprintf("#%s", name), patch.Block(name, map[string]any{name: value}))
 }
 
 // func (c Context) AppendKV(name string, value any) error {
@@ -147,9 +147,9 @@ func (c Context) Patch(patches ...patch.Op) error {
 	return &pl
 }
 
-// Morph replaces the element at the given selector with the given template
-func (c Context) Morph(selector string, t patch.TemplateRenderer) error {
-	return c.Patch(patch.Morph(selector, t))
+// Replace replaces the element at the given selector with the given template
+func (c Context) Replace(selector string, t patch.TemplateRenderer) error {
+	return c.Patch(patch.Replace(selector, t))
 }
 
 // After inserts the given template after the element at the given selector

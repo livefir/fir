@@ -19,7 +19,7 @@ A Go toolkit to build reactive web interfaces.
 
 Wants to provide a way to build moderately complex reactive apps for folks who are comfortable with Go.
 
-The library is a result of a series of experiments to build reactive apps in Go: [gomodest-template](https://github.com/adnaan/gomodest-template). It works by `patching` the DOM on user events using [morphdom](https://github.com/patrick-steele-idem/morphdom).
+The library is a result of a series of experiments to build reactive apps in Go: [gomodest-template](https://github.com/adnaan/gomodest-template). It works by `patching` the DOM on user events using [replacedom](https://github.com/patrick-steele-idem/replacedom).
 
 ## What is it ?
 

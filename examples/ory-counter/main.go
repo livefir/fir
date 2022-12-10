@@ -84,11 +84,11 @@ func (i *index) load(ctx fir.Context) error {
 }
 
 func (i *index) inc(ctx fir.Context) error {
-	return ctx.MorphKV("count", atomic.AddInt32(&i.value, 1))
+	return ctx.ReplaceKV("count", atomic.AddInt32(&i.value, 1))
 }
 
 func (i *index) dec(ctx fir.Context) error {
-	return ctx.MorphKV("count", atomic.AddInt32(&i.value, -1))
+	return ctx.ReplaceKV("count", atomic.AddInt32(&i.value, -1))
 }
 
 func (i *index) Options() fir.RouteOptions {

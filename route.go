@@ -326,7 +326,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
-				patch.Morph(fmt.Sprintf("#%s", k),
+				patch.Replace(fmt.Sprintf("#%s", k),
 					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
@@ -347,7 +347,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
-				patch.Morph(fmt.Sprintf("#%s", k),
+				patch.Replace(fmt.Sprintf("#%s", k),
 					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 		render(patchsetData...)
@@ -366,14 +366,14 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 				"route": v.Error(),
 			}
 			patchsetData = append(patchsetData,
-				patch.Morph(fmt.Sprintf("#%s", fieldErrorName),
+				patch.Replace(fmt.Sprintf("#%s", fieldErrorName),
 					patch.Block(fieldErrorName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 		// unset errors that are not set
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
-				patch.Morph(fmt.Sprintf("#%s", k),
+				patch.Replace(fmt.Sprintf("#%s", k),
 					patch.Block(k, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
@@ -390,7 +390,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
 			patchsetData = append(patchsetData,
-				patch.Morph(eventNameSelector,
+				patch.Replace(eventNameSelector,
 					patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
@@ -398,7 +398,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		routeNameSelector := fmt.Sprintf("#%s", routeName)
 		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
 			patchsetData = append(patchsetData,
-				patch.Morph(routeNameSelector,
+				patch.Replace(routeNameSelector,
 					patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)})))
 		}
 
