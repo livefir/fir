@@ -34,7 +34,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 	go func() {
 		for event := range route.eventSender {
 			eventCtx := Context{
-				event:    event,
+				Event:    event,
 				request:  r,
 				response: w,
 				route:    route,
@@ -102,7 +102,7 @@ loop:
 		}
 
 		eventCtx := Context{
-			event:    event,
+			Event:    event,
 			request:  r,
 			response: w,
 			route:    route,

@@ -231,7 +231,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventCtx := Context{
-			event:    event,
+			Event:    event,
 			request:  r,
 			response: w,
 			route:    rt,
@@ -284,7 +284,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			}
 
 			eventCtx := Context{
-				event:     event,
+				Event:     event,
 				request:   r,
 				response:  w,
 				route:     rt,
@@ -304,7 +304,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := Context{
-				event:    event,
+				Event:    event,
 				request:  r,
 				response: w,
 				route:    rt,
@@ -327,7 +327,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 	if err == nil {
 		var patchsetData dom.Patchset
 		for k := range unsetErrors {
-			errs := map[string]any{ctx.event.ID: nil}
+			errs := map[string]any{ctx.Event.ID: nil}
 			patchsetData = append(patchsetData,
 				ctx.DOM.Replace(fmt.Sprintf("#%s", k),
 					ctx.RenderBlock(k, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
@@ -343,11 +343,11 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		return
 	case dom.Patcher:
 		patchsetData := errVal.Patchset()
-		if ctx.event.IsForm {
-			patchsetData = ctx.DOM.ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
+		if ctx.Event.IsForm {
+			patchsetData = ctx.DOM.ResetForm(fmt.Sprintf("#%s", ctx.Event.ID)).Patchset()
 		}
 		for k := range unsetErrors {
-			errs := map[string]any{ctx.event.ID: nil}
+			errs := map[string]any{ctx.Event.ID: nil}
 			patchsetData = ctx.DOM.Replace(fmt.Sprintf("#%s", k),
 				ctx.RenderBlock(k, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()
 		}
@@ -358,11 +358,11 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		var patchsetData dom.Patchset
 
 		for k, v := range fieldErrorsData {
-			fieldErrorName := fmt.Sprintf("%s%s-%s", firErrorPrefix, ctx.event.ID, k)
+			fieldErrorName := fmt.Sprintf("%s%s-%s", firErrorPrefix, ctx.Event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
 			errs := map[string]any{
-				ctx.event.ID: map[string]any{
+				ctx.Event.ID: map[string]any{
 					k: v.Error()},
 				"route": v.Error(),
 			}
@@ -372,7 +372,7 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		}
 		// unset errors that are not set
 		for k := range unsetErrors {
-			errs := map[string]any{ctx.event.ID: nil}
+			errs := map[string]any{ctx.Event.ID: nil}
 			patchsetData = append(patchsetData,
 				ctx.DOM.Replace(fmt.Sprintf("#%s", k),
 					ctx.RenderBlock(k, map[string]any{"fir": newRouteContext(ctx, errs)})).Patchset()...)
@@ -384,10 +384,10 @@ func handleOnEventResult(err error, ctx Context, render patchRenderer) {
 		var patchsetData dom.Patchset
 		userErr := userError(ctx, err)
 		errs := map[string]any{
-			ctx.event.ID: userErr.Error(),
+			ctx.Event.ID: userErr.Error(),
 			"route":      userErr.Error()}
 
-		eventIdName := fmt.Sprintf("%s%s", firErrorPrefix, ctx.event.ID)
+		eventIdName := fmt.Sprintf("%s%s", firErrorPrefix, ctx.Event.ID)
 		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
 			patchsetData = append(patchsetData,
@@ -434,11 +434,11 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
 				errs = map[string]any{
-					ctx.event.ID: onFormErr.Error(),
+					ctx.Event.ID: onFormErr.Error(),
 					"route":      onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.Event.ID: fieldErrorsVal.toMap(),
 					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -456,11 +456,11 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
 				errs = map[string]any{
-					ctx.event.ID: onFormErr.Error(),
+					ctx.Event.ID: onFormErr.Error(),
 					"route":      onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.Event.ID: fieldErrorsVal.toMap(),
 					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -473,11 +473,11 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
 				errs = map[string]any{
-					ctx.event.ID: onFormErr.Error(),
+					ctx.Event.ID: onFormErr.Error(),
 					"route":      onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.Event.ID: fieldErrorsVal.toMap(),
 					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -492,11 +492,11 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
 				errs = map[string]any{
-					ctx.event.ID: onFormErr.Error(),
+					ctx.Event.ID: onFormErr.Error(),
 					"route":      onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.Event.ID: fieldErrorsVal.toMap(),
 					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -511,18 +511,18 @@ func handleOnLoadResult(err, onFormErr error, ctx Context) {
 				// merge err and onFormErr
 				mergedErr := fmt.Errorf("%v %v", err, onFormErr)
 				errs = map[string]any{
-					ctx.event.ID: mergedErr,
+					ctx.Event.ID: mergedErr,
 					"route":      mergedErr,
 				}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.Event.ID: fieldErrorsVal.toMap(),
 					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		} else {
 			errs = map[string]any{
-				ctx.event.ID: err.Error(),
+				ctx.Event.ID: err.Error(),
 				"route":      err.Error()}
 		}
 		renderRoute(ctx)(routeData{"fir": newRouteContext(ctx, errs)})

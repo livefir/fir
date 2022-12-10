@@ -46,7 +46,7 @@ func (f fieldErrors) Error() string {
 
 func userError(ctx Context, err error) error {
 	userError := err
-	glog.Errorf("ctx %+v , error: %v\n", ctx.event.ID, err)
+	glog.Errorf("ctx %+v , error: %v\n", ctx.Event.ID, err)
 	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {
 		userError = wrappedUserError
 	}
