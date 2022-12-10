@@ -81,8 +81,8 @@ const Plugin = (Alpine) => {
                     let eventID = el.id;
                     if (event.submitter && event.submitter.formAction) {
                         const url = new URL(event.submitter.formAction);
-                        if (url.searchParams.get("id")) {
-                            eventID = url.searchParams.get("id")
+                        if (url.searchParams.get("event")) {
+                            eventID = url.searchParams.get("event")
                         }
                     }
                     if (event.submitter && event.submitter.name) {
@@ -187,9 +187,9 @@ const Plugin = (Alpine) => {
             el.dispatchEvent(new CustomEvent(`${eventName}:${detail.id}`, options))
         }
         const event = {
-            id: id,
+            event_id: id,
             params: params,
-            isForm: isForm,
+            is_form: isForm,
         }
         if (socket.emit(event)) {
             el.dispatchEvent(new CustomEvent(endEventName, options))

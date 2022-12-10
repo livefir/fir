@@ -8,7 +8,7 @@
         x-data
         id="createTweet"
         method="post"
-        action="/?id=createTweet"
+        action="/?event=createTweet"
         @submit.prevent="$fir.submit"
         style="margin-top:1rem;margin-bottom:1rem;">
         <input type="text" name="body" placeholder="a new tweet" />
@@ -35,10 +35,10 @@
                         @submit.prevent="$fir.submit"
                         style="margin-right:1rem">
                         <input type="hidden" name="tweetID" value="{{ .ID }}" />
-                        <button formaction="/?id=likeTweet" type="submit">
+                        <button formaction="/?event=likeTweet" type="submit">
                             Like
                         </button>
-                        <button formaction="/?id=deleteTweet" type="submit">
+                        <button formaction="/?event=deleteTweet" type="submit">
                             Delete
                         </button>
                     </form>

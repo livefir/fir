@@ -251,13 +251,13 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			formAction := ""
 			values := r.URL.Query()
 			if len(values) == 1 {
-				id := values.Get("id")
-				if id != "" {
-					formAction = id
+				event := values.Get("event")
+				if event != "" {
+					formAction = event
 				}
 			}
 			if formAction == "" && len(rt.onEvents) > 1 {
-				http.Error(w, "form action[?id=myaction] is missing and default onEvent can't be selected since there is more than 1", http.StatusBadRequest)
+				http.Error(w, "form action[?event=myaction] is missing and default onEvent can't be selected since there is more than 1", http.StatusBadRequest)
 				return
 			} else if formAction == "" && len(rt.onEvents) == 1 {
 				for k := range rt.onEvents {
