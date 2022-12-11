@@ -4,6 +4,13 @@
             {{ .fir.Error "route" }}
         </p>
     {{ end }}
+
+
+    <div
+        x-data
+        @fir:submit-start:createTweet.window="console.log('create tweet start')"
+        @fir:submit-end:createTweet.window="console.log('create tweet done')"></div>
+
     <form
         x-data
         id="createTweet"
@@ -11,6 +18,9 @@
         action="/?event=createTweet"
         @submit.prevent="$fir.submit"
         style="margin-top:1rem;margin-bottom:1rem;">
+        {{/* why .camel? https://github.com/alpinejs/alpine/discussions/626 */}}
+
+
         <input type="text" name="body" placeholder="a new tweet" />
         {{ block "fir-error-createTweet-body" . }}
             <p id="fir-error-createTweet-body">
