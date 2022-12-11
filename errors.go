@@ -44,9 +44,9 @@ func (f fieldErrors) Error() string {
 	return strings.Join(errs, ", ")
 }
 
-func userError(ctx Context, err error) error {
+func userError(ctx RouteContext, err error) error {
 	userError := err
-	glog.Errorf("ctx %+v , error: %v\n", ctx.Event.ID, err)
+	glog.Errorf("ctx %+v , error: %v\n", ctx.event.ID, err)
 	if wrappedUserError := errors.Unwrap(err); wrappedUserError != nil {
 		userError = wrappedUserError
 	}

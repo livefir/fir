@@ -202,7 +202,7 @@ var defaultRouteOpt = &routeOpt{
 	funcMap:           defaultFuncMap(),
 	extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
 	eventSender:       make(chan Event),
-	onLoad: func(ctx Context) error {
+	onLoad: func(ctx RouteContext) error {
 		return nil
 	},
 }

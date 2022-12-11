@@ -55,7 +55,7 @@ func paginationData(req queryReq, boardLen int) map[string]any {
 }
 
 func loadProjects(db *ent.Client) fir.OnEventFunc {
-	return func(ctx fir.Context) error {
+	return func(ctx fir.RouteContext) error {
 		var q queryReq
 		if err := ctx.Bind(&q); err != nil {
 			return err
@@ -75,7 +75,7 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 }
 
 func createProject(db *ent.Client) fir.OnEventFunc {
-	return func(ctx fir.Context) error {
+	return func(ctx fir.RouteContext) error {
 		return ctx.KV("projects", "Projects")
 	}
 }

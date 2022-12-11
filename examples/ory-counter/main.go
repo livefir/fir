@@ -79,16 +79,16 @@ type index struct {
 	value int32
 }
 
-func (i *index) load(ctx fir.Context) error {
+func (i *index) load(ctx fir.RouteContext) error {
 	return ctx.KV("count", atomic.LoadInt32(&i.value))
 }
 
-func (i *index) inc(ctx fir.Context) error {
-	return ctx.DOM.ReplaceKV("count", atomic.AddInt32(&i.value, 1))
+func (i *index) inc(ctx fir.RouteContext) error {
+	return ctx.DOM().ReplaceKV("count", atomic.AddInt32(&i.value, 1))
 }
 
-func (i *index) dec(ctx fir.Context) error {
-	return ctx.DOM.ReplaceKV("count", atomic.AddInt32(&i.value, -1))
+func (i *index) dec(ctx fir.RouteContext) error {
+	return ctx.DOM().ReplaceKV("count", atomic.AddInt32(&i.value, -1))
 }
 
 func (i *index) Options() fir.RouteOptions {

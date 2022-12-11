@@ -33,12 +33,12 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 	// eventSender
 	go func() {
 		for event := range route.eventSender {
-			eventCtx := Context{
-				Event:    event,
+			eventCtx := RouteContext{
+				event:    event,
 				request:  r,
 				response: w,
 				route:    route,
-				DOM:      dom.NewPatcher(),
+				dom:      dom.NewPatcher(),
 			}
 			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 			onEventFunc, ok := route.onEvents[event.ID]
@@ -101,12 +101,12 @@ loop:
 			continue
 		}
 
-		eventCtx := Context{
-			Event:    event,
+		eventCtx := RouteContext{
+			event:    event,
 			request:  r,
 			response: w,
 			route:    route,
-			DOM:      dom.NewPatcher(),
+			dom:      dom.NewPatcher(),
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)

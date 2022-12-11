@@ -36,7 +36,7 @@ Consider the following html/template page:
 
 On form submission, server’s template engine hydrates the page template with updated `todos` and renders the new html page as http response.
 
-To avoid a page reload and update only the changed part of the page (i.e `{{range .todos}} .Text {{end}}` ), we need a client javascript function which can fetch the updated part from the server and patch the relevant section of the DOM. Also, the server’s template engine should be capable of re-rendering only the changed part of the template. A Go html template page can be composed of reusable parts enclosed in a `template`or `block` expression. Fir builds on top of Go’s standard capability by providing a way to re-render a `template/block` part and patching the targeted part of the page without a page reload while using only a bit of javascript.
+To avoid a page reload and update only the changed part of the page (i.e `{{range .todos}} .Text {{end}}` ), we need a client javascript function which can fetch the updated part from the server and patch the relevant section of the DOM(). Also, the server’s template engine should be capable of re-rendering only the changed part of the template. A Go html template page can be composed of reusable parts enclosed in a `template`or `block` expression. Fir builds on top of Go’s standard capability by providing a way to re-render a `template/block` part and patching the targeted part of the page without a page reload while using only a bit of javascript.
 
 ```go
 <form name="newTodo" method="post">

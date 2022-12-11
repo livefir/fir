@@ -20,11 +20,11 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func replaceCount(ctx fir.Context, c int32) error {
-	return ctx.DOM.Replace("#count", ctx.RenderBlock("count", map[string]any{"count": c}))
+func replaceCount(ctx fir.RouteContext, c int32) error {
+	return ctx.DOM().Replace("#count", ctx.RenderBlock("count", map[string]any{"count": c}))
 }
 
-func (c *Counter) Inc(ctx fir.Context) error {
+func (c *Counter) Inc(ctx fir.RouteContext) error {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
@@ -32,7 +32,7 @@ func (c *Counter) Inc(ctx fir.Context) error {
 	return replaceCount(ctx, c.count)
 }
 
-func (c *Counter) Dec(ctx fir.Context) error {
+func (c *Counter) Dec(ctx fir.RouteContext) error {
 	c.Lock()
 	defer c.Unlock()
 	c.count -= 1
@@ -100,24 +100,24 @@ func (i *index) Options() fir.RouteOptions {
 	}
 }
 
-func (i *index) load(ctx fir.Context) error {
+func (i *index) load(ctx fir.RouteContext) error {
 	return ctx.KV("count", i.model.Count())
 }
 
-func (i *index) inc(ctx fir.Context) error {
+func (i *index) inc(ctx fir.RouteContext) error {
 	return i.model.Inc(ctx)
 }
 
-func (i *index) dec(ctx fir.Context) error {
+func (i *index) dec(ctx fir.RouteContext) error {
 	return i.model.Dec(ctx)
 }
-func (i *index) updated(ctx fir.Context) error {
+func (i *index) updated(ctx fir.RouteContext) error {
 	req := &countUpdate{}
 	err := ctx.Bind(req)
 	if err != nil {
 		return err
 	}
-	return ctx.DOM.Store("fir", req)
+	return ctx.DOM().Store("fir", req)
 }
 
 var content = `

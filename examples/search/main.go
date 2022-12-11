@@ -41,13 +41,13 @@ type queryRequest struct {
 func index() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.Content("app.html"),
-		fir.OnEvent("query", func(ctx fir.Context) error {
+		fir.OnEvent("query", func(ctx fir.RouteContext) error {
 			req := new(queryRequest)
 			if err := ctx.Bind(req); err != nil {
 				return err
 			}
 			cities := map[string]any{"cities": getCities(req.Query)}
-			return ctx.DOM.ReplaceKV("cities", cities)
+			return ctx.DOM().ReplaceKV("cities", cities)
 		}),
 	}
 }

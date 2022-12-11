@@ -18,7 +18,7 @@ type Tweet struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
+func insertTweet(ctx fir.RouteContext, db *bolthold.Store) (*Tweet, error) {
 	tweet := new(Tweet)
 	if err := ctx.Bind(tweet); err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func insertTweet(ctx fir.Context, db *bolthold.Store) (*Tweet, error) {
 }
 
 func loadTweets(db *bolthold.Store) fir.OnEventFunc {
-	return func(ctx fir.Context) error {
+	return func(ctx fir.RouteContext) error {
 		var tweets []Tweet
 		if err := db.Find(&tweets, &bolthold.Query{}); err != nil {
 			return err
@@ -44,12 +44,15 @@ func loadTweets(db *bolthold.Store) fir.OnEventFunc {
 }
 
 func createTweet(db *bolthold.Store) fir.OnEventFunc {
-	return func(ctx fir.Context) error {
+	return func(ctx fir.RouteContext) error {
 		tweet, err := insertTweet(ctx, db)
 		if err != nil {
 			return err
 		}
-		return ctx.DOM.Append("#tweets", ctx.RenderBlock("tweet", tweet))
+		return ctx.DOM().Append(
+			"#tweets",
+			ctx.RenderBlock("tweet", tweet),
+		)
 	}
 }
 
@@ -57,7 +60,7 @@ func likeTweet(db *bolthold.Store) fir.OnEventFunc {
 	type likeReq struct {
 		TweetID uint64 `json:"tweetID"`
 	}
-	return func(ctx fir.Context) error {
+	return func(ctx fir.RouteContext) error {
 		req := new(likeReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
@@ -70,7 +73,10 @@ func likeTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Update(req.TweetID, &tweet); err != nil {
 			return err
 		}
-		return ctx.DOM.Replace(fmt.Sprintf("#tweet-%d", req.TweetID), ctx.RenderBlock("tweet", tweet))
+		return ctx.DOM().Replace(
+			fmt.Sprintf("#tweet-%d", req.TweetID),
+			ctx.RenderBlock("tweet", tweet),
+		)
 	}
 }
 
@@ -78,7 +84,7 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 	type deleteReq struct {
 		TweetID uint64 `json:"tweetID"`
 	}
-	return func(ctx fir.Context) error {
+	return func(ctx fir.RouteContext) error {
 		req := new(deleteReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
@@ -87,7 +93,7 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Delete(req.TweetID, &Tweet{}); err != nil {
 			return err
 		}
-		return ctx.DOM.Remove(fmt.Sprintf("#tweet-%d", req.TweetID))
+		return ctx.DOM().Remove(fmt.Sprintf("#tweet-%d", req.TweetID))
 	}
 }
 

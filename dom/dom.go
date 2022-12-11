@@ -31,7 +31,7 @@ type Patcher interface {
 		{{end}}
 	</div>
 	...
-	ctx.DOM.ReplaceKV("cities", cities)
+	ctx.DOM().ReplaceKV("cities", cities)
 	{{end}} */
 	ReplaceKV(key string, value any) Patcher
 	// After patches the dom after the given selector with the rendered template

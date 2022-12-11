@@ -40,16 +40,16 @@ var content = `<!DOCTYPE html>
 func index() fir.RouteOptions {
 	var value int32
 
-	load := func(ctx fir.Context) error {
+	load := func(ctx fir.RouteContext) error {
 		return ctx.KV("count", atomic.LoadInt32(&value))
 	}
 
-	inc := func(ctx fir.Context) error {
-		return ctx.DOM.ReplaceKV("count", atomic.AddInt32(&value, 1))
+	inc := func(ctx fir.RouteContext) error {
+		return ctx.DOM().ReplaceKV("count", atomic.AddInt32(&value, 1))
 	}
 
-	dec := func(ctx fir.Context) error {
-		return ctx.DOM.ReplaceKV("count", atomic.AddInt32(&value, -1))
+	dec := func(ctx fir.RouteContext) error {
+		return ctx.DOM().ReplaceKV("count", atomic.AddInt32(&value, -1))
 	}
 
 	return fir.RouteOptions{

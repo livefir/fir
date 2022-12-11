@@ -15,10 +15,10 @@ type countRequest struct {
 func index() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.Content("app.html"),
-		fir.OnLoad(func(ctx fir.Context) error {
+		fir.OnLoad(func(ctx fir.RouteContext) error {
 			return ctx.KV("total", 0)
 		}),
-		fir.OnEvent("update", func(ctx fir.Context) error {
+		fir.OnEvent("update", func(ctx fir.RouteContext) error {
 			req := new(countRequest)
 			if err := ctx.Bind(req); err != nil {
 				return err
@@ -27,7 +27,7 @@ func index() fir.RouteOptions {
 			if err != nil {
 				return err
 			}
-			return ctx.DOM.Store("fir", map[string]any{"total": count * 10})
+			return ctx.DOM().Store("fir", map[string]any{"total": count * 10})
 		}),
 	}
 }
