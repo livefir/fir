@@ -1,24 +1,17 @@
 {{ define "content" }}
     <div
         x-data="{loading: false,toggle(){this.loading = !this.loading}}"
-        class="columns is-mobile mt-5"
-    >
+        class="columns is-mobile mt-5">
         <div class="column is-three-fifths">
             <nav
                 class="breadcrumb has-succeeds-separator"
-                aria-label="breadcrumbs"
-            >
+                aria-label="breadcrumbs">
                 <ul>
                     <li>
                         <a href="/"> Projects </a>
                     </li>
                     <li class="is-active">
-                        <a
-                            href="#"
-                            aria-current="page"
-                        >
-                            Edit
-                        </a>
+                        <a href="#" aria-current="page"> Edit </a>
                     </li>
                 </ul>
             </nav>
@@ -29,14 +22,9 @@
                         method="post"
                         id="project-update"
                         @fir:submit:project-update.window="toggle"
-                        @submit.prevent="$fir.submit"
-                    >
+                        @submit.prevent="$fir.emit()">
                         <div class="field">
-                            <input
-                                name="action"
-                                value="update"
-                                type="hidden"
-                            />
+                            <input name="action" value="update" type="hidden" />
                         </div>
                         <div class="field">
                             <label class="label"> Title </label>
@@ -46,8 +34,7 @@
                                     class="input"
                                     type="text"
                                     value="{{ .Title }}"
-                                    placeholder="Title"
-                                />
+                                    placeholder="Title" />
                             </div>
                             {{ block "title-error" . }}
                                 <div id="title-error">
@@ -65,8 +52,7 @@
                                     class="input"
                                     type="text"
                                     value="{{ .Description }}"
-                                    placeholder="Description"
-                                />
+                                    placeholder="Description" />
                             </div>
                             {{ block "description-error" . }}
                                 <div id="title-error">
@@ -81,8 +67,7 @@
                                 <button
                                     type="submit"
                                     :class="loading && 'is-loading'"
-                                    class="button is-link"
-                                >
+                                    class="button is-link">
                                     Update
                                 </button>
                             </div>
@@ -92,18 +77,10 @@
                         method="post"
                         id="project-delete"
                         class="mt-2"
-                        @submit.prevent="$fir.submit"
-                    >
-                        <input
-                            name="action"
-                            value="delete"
-                            type="hidden"
-                        />
+                        @submit.prevent="$fir.emit()">
+                        <input name="action" value="delete" type="hidden" />
                         <div class="control">
-                            <button
-                                type="submit"
-                                class="button is-danger"
-                            >
+                            <button type="submit" class="button is-danger">
                                 Delete
                             </button>
                         </div>

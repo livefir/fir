@@ -55,7 +55,7 @@ To avoid a page reload and update only the changed part of the page (i.e `{{rang
 In the above page, `range` is enclosed in a `block` expression. The `block` section of the page can now be re-rendered by looking it up by name in the template tree. Fir’s alpine.js plugin can enhance this page by preventing the form submission request and sending a json event instead. On receiving the event, Fir server re-renders the `todos` `block` and sends back a html snippet. The fir alpine.js plugin replaces the content of the `todos` `div`  with the returned html snippet.
 
 ```go
-<form **x-data @submit.prevent="$fir.submit"** name="newTodo" method="post">
+<form **x-data @submit.prevent="$fir.emit()"** name="newTodo" method="post">
  <input name="text" class="input" type="text" required/>
   <button type="submit" value="Submit">Submit</button>
 </form>
@@ -68,4 +68,4 @@ In the above page, `range` is enclosed in a `block` expression. The `block` sect
 </div>
 ```
 
-`x-data` attribute on the `newTodo` form declares it as a new Alpine component. `@submit.prevent` is a `x-on` [directive](https://alpinejs.dev/directives/on) which prevents the form submission and calls `$fir.submit` [custom magic function](https://alpinejs.dev/advanced/extending#magic-functions) instead. The `$fir.submit` function reads the Form element data and sends a `fir.Event` over a real-time connection or a regular fetch call if a real-time connection is unavailable. The event is handled on the server and a `patch` operation is sent back. The patch operation is then applied the DOM by the alpine.js plugin.
+`x-data` attribute on the `newTodo` form declares it as a new Alpine component. `@submit.prevent` is a `x-on` [directive](https://alpinejs.dev/directives/on) which prevents the form submission and calls `$fir.emit()` [custom magic function](https://alpinejs.dev/advanced/extending#magic-functions) instead. The `$fir.emit()` function reads the Form element data and sends a `fir.Event` over a real-time connection or a regular fetch call if a real-time connection is unavailable. The event is handled on the server and a `patch` operation is sent back. The patch operation is then applied the DOM by the alpine.js plugin.

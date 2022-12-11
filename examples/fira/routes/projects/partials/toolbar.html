@@ -2,9 +2,9 @@
     <form
         class="mb-4"
         id="project-query"
-        @order-changed="$fir.submit"
-        @search-changed="$fir.submit"
-        @submit.prevent="$fir.submit">
+        @order-changed="$fir.emit()"
+        @search-changed="$fir.emit()"
+        @submit.prevent="$fir.emit()">
         <div class="field is-horizontal">
             <div class="field-body">
                 <div class="field has-addons">

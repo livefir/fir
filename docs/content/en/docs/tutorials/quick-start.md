@@ -227,7 +227,7 @@ func (*TaskView) Content() string {
  {{define "content"}}
   <div x-data>
    <h1>Tasks</h1>
-   <form id="new-task" method="post" @submit.prevent="$fir.submit">
+   <form id="new-task" method="post" @submit.prevent="$fir.emit()">
     <input type="text" name="text" placeholder="New task" />
    </form>
    {{block "tasks" .}}
@@ -242,15 +242,15 @@ func (*TaskView) Content() string {
 }
 ```
 
-Now we can use [alpinejs](https://alpinejs.dev/directives/on#prevent) `@submit.prevent` binding to call a utility function from the library: `$fir.submit`.
+Now we can use [alpinejs](https://alpinejs.dev/directives/on#prevent) `@submit.prevent` binding to call a utility function from the library: `$fir.emit()`.
 
 ```html
-<form id="new-task" method="post" @submit.prevent="$fir.submit">
+<form id="new-task" method="post" @submit.prevent="$fir.emit()">
  <input type="text" name="text" placeholder="New task" />
 </form>
 ```
 
-In the above snippet, we use the custom Alpinejs magic function, `$fir.submit` to send an event to the server on form submission. Internally `$fir.submit` collects the form data and sends a `post` request to the controller.  Shortly we will see how to handle this event to change state on the server, followed by updating tasks on the web page.
+In the above snippet, we use the custom Alpinejs magic function, `$fir.emit()` to send an event to the server on form submission. Internally `$fir.emit()` collects the form data and sends a `post` request to the controller.  Shortly we will see how to handle this event to change state on the server, followed by updating tasks on the web page.
 
 ### Handle page events
 
@@ -371,7 +371,7 @@ func (*TaskView) Content() string {
  {{define "content"}}
   <div x-data>
    <h1>Tasks</h1>
-   <form id="new-task" method="post" @submit.prevent="$fir.submit">
+   <form id="new-task" method="post" @submit.prevent="$fir.emit()">
     <input type="text" name="text" placeholder="New task" />
    </form>
    {{block "tasks" .}}

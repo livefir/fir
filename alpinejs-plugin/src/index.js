@@ -29,95 +29,119 @@ const Plugin = (Alpine) => {
         updateStore
     )
 
-    Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
-        const val = evaluate(expression)
-        if (isObject(val)) {
-            for (const [key, value] of Object.entries(val)) {
-                Alpine.store(key, value)
-            }
-            return
-        }
-    })
-
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
             emit(id, params) {
-                post(el, id, params, false)
-            },
-            navigate(to) {
-                if (!to) {
-                    return
-                }
-                window.location.href = to
-            },
-            submit(event) {
-                if (!(el instanceof HTMLFormElement)) {
-                    console.error(
-                        "Element is not a form. Can't submit event. Please use $fir.emit for non-form elements"
-                    )
-                    return
-                }
-
-                if (!el.id && !event.submitter && !event.submitter.formAction) {
-                    console.error(`Form element has niether id set nor it was sumbmitted by an event with formaction 
-                    set. Can't submit event. Please use $fir.emit for non-form elements`)
-                    return
-                }
-
-                let inputs = [...el.querySelectorAll('input[data-rules]')]
-                let formErrors = { errors: {} }
-                inputs.map((input) => {
-                    const rules = JSON.parse(input.dataset.rules)
-                    const isValid = iodine.is(input.value, rules)
-                    if (isValid !== true) {
-                        formErrors.errors[input.getAttribute('name')] =
-                            iodine.getErrorMessage(isValid)
-                    }
-                })
-
-                let formMethod = el.getAttribute('method')
-                if (!formMethod) {
-                    formMethod = 'get'
-                }
-
-                // update form errors store
-                const prevStore = Object.assign({}, Alpine.store(el.id))
-                const nextStore = { ...prevStore, ...formErrors }
-                Alpine.store(el.id, nextStore)
-                if (Object.keys(formErrors.errors).length == 0) {
-                    let formData = new FormData(el)
-                    let eventID = el.id
-                    if (el.action) {
-                        const url = new URL(event.submitter.formAction)
-                        if (url.searchParams.get('event')) {
-                            eventID = url.searchParams.get('event')
+                return function (event) {
+                    if (!(el instanceof HTMLFormElement)) {
+                        if (!id && el.id) {
+                            id = el.id
                         }
-                    }
-                    if (event.submitter && event.submitter.formAction) {
-                        const url = new URL(event.submitter.formAction)
-                        if (url.searchParams.get('event')) {
-                            eventID = url.searchParams.get('event')
+
+                        if (!id) {
+                            console.error(
+                                `element ${el} has niether id set nor emit was called with an id.`
+                            )
+                            return
                         }
+
+                        if (typeof id !== 'string') {
+                            console.error(`id ${id} is not a string.`)
+                            return
+                        }
+
+                        if (event && event.target && event.target.value) {
+                            let key = 'targetValue'
+                            if (event.target.name) {
+                                key = event.target.name
+                            }
+                            if (!params) {
+                                params = { key: event.target.value }
+                            } else {
+                                params[key] = event.target.value
+                            }
+                        }
+
+                        post(el, id, params, false)
+                        return
                     }
-                    if (event.submitter && event.submitter.name) {
-                        formData.append(
-                            event.submitter.name,
-                            event.submitter.value
+
+                    if (
+                        !id &&
+                        !el.id &&
+                        !event.submitter &&
+                        !event.submitter.formAction
+                    ) {
+                        console.error(`event id is empty, the form element id is not set, 
+                        or it wasn't sumbmitted by a button with formaction set. can't emit event`)
+                        return
+                    }
+
+                    let inputs = [...el.querySelectorAll('input[data-rules]')]
+                    let formErrors = { errors: {} }
+                    inputs.map((input) => {
+                        const rules = JSON.parse(input.dataset.rules)
+                        const isValid = iodine.is(input.value, rules)
+                        if (isValid !== true) {
+                            formErrors.errors[input.getAttribute('name')] =
+                                iodine.getErrorMessage(isValid)
+                        }
+                    })
+
+                    let formMethod = el.getAttribute('method')
+                    if (!formMethod) {
+                        formMethod = 'get'
+                    }
+
+                    // update form errors store
+                    const prevStore = Object.assign({}, Alpine.store(el.id))
+                    const nextStore = { ...prevStore, ...formErrors }
+                    Alpine.store(el.id, nextStore)
+                    if (Object.keys(formErrors.errors).length == 0) {
+                        let formData = new FormData(el)
+                        let eventID = id
+                        if (!eventID) {
+                            if (el.id) {
+                                eventID = el.id
+                            }
+                            if (el.action) {
+                                const url = new URL(event.submitter.formAction)
+                                if (url.searchParams.get('event')) {
+                                    eventID = url.searchParams.get('event')
+                                }
+                            }
+                            if (event.submitter && event.submitter.formAction) {
+                                const url = new URL(event.submitter.formAction)
+                                if (url.searchParams.get('event')) {
+                                    eventID = url.searchParams.get('event')
+                                }
+                            }
+                        } else {
+                            if (typeof eventID !== 'string') {
+                                console.error(`id ${eventID} is not a string.`)
+                                return
+                            }
+                        }
+                        if (event.submitter && event.submitter.name) {
+                            formData.append(
+                                event.submitter.name,
+                                event.submitter.value
+                            )
+                        }
+                        let params = {}
+                        formData.forEach(
+                            (value, key) => (params[key] = new Array(value))
                         )
+                        post(el, eventID, params, true)
+                        if (formMethod.toLowerCase() === 'get') {
+                            const url = new URL(window.location)
+                            formData.forEach((value, key) =>
+                                url.searchParams.set(key, value)
+                            )
+                            window.history.pushState({}, '', url)
+                        }
+                        return
                     }
-                    let params = {}
-                    formData.forEach(
-                        (value, key) => (params[key] = new Array(value))
-                    )
-                    post(el, eventID, params, true)
-                    if (formMethod.toLowerCase() === 'get') {
-                        const url = new URL(window.location)
-                        formData.forEach((value, key) =>
-                            url.searchParams.set(key, value)
-                        )
-                        window.history.pushState({}, '', url)
-                    }
-                    return
                 }
             },
         }
@@ -204,13 +228,6 @@ const Plugin = (Alpine) => {
         let startEventNameCamel = 'fir:emitStart'
         let endEventName = 'fir:emit-end'
         let endEventNameCamel = 'fir:emitEnd'
-        if (el instanceof HTMLFormElement) {
-            startEventName = 'fir:submit-start'
-            startEventNameCamel = 'fir:submitStart'
-            endEventName = 'fir:submit-end'
-            endEventNameCamel = 'fir:submitEnd'
-            eventName = 'fir:submit'
-        }
 
         const options = {
             detail,
@@ -222,7 +239,9 @@ const Plugin = (Alpine) => {
 
         const eventIdlower = eventId.toLowerCase()
         // camel to kebab case
-        const eventIdKebab = eventId.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase()
+        const eventIdKebab = eventId
+            .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
+            .toLowerCase()
 
         el.dispatchEvent(new CustomEvent(startEventName, options))
         el.dispatchEvent(
@@ -234,11 +253,13 @@ const Plugin = (Alpine) => {
         el.dispatchEvent(
             new CustomEvent(`${startEventName}:${eventIdKebab}`, options)
         )
-        el.dispatchEvent(new CustomEvent(`${eventName}:${eventIdKebab}`, options))
+        el.dispatchEvent(
+            new CustomEvent(`${eventName}:${eventIdKebab}`, options)
+        )
 
-        el.dispatchEvent(new CustomEvent(`${eventName}:${eventIdlower}`, options))
-
-
+        el.dispatchEvent(
+            new CustomEvent(`${eventName}:${eventIdlower}`, options)
+        )
 
         const event = {
             event_id: eventId,
@@ -286,16 +307,25 @@ const Plugin = (Alpine) => {
                 .finally(() => {
                     el.dispatchEvent(new CustomEvent(endEventName, options))
                     el.dispatchEvent(
-                        new CustomEvent(`${endEventName}:${eventIdlower}`, options)
+                        new CustomEvent(
+                            `${endEventName}:${eventIdlower}`,
+                            options
+                        )
                     )
                     el.dispatchEvent(
                         new CustomEvent(`${eventName}:${eventIdlower}`, options)
                     )
                     el.dispatchEvent(
-                        new CustomEvent(`${endEventNameCamel}:${eventIdlower}`, options)
+                        new CustomEvent(
+                            `${endEventNameCamel}:${eventIdlower}`,
+                            options
+                        )
                     )
                     el.dispatchEvent(
-                        new CustomEvent(`${endEventName}:${eventIdKebab}`, options)
+                        new CustomEvent(
+                            `${endEventName}:${eventIdKebab}`,
+                            options
+                        )
                     )
                     el.dispatchEvent(
                         new CustomEvent(`${eventName}:${eventIdKebab}`, options)

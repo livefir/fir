@@ -16,7 +16,7 @@
         id="createTweet"
         method="post"
         action="/?event=createTweet"
-        @submit.prevent="$fir.submit"
+        @submit.prevent="$fir.emit()"
         style="margin-top:1rem;margin-bottom:1rem;">
         <input type="text" name="body" placeholder="a new tweet" />
         {{ block "fir-error-createTweet-body" . }}
@@ -39,7 +39,7 @@
                     </div>
                     <form
                         method="post"
-                        @submit.prevent="$fir.submit"
+                        @submit.prevent="$fir.emit()"
                         style="margin-right:1rem">
                         <input type="hidden" name="tweetID" value="{{ .ID }}" />
                         <button formaction="/?event=likeTweet" type="submit">

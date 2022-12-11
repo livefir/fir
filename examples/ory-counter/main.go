@@ -65,7 +65,7 @@ var content = `<!DOCTYPE html>
 					{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
 					<button class="button has-background-primary" @click="$fir.emit('inc')">+
 					</button>
-					<button class="button has-background-primary" @click="$fir.emit('dec')">-
+					<button id="dec" class="button has-background-primary" @click="$fir.emit()">-
 					</button>
 				</div>
 			</div>
