@@ -31,8 +31,33 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            emit(id, params) {
+            emit(id, options) {
                 return function (event) {
+                    if (options.patch) {
+                        if (typeof options.patch !== 'object') {
+                            console.error(`options.patch must be an object.`)
+                            return
+                        }
+                    }
+
+                    if (options.patchset) {
+                        if (!Array.isArray(options.patchset)) {
+                            console.error(
+                                `options.patchset must be an array of patch objects.`
+                            )
+                            return
+                        }
+
+                        options.patchset.map((patch) => {
+                            if (typeof patch !== 'object') {
+                                console.error(
+                                    `options.patchset must be an array of patch objects.`
+                                )
+                                return
+                            }
+                        })
+                    }
+
                     if (!(el instanceof HTMLFormElement)) {
                         if (!id && el.id) {
                             id = el.id
@@ -55,14 +80,20 @@ const Plugin = (Alpine) => {
                             if (event.target.name) {
                                 key = event.target.name
                             }
-                            if (!params) {
-                                params = { key: event.target.value }
+                            if (!options) {
+                                options = {
+                                    params: { key: event.target.value },
+                                }
                             } else {
-                                params[key] = event.target.value
+                                if (!options.params) {
+                                    options.params = { key: event.target.value }
+                                } else {
+                                    options.params[key] = event.target.value
+                                }
                             }
                         }
 
-                        post(el, id, params, false)
+                        post(el, id, Object.assign(options, {}), false)
                         return
                     }
 
@@ -132,7 +163,11 @@ const Plugin = (Alpine) => {
                         formData.forEach(
                             (value, key) => (params[key] = new Array(value))
                         )
-                        post(el, eventID, params, true)
+
+                        if (options && options.params) {
+                            options.params = { ...options.params, ...params }
+                        }
+                        post(el, id, Object.assign(options, {}), true)
                         if (formMethod.toLowerCase() === 'get') {
                             const url = new URL(window.location)
                             formData.forEach((value, key) =>
@@ -213,14 +248,14 @@ const Plugin = (Alpine) => {
         store: (operation) => updateStore(operation.selector, operation.value),
     }
 
-    const post = (el, eventId, params, isForm) => {
+    const post = (el, eventId, eventOptions, isForm) => {
         if (!eventId) {
             throw new Error('event id is required.')
         }
         let detail = {
             elementId: el.id,
             eventId: eventId,
-            params: params,
+            params: eventOptions.params,
         }
 
         let eventName = 'fir:emit'
@@ -261,11 +296,58 @@ const Plugin = (Alpine) => {
             new CustomEvent(`${eventName}:${eventIdlower}`, options)
         )
 
+        const buildPatch = (patch) => {
+            if (!patch.selector) {
+                throw new Error('patchset requires a selector')
+            }
+
+            let op = 'replace'
+            if (patch.op) {
+                op = patch.op
+            }
+            if (!operations[op]) {
+                throw new Error(`patchset op ${op} not supported`)
+            }
+            let value = ''
+            if (patch.renderBlock) {
+                value = patch.renderBlock
+            } else if (patch.renderTemplate) {
+                value = patch.renderTemplate
+            } else {
+                throw new Error(
+                    'patchset requires either renderBlock or renderTemplate'
+                )
+            }
+            if (typeof value !== 'string') {
+                throw new Error(
+                    'patchset requires either renderBlock or renderTemplate to be a string'
+                )
+            }
+
+            return {
+                selector: patch.selector,
+                op: patch.op,
+                value: value,
+            }
+        }
+
+        let patchset = []
+        if (eventOptions.patch) {
+            patchset.push(buildPatch(eventOptions.patch))
+        }
+        if (eventOptions.patchset) {
+            eventOptions.patchset.forEach((patch) => {
+                patchset.push(buildPatch(patch))
+            })
+        }
+
         const event = {
             event_id: eventId,
-            params: params,
+            params: eventOptions.params,
+            patchset: patchset,
             is_form: isForm,
         }
+
         if (socket.emit(event)) {
             el.dispatchEvent(new CustomEvent(endEventName, options))
             el.dispatchEvent(

@@ -18,16 +18,12 @@ type Counter struct {
 	sync.RWMutex
 }
 
-func replaceCount(ctx fir.RouteContext, c int32) error {
-	return ctx.DOM().Replace("#count", ctx.RenderBlock("count", map[string]any{"count": c}))
-}
-
 func (c *Counter) Inc(ctx fir.RouteContext) error {
 	c.Lock()
 	defer c.Unlock()
 	c.count += 1
 	c.updated = time.Now()
-	return replaceCount(ctx, c.count)
+	return ctx.KV("count", c.count)
 }
 
 func (c *Counter) Dec(ctx fir.RouteContext) error {
@@ -35,7 +31,7 @@ func (c *Counter) Dec(ctx fir.RouteContext) error {
 	defer c.Unlock()
 	c.count -= 1
 	c.updated = time.Now()
-	return replaceCount(ctx, c.count)
+	return ctx.KV("count", c.count)
 }
 
 func (c *Counter) Updated() float64 {
@@ -122,14 +118,15 @@ var content = `
 {{define "content" }} 
 <div class="my-6" style="height: 500px">
 	<div class="columns is-mobile is-centered is-vcentered">
-		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+		<div x-data="{patch:{op:'replace',selector:'#count',renderBlock:'count'}}" 
+			 class="column is-one-third-desktop has-text-centered is-narrow">
 			<div>
 				<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
 				<hr>
 				{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-				<button class="button has-background-primary" @click="$fir.emit('inc')">+
+				<button class="button has-background-primary" @click="$fir.emit('inc',$data)">+
 				</button>
-				<button id="dec" class="button has-background-primary" @click="$fir.emit()">-
+				<button class="button has-background-primary" @click="$fir.emit('dec',$data)">-
 				</button>
 			</div>
 		</div>
@@ -145,8 +142,8 @@ var layout = `<!DOCTYPE html>
 		<meta charset="UTF-8">
 		<meta name="description" content="A counter app">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<-- <script defer src="http://localhost:8000/cdn.js"></script> -->
-		<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+		<script defer src="http://localhost:8000/cdn.js"></script>
+		
 		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	</head>
 	

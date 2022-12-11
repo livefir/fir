@@ -3,6 +3,7 @@ package fir
 import (
 	"encoding/json"
 
+	"github.com/adnaan/fir/dom"
 	"github.com/golang/glog"
 )
 
@@ -26,8 +27,9 @@ type Event struct {
 	// Name is the name of the event
 	ID string `json:"event_id"`
 	// Params is the json rawmessage to be passed to the event
-	Params json.RawMessage `json:"params"`
-	IsForm bool            `json:"is_form"`
+	Params   json.RawMessage `json:"params"`
+	Patchset dom.Patchset    `json:"patchset"`
+	IsForm   bool            `json:"is_form"`
 }
 
 // String returns the string representation of the event

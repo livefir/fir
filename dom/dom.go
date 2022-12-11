@@ -64,16 +64,16 @@ var _ error = (Patcher)(nil)
 type PatchType string
 
 const (
-	replace     PatchType = "replace"
-	after       PatchType = "after"
-	before      PatchType = "before"
-	appendOp    PatchType = "append"
-	prepend     PatchType = "prepend"
-	remove      PatchType = "remove"
-	reload      PatchType = "reload"
-	updateStore PatchType = "store"
-	resetForm   PatchType = "resetForm"
-	navigate    PatchType = "navigate"
+	Replace   PatchType = "replace"
+	After     PatchType = "after"
+	Before    PatchType = "before"
+	Append    PatchType = "append"
+	Prepend   PatchType = "prepend"
+	Remove    PatchType = "remove"
+	Reload    PatchType = "reload"
+	Store     PatchType = "store"
+	ResetForm PatchType = "resetForm"
+	Navigate  PatchType = "navigate"
 )
 
 // Patch is an interface for all patch operations
@@ -95,7 +95,7 @@ type patcher struct {
 
 func (p *patcher) Replace(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     replace,
+		Type:     Replace,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -106,7 +106,7 @@ func (p *patcher) ReplaceKV(key string, value any) Patcher {
 	selector := fmt.Sprintf("#%s", key)
 	t := NewTemplateRenderer(key, value)
 	p.patchset = append(p.patchset, Patch{
-		Type:     replace,
+		Type:     Replace,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -115,7 +115,7 @@ func (p *patcher) ReplaceKV(key string, value any) Patcher {
 
 func (p *patcher) After(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     after,
+		Type:     After,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -124,7 +124,7 @@ func (p *patcher) After(selector string, t TemplateRenderer) Patcher {
 
 func (p *patcher) Before(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     before,
+		Type:     Before,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -133,7 +133,7 @@ func (p *patcher) Before(selector string, t TemplateRenderer) Patcher {
 
 func (p *patcher) Append(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     appendOp,
+		Type:     Append,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -142,7 +142,7 @@ func (p *patcher) Append(selector string, t TemplateRenderer) Patcher {
 
 func (p *patcher) Prepend(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     prepend,
+		Type:     Prepend,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -151,7 +151,7 @@ func (p *patcher) Prepend(selector string, t TemplateRenderer) Patcher {
 
 func (p *patcher) Remove(selector string) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     remove,
+		Type:     Remove,
 		Selector: &selector,
 	})
 	return p
@@ -159,14 +159,14 @@ func (p *patcher) Remove(selector string) Patcher {
 
 func (p *patcher) Reload() Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type: reload,
+		Type: Reload,
 	})
 	return p
 }
 
 func (p *patcher) Store(name string, data any) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     updateStore,
+		Type:     Store,
 		Selector: &name,
 		Value:    data,
 	})
@@ -175,7 +175,7 @@ func (p *patcher) Store(name string, data any) Patcher {
 
 func (p *patcher) ResetForm(selector string) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     resetForm,
+		Type:     ResetForm,
 		Selector: &selector,
 	})
 	return p
@@ -183,7 +183,7 @@ func (p *patcher) ResetForm(selector string) Patcher {
 
 func (p *patcher) Navigate(url string) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:  navigate,
+		Type:  Navigate,
 		Value: url,
 	})
 	return p
@@ -204,9 +204,9 @@ func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 	firErrorPatchExists := false
 	for _, p := range patchset {
 		switch p.Type {
-		case updateStore, navigate, resetForm, reload, remove:
+		case Store, Navigate, ResetForm, Reload, Remove:
 			renderedPatchset = append(renderedPatchset, p)
-		case replace, after, before, appendOp, prepend:
+		case Replace, After, Before, Append, Prepend:
 			tmpl, ok := p.Value.(map[string]any)
 			if !ok {
 				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
@@ -236,7 +236,7 @@ func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 		tmplVal, err := buildTemplateValue(t, "fir-error", nil)
 		if err == nil {
 			renderedPatchset = append([]Patch{{
-				Type:     replace,
+				Type:     Replace,
 				Selector: &firError,
 				Value:    tmplVal,
 			}}, renderedPatchset...)
