@@ -18,9 +18,6 @@
         action="/?event=createTweet"
         @submit.prevent="$fir.submit"
         style="margin-top:1rem;margin-bottom:1rem;">
-        {{/* why .camel? https://github.com/alpinejs/alpine/discussions/626 */}}
-
-
         <input type="text" name="body" placeholder="a new tweet" />
         {{ block "fir-error-createTweet-body" . }}
             <p id="fir-error-createTweet-body">
