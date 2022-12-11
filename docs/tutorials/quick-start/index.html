@@ -154,7 +154,7 @@ func (*TaskView) Content() string {
  {{define &quot;content&quot;}}
   &lt;div x-data&gt;
    &lt;h1&gt;Tasks&lt;/h1&gt;
-   &lt;form id=&quot;new-task&quot; method=&quot;post&quot; @submit.prevent=&quot;$fir.submit&quot;&gt;
+   &lt;form id=&quot;new-task&quot; method=&quot;post&quot; @submit.prevent=&quot;$fir.emit()&quot;&gt;
     &lt;input type=&quot;text&quot; name=&quot;text&quot; placeholder=&quot;New task&quot; /&gt;
    &lt;/form&gt;
    {{block &quot;tasks&quot; .}}
@@ -167,10 +167,10 @@ func (*TaskView) Content() string {
   &lt;/div&gt;
  {{end}}`
 }
-</code></pre><p>Now we can use <a href=https://alpinejs.dev/directives/on#prevent>alpinejs</a> <code>@submit.prevent</code> binding to call a utility function from the library: <code>$fir.submit</code>.</p><pre><code class=language-html>&lt;form id=&quot;new-task&quot; method=&quot;post&quot; @submit.prevent=&quot;$fir.submit&quot;&gt;
+</code></pre><p>Now we can use <a href=https://alpinejs.dev/directives/on#prevent>alpinejs</a> <code>@submit.prevent</code> binding to call a utility function from the library: <code>$fir.emit()</code>.</p><pre><code class=language-html>&lt;form id=&quot;new-task&quot; method=&quot;post&quot; @submit.prevent=&quot;$fir.emit()&quot;&gt;
  &lt;input type=&quot;text&quot; name=&quot;text&quot; placeholder=&quot;New task&quot; /&gt;
 &lt;/form&gt;
-</code></pre><p>In the above snippet, we use the custom Alpinejs magic function, <code>$fir.submit</code> to send an event to the server on form submission. Internally <code>$fir.submit</code> collects the form data and sends a <code>post</code> request to the controller. Shortly we will see how to handle this event to change state on the server, followed by updating tasks on the web page.</p><h3 id=handle-page-events>Handle page events <a href=#handle-page-events class=anchor aria-hidden=true>#</a></h3><p>To handle page events emitted by the <code>fir</code> client library, we override the <code>OnEvent</code> method of the <code>View</code> interface. In response to a page event, we want to send back a set of <code>Patch</code> operations which can modify targeted sections of the page.</p><pre><code class=language-go>...
+</code></pre><p>In the above snippet, we use the custom Alpinejs magic function, <code>$fir.emit()</code> to send an event to the server on form submission. Internally <code>$fir.emit()</code> collects the form data and sends a <code>post</code> request to the controller. Shortly we will see how to handle this event to change state on the server, followed by updating tasks on the web page.</p><h3 id=handle-page-events>Handle page events <a href=#handle-page-events class=anchor aria-hidden=true>#</a></h3><p>To handle page events emitted by the <code>fir</code> client library, we override the <code>OnEvent</code> method of the <code>View</code> interface. In response to a page event, we want to send back a set of <code>Patch</code> operations which can modify targeted sections of the page.</p><pre><code class=language-go>...
 
 func (t *TaskView) OnEvent(event fir.Event) fir.Patchset {
  switch event.ID {
@@ -277,7 +277,7 @@ func (*TaskView) Content() string {
  {{define &quot;content&quot;}}
   &lt;div x-data&gt;
    &lt;h1&gt;Tasks&lt;/h1&gt;
-   &lt;form id=&quot;new-task&quot; method=&quot;post&quot; @submit.prevent=&quot;$fir.submit&quot;&gt;
+   &lt;form id=&quot;new-task&quot; method=&quot;post&quot; @submit.prevent=&quot;$fir.emit()&quot;&gt;
     &lt;input type=&quot;text&quot; name=&quot;text&quot; placeholder=&quot;New task&quot; /&gt;
    &lt;/form&gt;
    {{block &quot;tasks&quot; .}}
@@ -301,4 +301,4 @@ func main() {
 </code></pre><div class="page-footer-meta d-flex flex-column flex-md-row justify-content-between"></div><div class="docs-navigation d-flex justify-content-between"><a class=ms-auto href=https://adnaan.badr.in/fir/docs/api/go/><div class="card my-1"><div class="card-body py-2">Go &rarr;</div></div></a></div></main></div></div></div><footer class="footer text-muted"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div></div></div></footer><script src=https://adnaan.badr.in/fir/js/bootstrap.min.54bf0932b8a36d0e152b1635b099a6ef1394d35327e2437550a075c9c8ed1bd8aed5847c21b36fc02ed24014c031d9ca24017b0c78b1639d7e2fa8329898b842.js integrity="sha512-VL8JMrijbQ4VKxY1sJmm7xOU01Mn4kN1UKB1ycjtG9iu1YR8IbNvwC7SQBTAMdnKJAF7DHixY51+L6gymJi4Qg==" crossorigin=anonymous defer></script>
 <script src=https://adnaan.badr.in/fir/js/highlight.min.5d6f0cf947e4113050c77888e0573b1db7b4fcc46c02b35560eb83150574f049dcc378443447514b4b25cbf1cff85522c403b87759cb2203b64fb78e2afa084c.js integrity="sha512-XW8M+UfkETBQx3iI4Fc7Hbe0/MRsArNVYOuDFQV08Encw3hENEdRS0sly/HP+FUixAO4d1nLIgO2T7eOKvoITA==" crossorigin=anonymous defer></script>
 <script src=https://adnaan.badr.in/fir/main.min.162c56a0426544de0d010e66c56e321579655c400c9aae06a6823e7682de379adadf2165bd416fea191e4e7e410fbf1fd2c35a759aa43ff2e3787067669bf81b.js integrity="sha512-FixWoEJlRN4NAQ5mxW4yFXllXEAMmq4GpoI+doLeN5ra3yFlvUFv6hkeTn5BD78f0sNadZqkP/LjeHBnZpv4Gw==" crossorigin=anonymous defer></script>
-<script src=https://adnaan.badr.in/fir/index.min.242771f22bb4d3cd5cfca85d52f72ad72337f3c1afa199dcc923470de03879afeb139d7e5968d79d2bf5b93e1209f89bbe4c7d28c2b7cc797a0b08ef1adc8073.js integrity="sha512-JCdx8iu0081c/KhdUvcq1yM388GvoZncySNHDeA4ea/rE51+WWjXnSv1uT4SCfibvkx9KMK3zHl6CwjvGtyAcw==" crossorigin=anonymous defer></script></body></html>
+<script src=https://adnaan.badr.in/fir/index.min.48ed4068146d1611c848a0d8beb1f72e03f53829f00b75f90b0d1e0c7a6f8f8da516154e618c31f42bf02b3c12a6e9201a7ca07956bd6b846f1709494da6ff52.js integrity="sha512-SO1AaBRtFhHISKDYvrH3LgP1OCnwC3X5Cw0eDHpvj42lFhVOYYwx9CvwKzwSpukgGnygeVa9a4RvFwlJTab/Ug==" crossorigin=anonymous defer></script></body></html>
