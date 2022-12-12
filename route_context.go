@@ -22,6 +22,7 @@ type RouteContext struct {
 	route     *route
 	isOnLoad  bool
 	dom       dom.Patcher
+	sessionID string
 }
 
 func (c RouteContext) Event() Event {

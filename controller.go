@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/adnaan/fir/pubsub"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
@@ -37,6 +38,7 @@ type opt struct {
 	appName              string
 	formDecoder          *schema.Decoder
 	validator            *validator.Validate
+	sessionManager       *scs.SessionManager
 }
 
 // ControllerOption is an option for the controller.
@@ -144,6 +146,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 		return name
 	})
 
+	sessionManager := scs.New()
+	sessionManager.Cookie.Name = "_fir_session_"
+
 	o := &opt{
 		channelFunc:       defaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
@@ -152,6 +157,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		appName:           name,
 		formDecoder:       formDecoder,
 		validator:         validate,
+		sessionManager:    sessionManager,
 	}
 
 	for _, option := range options {
@@ -213,10 +219,7 @@ func (c *controller) Route(route Route) http.HandlerFunc {
 		option(defaultRouteOpt)
 	}
 
-	rt := newRoute(c, defaultRouteOpt)
-	return func(w http.ResponseWriter, r *http.Request) {
-		rt.handle(w, r)
-	}
+	return c.sessionHandlerFunc(newRoute(c, defaultRouteOpt))
 }
 
 // RouteFunc returns an http.HandlerFunc that renders the route
@@ -225,8 +228,9 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 		option(defaultRouteOpt)
 	}
 
-	rt := newRoute(c, defaultRouteOpt)
-	return func(w http.ResponseWriter, r *http.Request) {
-		rt.handle(w, r)
-	}
+	return c.sessionHandlerFunc(newRoute(c, defaultRouteOpt))
+}
+
+func (c *controller) sessionHandlerFunc(route *route) http.HandlerFunc {
+	return c.sessionManager.LoadAndSave(route).ServeHTTP
 }

@@ -6,7 +6,9 @@ require (
 	entgo.io/ent v0.11.4
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alecthomas/chroma v0.10.0
+	github.com/alexedwards/scs/v2 v2.5.0
 	github.com/davecgh/go-spew v1.1.1
+	github.com/fatih/structs v1.1.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/go-redis/redis/v8 v8.11.5
