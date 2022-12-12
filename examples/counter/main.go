@@ -45,11 +45,19 @@ func index() fir.RouteOptions {
 	}
 
 	inc := func(ctx fir.RouteContext) error {
-		return ctx.DOM().ReplaceKV("count", atomic.AddInt32(&value, 1))
+		return ctx.DOM().Replace("#count",
+			ctx.RenderBlock("count",
+				map[string]interface{}{
+					"count": atomic.AddInt32(&value, 1),
+				}))
 	}
 
 	dec := func(ctx fir.RouteContext) error {
-		return ctx.DOM().ReplaceKV("count", atomic.AddInt32(&value, -1))
+		return ctx.DOM().Replace("#count",
+			ctx.RenderBlock("count",
+				map[string]interface{}{
+					"count": atomic.AddInt32(&value, -1),
+				}))
 	}
 
 	return fir.RouteOptions{

@@ -12,11 +12,13 @@
         @fir:submit-end:createTweet.window="console.log('create tweet done')"></div>
 
     <form
-        x-data
+        x-data="{
+            patch: {op: 'append',selector:'#tweets',renderBlock:'tweet'}
+        }"
         id="createTweet"
         method="post"
         action="/?event=createTweet"
-        @submit.prevent="$fir.emit()"
+        @submit.prevent="$fir.emit('createTweet',$data)"
         style="margin-top:1rem;margin-bottom:1rem;">
         <input type="text" name="body" placeholder="a new tweet" />
         {{ block "fir-error-createTweet-body" . }}
@@ -26,7 +28,22 @@
         {{ end }}
         <button type="submit">Submit</button>
     </form>
-    <div x-data id="tweets">
+    <div
+        x-data="{
+        handleSubmit(event){
+            const url = new URL(event.submitter.formAction);
+            const eventID = url.searchParams.get('event');
+            const selector = '#tweet-'+event.submitter.value;
+            if (eventID === 'likeTweet') {
+               const opts = {patch: {selector:selector,renderBlock:'tweet'}}
+               $fir.emit('likeTweet',opts)(event)
+            } else if (eventID === 'deleteTweet') {
+               const opts = {patch: {op: 'remove',selector:selector}}
+               $fir.emit('deleteTweet', opts)(event)
+            }
+        }
+       }"
+        id="tweets">
         {{ range .tweets }}
             {{ block "tweet" . }}
                 <div
@@ -38,14 +55,21 @@
                         {{ .LikesCount }}
                     </div>
                     <form
+                        x-data
                         method="post"
-                        @submit.prevent="$fir.emit()"
+                        @submit.prevent="handleSubmit"
                         style="margin-right:1rem">
                         <input type="hidden" name="tweetID" value="{{ .ID }}" />
-                        <button formaction="/?event=likeTweet" type="submit">
+                        <button
+                            formaction="/?event=likeTweet"
+                            value="{{ .ID }}"
+                            type="submit">
                             Like
                         </button>
-                        <button formaction="/?event=deleteTweet" type="submit">
+                        <button
+                            formaction="/?event=deleteTweet"
+                            value="{{ .ID }}"
+                            type="submit">
                             Delete
                         </button>
                     </form>

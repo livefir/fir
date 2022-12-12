@@ -2,7 +2,6 @@ package routes
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/adnaan/fir"
@@ -49,10 +48,7 @@ func createTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err != nil {
 			return err
 		}
-		return ctx.DOM().Append(
-			"#tweets",
-			ctx.RenderBlock("tweet", tweet),
-		)
+		return ctx.Data(tweet)
 	}
 }
 
@@ -73,10 +69,7 @@ func likeTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Update(req.TweetID, &tweet); err != nil {
 			return err
 		}
-		return ctx.DOM().Replace(
-			fmt.Sprintf("#tweet-%d", req.TweetID),
-			ctx.RenderBlock("tweet", tweet),
-		)
+		return ctx.Data(tweet)
 	}
 }
 
@@ -93,7 +86,7 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Delete(req.TweetID, &Tweet{}); err != nil {
 			return err
 		}
-		return ctx.DOM().Remove(fmt.Sprintf("#tweet-%d", req.TweetID))
+		return nil
 	}
 }
 

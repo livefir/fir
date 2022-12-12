@@ -135,11 +135,33 @@ func (c RouteContext) Redirect(url string, status int) error {
 }
 
 // Data sets the data to be hydrated into the route's template
-func (c RouteContext) Data(data map[string]any) error {
+func (c RouteContext) Data(data any) error {
 	m := routeData{}
-	for k, v := range data {
-		m[k] = v
+	val := reflect.ValueOf(data)
+	if val.Kind() == reflect.Ptr {
+		el := val.Elem() // dereference the pointer
+		if el.Kind() == reflect.Struct {
+			for k, v := range structs.Map(data) {
+				m[k] = v
+			}
+		}
+	} else if val.Kind() == reflect.Struct {
+		for k, v := range structs.Map(data) {
+			m[k] = v
+		}
+	} else if val.Kind() == reflect.Map {
+		ms, ok := data.(map[string]any)
+		if !ok {
+			return errors.New("data must be a map[string]any , struct or pointer to a struct")
+		}
+
+		for k, v := range ms {
+			m[k] = v
+		}
+	} else {
+		return errors.New("data must be a map[string]any , struct or pointer to a struct")
 	}
+
 	return &m
 }
 
