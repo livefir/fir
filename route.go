@@ -11,6 +11,7 @@ import (
 
 	"github.com/adnaan/fir/dom"
 	"github.com/golang/glog"
+	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )
 
@@ -205,12 +206,17 @@ func renderPatch(ctx RouteContext) patchRenderer {
 	}
 }
 
-func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
+func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rt.parseTemplate()
+	sessionID := rt.sessionManager.GetString(r.Context(), "id")
+	if sessionID == "" {
+		sessionID = uuid.New().String()
+		rt.sessionManager.Put(r.Context(), "id", sessionID)
+	}
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
 		// onWebsocket: upgrade to websocket
-		onWebsocket(w, r, rt)
+		onWebsocket(w, r, rt, sessionID)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
@@ -231,11 +237,12 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventCtx := RouteContext{
-			event:    event,
-			request:  r,
-			response: w,
-			route:    rt,
-			dom:      dom.NewPatcher(),
+			event:     event,
+			request:   r,
+			response:  w,
+			route:     rt,
+			dom:       dom.NewPatcher(),
+			sessionID: sessionID,
 		}
 
 		onEventFunc, ok := rt.onEvents[event.ID]
@@ -290,6 +297,7 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 				route:     rt,
 				urlValues: urlValues,
 				dom:       dom.NewPatcher(),
+				sessionID: sessionID,
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -304,12 +312,13 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := RouteContext{
-				event:    event,
-				request:  r,
-				response: w,
-				route:    rt,
-				isOnLoad: true,
-				dom:      dom.NewPatcher(),
+				event:     event,
+				request:   r,
+				response:  w,
+				route:     rt,
+				isOnLoad:  true,
+				dom:       dom.NewPatcher(),
+				sessionID: sessionID,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {

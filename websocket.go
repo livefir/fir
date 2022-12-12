@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
+func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionID string) {
 	channel := route.channelFunc(r, route.id)
 	if channel == nil {
 		glog.Errorf("[onWebsocket] error: channel is empty")
@@ -34,11 +34,12 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 	go func() {
 		for event := range route.eventSender {
 			eventCtx := RouteContext{
-				event:    event,
-				request:  r,
-				response: w,
-				route:    route,
-				dom:      dom.NewPatcher(),
+				event:     event,
+				request:   r,
+				response:  w,
+				route:     route,
+				dom:       dom.NewPatcher(),
+				sessionID: sessionID,
 			}
 			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 			onEventFunc, ok := route.onEvents[event.ID]
@@ -102,11 +103,12 @@ loop:
 		}
 
 		eventCtx := RouteContext{
-			event:    event,
-			request:  r,
-			response: w,
-			route:    route,
-			dom:      dom.NewPatcher(),
+			event:     event,
+			request:   r,
+			response:  w,
+			route:     route,
+			dom:       dom.NewPatcher(),
+			sessionID: sessionID,
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)
