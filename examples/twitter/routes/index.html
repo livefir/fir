@@ -13,7 +13,7 @@
 
     <form
         x-data="{
-            patch: {op: 'append',selector:'#tweets',renderBlock:'tweet'}
+            patch: {op: 'append',selector:'#tweets',block:'tweet'}
         }"
         id="createTweet"
         method="post"
@@ -29,21 +29,21 @@
         <button type="submit">Submit</button>
     </form>
     <div
+        id="tweets"
         x-data="{
         handleSubmit(event){
             const url = new URL(event.submitter.formAction);
             const eventID = url.searchParams.get('event');
-            const selector = '#tweet-'+event.submitter.value;
+            const id = '#tweet-'+event.submitter.value;
             if (eventID === 'likeTweet') {
-               const opts = {patch: {selector:selector,renderBlock:'tweet'}}
+               const opts = {patch: {selector:id,block:'tweet'}}
                $fir.emit('likeTweet',opts)(event)
             } else if (eventID === 'deleteTweet') {
-               const opts = {patch: {op: 'remove',selector:selector}}
+               const opts = {patch: {op: 'remove',selector:id}}
                $fir.emit('deleteTweet', opts)(event)
             }
         }
-       }"
-        id="tweets">
+       }">
         {{ range .tweets }}
             {{ block "tweet" . }}
                 <div
@@ -55,7 +55,6 @@
                         {{ .LikesCount }}
                     </div>
                     <form
-                        x-data
                         method="post"
                         @submit.prevent="handleSubmit"
                         style="margin-right:1rem">

@@ -321,14 +321,14 @@ const Plugin = (Alpine) => {
                 throw new Error(`patchset op ${op} not supported`)
             }
             let value = ''
-            if (patch.renderBlock) {
-                value = patch.renderBlock
-            } else if (patch.renderTemplate) {
-                value = patch.renderTemplate
+            if (patch.block) {
+                value = patch.block
+            } else if (patch.template) {
+                value = patch.template
             }
             if (typeof value !== 'string') {
                 throw new Error(
-                    'patchset requires either renderBlock or renderTemplate to be a string'
+                    'patchset requires either block or template to be a string'
                 )
             }
 

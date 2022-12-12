@@ -120,7 +120,7 @@ var content = `
 {{define "content" }} 
 <div class="my-6" style="height: 500px">
 	<div class="columns is-mobile is-centered is-vcentered">
-		<div x-data="{patch:{op:'replace',selector:'#count',renderBlock:'count'}}" 
+		<div x-data="{patch:{op:'replace',selector:'#count',block:'count'}}" 
 			 class="column is-one-third-desktop has-text-centered is-narrow">
 			<div>
 				<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
