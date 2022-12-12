@@ -13,12 +13,12 @@
 
     <form
         x-data="{
-            patch: {op: 'append',selector:'#tweets',block:'tweet'}
+            opts: {patch: {op:'append',selector:'#tweets',block:'tweet'}}
         }"
         id="createTweet"
         method="post"
         action="/?event=createTweet"
-        @submit.prevent="$fir.emit('createTweet',$data)"
+        @submit.prevent="$fir.emit('createTweet',$data.opts)"
         style="margin-top:1rem;margin-bottom:1rem;">
         <input type="text" name="body" placeholder="a new tweet" />
         {{ block "fir-error-createTweet-body" . }}
@@ -36,6 +36,7 @@
             const eventID = url.searchParams.get('event');
             const id = '#tweet-'+event.submitter.value;
             if (eventID === 'likeTweet') {
+               // op is not set. 'replace' is the default.
                const opts = {patch: {selector:id,block:'tweet'}}
                $fir.emit('likeTweet',opts)(event)
             } else if (eventID === 'deleteTweet') {

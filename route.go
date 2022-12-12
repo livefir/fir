@@ -318,6 +318,42 @@ func (rt *route) handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getEventPatchset(ctx RouteContext, data any) dom.Patchset {
+
+	var patchsetData dom.Patchset
+
+	for _, p := range ctx.event.Patchset {
+		templateName, ok := p.Value.(string)
+		if !ok {
+			glog.Warningf("patchset value sent from client is not a string template/block name")
+		}
+
+		switch p.Type {
+		case dom.Replace:
+			patchsetData = ctx.DOM().Replace(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+		case dom.Append:
+			patchsetData = ctx.DOM().Append(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+		case dom.Prepend:
+			patchsetData = ctx.DOM().Prepend(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+		case dom.After:
+			patchsetData = ctx.DOM().After(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+		case dom.Before:
+			patchsetData = ctx.DOM().Before(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+		case dom.Remove:
+			patchsetData = ctx.DOM().Remove(*p.Selector).Patchset()
+		case dom.Store:
+			patchsetData = ctx.DOM().Store(*p.Selector, data).Patchset()
+		case dom.ResetForm:
+			patchsetData = ctx.DOM().ResetForm(*p.Selector).Patchset()
+		case dom.Navigate:
+			patchsetData = ctx.DOM().Navigate(*p.Selector).Patchset()
+		default:
+			glog.Warning("unknown patchset type sent from client")
+		}
+	}
+	return patchsetData
+}
+
 func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	unsetErrors := map[string]any{}
 	for _, v := range ctx.route.firErrorTemplates {
@@ -325,7 +361,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	}
 
 	if err == nil {
-		var patchsetData dom.Patchset
+		patchsetData := getEventPatchset(ctx, nil)
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
@@ -382,38 +418,8 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			render(ctx.DOM().Store("fir", *errVal).Patchset()...)
 			return
 		}
-		var patchsetData dom.Patchset
+		patchsetData := getEventPatchset(ctx, data)
 
-		for _, p := range ctx.event.Patchset {
-			templateName, ok := p.Value.(string)
-			if !ok {
-				glog.Warning("patchset value sent from client is not a string template/block name")
-				continue
-			}
-
-			switch p.Type {
-			case dom.Replace:
-				patchsetData = ctx.DOM().Replace(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
-			case dom.Append:
-				patchsetData = ctx.DOM().Append(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
-			case dom.Prepend:
-				patchsetData = ctx.DOM().Prepend(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
-			case dom.After:
-				patchsetData = ctx.DOM().After(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
-			case dom.Before:
-				patchsetData = ctx.DOM().Before(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
-			case dom.Remove:
-				patchsetData = ctx.DOM().Remove(*p.Selector).Patchset()
-			case dom.Store:
-				patchsetData = ctx.DOM().Store(*p.Selector, data).Patchset()
-			case dom.ResetForm:
-				patchsetData = ctx.DOM().ResetForm(*p.Selector).Patchset()
-			case dom.Navigate:
-				patchsetData = ctx.DOM().Navigate(*p.Selector).Patchset()
-			default:
-				glog.Warning("unknown patchset type sent from client")
-			}
-		}
 		if ctx.event.IsForm {
 			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
 		}

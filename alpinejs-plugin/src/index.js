@@ -334,7 +334,7 @@ const Plugin = (Alpine) => {
 
             return {
                 selector: patch.selector,
-                op: patch.op,
+                op: op,
                 value: value,
             }
         }
