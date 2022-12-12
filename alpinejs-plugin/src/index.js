@@ -31,9 +31,34 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            emit(id, params) {
+            emit(id, options) {
                 return function (event) {
-                    if (!(el instanceof HTMLFormElement)) {
+                    if (options && options.patch) {
+                        if (typeof options.patch !== 'object') {
+                            console.error(`options.patch must be an object.`)
+                            return
+                        }
+                    }
+
+                    if (options && options.patchset) {
+                        if (!Array.isArray(options.patchset)) {
+                            console.error(
+                                `options.patchset must be an array of patch objects.`
+                            )
+                            return
+                        }
+
+                        options.patchset.map((patch) => {
+                            if (typeof patch !== 'object') {
+                                console.error(
+                                    `options.patchset must be an array of patch objects.`
+                                )
+                                return
+                            }
+                        })
+                    }
+
+                    if (event.type !== 'submit') {
                         if (!id && el.id) {
                             id = el.id
                         }
@@ -55,20 +80,27 @@ const Plugin = (Alpine) => {
                             if (event.target.name) {
                                 key = event.target.name
                             }
-                            if (!params) {
-                                params = { key: event.target.value }
+                            if (!options) {
+                                options = {
+                                    params: { key: event.target.value },
+                                }
                             } else {
-                                params[key] = event.target.value
+                                if (!options.params) {
+                                    options.params = { key: event.target.value }
+                                } else {
+                                    options.params[key] = event.target.value
+                                }
                             }
                         }
-
-                        post(el, id, params, false)
+                        post(el, id, options, false)
                         return
                     }
 
+                    const form = event.target
+
                     if (
                         !id &&
-                        !el.id &&
+                        !form.id &&
                         !event.submitter &&
                         !event.submitter.formAction
                     ) {
@@ -77,7 +109,7 @@ const Plugin = (Alpine) => {
                         return
                     }
 
-                    let inputs = [...el.querySelectorAll('input[data-rules]')]
+                    let inputs = [...form.querySelectorAll('input[data-rules]')]
                     let formErrors = { errors: {} }
                     inputs.map((input) => {
                         const rules = JSON.parse(input.dataset.rules)
@@ -88,23 +120,23 @@ const Plugin = (Alpine) => {
                         }
                     })
 
-                    let formMethod = el.getAttribute('method')
+                    let formMethod = form.getAttribute('method')
                     if (!formMethod) {
                         formMethod = 'get'
                     }
 
                     // update form errors store
-                    const prevStore = Object.assign({}, Alpine.store(el.id))
+                    const prevStore = Object.assign({}, Alpine.store(form.id))
                     const nextStore = { ...prevStore, ...formErrors }
-                    Alpine.store(el.id, nextStore)
+                    Alpine.store(form.id, nextStore)
                     if (Object.keys(formErrors.errors).length == 0) {
-                        let formData = new FormData(el)
+                        let formData = new FormData(form)
                         let eventID = id
                         if (!eventID) {
-                            if (el.id) {
-                                eventID = el.id
+                            if (form.id) {
+                                eventID = form.id
                             }
-                            if (el.action) {
+                            if (form.action) {
                                 const url = new URL(event.submitter.formAction)
                                 if (url.searchParams.get('event')) {
                                     eventID = url.searchParams.get('event')
@@ -132,7 +164,22 @@ const Plugin = (Alpine) => {
                         formData.forEach(
                             (value, key) => (params[key] = new Array(value))
                         )
-                        post(el, eventID, params, true)
+
+                        if (!options) {
+                            options = {}
+                        }
+
+                        if (options && !options.params) {
+                            options.params = params
+                        }
+
+                        if (options && options.params) {
+                            Object.keys(params).forEach((key) => {
+                                options.params[key] = params[key]
+                            })
+                        }
+
+                        post(form, eventID, options, true)
                         if (formMethod.toLowerCase() === 'get') {
                             const url = new URL(window.location)
                             formData.forEach((value, key) =>
@@ -213,14 +260,14 @@ const Plugin = (Alpine) => {
         store: (operation) => updateStore(operation.selector, operation.value),
     }
 
-    const post = (el, eventId, params, isForm) => {
+    const post = (el, eventId, eventOptions, isForm) => {
         if (!eventId) {
             throw new Error('event id is required.')
         }
         let detail = {
             elementId: el.id,
             eventId: eventId,
-            params: params,
+            params: eventOptions.params,
         }
 
         let eventName = 'fir:emit'
@@ -261,11 +308,54 @@ const Plugin = (Alpine) => {
             new CustomEvent(`${eventName}:${eventIdlower}`, options)
         )
 
+        const buildPatch = (patch) => {
+            if (!patch.selector) {
+                throw new Error('patchset requires a selector')
+            }
+
+            let op = 'replace'
+            if (patch.op) {
+                op = patch.op
+            }
+            if (!operations[op]) {
+                throw new Error(`patchset op ${op} not supported`)
+            }
+            let value = ''
+            if (patch.block) {
+                value = patch.block
+            } else if (patch.template) {
+                value = patch.template
+            }
+            if (typeof value !== 'string') {
+                throw new Error(
+                    'patchset requires either block or template to be a string'
+                )
+            }
+
+            return {
+                selector: patch.selector,
+                op: op,
+                value: value,
+            }
+        }
+
+        let patchset = []
+        if (eventOptions.patch) {
+            patchset.push(buildPatch(eventOptions.patch))
+        }
+        if (eventOptions.patchset) {
+            eventOptions.patchset.forEach((patch) => {
+                patchset.push(buildPatch(patch))
+            })
+        }
+
         const event = {
             event_id: eventId,
-            params: params,
+            params: eventOptions.params,
+            patchset: patchset,
             is_form: isForm,
         }
+
         if (socket.emit(event)) {
             el.dispatchEvent(new CustomEvent(endEventName, options))
             el.dispatchEvent(
