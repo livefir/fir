@@ -208,15 +208,15 @@ func renderPatch(ctx RouteContext) patchRenderer {
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rt.parseTemplate()
-	sessionID := rt.sessionManager.GetString(r.Context(), "id")
+	sessionID := rt.session.GetString(r.Context(), "id")
 	if sessionID == "" {
 		sessionID = uuid.New().String()
-		rt.sessionManager.Put(r.Context(), "id", sessionID)
+		rt.session.Put(r.Context(), "id", sessionID)
 	}
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
 		// onWebsocket: upgrade to websocket
-		onWebsocket(w, r, rt, sessionID)
+		onWebsocket(w, r, rt)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
@@ -237,12 +237,11 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventCtx := RouteContext{
-			event:     event,
-			request:   r,
-			response:  w,
-			route:     rt,
-			dom:       dom.NewPatcher(),
-			sessionID: sessionID,
+			event:    event,
+			request:  r,
+			response: w,
+			route:    rt,
+			dom:      dom.NewPatcher(),
 		}
 
 		onEventFunc, ok := rt.onEvents[event.ID]
@@ -287,7 +286,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			event := Event{
 				ID:     formAction,
 				Params: params,
-				IsForm: true,
+				FormID: &formAction,
 			}
 
 			eventCtx := RouteContext{
@@ -297,7 +296,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				route:     rt,
 				urlValues: urlValues,
 				dom:       dom.NewPatcher(),
-				sessionID: sessionID,
+				session:   rt.session,
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -312,13 +311,13 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := RouteContext{
-				event:     event,
-				request:   r,
-				response:  w,
-				route:     rt,
-				isOnLoad:  true,
-				dom:       dom.NewPatcher(),
-				sessionID: sessionID,
+				event:    event,
+				request:  r,
+				response: w,
+				route:    rt,
+				isOnLoad: true,
+				dom:      dom.NewPatcher(),
+				session:  rt.session,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
@@ -372,6 +371,10 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	if err == nil {
 		patchsetData := getEventPatchset(ctx, nil)
 		for k := range unsetErrors {
+			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
+				continue
+			}
+			ctx.session.Remove(ctx.request.Context(), k)
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
 				ctx.DOM().Replace(fmt.Sprintf("#%s", k),
@@ -386,10 +389,14 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 
 	case dom.Patcher:
 		patchsetData := errVal.Patchset()
-		if ctx.event.IsForm {
+		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
 			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
 		}
 		for k := range unsetErrors {
+			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
+				continue
+			}
+			ctx.session.Remove(ctx.request.Context(), k)
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = ctx.DOM().Replace(fmt.Sprintf("#%s", k),
 				ctx.RenderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
@@ -404,6 +411,8 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			fieldErrorName := fmt.Sprintf("%s%s-%s", firErrorPrefix, ctx.event.ID, k)
 			// eror is set, don't unset it
 			delete(unsetErrors, fieldErrorName)
+			// mark error as set in session
+			ctx.session.Put(ctx.request.Context(), fieldErrorName, 1)
 			errs := map[string]any{
 				ctx.event.ID: map[string]any{
 					k: v.Error()},
@@ -429,10 +438,14 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		}
 		patchsetData := getEventPatchset(ctx, data)
 
-		if ctx.event.IsForm {
+		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
 			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
 		}
 		for k := range unsetErrors {
+			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
+				continue
+			}
+			ctx.session.Remove(ctx.request.Context(), k)
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = ctx.DOM().Replace(fmt.Sprintf("#%s", k),
 				ctx.RenderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()

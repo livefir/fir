@@ -353,7 +353,7 @@ const Plugin = (Alpine) => {
             event_id: eventId,
             params: eventOptions.params,
             patchset: patchset,
-            is_form: isForm,
+            form_id: isForm ? el.id : null,
         }
 
         if (socket.emit(event)) {

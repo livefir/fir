@@ -29,7 +29,7 @@ type Event struct {
 	// Params is the json rawmessage to be passed to the event
 	Params   json.RawMessage `json:"params"`
 	Patchset dom.Patchset    `json:"patchset"`
-	IsForm   bool            `json:"is_form"`
+	FormID   *string         `json:"form_id,omitempty"`
 }
 
 // String returns the string representation of the event
