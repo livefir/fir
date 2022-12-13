@@ -38,7 +38,7 @@ type opt struct {
 	appName              string
 	formDecoder          *schema.Decoder
 	validator            *validator.Validate
-	sessionManager       *scs.SessionManager
+	session              *scs.SessionManager
 }
 
 // ControllerOption is an option for the controller.
@@ -157,7 +157,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		appName:           name,
 		formDecoder:       formDecoder,
 		validator:         validate,
-		sessionManager:    sessionManager,
+		session:           sessionManager,
 	}
 
 	for _, option := range options {
@@ -232,5 +232,5 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 }
 
 func (c *controller) sessionHandlerFunc(route *route) http.HandlerFunc {
-	return c.sessionManager.LoadAndSave(route).ServeHTTP
+	return c.session.LoadAndSave(route).ServeHTTP
 }

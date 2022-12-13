@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/adnaan/fir/dom"
+	"github.com/alexedwards/scs/v2"
 	"github.com/fatih/structs"
 )
 
@@ -22,7 +23,7 @@ type RouteContext struct {
 	route     *route
 	isOnLoad  bool
 	dom       dom.Patcher
-	sessionID string
+	session   *scs.SessionManager
 }
 
 func (c RouteContext) Event() Event {
@@ -100,7 +101,7 @@ func (c RouteContext) BindQueryParams(v any) error {
 }
 
 func (c RouteContext) BindEventParams(v any) error {
-	if c.event.IsForm {
+	if c.event.FormID != nil {
 		if len(c.urlValues) == 0 {
 			var urlValues url.Values
 			if err := json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(&urlValues); err != nil {
