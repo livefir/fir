@@ -120,17 +120,18 @@ var content = `
 {{define "content" }} 
 <div class="my-6" style="height: 500px">
 	<div class="columns is-mobile is-centered is-vcentered">
-		<div x-data="{patch:{op:'replace',selector:'#count',block:'count'}}" 
-			 class="column is-one-third-desktop has-text-centered is-narrow">
-			<div>
-				<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
-				<hr>
-				{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-				<button class="button has-background-primary" @click="$fir.emit('inc',$data)">+
-				</button>
-				<button class="button has-background-primary" @click="$fir.emit('dec',$data)">-
-				</button>
-			</div>
+		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
+			<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+			<hr>
+			{{block "count" .}}
+				<div @inc.window="$fir.replace()" @dec.window="$fir.replace()" id="count">
+					{{.count}}
+				</div>
+			{{end}}
+			<button class="button has-background-primary" @click="$dispatch('inc')">+
+			</button>
+			<button class="button has-background-primary" @click="$dispatch('dec')">-
+			</button>
 		</div>
 	</div>
 </div>

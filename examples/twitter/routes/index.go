@@ -97,9 +97,9 @@ func Index(db *bolthold.Store) fir.RouteFunc {
 			fir.Content("routes/index.html"),
 			fir.Layout("routes/layout.html"),
 			fir.OnLoad(loadTweets(db)),
-			fir.OnEvent("createTweet", createTweet(db)),
-			fir.OnEvent("deleteTweet", deleteTweet(db)),
-			fir.OnEvent("likeTweet", likeTweet(db)),
+			fir.OnEvent("create-tweet", createTweet(db)),
+			fir.OnEvent("delete-tweet", deleteTweet(db)),
+			fir.OnEvent("like-tweet", likeTweet(db)),
 		}
 	}
 }

@@ -31,68 +31,72 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            emit(id, options) {
+            replace(patch) {
                 return function (event) {
-                    if (options && options.patch) {
-                        if (typeof options.patch !== 'object') {
-                            console.error(`options.patch must be an object.`)
-                            return
-                        }
-                    }
-
-                    if (options && options.patchset) {
-                        if (!Array.isArray(options.patchset)) {
-                            console.error(
-                                `options.patchset must be an array of patch objects.`
-                            )
-                            return
-                        }
-
-                        options.patchset.map((patch) => {
-                            if (typeof patch !== 'object') {
-                                console.error(
-                                    `options.patchset must be an array of patch objects.`
-                                )
-                                return
-                            }
-                        })
-                    }
-
-                    if (event.type !== 'submit') {
-                        if (!id && el.id) {
-                            id = el.id
-                        }
-
-                        if (!id) {
-                            console.error(
-                                `element ${el} has niether id set nor emit was called with an id.`
-                            )
-                            return
-                        }
-
+                    post(el, buildFirEvent(el, event, patch, 'replace'))
+                }
+            },
+            append(patch) {
+                return function (event) {
+                    post(el, buildFirEvent(el, event, patch, 'append'))
+                }
+            },
+            prepend(patch) {
+                return function (event) {
+                    post(el, buildFirEvent(el, event, patch, 'prepend'))
+                }
+            },
+            after(patch) {
+                return function (event) {
+                    post(el, buildFirEvent(el, event, patch, 'after'))
+                }
+            },
+            before(patch) {
+                return function (event) {
+                    post(el, buildFirEvent(el, event, patch, 'before'))
+                }
+            },
+            remove(patch) {
+                return function (event) {
+                    post(el, buildFirEvent(el, event, patch, 'remove'))
+                }
+            },
+            emit(id, params) {
+                return function (event) {
+                    if (id) {
                         if (typeof id !== 'string') {
                             console.error(`id ${id} is not a string.`)
                             return
                         }
-
-                        if (event && event.target && event.target.value) {
-                            let key = 'targetValue'
-                            if (event.target.name) {
-                                key = event.target.name
-                            }
-                            if (!options) {
-                                options = {
-                                    params: { key: event.target.value },
-                                }
-                            } else {
-                                if (!options.params) {
-                                    options.params = { key: event.target.value }
-                                } else {
-                                    options.params[key] = event.target.value
-                                }
-                            }
+                    } else {
+                        if (!el.id) {
+                            console.error(
+                                `event id is empty and element id is not set. can't emit event`
+                            )
+                            return
                         }
-                        post(el, id, options, false)
+                        id = el.id
+                    }
+                    if (params) {
+                        if (!isObject(params)) {
+                            console.error(`params ${params} is not an object.`)
+                            return
+                        }
+                    } else {
+                        params = {}
+                    }
+                    post(el, {
+                        event_id: id,
+                        params: params,
+                    })
+                }
+            },
+            submit(id) {
+                return function (event) {
+                    if (event.type !== 'submit') {
+                        console.error(
+                            `event type ${event.type} is not submit. $fir.submit() can only be used on forms.`
+                        )
                         return
                     }
 
@@ -165,21 +169,27 @@ const Plugin = (Alpine) => {
                             (value, key) => (params[key] = new Array(value))
                         )
 
-                        if (!options) {
-                            options = {}
+                        const detail = {
+                            isForm: true,
+                            form_id: form.id,
+                            form_data: params,
                         }
 
-                        if (options && !options.params) {
-                            options.params = params
+                        const options = {
+                            detail,
+                            bubbles: true,
+                            // Allows events to pass the shadow DOM barrier.
+                            composed: true,
+                            cancelable: true,
                         }
 
-                        if (options && options.params) {
-                            Object.keys(params).forEach((key) => {
-                                options.params[key] = params[key]
-                            })
-                        }
+                        const submitCustomEvent = new CustomEvent(
+                            eventID.toLowerCase(),
+                            options
+                        )
 
-                        post(form, eventID, options, true)
+                        el.dispatchEvent(submitCustomEvent)
+
                         if (formMethod.toLowerCase() === 'get') {
                             const url = new URL(window.location)
                             formData.forEach((value, key) =>
@@ -260,14 +270,78 @@ const Plugin = (Alpine) => {
         store: (operation) => updateStore(operation.selector, operation.value),
     }
 
-    const post = (el, eventId, eventOptions, isForm) => {
-        if (!eventId) {
+    const buildFirEvent = (el, event, patch, action) => {
+        const buildPatch = (patch) => {
+            if (!patch.selector) {
+                throw new Error('patchset requires a selector')
+            }
+
+            if (!operations[patch.op]) {
+                throw new Error(`patchset op ${patch.op} not supported`)
+            }
+            let value = el.dataset['firBlock']
+            if (patch.block) {
+                value = patch.block
+            } else if (patch.template) {
+                value = patch.template
+            }
+            if (value == undefined) {
+                value = el.id
+            }
+
+            if (typeof value !== 'string') {
+                throw new Error(
+                    'patch requires either block or template to be a string'
+                )
+            }
+
+            return {
+                selector: patch.selector,
+                op: patch.op,
+                value: value,
+            }
+        }
+
+        if (!patch) {
+            patch = {
+                op: action,
+                selector: `#${el.id}`,
+            }
+        } else {
+            if (typeof patch !== 'object') {
+                console.error(
+                    `arg to ${action} must be an object. e.g. {selector: '#id', block: 'id'}`
+                )
+                return {}
+            }
+            patch.op = action
+            if (!patch.selector) {
+                patch.selector = `#${el.id}`
+            }
+        }
+        if (event.detail && event.detail.isForm) {
+            return {
+                event_id: event.type,
+                params: event.detail.form_data,
+                patchset: [buildPatch(patch)],
+                form_id: event.detail.form_id,
+            }
+        }
+        return {
+            event_id: event.type,
+            params: event.detail,
+            patchset: [buildPatch(patch)],
+        }
+    }
+
+    const post = (el, firEvent) => {
+        if (!firEvent.event_id) {
             throw new Error('event id is required.')
         }
+
         let detail = {
-            elementId: el.id,
-            eventId: eventId,
-            params: eventOptions.params,
+            eventId: firEvent.event_id,
+            params: firEvent.params,
         }
 
         let eventName = 'fir:emit'
@@ -284,9 +358,9 @@ const Plugin = (Alpine) => {
             cancelable: true,
         }
 
-        const eventIdlower = eventId.toLowerCase()
+        const eventIdlower = firEvent.event_id.toLowerCase()
         // camel to kebab case
-        const eventIdKebab = eventId
+        const eventIdKebab = firEvent.event_id
             .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
             .toLowerCase()
 
@@ -308,55 +382,7 @@ const Plugin = (Alpine) => {
             new CustomEvent(`${eventName}:${eventIdlower}`, options)
         )
 
-        const buildPatch = (patch) => {
-            if (!patch.selector) {
-                throw new Error('patchset requires a selector')
-            }
-
-            let op = 'replace'
-            if (patch.op) {
-                op = patch.op
-            }
-            if (!operations[op]) {
-                throw new Error(`patchset op ${op} not supported`)
-            }
-            let value = ''
-            if (patch.block) {
-                value = patch.block
-            } else if (patch.template) {
-                value = patch.template
-            }
-            if (typeof value !== 'string') {
-                throw new Error(
-                    'patchset requires either block or template to be a string'
-                )
-            }
-
-            return {
-                selector: patch.selector,
-                op: op,
-                value: value,
-            }
-        }
-
-        let patchset = []
-        if (eventOptions.patch) {
-            patchset.push(buildPatch(eventOptions.patch))
-        }
-        if (eventOptions.patchset) {
-            eventOptions.patchset.forEach((patch) => {
-                patchset.push(buildPatch(patch))
-            })
-        }
-
-        const event = {
-            event_id: eventId,
-            params: eventOptions.params,
-            patchset: patchset,
-            form_id: isForm ? el.id : null,
-        }
-
-        if (socket.emit(event)) {
+        if (socket.emit(firEvent)) {
             el.dispatchEvent(new CustomEvent(endEventName, options))
             el.dispatchEvent(
                 new CustomEvent(`${endEventName}:${eventIdlower}`, options)
@@ -380,7 +406,7 @@ const Plugin = (Alpine) => {
                     'Content-Type': 'application/json',
                     'X-FIR-MODE': 'event',
                 },
-                body: JSON.stringify(event),
+                body: JSON.stringify(firEvent),
             })
                 .then((response) => response.json())
                 .then((patchOperations) => {

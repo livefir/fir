@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/adnaan/fir/dom"
 	"github.com/golang/glog"
@@ -42,7 +43,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 				session:  route.session,
 			}
 			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
-			onEventFunc, ok := route.onEvents[event.ID]
+			onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 			if !ok {
 				glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
 				continue
@@ -112,7 +113,7 @@ loop:
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)
-		onEventFunc, ok := route.onEvents[event.ID]
+		onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
 			continue
