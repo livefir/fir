@@ -61,6 +61,36 @@ const Plugin = (Alpine) => {
                     post(el, buildFirEvent(el, event, patch, 'remove'))
                 }
             },
+            emit(id, params) {
+                return function (event) {
+                    if (id) {
+                        if (typeof id !== 'string') {
+                            console.error(`id ${id} is not a string.`)
+                            return
+                        }
+                    } else {
+                        if (!el.id) {
+                            console.error(
+                                `event id is empty and element id is not set. can't emit event`
+                            )
+                            return
+                        }
+                        id = el.id
+                    }
+                    if (params) {
+                        if (!isObject(params)) {
+                            console.error(`params ${params} is not an object.`)
+                            return
+                        }
+                    } else {
+                        params = {}
+                    }
+                    post(el, {
+                        event_id: id,
+                        params: params,
+                    })
+                }
+            },
             submit(id) {
                 return function (event) {
                     if (event.type !== 'submit') {

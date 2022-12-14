@@ -14,8 +14,8 @@ var content = `<!DOCTYPE html>
 	<title>{{.app_name}}</title>
 	<meta charset="UTF-8">
 	<meta name="description" content="A counter app">
-	<script defer src="http://localhost:8000/cdn.js"></script>
-	<!-- <script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script> -->
+	<!-- <script defer src="http://localhost:8000/cdn.js"></script> -->
+	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
 	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
@@ -27,7 +27,7 @@ var content = `<!DOCTYPE html>
 			</div>
 		{{end}}
 		<button @click="$dispatch('inc')">+</button>
-		<button  @click="$dispatch('dec')">-</button>
+		<button @click="$dispatch('dec')">-</button>
 	</div>
 </body>
 

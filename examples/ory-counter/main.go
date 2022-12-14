@@ -61,13 +61,15 @@ var content = `<!DOCTYPE html>
 	<div class="my-6" style="height: 500px">
 		<div class="columns is-mobile is-centered is-vcentered">
 			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-				<div>
-					{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-					<button class="button has-background-primary" @click="$fir.emit('inc')">+
-					</button>
-					<button id="dec" class="button has-background-primary" @click="$fir.emit()">-
-					</button>
-				</div>
+				{{block "count" .}}
+					<div @inc.window="$fir.replace()" @dec.window="$fir.replace()" id="count">
+						{{.count}}
+					</div>
+				{{end}}
+				<button class="button has-background-primary" @click="$dispatch('inc')">+
+				</button>
+				<button class="button has-background-primary" @click="$dispatch('dec')">-
+				</button>
 			</div>
 		</div>
 	</div>

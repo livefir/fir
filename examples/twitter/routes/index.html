@@ -6,31 +6,31 @@
             </p>
         {{ end }}
         <div
-            @fir:emit-start:createTweet.window="console.log('create tweet start')"
-            @fir:emit-end:createTweet.window="console.log('create tweet done')"></div>
+            @fir:emit-start:create-tweet.window="console.log('create tweet start')"
+            @fir:emit-end:create-tweet.window="console.log('create tweet done')"></div>
 
         <form
-            id="createTweet"
+            id="create-tweet"
             method="post"
-            action="/?event=createTweet"
-            @submit.prevent="$fir.submit('createTweet')"
+            action="/?event=create-tweet"
+            @submit.prevent="$fir.submit('create-tweet')"
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
             {{/* validation error for the input=body */}}
-            {{ block "fir-error-createTweet-body" . }}
-                <p id="fir-error-createTweet-body">
-                    {{ .fir.Error "createTweet.body" }}
+            {{ block "fir-error-create-tweet-body" . }}
+                <p id="fir-error-create-tweet-body">
+                    {{ .fir.Error "create-tweet.body" }}
                 </p>
             {{ end }}
             <button type="submit">Submit</button>
         </form>
-        <div id="tweets" @createTweet.window="$fir.append({block: 'tweet'})">
+        <div id="tweets" @create-tweet.window="$fir.append({block: 'tweet'})">
             {{ range .tweets }}
                 {{ block "tweet" . }}
                     <div
                         id="tweet-{{ .ID }}"
-                        @likeTweet="$fir.replace({block: 'tweet'})"
-                        @deleteTweet="$fir.remove()"
+                        @like-tweet="$fir.replace({block: 'tweet'})"
+                        @delete-tweet="$fir.remove()"
                         style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                         <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
                         <div style="margin-right:1rem">
@@ -46,13 +46,13 @@
                                 name="tweetID"
                                 value="{{ .ID }}" />
                             <button
-                                formaction="/?event=likeTweet"
+                                formaction="/?event=like-tweet"
                                 value="{{ .ID }}"
                                 type="submit">
                                 Like
                             </button>
                             <button
-                                formaction="/?event=deleteTweet"
+                                formaction="/?event=delete-tweet"
                                 value="{{ .ID }}"
                                 type="submit">
                                 Delete
