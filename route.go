@@ -119,7 +119,7 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 		if opt.onEvents == nil {
 			opt.onEvents = make(map[string]OnEventFunc)
 		}
-		opt.onEvents[name] = onEventFunc
+		opt.onEvents[strings.ToLower(name)] = onEventFunc
 	}
 }
 
@@ -244,7 +244,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			dom:      dom.NewPatcher(),
 		}
 
-		onEventFunc, ok := rt.onEvents[event.ID]
+		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			http.Error(w, "event id is not registered", http.StatusBadRequest)
 			return
@@ -390,7 +390,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	case dom.Patcher:
 		patchsetData := errVal.Patchset()
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
-			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
+			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
 		}
 		for k := range unsetErrors {
 			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
@@ -439,7 +439,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		patchsetData := getEventPatchset(ctx, data)
 
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
-			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", ctx.event.ID)).Patchset()
+			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
 		}
 		for k := range unsetErrors {
 			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {

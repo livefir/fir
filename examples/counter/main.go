@@ -14,24 +14,20 @@ var content = `<!DOCTYPE html>
 	<title>{{.app_name}}</title>
 	<meta charset="UTF-8">
 	<meta name="description" content="A counter app">
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+	<script defer src="http://localhost:8000/cdn.js"></script>
+	<!-- <script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script> -->
 	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
 <body>
-	<div class="my-6" style="height: 500px">
-		<div class="columns is-mobile is-centered is-vcentered">
-			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-				<div>
-					{{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-					<button class="button has-background-primary" @click="$fir.emit('inc')">+
-					</button>
-					<button id="dec" class="button has-background-primary" @click="$fir.emit()">-
-					</button>
-				</div>
+	<div x-data>
+		{{block "count" .}}
+			<div @inc.window="$fir.replace()" @dec.window="$fir.replace()" id="count">
+				{{.count}}
 			</div>
-		</div>
+		{{end}}
+		<button @click="$dispatch('inc')">+</button>
+		<button  @click="$dispatch('dec')">-</button>
 	</div>
 </body>
 

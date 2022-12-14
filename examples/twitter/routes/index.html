@@ -1,80 +1,66 @@
 {{ define "content" }}
-    {{ block "fir-error-route" . }}
-        <p id="fir-error-route">
-            {{ .fir.Error "route" }}
-        </p>
-    {{ end }}
-
-
-    <div
-        x-data
-        @fir:submit-start:createTweet.window="console.log('create tweet start')"
-        @fir:submit-end:createTweet.window="console.log('create tweet done')"></div>
-
-    <form
-        x-data="{
-            opts: {patch: {op:'append',selector:'#tweets',block:'tweet'}}
-        }"
-        id="createTweet"
-        method="post"
-        action="/?event=createTweet"
-        @submit.prevent="$fir.emit('createTweet',$data.opts)"
-        style="margin-top:1rem;margin-bottom:1rem;">
-        <input type="text" name="body" placeholder="a new tweet" />
-        {{ block "fir-error-createTweet-body" . }}
-            <p id="fir-error-createTweet-body">
-                {{ .fir.Error "createTweet.body" }}
+    <div x-data id="content">
+        {{ block "fir-error-route" . }}
+            <p id="fir-error-route">
+                {{ .fir.Error "route" }}
             </p>
         {{ end }}
-        <button type="submit">Submit</button>
-    </form>
-    <div
-        id="tweets"
-        x-data="{
-        handleSubmit(event){
-            const url = new URL(event.submitter.formAction);
-            const eventID = url.searchParams.get('event');
-            const id = '#tweet-'+event.submitter.value;
-            if (eventID === 'likeTweet') {
-               // op is not set. 'replace' is the default.
-               const opts = {patch: {selector:id,block:'tweet'}}
-               $fir.emit('likeTweet',opts)(event)
-            } else if (eventID === 'deleteTweet') {
-               const opts = {patch: {op: 'remove',selector:id}}
-               $fir.emit('deleteTweet', opts)(event)
-            }
-        }
-       }">
-        {{ range .tweets }}
-            {{ block "tweet" . }}
-                <div
-                    id="tweet-{{ .ID }}"
-                    style="display: flex;margin-top:1rem;margin-bottom:1rem;">
-                    <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
-                    <div style="margin-right:1rem">
-                        likes:
-                        {{ .LikesCount }}
-                    </div>
-                    <form
-                        method="post"
-                        @submit.prevent="handleSubmit"
-                        style="margin-right:1rem">
-                        <input type="hidden" name="tweetID" value="{{ .ID }}" />
-                        <button
-                            formaction="/?event=likeTweet"
-                            value="{{ .ID }}"
-                            type="submit">
-                            Like
-                        </button>
-                        <button
-                            formaction="/?event=deleteTweet"
-                            value="{{ .ID }}"
-                            type="submit">
-                            Delete
-                        </button>
-                    </form>
-                </div>
+        <div
+            @fir:emit-start:createTweet.window="console.log('create tweet start')"
+            @fir:emit-end:createTweet.window="console.log('create tweet done')"></div>
+
+        <form
+            id="createTweet"
+            method="post"
+            action="/?event=createTweet"
+            @submit.prevent="$fir.submit('createTweet')"
+            style="margin-top:1rem;margin-bottom:1rem;">
+            <input type="text" name="body" placeholder="a new tweet" />
+            {{/* validation error for the input=body */}}
+            {{ block "fir-error-createTweet-body" . }}
+                <p id="fir-error-createTweet-body">
+                    {{ .fir.Error "createTweet.body" }}
+                </p>
             {{ end }}
-        {{ end }}
+            <button type="submit">Submit</button>
+        </form>
+        <div id="tweets" @createTweet.window="$fir.append({block: 'tweet'})">
+            {{ range .tweets }}
+                {{ block "tweet" . }}
+                    <div
+                        id="tweet-{{ .ID }}"
+                        @likeTweet="$fir.replace({block: 'tweet'})"
+                        @deleteTweet="$fir.remove()"
+                        style="display: flex;margin-top:1rem;margin-bottom:1rem;">
+                        <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
+                        <div style="margin-right:1rem">
+                            likes:
+                            {{ .LikesCount }}
+                        </div>
+                        <form
+                            method="post"
+                            @submit.prevent="$fir.submit()"
+                            style="margin-right:1rem">
+                            <input
+                                type="hidden"
+                                name="tweetID"
+                                value="{{ .ID }}" />
+                            <button
+                                formaction="/?event=likeTweet"
+                                value="{{ .ID }}"
+                                type="submit">
+                                Like
+                            </button>
+                            <button
+                                formaction="/?event=deleteTweet"
+                                value="{{ .ID }}"
+                                type="submit">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                {{ end }}
+            {{ end }}
+        </div>
     </div>
 {{ end }}
