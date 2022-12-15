@@ -86,15 +86,21 @@ export default websocket = (url, socketOptions, invokeOperation) => {
 
     return {
         emit(value) {
-            const send = () => socket.send(JSON.stringify(value))
+            const send = () => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify(value))
+                    return true
+                } else {
+                    return false
+                }
+            }
             if (socket && socket.readyState !== WebSocket.OPEN) {
                 openSocket()
                     .then(() => {})
                     .catch((e) => console.error(e))
                 return false
             } else {
-                send()
-                return true
+                return send()
             }
         },
     }

@@ -400,13 +400,14 @@ const Plugin = (Alpine) => {
                 new CustomEvent(`${eventName}:${eventIdKebab}`, options)
             )
         } else {
+            const body = JSON.stringify(firEvent)
             fetch(window.location.pathname, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-FIR-MODE': 'event',
                 },
-                body: JSON.stringify(firEvent),
+                body: body,
             })
                 .then((response) => response.json())
                 .then((patchOperations) => {
@@ -416,7 +417,7 @@ const Plugin = (Alpine) => {
                 })
                 .catch((error) => {
                     console.error(
-                        `${endEventName} error: ${error}, detail: ${detail}`,
+                        `${endEventName} error: ${error}, request body: ${body}`,
                         error
                     )
                 })
