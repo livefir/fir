@@ -122,7 +122,7 @@ var content = `
 			<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
 			<hr>
 			{{block "count" .}}
-				<div @inc.window="$fir.replace()" @dec.window="$fir.replace()" id="count">
+				<div @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()" id="count">
 					{{.count}}
 				</div>
 			{{end}}

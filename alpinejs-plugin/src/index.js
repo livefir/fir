@@ -31,32 +31,32 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            replace(patch) {
+            replaceEl(patch) {
                 return function (event) {
                     post(el, buildFirEvent(el, event, patch, 'replace'))
                 }
             },
-            append(patch) {
+            appendEl(patch) {
                 return function (event) {
                     post(el, buildFirEvent(el, event, patch, 'append'))
                 }
             },
-            prepend(patch) {
+            prependEl(patch) {
                 return function (event) {
                     post(el, buildFirEvent(el, event, patch, 'prepend'))
                 }
             },
-            after(patch) {
+            afterEl(patch) {
                 return function (event) {
                     post(el, buildFirEvent(el, event, patch, 'after'))
                 }
             },
-            before(patch) {
+            beforeEl(patch) {
                 return function (event) {
                     post(el, buildFirEvent(el, event, patch, 'before'))
                 }
             },
-            remove(patch) {
+            removeEl(patch) {
                 return function (event) {
                     post(el, buildFirEvent(el, event, patch, 'remove'))
                 }

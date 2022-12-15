@@ -62,7 +62,7 @@ var content = `<!DOCTYPE html>
 		<div class="columns is-mobile is-centered is-vcentered">
 			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 				{{block "count" .}}
-					<div @inc.window="$fir.replace()" @dec.window="$fir.replace()" id="count">
+					<div @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()" id="count">
 						{{.count}}
 					</div>
 				{{end}}

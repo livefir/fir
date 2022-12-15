@@ -24,17 +24,17 @@
             {{ end }}
             <button type="submit">Submit</button>
         </form>
-        <div id="tweets" @create-tweet.window="$fir.append({block: 'tweet'})">
+        <div id="tweets" @create-tweet.window="$fir.appendEl({block: 'tweet'})">
             {{ range .tweets }}
                 {{ block "tweet" . }}
                     <div
                         id="tweet-{{ .ID }}"
-                        @like-tweet="$fir.replace({block: 'tweet'})"
-                        @delete-tweet="$fir.remove()"
+                        @like-tweet="$fir.replaceEl({block: 'tweet'})"
+                        @delete-tweet="$fir.removeEl()"
                         style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                         <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
                         <div style="margin-right:1rem">
-                            likes:
+                            Likes:
                             {{ .LikesCount }}
                         </div>
                         <form

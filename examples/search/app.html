@@ -42,7 +42,7 @@
                             @input="$dispatch('query',{query: $event.target.value})" />
                     </div>
                     {{ block "cities" . }}
-                        <div id="cities" @query.window="$fir.replace()">
+                        <div id="cities" @query.window="$fir.replaceEl()">
                             {{ range .cities }}
                                 <div>{{ . }}</div>
                             {{ end }}

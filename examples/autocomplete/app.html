@@ -26,7 +26,7 @@
                 </div>
                 {{ block "cities" .}}
                 <div>
-                    <datalist id="list_cities" @query.window="$fir.replace({block: 'cities'})">
+                    <datalist id="list_cities" @query.window="$fir.replaceEl({block: 'cities'})">
                         {{range .cities}}
                         <option value="{{.}}"></option>
                         {{end}}
