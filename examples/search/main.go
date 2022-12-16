@@ -21,7 +21,7 @@ var cities = []string{
 	"Seoul",
 }
 
-func getCities(str string) []string {
+func filterCities(str string) []string {
 	if str == "" {
 		return nil
 	}
@@ -46,8 +46,7 @@ func index() fir.RouteOptions {
 			if err := ctx.Bind(req); err != nil {
 				return err
 			}
-			cities := map[string]any{"cities": getCities(req.Query)}
-			return ctx.DOM().ReplaceKV("cities", cities)
+			return ctx.Data(filterCities(req.Query))
 		}),
 	}
 }

@@ -9,11 +9,8 @@ import (
 
 var content = `<!DOCTYPE html>
 <html lang="en">
-
 <head>
-	<title>{{.app_name}}</title>
 	<meta charset="UTF-8">
-	<meta name="description" content="A counter app">
 	<!-- <script defer src="http://localhost:8000/cdn.js"></script> -->
 	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
 	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -22,38 +19,29 @@ var content = `<!DOCTYPE html>
 <body>
 	<div x-data>
 		{{block "count" .}}
-			<div @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()" id="count">
-				{{.count}}
+			<div id="count" @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()">
+				{{.data}}
 			</div>
 		{{end}}
 		<button @click="$dispatch('inc')">+</button>
 		<button @click="$dispatch('dec')">-</button>
 	</div>
 </body>
-
 </html>`
 
 func index() fir.RouteOptions {
 	var value int32
 
 	load := func(ctx fir.RouteContext) error {
-		return ctx.KV("count", atomic.LoadInt32(&value))
+		return ctx.Data(atomic.LoadInt32(&value))
 	}
 
 	inc := func(ctx fir.RouteContext) error {
-		return ctx.DOM().Replace("#count",
-			ctx.RenderBlock("count",
-				map[string]interface{}{
-					"count": atomic.AddInt32(&value, 1),
-				}))
+		return ctx.Data(atomic.AddInt32(&value, 1))
 	}
 
 	dec := func(ctx fir.RouteContext) error {
-		return ctx.DOM().Replace("#count",
-			ctx.RenderBlock("count",
-				map[string]interface{}{
-					"count": atomic.AddInt32(&value, -1),
-				}))
+		return ctx.Data(atomic.AddInt32(&value, -1))
 	}
 
 	return fir.RouteOptions{

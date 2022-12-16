@@ -3,7 +3,7 @@ package fir
 import (
 	"encoding/json"
 
-	"github.com/adnaan/fir/dom"
+	"github.com/adnaan/fir/internal/dom"
 	"github.com/golang/glog"
 )
 

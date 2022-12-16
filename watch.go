@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adnaan/fir/dom"
+	"github.com/adnaan/fir/internal/dom"
 	"github.com/fsnotify/fsnotify"
 	"golang.org/x/exp/slices"
 )

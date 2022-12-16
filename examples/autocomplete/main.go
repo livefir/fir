@@ -21,7 +21,7 @@ var cities = []string{
 	"Seoul",
 }
 
-func getCities(str string) []string {
+func filterCities(str string) []string {
 	if str == "" {
 		return nil
 	}
@@ -40,7 +40,7 @@ type queryRequest struct {
 
 func index() fir.RouteOptions {
 	load := func(ctx fir.RouteContext) error {
-		return ctx.KV("cities", cities)
+		return ctx.Data(cities)
 	}
 
 	query := func(ctx fir.RouteContext) error {
@@ -48,14 +48,13 @@ func index() fir.RouteOptions {
 		if err := ctx.Bind(req); err != nil {
 			return err
 		}
-		data := map[string]any{"cities": getCities(req.Query)}
-		return ctx.DOM().ReplaceKV("cities", data)
+		return ctx.Data(filterCities(req.Query))
 	}
 
 	return fir.RouteOptions{
 		fir.Content("app.html"),
-		fir.OnEvent("query", query),
 		fir.OnLoad(load),
+		fir.OnEvent("query", query),
 	}
 }
 

@@ -3,7 +3,6 @@ package dom
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io"
 
@@ -21,30 +20,18 @@ func NewPatcher() Patcher {
 }
 
 type Patcher interface {
-	// Replace patches the dom at the given selector with the rendered template
-	Replace(selector string, t TemplateRenderer) Patcher
-	// ReplaceKV is a convenience method to replace a dom element when template name and selector are the same
-	/* e.g.
-	{{ block "cities" .}}
-		<div id="cities">
-		{{range .cities}}
-		<div>{{.}}</div>
-		{{end}}
-	</div>
-	...
-	ctx.DOM().ReplaceKV("cities", cities)
-	{{end}} */
-	ReplaceKV(key string, value any) Patcher
+	// ReplaceEl patches the dom at the given selector with the rendered template
+	ReplaceEl(selector string, t TemplateRenderer) Patcher
 	// After patches the dom after the given selector with the rendered template
-	After(selector string, t TemplateRenderer) Patcher
+	AfterEl(selector string, t TemplateRenderer) Patcher
 	// Before patches the dom before the given selector with the rendered template
-	Before(selector string, t TemplateRenderer) Patcher
+	BeforeEl(selector string, t TemplateRenderer) Patcher
 	// Append patches the dom after the given selector with the rendered template
-	Append(selector string, t TemplateRenderer) Patcher
+	AppendEl(selector string, t TemplateRenderer) Patcher
 	// Prepend patches the dom before the given selector with the rendered template
-	Prepend(selector string, t TemplateRenderer) Patcher
+	PrependEl(selector string, t TemplateRenderer) Patcher
 	// Remove patches the dom to remove the given selector
-	Remove(selector string) Patcher
+	RemoveEl(selector string) Patcher
 	// Reload patches the dom to reload the page
 	Reload() Patcher
 	// Store patches the dom to update the alpinejs store
@@ -94,7 +81,7 @@ type patcher struct {
 	patchset Patchset
 }
 
-func (p *patcher) Replace(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) ReplaceEl(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
 		Type:     Replace,
 		Selector: &selector,
@@ -103,18 +90,7 @@ func (p *patcher) Replace(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) ReplaceKV(key string, value any) Patcher {
-	selector := fmt.Sprintf("#%s", key)
-	t := NewTemplateRenderer(key, value)
-	p.patchset = append(p.patchset, Patch{
-		Type:     Replace,
-		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
-	})
-	return p
-}
-
-func (p *patcher) After(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) AfterEl(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
 		Type:     After,
 		Selector: &selector,
@@ -123,7 +99,7 @@ func (p *patcher) After(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) Before(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) BeforeEl(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
 		Type:     Before,
 		Selector: &selector,
@@ -132,7 +108,7 @@ func (p *patcher) Before(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) Append(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) AppendEl(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
 		Type:     Append,
 		Selector: &selector,
@@ -141,7 +117,7 @@ func (p *patcher) Append(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) Prepend(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) PrependEl(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
 		Type:     Prepend,
 		Selector: &selector,
@@ -150,7 +126,7 @@ func (p *patcher) Prepend(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) Remove(selector string) Patcher {
+func (p *patcher) RemoveEl(selector string) Patcher {
 	p.patchset = append(p.patchset, Patch{
 		Type:     Remove,
 		Selector: &selector,

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/adnaan/fir/dom"
+	"github.com/adnaan/fir/internal/dom"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
@@ -237,11 +237,11 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventCtx := RouteContext{
-			event:    event,
-			request:  r,
-			response: w,
-			route:    rt,
-			dom:      dom.NewPatcher(),
+			event:      event,
+			request:    r,
+			response:   w,
+			route:      rt,
+			domPatcher: dom.NewPatcher(),
 		}
 
 		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
@@ -290,13 +290,13 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 
 			eventCtx := RouteContext{
-				event:     event,
-				request:   r,
-				response:  w,
-				route:     rt,
-				urlValues: urlValues,
-				dom:       dom.NewPatcher(),
-				session:   rt.session,
+				event:      event,
+				request:    r,
+				response:   w,
+				route:      rt,
+				urlValues:  urlValues,
+				domPatcher: dom.NewPatcher(),
+				session:    rt.session,
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -311,13 +311,13 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := RouteContext{
-				event:    event,
-				request:  r,
-				response: w,
-				route:    rt,
-				isOnLoad: true,
-				dom:      dom.NewPatcher(),
-				session:  rt.session,
+				event:      event,
+				request:    r,
+				response:   w,
+				route:      rt,
+				isOnLoad:   true,
+				domPatcher: dom.NewPatcher(),
+				session:    rt.session,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
@@ -329,6 +329,10 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func getEventPatchset(ctx RouteContext, data any) dom.Patchset {
 
 	var patchsetData dom.Patchset
+	if (ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0) && data != nil {
+		patchsetData = ctx.dom().Store("fir", (data.(map[string]any))["data"]).Patchset()
+		return patchsetData
+	}
 
 	for _, p := range ctx.event.Patchset {
 		templateName, ok := p.Value.(string)
@@ -338,23 +342,17 @@ func getEventPatchset(ctx RouteContext, data any) dom.Patchset {
 
 		switch p.Type {
 		case dom.Replace:
-			patchsetData = ctx.DOM().Replace(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
 		case dom.Append:
-			patchsetData = ctx.DOM().Append(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+			patchsetData = ctx.dom().AppendEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
 		case dom.Prepend:
-			patchsetData = ctx.DOM().Prepend(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+			patchsetData = ctx.dom().PrependEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
 		case dom.After:
-			patchsetData = ctx.DOM().After(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+			patchsetData = ctx.dom().AfterEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
 		case dom.Before:
-			patchsetData = ctx.DOM().Before(*p.Selector, ctx.RenderBlock(templateName, data)).Patchset()
+			patchsetData = ctx.dom().BeforeEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
 		case dom.Remove:
-			patchsetData = ctx.DOM().Remove(*p.Selector).Patchset()
-		case dom.Store:
-			patchsetData = ctx.DOM().Store(*p.Selector, data).Patchset()
-		case dom.ResetForm:
-			patchsetData = ctx.DOM().ResetForm(*p.Selector).Patchset()
-		case dom.Navigate:
-			patchsetData = ctx.DOM().Navigate(*p.Selector).Patchset()
+			patchsetData = ctx.dom().RemoveEl(*p.Selector).Patchset()
 		default:
 			glog.Warning("unknown patchset type sent from client")
 		}
@@ -377,8 +375,8 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			ctx.session.Remove(ctx.request.Context(), k)
 			errs := map[string]any{ctx.event.ID: nil}
 			patchsetData = append(patchsetData,
-				ctx.DOM().Replace(fmt.Sprintf("#%s", k),
-					ctx.RenderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()...)
+				ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
+					ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()...)
 		}
 
 		render(patchsetData...)
@@ -390,7 +388,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	case dom.Patcher:
 		patchsetData := errVal.Patchset()
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
-			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
+			patchsetData = ctx.dom().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
 		}
 		for k := range unsetErrors {
 			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
@@ -398,8 +396,8 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			}
 			ctx.session.Remove(ctx.request.Context(), k)
 			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = ctx.DOM().Replace(fmt.Sprintf("#%s", k),
-				ctx.RenderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
+				ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 		}
 		render(patchsetData...)
 		return
@@ -418,28 +416,28 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 					k: v.Error()},
 				"route": v.Error(),
 			}
-			patchsetData = ctx.DOM().Replace(fmt.Sprintf("#%s", fieldErrorName),
-				ctx.RenderBlock(fieldErrorName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", fieldErrorName),
+				ctx.renderBlock(fieldErrorName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 		}
 		// unset errors that are not set
 		for k := range unsetErrors {
 			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = ctx.DOM().Replace(fmt.Sprintf("#%s", k),
-				ctx.RenderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
+				ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 		}
 
 		render(patchsetData...)
 		return
 	case *routeData:
 		data := *errVal
-		if ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0 {
-			render(ctx.DOM().Store("fir", *errVal).Patchset()...)
+		if (ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0) && data != nil {
+			render(ctx.dom().Store("fir", data["data"]).Patchset()...)
 			return
 		}
 		patchsetData := getEventPatchset(ctx, data)
 
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
-			patchsetData = ctx.DOM().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
+			patchsetData = ctx.dom().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
 		}
 		for k := range unsetErrors {
 			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
@@ -447,8 +445,8 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			}
 			ctx.session.Remove(ctx.request.Context(), k)
 			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = ctx.DOM().Replace(fmt.Sprintf("#%s", k),
-				ctx.RenderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
+				ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 		}
 
 		render(patchsetData...)
@@ -463,15 +461,15 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		eventIdName := fmt.Sprintf("%s%s", firErrorPrefix, ctx.event.ID)
 		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
 		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
-			patchsetData = ctx.DOM().Replace(eventNameSelector,
-				ctx.RenderBlock(eventIdName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(eventNameSelector,
+				ctx.renderBlock(eventIdName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 		}
 
 		routeName := fmt.Sprintf("%s-route", firErrorPrefix)
 		routeNameSelector := fmt.Sprintf("#%s", routeName)
 		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
-			patchsetData = ctx.DOM().Replace(routeNameSelector,
-				ctx.RenderBlock(routeName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			patchsetData = ctx.dom().ReplaceEl(routeNameSelector,
+				ctx.renderBlock(routeName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 		}
 
 		render(patchsetData...)

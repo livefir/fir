@@ -29,6 +29,11 @@ const Plugin = (Alpine) => {
         updateStore
     )
 
+    Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
+        const val = evaluate(expression)
+        Alpine.store('fir', val)
+    })
+
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
             replaceEl(patch) {

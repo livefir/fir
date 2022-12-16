@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/adnaan/fir/dom"
+	"github.com/adnaan/fir/internal/dom"
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 )
@@ -35,12 +35,12 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 	go func() {
 		for event := range route.eventSender {
 			eventCtx := RouteContext{
-				event:    event,
-				request:  r,
-				response: w,
-				route:    route,
-				dom:      dom.NewPatcher(),
-				session:  route.session,
+				event:      event,
+				request:    r,
+				response:   w,
+				route:      route,
+				domPatcher: dom.NewPatcher(),
+				session:    route.session,
 			}
 			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 			onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
@@ -104,12 +104,12 @@ loop:
 		}
 
 		eventCtx := RouteContext{
-			event:    event,
-			request:  r,
-			response: w,
-			route:    route,
-			dom:      dom.NewPatcher(),
-			session:  route.session,
+			event:      event,
+			request:    r,
+			response:   w,
+			route:      route,
+			domPatcher: dom.NewPatcher(),
+			session:    route.session,
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)

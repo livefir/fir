@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/adnaan/fir/dom"
+	"github.com/adnaan/fir/internal/dom"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
 )

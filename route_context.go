@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/adnaan/fir/dom"
+	"github.com/adnaan/fir/internal/dom"
 	"github.com/alexedwards/scs/v2"
 	"github.com/fatih/structs"
 )
@@ -16,22 +16,22 @@ import (
 // RouteContext is the context for a route handler.
 // Its methods are used to return data or patch operations to the client.
 type RouteContext struct {
-	event     Event
-	request   *http.Request
-	response  http.ResponseWriter
-	urlValues url.Values
-	route     *route
-	isOnLoad  bool
-	dom       dom.Patcher
-	session   *scs.SessionManager
+	event      Event
+	request    *http.Request
+	response   http.ResponseWriter
+	urlValues  url.Values
+	route      *route
+	isOnLoad   bool
+	domPatcher dom.Patcher
+	session    *scs.SessionManager
 }
 
 func (c RouteContext) Event() Event {
 	return c.event
 }
 
-func (c RouteContext) DOM() dom.Patcher {
-	return c.dom
+func (c RouteContext) dom() dom.Patcher {
+	return c.domPatcher
 }
 
 // Bind decodes the event params into the given struct
@@ -138,38 +138,8 @@ func (c RouteContext) Redirect(url string, status int) error {
 
 // Data sets the data to be hydrated into the route's template
 func (c RouteContext) Data(data any) error {
-	m := routeData{}
-	val := reflect.ValueOf(data)
-	if val.Kind() == reflect.Ptr {
-		el := val.Elem() // dereference the pointer
-		if el.Kind() == reflect.Struct {
-			for k, v := range structs.Map(data) {
-				m[k] = v
-			}
-		}
-	} else if val.Kind() == reflect.Struct {
-		for k, v := range structs.Map(data) {
-			m[k] = v
-		}
-	} else if val.Kind() == reflect.Map {
-		ms, ok := data.(map[string]any)
-		if !ok {
-			return errors.New("data must be a map[string]any , struct or pointer to a struct")
-		}
-
-		for k, v := range ms {
-			m[k] = v
-		}
-	} else {
-		return errors.New("data must be a map[string]any , struct or pointer to a struct")
-	}
-
+	m := routeData{"data": data}
 	return &m
-}
-
-// KV sets a key value pair to be hydrated into the route's template
-func (c RouteContext) KV(k string, v any) error {
-	return &routeData{k: v}
 }
 
 // FieldError sets the error message for the given field and can be looked up by {{.fir.Error "myevent.field"}}
@@ -191,17 +161,17 @@ func (c RouteContext) FieldErrors(fields map[string]error) error {
 	return &m
 }
 
-// RenderTemplate renders a partial template on the server
-func (c *RouteContext) RenderTemplate(name string, data any) dom.TemplateRenderer {
+// renderTemplate renders a partial template on the server
+func (c *RouteContext) renderTemplate(name string, data any) dom.TemplateRenderer {
 	return dom.NewTemplateRenderer(name, data)
 }
 
-// RenderBlock renders a partial template on the server and is an alias for RenderTemplate(...)
-func (c *RouteContext) RenderBlock(name string, data any) dom.TemplateRenderer {
-	return c.RenderTemplate(name, data)
+// renderBlock renders a partial template on the server and is an alias for RenderTemplate(...)
+func (c *RouteContext) renderBlock(name string, data any) dom.TemplateRenderer {
+	return c.renderTemplate(name, data)
 }
 
-// RenderHTML is a utility function for rendering raw html on the server
-func (c *RouteContext) RenderHTML(html string) dom.TemplateRenderer {
-	return c.RenderTemplate("_fir_html", html)
+// renderHTML is a utility function for rendering raw html on the server
+func (c *RouteContext) renderHTML(html string) dom.TemplateRenderer {
+	return c.renderTemplate("_fir_html", html)
 }
