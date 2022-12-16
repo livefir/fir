@@ -20,13 +20,13 @@
         <div class="columns is-mobile is-centered is-vcentered">
             <div x-data class="column is-one-third-desktop has-text-centered is-narrow">
                 <div class="py-5">
-                    <input name="query" class="input" list="list_cities" type="search"
+                    <input name="query" class="input" list="cities" type="search"
                         placeholder="Search Cities e.g. Paris" aria-label="Search Cities" autocomplete="off" autofocus
-                        @input="$dispatch('query')">
+                        @input="$dispatch('query',{query: $event.target.value})">
                 </div>
                 {{ block "cities" .}}
                 <div>
-                    <datalist id="list_cities" @query.window="$fir.replaceEl({block: 'cities'})">
+                    <datalist id="cities" @query.window="$fir.replaceEl()">
                         {{range .cities}}
                         <option value="{{.}}"></option>
                         {{end}}
