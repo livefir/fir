@@ -330,7 +330,7 @@ func getEventPatchset(ctx RouteContext, data any) dom.Patchset {
 
 	var patchsetData dom.Patchset
 	if (ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0) && data != nil {
-		patchsetData = ctx.dom().Store("fir", (data.(map[string]any))["data"]).Patchset()
+		patchsetData = ctx.dom().Store("fir", data).Patchset()
 		return patchsetData
 	}
 
@@ -431,7 +431,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	case *routeData:
 		data := *errVal
 		if (ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0) && data != nil {
-			render(ctx.dom().Store("fir", data["data"]).Patchset()...)
+			render(ctx.dom().Store("fir", data).Patchset()...)
 			return
 		}
 		patchsetData := getEventPatchset(ctx, data)

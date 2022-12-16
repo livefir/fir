@@ -38,7 +38,7 @@ func loadTweets(db *bolthold.Store) fir.OnEventFunc {
 		if err := db.Find(&tweets, &bolthold.Query{}); err != nil {
 			return err
 		}
-		return ctx.Data(tweets)
+		return ctx.Data(map[string]any{"tweets": tweets})
 	}
 }
 
