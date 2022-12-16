@@ -1,5 +1,5 @@
 {{ define "content" }}
-    <div id="content">
+    <div x-data id="content">
         {{ block "fir-error-route" . }}
             <p id="fir-error-route">
                 {{ .fir.Error "route" }}

@@ -253,7 +253,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		handleOnEventResult(onEventFunc(eventCtx), eventCtx, renderPatch(eventCtx))
 
 	} else {
-		// onForms
+		// postForm
 		if r.Method == http.MethodPost {
 			formAction := ""
 			values := r.URL.Query()
@@ -305,7 +305,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			handleOnFormResult(onEventFunc(eventCtx), eventCtx)
+			handlePostFormResult(onEventFunc(eventCtx), eventCtx)
 
 		} else if r.Method == http.MethodGet {
 			// onLoad
@@ -477,17 +477,16 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	}
 }
 
-func handleOnFormResult(err error, ctx RouteContext) {
+func handlePostFormResult(err error, ctx RouteContext) {
 	if err == nil {
 		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 		return
 	}
 
-	switch errVal := err.(type) {
+	switch err.(type) {
 	case *routeData:
-		onFormData := *errVal
-		onFormData["fir"] = newRouteDOMContext(ctx, map[string]any{})
-		renderRoute(ctx)(onFormData)
+		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
+		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 	case dom.Patcher:
 		// ignore patchset since this is a full page render
 		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
