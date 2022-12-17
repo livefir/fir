@@ -27,11 +27,11 @@ var content = `
 <body>
 	<div x-data>
 		{{block "count" .}}
-			<div id="count"
-                 @inc.window="$fir.replaceEl()"
-                @dec.window="$fir.replaceEl()">
-				{{.count}}
-			</div>
+        <div id="count"
+            @inc.window="$fir.replaceEl()"
+            @dec.window="$fir.replaceEl()">
+            {{.count}}
+        </div>
 		{{end}}
 		<button @click="$dispatch('inc')">+</button>
 		<button @click="$dispatch('dec')">-</button>
