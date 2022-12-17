@@ -60,7 +60,7 @@ var content = `<!DOCTYPE html>
 			<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
 				{{block "count" .}}
 					<div @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()" id="count">
-						{{.data}}
+						{{.count}}
 					</div>
 				{{end}}
 				<button class="button has-background-primary" @click="$dispatch('inc')">+
@@ -79,15 +79,15 @@ type index struct {
 }
 
 func (i *index) load(ctx fir.RouteContext) error {
-	return ctx.Data(atomic.LoadInt32(&i.value))
+	return ctx.Data(map[string]any{"count": atomic.LoadInt32(&i.value)})
 }
 
 func (i *index) inc(ctx fir.RouteContext) error {
-	return ctx.Data(atomic.AddInt32(&i.value, 1))
+	return ctx.Data(map[string]any{"count": atomic.AddInt32(&i.value, 1)})
 }
 
 func (i *index) dec(ctx fir.RouteContext) error {
-	return ctx.Data(atomic.AddInt32(&i.value, -1))
+	return ctx.Data(map[string]any{"count": atomic.AddInt32(&i.value, -1)})
 }
 
 func (i *index) Options() fir.RouteOptions {

@@ -76,7 +76,7 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 
 func createProject(db *ent.Client) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
-		return ctx.Data("ok")
+		return ctx.Data(map[string]any{})
 	}
 }
 

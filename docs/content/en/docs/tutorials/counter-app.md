@@ -511,7 +511,7 @@ func NewCounterView() *CounterView {
 ```
 
 ```html
-<div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+<div>Count updated: <span x-text="$store.fir.CountUpdated || 0"></span> seconds ago</div>
 ```
 
 `fir.Store{}` updates the global [alpinejs $store](https://alpinejs.dev/globals/alpine-store). Since its reactive, the above html snippet automatically updates.
@@ -623,7 +623,7 @@ func (c *CounterView) Content() string {
  <div class="columns is-mobile is-centered is-vcentered">
   <div x-data class="column is-one-third-desktop has-text-centered is-narrow">
    <div>
-    <div>Count updated: <span x-text="$store.fir.count_updated || 0"></span> seconds ago</div>
+    <div>Count updated: <span x-text="$store.fir.CountUpdated || 0"></span> seconds ago</div>
     <hr>
     {{block "count" .}}<div id="count">{{.count}}</div>{{end}}
     <button class="button has-background-primary" @click="$fir.emit('inc')">+

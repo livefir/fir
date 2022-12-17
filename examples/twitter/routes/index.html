@@ -30,7 +30,7 @@
               @like-tweet(tweet-{{.ID}}),
               @delete-tweet(tweet-{{.ID}})
               @create-tweet(tweets)
-              It is re-rendered on the server when the event is emitted 
+              The is re-rendered on the server aftter the event is handled by $fir.xxxEl()
               and the output html is patched(replaceEl,removeEl,appendEl) to the element.
                */}}
                 {{ block "tweet*" . }}

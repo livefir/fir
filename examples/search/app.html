@@ -43,7 +43,7 @@
                     </div>
                     {{ block "cities" . }}
                         <div id="cities" @query.window="$fir.replaceEl()">
-                            {{ range .data }}
+                            {{ range .cities }}
                                 <div>{{ . }}</div>
                             {{ end }}
                         </div>

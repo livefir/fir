@@ -23,7 +23,7 @@ func (c *Counter) Inc(ctx fir.RouteContext) error {
 	defer c.Unlock()
 	c.count += 1
 	c.updated = time.Now()
-	return ctx.Data(c.count)
+	return ctx.Data(map[string]any{"count": c.count})
 }
 
 func (c *Counter) Dec(ctx fir.RouteContext) error {
@@ -31,7 +31,7 @@ func (c *Counter) Dec(ctx fir.RouteContext) error {
 	defer c.Unlock()
 	c.count -= 1
 	c.updated = time.Now()
-	return ctx.Data(c.count)
+	return ctx.Data(map[string]any{"count": c.count})
 }
 
 func (c *Counter) Updated() float64 {
@@ -71,7 +71,7 @@ func NewCounterIndex(pubsub pubsub.Adapter) *index {
 }
 
 type countUpdate struct {
-	CountUpdated float64 `json:"count_updated"`
+	CountUpdated float64
 }
 
 type index struct {
@@ -95,7 +95,7 @@ func (i *index) Options() fir.RouteOptions {
 }
 
 func (i *index) load(ctx fir.RouteContext) error {
-	return ctx.Data(i.model.Count())
+	return ctx.Data(map[string]any{"count": i.model.Count()})
 }
 
 func (i *index) inc(ctx fir.RouteContext) error {
@@ -111,7 +111,7 @@ func (i *index) updated(ctx fir.RouteContext) error {
 	if err != nil {
 		return err
 	}
-	return ctx.Data(req.CountUpdated)
+	return ctx.Data(req)
 }
 
 var content = `
@@ -119,11 +119,11 @@ var content = `
 <div class="my-6" style="height: 500px">
 	<div class="columns is-mobile is-centered is-vcentered">
 		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-			<div>Count updated: <span x-text="$store.fir || 0"></span> seconds ago</div>
+			<div>Count updated: <span x-text="$store.fir.CountUpdated || 0"></span> seconds ago</div>
 			<hr>
 			{{block "count" .}}
 				<div @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()" id="count">
-					{{.data}}
+					{{.count}}
 				</div>
 			{{end}}
 			<button class="button has-background-primary" @click="$dispatch('inc')">+

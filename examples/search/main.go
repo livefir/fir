@@ -21,7 +21,7 @@ var cities = []string{
 	"Seoul",
 }
 
-func filterCities(str string) []string {
+func filterCities(str string) map[string]any {
 	if str == "" {
 		return nil
 	}
@@ -31,7 +31,7 @@ func filterCities(str string) []string {
 			result = append(result, city)
 		}
 	}
-	return result
+	return map[string]any{"cities": result}
 }
 
 type queryRequest struct {

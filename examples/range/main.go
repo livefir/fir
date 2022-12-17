@@ -16,7 +16,7 @@ func index() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.Content("app.html"),
 		fir.OnLoad(func(ctx fir.RouteContext) error {
-			return ctx.Data(0)
+			return ctx.Data(map[string]any{"total": 0})
 		}),
 		fir.OnEvent("update", func(ctx fir.RouteContext) error {
 			req := new(countRequest)
@@ -27,7 +27,7 @@ func index() fir.RouteOptions {
 			if err != nil {
 				return err
 			}
-			return ctx.Data(count * 10)
+			return ctx.Data(map[string]any{"total": count * 10})
 		}),
 	}
 }
