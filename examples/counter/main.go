@@ -7,7 +7,8 @@ import (
 	"github.com/livefir/fir"
 )
 
-var content = `<!DOCTYPE html>
+var content = `
+<!DOCTYPE html>
 <html lang="en">
 <head>
 	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
@@ -17,6 +18,9 @@ var content = `<!DOCTYPE html>
 <body>
 	<div x-data>
 		{{block "count" .}}
+		<!-- div id matches block "count". on $fir.replaceEl, 
+			the block is re-rendered on the server and div is replaced on the client.
+		--->
 			<div 
 				id="count"
 				@inc.window="$fir.replaceEl()" 
@@ -31,26 +35,19 @@ var content = `<!DOCTYPE html>
 </html>`
 
 func index() fir.RouteOptions {
-	var value int32
-
-	load := func(ctx fir.RouteContext) error {
-		return ctx.KV("count", atomic.LoadInt32(&value))
-	}
-
-	inc := func(ctx fir.RouteContext) error {
-		return ctx.KV("count", atomic.AddInt32(&value, 1))
-	}
-
-	dec := func(ctx fir.RouteContext) error {
-		return ctx.KV("count", atomic.AddInt32(&value, -1))
-	}
-
+	var count int32
 	return fir.RouteOptions{
 		fir.ID("counter"),
 		fir.Content(content),
-		fir.OnLoad(load),
-		fir.OnEvent("inc", inc),
-		fir.OnEvent("dec", dec),
+		fir.OnLoad(func(ctx fir.RouteContext) error {
+			return ctx.KV("count", atomic.LoadInt32(&count))
+		}),
+		fir.OnEvent("inc", func(ctx fir.RouteContext) error {
+			return ctx.KV("count", atomic.AddInt32(&count, 1))
+		}),
+		fir.OnEvent("dec", func(ctx fir.RouteContext) error {
+			return ctx.KV("count", atomic.AddInt32(&count, -1))
+		}),
 	}
 }
 
