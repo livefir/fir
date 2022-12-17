@@ -17,7 +17,10 @@ var content = `<!DOCTYPE html>
 <body>
 	<div x-data>
 		{{block "count" .}}
-			<div id="count" @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()">
+			<div 
+				id="count"
+				@inc.window="$fir.replaceEl()" 
+				@dec.window="$fir.replaceEl()">
 				{{.count}}
 			</div>
 		{{end}}
@@ -31,15 +34,15 @@ func index() fir.RouteOptions {
 	var value int32
 
 	load := func(ctx fir.RouteContext) error {
-		return ctx.Data(map[string]any{"count": atomic.LoadInt32(&value)})
+		return ctx.KV("count", atomic.LoadInt32(&value))
 	}
 
 	inc := func(ctx fir.RouteContext) error {
-		return ctx.Data(map[string]any{"count": atomic.AddInt32(&value, 1)})
+		return ctx.KV("count", atomic.AddInt32(&value, 1))
 	}
 
 	dec := func(ctx fir.RouteContext) error {
-		return ctx.Data(map[string]any{"count": atomic.AddInt32(&value, -1)})
+		return ctx.KV("count", atomic.AddInt32(&value, -1))
 	}
 
 	return fir.RouteOptions{

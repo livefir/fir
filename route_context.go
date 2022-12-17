@@ -136,7 +136,14 @@ func (c RouteContext) Redirect(url string, status int) error {
 	return nil
 }
 
-// Data sets the data to be hydrated into the route's template
+// KV is a wrapper for ctx.Data(map[string]any{key: data})
+func (c RouteContext) KV(key string, data any) error {
+	return c.Data(map[string]any{key: data})
+}
+
+// Data sets the data to be hydrated into the route's template or an event's associated template/block action
+// It accepts either a map or struct type so that fir can inject
+// utility functions: .fir.Error, .fir.ActiveRoute etc.
 func (c RouteContext) Data(data any) error {
 	m := routeData{}
 	val := reflect.ValueOf(data)

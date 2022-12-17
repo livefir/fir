@@ -16,7 +16,7 @@
             @submit.prevent="$fir.submit('create-tweet')"
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
-            {{/* validation error for the input=body */}}
+            <!-- validation error for the input=body set by ctx.FieldError(...) -->
             {{ block "fir-error-create-tweet-body" . }}
                 <p id="fir-error-create-tweet-body">
                     {{ .fir.Error "create-tweet.body" }}
@@ -26,13 +26,13 @@
         </form>
         <div id="tweets" @create-tweet.window="$fir.appendEl()">
             {{ range .tweets }}
-            {{/* block "tweet*" matches element id of event listeners: 
-              @like-tweet(tweet-{{.ID}}),
-              @delete-tweet(tweet-{{.ID}})
-              @create-tweet(tweets)
-              The block is re-rendered on the server aftter the event is emitted by $fir.xxxEl()
-              The output html is patched(replaceEl,removeEl,appendEl) to the element on the client.
-               */}}
+                <!-- block "tweet*" matches the element id of event listeners: 
+                @like-tweet(tweet-{{ .ID }}),
+                @delete-tweet(tweet-{{ .ID }})
+                @create-tweet(tweets)
+                The block is re-rendered on the server aftter the event is emitted by $fir.xxxEl()
+                The output html is patched(replaceEl,removeEl,appendEl) to the element on the client.
+               -->
                 {{ block "tweet*" . }}
                     <div
                         id="tweet-{{ .ID }}"
