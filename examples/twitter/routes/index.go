@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/adnaan/fir"
+	"github.com/livefir/fir"
 	"github.com/timshannon/bolthold"
 )
 

@@ -22,7 +22,7 @@ THE SOFTWARE.
 package main
 
 import (
-	"github.com/adnaan/fir/cli/cmd"
+	"github.com/livefir/fir/cli/cmd"
 )
 
 func main() {

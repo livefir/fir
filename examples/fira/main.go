@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/examples/fira/ent"
-	projects "github.com/adnaan/fir/examples/fira/routes/projects"
+	"github.com/livefir/fir"
+	"github.com/livefir/fir/examples/fira/ent"
+	projects "github.com/livefir/fir/examples/fira/routes/projects"
 )
 
 func main() {

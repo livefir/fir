@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync/atomic"
 
-	"github.com/adnaan/fir"
+	"github.com/livefir/fir"
 	ory "github.com/ory/client-go"
 )
 

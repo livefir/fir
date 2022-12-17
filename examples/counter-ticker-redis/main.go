@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/pubsub"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
+	"github.com/livefir/fir"
+	"github.com/livefir/fir/pubsub"
 )
 
 type Counter struct {

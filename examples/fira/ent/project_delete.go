@@ -9,8 +9,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/adnaan/fir/examples/fira/ent/predicate"
-	"github.com/adnaan/fir/examples/fira/ent/project"
+	"github.com/livefir/fir/examples/fira/ent/predicate"
+	"github.com/livefir/fir/examples/fira/ent/project"
 )
 
 // ProjectDelete is the builder for deleting a Project entity.

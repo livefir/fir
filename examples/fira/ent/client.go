@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/adnaan/fir/examples/fira/ent/migrate"
+	"github.com/livefir/fir/examples/fira/ent/migrate"
 	"github.com/google/uuid"
 
-	"github.com/adnaan/fir/examples/fira/ent/issue"
-	"github.com/adnaan/fir/examples/fira/ent/project"
+	"github.com/livefir/fir/examples/fira/ent/issue"
+	"github.com/livefir/fir/examples/fira/ent/project"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"

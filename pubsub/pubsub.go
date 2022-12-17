@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/adnaan/fir/internal/dom"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
+	"github.com/livefir/fir/internal/dom"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go

@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/adnaan/fir"
+	"github.com/livefir/fir"
 )
 
 func home() fir.RouteOptions {

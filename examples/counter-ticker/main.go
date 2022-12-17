@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/pubsub"
 	"github.com/golang/glog"
+	"github.com/livefir/fir"
+	"github.com/livefir/fir/pubsub"
 )
 
 type Counter struct {

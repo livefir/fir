@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/adnaan/fir"
+	"github.com/livefir/fir"
 )
 
 type countRequest struct {

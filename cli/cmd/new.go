@@ -4,7 +4,7 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"github.com/adnaan/fir/cli/entgo"
+	"github.com/livefir/fir/cli/entgo"
 	"github.com/spf13/cobra"
 )
 

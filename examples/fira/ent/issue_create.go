@@ -10,8 +10,8 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/adnaan/fir/examples/fira/ent/issue"
-	"github.com/adnaan/fir/examples/fira/ent/project"
+	"github.com/livefir/fir/examples/fira/ent/issue"
+	"github.com/livefir/fir/examples/fira/ent/project"
 	"github.com/google/uuid"
 )
 

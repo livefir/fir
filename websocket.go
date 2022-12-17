@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/adnaan/fir/internal/dom"
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
+	"github.com/livefir/fir/internal/dom"
 )
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {

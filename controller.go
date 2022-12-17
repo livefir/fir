@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/adnaan/fir/pubsub"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
+	"github.com/livefir/fir/pubsub"
 )
 
 // Controller is an interface which encapsulates a group of views. It routes requests to the appropriate view.

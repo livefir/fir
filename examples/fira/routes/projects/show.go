@@ -1,8 +1,8 @@
 package projects
 
 import (
-	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/examples/fira/ent"
+	"github.com/livefir/fir"
+	"github.com/livefir/fir/examples/fira/ent"
 )
 
 func Show(db *ent.Client) fir.RouteFunc {

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/adnaan/fir/internal/dom"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
+	"github.com/livefir/fir/internal/dom"
 	"golang.org/x/exp/slices"
 )
 

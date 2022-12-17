@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/adnaan/fir/internal/dom"
 	"github.com/alexedwards/scs/v2"
 	"github.com/fatih/structs"
+	"github.com/livefir/fir/internal/dom"
 )
 
 // RouteContext is the context for a route handler.

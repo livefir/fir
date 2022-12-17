@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/adnaan/fir/gen"
+	"github.com/livefir/fir/gen"
 	"github.com/spf13/cobra"
 )
 

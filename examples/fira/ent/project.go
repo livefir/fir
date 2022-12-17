@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/adnaan/fir/examples/fira/ent/project"
+	"github.com/livefir/fir/examples/fira/ent/project"
 	"github.com/google/uuid"
 )
 

@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/adnaan/fir/examples/fira/ent"
+	"github.com/livefir/fir/examples/fira/ent"
 )
 
 // The IssueFunc type is an adapter to allow the use of ordinary

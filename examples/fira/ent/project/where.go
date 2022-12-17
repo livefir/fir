@@ -7,7 +7,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/adnaan/fir/examples/fira/ent/predicate"
+	"github.com/livefir/fir/examples/fira/ent/predicate"
 	"github.com/google/uuid"
 )
 

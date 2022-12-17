@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/examples/twitter/routes"
+	"github.com/livefir/fir"
+	"github.com/livefir/fir/examples/twitter/routes"
 	"github.com/timshannon/bolthold"
 )
 

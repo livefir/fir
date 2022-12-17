@@ -3,8 +3,8 @@ package fir
 import (
 	"encoding/json"
 
-	"github.com/adnaan/fir/internal/dom"
 	"github.com/golang/glog"
+	"github.com/livefir/fir/internal/dom"
 )
 
 // NewEvent creates a new event

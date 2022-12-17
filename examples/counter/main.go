@@ -4,14 +4,12 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/adnaan/fir"
+	"github.com/livefir/fir"
 )
 
 var content = `<!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<!-- <script defer src="http://localhost:8000/cdn.js"></script> -->
 	<script defer src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
 	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>

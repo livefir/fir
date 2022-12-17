@@ -5,9 +5,9 @@ package ent
 import (
 	"time"
 
-	"github.com/adnaan/fir/examples/fira/ent/issue"
-	"github.com/adnaan/fir/examples/fira/ent/project"
-	"github.com/adnaan/fir/examples/fira/ent/schema"
+	"github.com/livefir/fir/examples/fira/ent/issue"
+	"github.com/livefir/fir/examples/fira/ent/project"
+	"github.com/livefir/fir/examples/fira/ent/schema"
 	"github.com/google/uuid"
 )
 

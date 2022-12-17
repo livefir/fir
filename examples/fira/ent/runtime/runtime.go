@@ -2,7 +2,7 @@
 
 package runtime
 
-// The schema-stitching logic is generated in github.com/adnaan/fir/examples/fira/ent/runtime.go
+// The schema-stitching logic is generated in github.com/livefir/fir/examples/fira/ent/runtime.go
 
 const (
 	Version = "v0.11.4"                                         // Version of ent codegen.

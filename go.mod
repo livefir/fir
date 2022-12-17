@@ -1,4 +1,4 @@
-module github.com/adnaan/fir
+module github.com/livefir/fir
 
 go 1.19
 

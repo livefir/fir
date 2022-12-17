@@ -5,8 +5,8 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/mixin"
-	"github.com/adnaan/fir/gen"
 	"github.com/google/uuid"
+	"github.com/livefir/fir/gen"
 )
 
 // Issue holds the schema definition for the Issue entity.

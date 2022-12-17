@@ -1,9 +1,9 @@
 package projects
 
 import (
-	"github.com/adnaan/fir"
-	"github.com/adnaan/fir/examples/fira/ent"
-	"github.com/adnaan/fir/examples/fira/ent/project"
+	"github.com/livefir/fir"
+	"github.com/livefir/fir/examples/fira/ent"
+	"github.com/livefir/fir/examples/fira/ent/project"
 )
 
 var defaultPageSize = 5

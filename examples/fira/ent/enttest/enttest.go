@@ -5,12 +5,12 @@ package enttest
 import (
 	"context"
 
-	"github.com/adnaan/fir/examples/fira/ent"
+	"github.com/livefir/fir/examples/fira/ent"
 	// required by schema hooks.
-	_ "github.com/adnaan/fir/examples/fira/ent/runtime"
+	_ "github.com/livefir/fir/examples/fira/ent/runtime"
 
 	"entgo.io/ent/dialect/sql/schema"
-	"github.com/adnaan/fir/examples/fira/ent/migrate"
+	"github.com/livefir/fir/examples/fira/ent/migrate"
 )
 
 type (
