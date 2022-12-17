@@ -27,15 +27,10 @@ var content = `
 <body>
 	<div x-data>
 		{{block "count" .}}
-		<!-- 
-            div id="count" matches block "count". on $fir.replaceEl, 
-			the block is re-rendered on the server and the div 
-            is replaced on the client.
-		--->
-			<div 
-				id="count"
-				@inc.window="$fir.replaceEl()" 
-				@dec.window="$fir.replaceEl()">
+            <!-- div id="count" matches block "count". on $fir.replaceEl,the block is
+            re-rendered on the server and the div is replaced on the client --->
+
+			<div id="count"@inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()">
 				{{.count}}
 			</div>
 		{{end}}
