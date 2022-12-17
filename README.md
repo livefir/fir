@@ -27,7 +27,9 @@ var content = `
 <body>
 	<div x-data>
 		{{block "count" .}}
-			<div id="count"@inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()">
+			<div id="count"
+                 @inc.window="$fir.replaceEl()"
+                @dec.window="$fir.replaceEl()">
 				{{.count}}
 			</div>
 		{{end}}
