@@ -5,11 +5,14 @@
 
 **A Go toolkit to build reactive web interfaces using: [Go](https://go.dev/), [html/template](https://pkg.go.dev/html/template) and [alpinejs](https://alpinejs.dev/).**
 
+**Status**: This is a work in progress. Checkout examples to see what works today: [examples](./examples/)
+
 
 Fir is a toolkit for building server-rendered HTML applications and progressively enhancing them to enable real-time user experiences. It is intended for developers who want to build real-time web apps using Go, server-rendered HTML (html/template), CSS, and sprinkles of declarative javascript (Alpine.js). The toolkit can be used to build a completely server-rendered web application with zero javascript, and the same app can then be progressively enhanced on the client to a real-time dynamic app with little bits of javascript while still using Go's html/template engine on the server. Fir can be used to build various types of web applications, including static websites like landing pages or blogs, interactive CRUD apps like ticket helpdesks, and real-time apps like metrics dashboards or social media streams.
 
+The big idea behind Fir is to enhance Go’s standard html/template web page with alpine.js to update predefined parts of the page on user interaction. A html page is decomposed into updatable parts using the `block` action. This allows Fir to re-compile the targeted block on the server and update the web page over the wire(http & websocket) without page reloads. 
+The HTML itself is largely quite standard i.e. its free of magics or special attributes except what’s exposed by the alpinejs plugin. The plugin exposes a small API and is designed to be unobtrusive and easy to remove incase one wants to migrate the HTML to another framework. 
 
-**Status**: This is a work in progress. Checkout examples to see what works today: [examples](./examples/)
 
 ## Example
 
@@ -79,3 +82,7 @@ func main() {
     </body>
 </html>
 ```
+
+In the above example, `@inc.window="$fir.replaceEl()"` marks `<div id="count">` to be replaced by the content of a `block` which matches the element's div id `count` which in this case is `{{ block "count" . }} ... {{ end }}`. The matching is done on the server and block action names can contain a wildcard, for e.g. `block "count*` would match `count` or `count-1`.
+
+`$fir.submit` is a helper which prevents the form submission and dispatches browser events `inc` and `dec` which is then captured by `@inc.window, @dec.window` listeners registered on `<div id="count">`. It also captures any form data and attaches it to the event before its sent to the server by `$fir.replaceEl`. In this example we don't have any form data.
