@@ -1,6 +1,13 @@
 # Fir
 
-A Go toolkit to build reactive web interfaces using: [Go](https://go.dev/), [html/template](https://pkg.go.dev/html/template) and [alpinejs](https://alpinejs.dev/). 
+[![Go Reference](https://pkg.go.dev/badge/github.com/livefir/fir.svg)](https://pkg.go.dev/github.com/livefir/fir) 
+[![npm version](https://badge.fury.io/js/@livefir%2Ffir.svg)](https://badge.fury.io/js/@livefir%2Ffir)
+
+**A Go toolkit to build reactive web interfaces using: [Go](https://go.dev/), [html/template](https://pkg.go.dev/html/template) and [alpinejs](https://alpinejs.dev/).**
+
+
+Fir is a toolkit for building server-rendered HTML applications and progressively enhancing them to enable real-time user experiences. It is intended for developers who want to build real-time web apps using Go, server-rendered HTML (html/template), CSS, and sprinkles of declarative javascript (Alpine.js). The toolkit can be used to build a completely server-rendered web application with zero javascript, and the same app can then be progressively enhanced on the client to a real-time dynamic app with little bits of javascript while still using Go's html/template engine on the server. Fir can be used to build various types of web applications, including static websites like landing pages or blogs, interactive CRUD apps like ticket helpdesks, and real-time apps like metrics dashboards or social media streams.
+
 
 **Status**: This is a work in progress. Checkout examples to see what works today: [examples](./examples/)
 
