@@ -13,6 +13,8 @@ Fir is a toolkit for building server-rendered HTML applications and progressivel
 
 ## Example
 
+Using fir's alpinejs plugin, the page below has been progressively enhanced to a real-time single page app. Open two tabs to see the count update in both. Disable javascript in your browser to see it still work without the enhancements.
+
 ```go
 package main
 
@@ -69,8 +71,10 @@ func main() {
                     {{ .count }}
                 </div>
             {{ end }}
-            <button @click="$dispatch('inc')">+</button>
-            <button @click="$dispatch('dec')">-</button>
+            <form method="post" @submit.prevent="$fir.submit()">
+                <button formaction="/?event=inc" type="submit">+</button>
+                <button formaction="/?event=dec" type="submit">-</button>
+            </form>
         </div>
     </body>
 </html>

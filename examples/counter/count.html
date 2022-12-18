@@ -19,8 +19,10 @@
                     {{ .count }}
                 </div>
             {{ end }}
-            <button @click="$dispatch('inc')">+</button>
-            <button @click="$dispatch('dec')">-</button>
+            <form method="post" @submit.prevent="$fir.submit()">
+                <button formaction="/?event=inc" type="submit">+</button>
+                <button formaction="/?event=dec" type="submit">-</button>
+            </form>
         </div>
     </body>
 </html>
