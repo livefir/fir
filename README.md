@@ -46,7 +46,7 @@ func main() {
     <head>
         <script
             defer
-            src="https://unpkg.com/@adnaanx/fir@latest/dist/fir.min.js"></script>
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
