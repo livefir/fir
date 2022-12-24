@@ -3,6 +3,7 @@ package dom
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 
@@ -20,26 +21,30 @@ func NewPatcher() Patcher {
 }
 
 type Patcher interface {
-	// ReplaceEl patches the dom at the given selector with the rendered template
+	// ReplaceEl patches the dom element at the given selector with the rendered template
 	ReplaceEl(selector string, t TemplateRenderer) Patcher
-	// After patches the dom after the given selector with the rendered template
+	// ReplaceContent patches the dom element content at the given selector with the rendered template
+	ReplaceContent(selector string, t TemplateRenderer) Patcher
+	// After patches the dom element after the given selector with the rendered template
 	AfterEl(selector string, t TemplateRenderer) Patcher
-	// Before patches the dom before the given selector with the rendered template
+	// Before patches the dom element before the given selector with the rendered template
 	BeforeEl(selector string, t TemplateRenderer) Patcher
-	// Append patches the dom after the given selector with the rendered template
+	// Append patches the dom element  after the given selector with the rendered template
 	AppendEl(selector string, t TemplateRenderer) Patcher
-	// Prepend patches the dom before the given selector with the rendered template
+	// Prepend patches the dom element before the given selector with the rendered template
 	PrependEl(selector string, t TemplateRenderer) Patcher
-	// Remove patches the dom to remove the given selector
+	// Remove patches the dom element to remove the given selector
 	RemoveEl(selector string) Patcher
-	// Reload patches the dom to reload the page
+	// Reload patches the dom  to reload the page
 	Reload() Patcher
-	// Store patches the dom to update the alpinejs store
+	// Store patches the dom  to update the alpinejs store
 	Store(name string, data any) Patcher
 	// ResetForm patches the dom to reset the form
 	ResetForm(selector string) Patcher
 	// Navigate patches the dom to navigate to the given url
 	Navigate(url string) Patcher
+	// DispatchEvent patches the dom to dispatch the given event
+	DispatchEvent(selector, eventSourceID string, t TemplateRenderer) Patcher
 	// Patchset returns the patchset
 	Patchset() Patchset
 	// Error satisfies the error interface so that Context can return a Patcher
@@ -52,16 +57,18 @@ var _ error = (Patcher)(nil)
 type PatchType string
 
 const (
-	Replace   PatchType = "replace"
-	After     PatchType = "after"
-	Before    PatchType = "before"
-	Append    PatchType = "append"
-	Prepend   PatchType = "prepend"
-	Remove    PatchType = "remove"
-	Reload    PatchType = "reload"
-	Store     PatchType = "store"
-	ResetForm PatchType = "resetForm"
-	Navigate  PatchType = "navigate"
+	ReplaceElement PatchType = "replaceElement"
+	ReplaceContent PatchType = "replaceContent"
+	After          PatchType = "after"
+	Before         PatchType = "before"
+	Append         PatchType = "append"
+	Prepend        PatchType = "prepend"
+	Remove         PatchType = "remove"
+	Reload         PatchType = "reload"
+	Store          PatchType = "store"
+	ResetForm      PatchType = "resetForm"
+	Navigate       PatchType = "navigate"
+	DispatchEvent  PatchType = "dispatchEvent"
 )
 
 // Patch is an interface for all patch operations
@@ -72,6 +79,8 @@ type Patch struct {
 	Selector *string `json:"selector,omitempty"`
 	// Value is the value for the patch operation
 	Value any `json:"value,omitempty"`
+	// EventSourceID is the id of the element that triggered the event
+	EventSourceID *string `json:"eid,omitempty"`
 }
 
 // Patchset is a collection of patch operations
@@ -83,7 +92,16 @@ type patcher struct {
 
 func (p *patcher) ReplaceEl(selector string, t TemplateRenderer) Patcher {
 	p.patchset = append(p.patchset, Patch{
-		Type:     Replace,
+		Type:     ReplaceElement,
+		Selector: &selector,
+		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+	})
+	return p
+}
+
+func (p *patcher) ReplaceContent(selector string, t TemplateRenderer) Patcher {
+	p.patchset = append(p.patchset, Patch{
+		Type:     ReplaceContent,
 		Selector: &selector,
 		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
 	})
@@ -166,6 +184,22 @@ func (p *patcher) Navigate(url string) Patcher {
 	return p
 }
 
+func (p *patcher) DispatchEvent(selector, eventSourceID string, t TemplateRenderer) Patcher {
+	eventID := fmt.Sprintf("fir:%s", selector)
+	patch := Patch{
+		Type:          DispatchEvent,
+		Selector:      &eventID,
+		Value:         nil,
+		EventSourceID: &eventSourceID,
+	}
+
+	if t != nil {
+		patch.Value = map[string]any{"name": t.Name(), "data": t.Data()}
+	}
+	p.patchset = append(p.patchset, patch)
+	return p
+}
+
 func (p *patcher) Patchset() Patchset {
 	return p.patchset
 }
@@ -183,7 +217,10 @@ func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 		switch p.Type {
 		case Store, Navigate, ResetForm, Reload, Remove:
 			renderedPatchset = append(renderedPatchset, p)
-		case Replace, After, Before, Append, Prepend:
+		case ReplaceElement, After, Before, Append, Prepend, DispatchEvent:
+			if p.Value == nil {
+				continue
+			}
 			tmpl, ok := p.Value.(map[string]any)
 			if !ok {
 				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
@@ -213,7 +250,7 @@ func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 		tmplVal, err := buildTemplateValue(t, "fir-error", nil)
 		if err == nil {
 			renderedPatchset = append([]Patch{{
-				Type:     Replace,
+				Type:     ReplaceElement,
 				Selector: &firError,
 				Value:    tmplVal,
 			}}, renderedPatchset...)

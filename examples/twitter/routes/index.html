@@ -16,7 +16,7 @@
             @submit.prevent="$fir.submit('create-tweet')"
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
-            <!-- validation error for the input=body set by ctx.FieldError(...) -->
+            <!-- validation error for the name=body set by ctx.FieldError(...) -->
             {{ block "fir-error-create-tweet-body" . }}
                 <p id="fir-error-create-tweet-body">
                     {{ .fir.Error "create-tweet.body" }}

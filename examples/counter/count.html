@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script
+        <script defer src="http://localhost:8000/cdn.js"></script>
+        {{/* <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        */}}
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -11,14 +13,15 @@
 
     <body>
         <div x-data>
-            {{ block "count" . }}
-                <div
-                    id="count"
-                    @inc.window="$fir.replaceEl()"
-                    @dec.window="$fir.replaceEl()">
-                    {{ .count }}
-                </div>
-            {{ end }}
+            <div
+                id="count"
+                @fir:inc.window="$fir.replace()"
+                @fir:dec.window="$fir.replace()">
+                {{ block "count" . }}
+                    <div>Count: {{ .count }}</div>
+                    {{/* {{ .count }} */}}
+                {{ end }}
+            </div>
             <form method="post" @submit.prevent="$fir.submit()">
                 <button formaction="/?event=inc" type="submit">+</button>
                 <button formaction="/?event=dec" type="submit">-</button>
