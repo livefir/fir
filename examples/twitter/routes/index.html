@@ -20,7 +20,8 @@
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
             <!-- validation error for the name=body set by ctx.FieldError(...) -->
-
+            <!-- $fir.replace replaces the content of the element on which it is invoked -->
+            <!-- $fir.replaceEl replaces the element on which it is invoked -->
             <p
                 id="body-err"
                 @fir:create-tweet:body:error.window="$fir.replace()">
@@ -34,11 +35,12 @@
         <div id="tweets" @fir:create-tweet.window="$fir.appendEl()">
             {{ range .tweets }}
                 <!-- block "tweet*" matches the element id of event listeners: 
-                @fir:like-tweet(tweet-{{ .ID }}),
                 @fir:delete-tweet(tweet-{{ .ID }})
                 @fir:create-tweet(tweets)
-                The block is re-rendered on the server aftter the event is emitted by $fir.xxxEl()
-                The output html is patched(replaceEl,removeEl,appendEl) to the element on the client.
+                Similary, block "like-tweet*" matches the element id of event listeners:
+                @fir:like-tweet(tweet-{{ .ID }})
+                The block is re-rendered on the server aftter the event is emitted by $fir.submit()
+                The output html is patched(removeEl,appendEl,replace,) to the element on the client.
                -->
                 {{ block "tweet*" . }}
                     <div
