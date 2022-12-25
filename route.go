@@ -17,8 +17,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var firErrorPrefix = "fir-error-"
-
 // RouteOption is a function that sets route options
 type RouteOption func(*routeOpt)
 

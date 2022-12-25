@@ -59,6 +59,7 @@ func main() {
         <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -66,14 +67,14 @@ func main() {
 
     <body>
         <div x-data>
-            {{ block "count" . }}
-                <div
-                    id="count"
-                    @inc.window="$fir.replaceEl()"
-                    @dec.window="$fir.replaceEl()">
-                    {{ .count }}
-                </div>
-            {{ end }}
+            <div
+                id="count"
+                @fir:inc.window="$fir.replace()"
+                @fir:dec.window="$fir.replace()">
+                {{ block "count" . }}
+                    <div>Count: {{ .count }}</div>
+                {{ end }}
+            </div>
             <form method="post" @submit.prevent="$fir.submit()">
                 <button formaction="/?event=inc" type="submit">+</button>
                 <button formaction="/?event=dec" type="submit">-</button>
@@ -81,6 +82,7 @@ func main() {
         </div>
     </body>
 </html>
+
 ```
 
 In the above example, `@inc.window="$fir.replaceEl()"` marks `<div id="count">` to be replaced by the content of a `block` which matches the element's div id `count` which in this case is `{{ block "count" . }} ... {{ end }}`. The matching is done on the server and block action names can contain a wildcard, for e.g. `block "count*` would match `count` or `count-1`.
