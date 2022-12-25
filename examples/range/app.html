@@ -19,7 +19,6 @@
             <div class="columns is-mobile is-centered is-vcentered">
                 <div
                     x-data="{count: 0}"
-                    x-fir-store="0"
                     class="column is-one-third-desktop has-text-centered is-narrow">
                     <div>
                         You have selected
@@ -33,11 +32,13 @@
                         x-model="count"
                         value="0"
                         @input="$fir.emit('update',{count: $event.target.value})" />
-                    <div>
-                        Price:
-                        <div id="total" x-text="{{ .total }} || $store.fir">
-                            {{ .total }}
-                        </div>
+                    <div id="total" @fir:update.window="$fir.replace()">
+                        {{ block "total" . }}
+                            <div>
+                                Price:
+                                {{ .total }}
+                            </div>
+                        {{ end }}
                     </div>
                 </div>
             </div>

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/golang/glog"
-	"github.com/livefir/fir/internal/dom"
 )
 
 // NewEvent creates a new event
@@ -28,8 +27,8 @@ type Event struct {
 	ID string `json:"event_id"`
 	// Params is the json rawmessage to be passed to the event
 	Params   json.RawMessage `json:"params"`
-	Patchset dom.Patchset    `json:"patchset"`
 	FormID   *string         `json:"form_id,omitempty"`
+	SourceID *string         `json:"source_id,omitempty"`
 }
 
 // String returns the string representation of the event

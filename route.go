@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/golang/glog"
@@ -14,8 +16,6 @@ import (
 	"github.com/livefir/fir/internal/dom"
 	"golang.org/x/exp/slices"
 )
-
-var firErrorPrefix = "fir-error-"
 
 // RouteOption is a function that sets route options
 type RouteOption func(*routeOpt)
@@ -147,17 +147,19 @@ type routeOpt struct {
 }
 
 type route struct {
-	cntrl             *controller
-	template          *template.Template
-	firErrorTemplates []string
+	cntrl            *controller
+	template         *template.Template
+	allTemplates     []string
+	eventTemplateMap map[string]string
 	routeOpt
 }
 
 func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	routeOpt.opt = cntrl.opt
 	rt := &route{
-		routeOpt: *routeOpt,
-		cntrl:    cntrl,
+		routeOpt:         *routeOpt,
+		cntrl:            cntrl,
+		eventTemplateMap: make(map[string]string),
 	}
 	rt.parseTemplate()
 	return rt
@@ -207,7 +209,6 @@ func renderPatch(ctx RouteContext) patchRenderer {
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rt.parseTemplate()
 	sessionID := rt.session.GetString(r.Context(), "id")
 	if sessionID == "" {
 		sessionID = uuid.New().String()
@@ -326,57 +327,31 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getEventPatchset(ctx RouteContext, data any) dom.Patchset {
-
-	var patchsetData dom.Patchset
-	if (ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0) && data != nil {
-		patchsetData = ctx.dom().Store("fir", data).Patchset()
-		return patchsetData
+func renderErrorBlock(ctx RouteContext, eventErrorID string, errs map[string]any) dom.Patchset {
+	sourceID := ""
+	if ctx.event.SourceID != nil {
+		sourceID = *ctx.event.SourceID
 	}
-
-	for _, p := range ctx.event.Patchset {
-		templateName, ok := p.Value.(string)
-		if !ok {
-			glog.Warningf("patchset value sent from client is not a string template/block name")
-		}
-
-		switch p.Type {
-		case dom.Replace:
-			patchsetData = ctx.dom().ReplaceEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
-		case dom.Append:
-			patchsetData = ctx.dom().AppendEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
-		case dom.Prepend:
-			patchsetData = ctx.dom().PrependEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
-		case dom.After:
-			patchsetData = ctx.dom().AfterEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
-		case dom.Before:
-			patchsetData = ctx.dom().BeforeEl(*p.Selector, ctx.renderBlock(templateName, data)).Patchset()
-		case dom.Remove:
-			patchsetData = ctx.dom().RemoveEl(*p.Selector).Patchset()
-		default:
-			glog.Warning("unknown patchset type sent from client")
-		}
-	}
-	return patchsetData
+	return ctx.dom().DispatchEvent(
+		eventErrorID,
+		sourceID,
+		ctx.renderBlock(ctx.route.eventTemplateMap[eventErrorID],
+			map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
 }
 
 func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
-	unsetErrors := map[string]any{}
-	for _, v := range ctx.route.firErrorTemplates {
-		unsetErrors[v] = struct{}{}
-	}
-
 	if err == nil {
-		patchsetData := getEventPatchset(ctx, nil)
-		for k := range unsetErrors {
-			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
-				continue
-			}
-			ctx.session.Remove(ctx.request.Context(), k)
-			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = append(patchsetData,
-				ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
-					ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()...)
+		sourceID := ""
+		if ctx.event.SourceID != nil {
+			sourceID = *ctx.event.SourceID
+		}
+		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID, nil).Patchset()
+		// check if error was previously set for this event
+		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
+		// if error was previously set, then remove it and dispatch event to unset error
+		if ctx.session.GetInt(ctx.request.Context(), eventErrorID) == 1 {
+			ctx.session.Remove(ctx.request.Context(), eventErrorID)
+			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
 		}
 
 		render(patchsetData...)
@@ -384,94 +359,95 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	}
 
 	switch errVal := err.(type) {
-
-	case dom.Patcher:
-		patchsetData := errVal.Patchset()
-		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
-			patchsetData = ctx.dom().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
-		}
-		for k := range unsetErrors {
-			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
-				continue
-			}
-			ctx.session.Remove(ctx.request.Context(), k)
-			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
-				ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
-		}
-		render(patchsetData...)
-		return
 	case *fieldErrors:
 		fieldErrorsData := *errVal
-		var patchsetData dom.Patchset
-
-		for k, v := range fieldErrorsData {
-			fieldErrorName := fmt.Sprintf("%s%s-%s", firErrorPrefix, ctx.event.ID, k)
-			// eror is set, don't unset it
-			delete(unsetErrors, fieldErrorName)
-			// mark error as set in session
-			ctx.session.Put(ctx.request.Context(), fieldErrorName, 1)
-			errs := map[string]any{
-				ctx.event.ID: map[string]any{
-					k: v.Error()},
-				"route": v.Error(),
-			}
-			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", fieldErrorName),
-				ctx.renderBlock(fieldErrorName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+		sourceID := ""
+		if ctx.event.SourceID != nil {
+			sourceID = *ctx.event.SourceID
 		}
-		// unset errors that are not set
-		for k := range unsetErrors {
-			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
-				ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID, nil).Patchset()
+
+		var errSkipList []string
+		for field, err := range fieldErrorsData {
+			eventErrorID := fmt.Sprintf("%s:%s:error", ctx.event.ID, field)
+			// mark error as set in session
+			errSkipList = append(errSkipList, eventErrorID)
+			ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
+			errs := map[string]any{ctx.event.ID: map[string]any{field: err.Error()}}
+			patchsetData = renderErrorBlock(ctx, eventErrorID, errs)
+		}
+
+		// check if errors were set  in a previous sesion
+		for eventErrorID := range ctx.route.eventTemplateMap {
+			// skip if not error event
+			if !strings.HasSuffix(eventErrorID, ":error") {
+				continue
+			}
+			if ctx.session.GetInt(ctx.request.Context(), eventErrorID) != 1 {
+				continue
+			}
+			// skip if error was set for this field above
+			if slices.Contains(errSkipList, eventErrorID) {
+				continue
+			}
+
+			// remove error from session
+			ctx.session.Remove(ctx.request.Context(), eventErrorID)
+			// unset error if previously set
+			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
 		}
 
 		render(patchsetData...)
 		return
 	case *routeData:
 		data := *errVal
-		if (ctx.Event().Patchset == nil || len(ctx.Event().Patchset) == 0) && data != nil {
-			render(ctx.dom().Store("fir", data).Patchset()...)
-			return
+		eventSuccessID := fmt.Sprintf("%s:success", ctx.event.ID)
+
+		block, ok := ctx.route.eventTemplateMap[eventSuccessID]
+		if !ok {
+			block, ok = ctx.route.eventTemplateMap[ctx.event.ID]
+			if !ok {
+				glog.Errorf("no block found to render for event %s", ctx.event.ID)
+				return
+			}
+
 		}
-		patchsetData := getEventPatchset(ctx, data)
+		sourceID := ""
+		if ctx.event.SourceID != nil {
+			sourceID = *ctx.event.SourceID
+		}
+		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID,
+			ctx.renderBlock(block, data)).Patchset()
 
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
 			patchsetData = ctx.dom().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
 		}
-		for k := range unsetErrors {
-			if ctx.session.GetInt(ctx.request.Context(), k) != 1 {
+
+		// check if errors were set  in a previous sesion
+		for eventErrorID := range ctx.route.eventTemplateMap {
+			// skip if not error event
+			if !strings.HasSuffix(eventErrorID, ":error") {
 				continue
 			}
-			ctx.session.Remove(ctx.request.Context(), k)
-			errs := map[string]any{ctx.event.ID: nil}
-			patchsetData = ctx.dom().ReplaceEl(fmt.Sprintf("#%s", k),
-				ctx.renderBlock(k, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+			if ctx.session.GetInt(ctx.request.Context(), eventErrorID) != 1 {
+				continue
+			}
+
+			// remove error from session
+			ctx.session.Remove(ctx.request.Context(), eventErrorID)
+			// unset error if previously set
+			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
 		}
 
 		render(patchsetData...)
 		return
 	default:
 		var patchsetData dom.Patchset
-		userErr := userError(ctx, err)
-		errs := map[string]any{
-			ctx.event.ID: userErr.Error(),
-			"route":      userErr.Error()}
-
-		eventIdName := fmt.Sprintf("%s%s", firErrorPrefix, ctx.event.ID)
-		eventNameSelector := fmt.Sprintf("#%s", eventIdName)
-		if slices.Contains(ctx.route.firErrorTemplates, eventIdName) {
-			patchsetData = ctx.dom().ReplaceEl(eventNameSelector,
-				ctx.renderBlock(eventIdName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
-		}
-
-		routeName := fmt.Sprintf("%s-route", firErrorPrefix)
-		routeNameSelector := fmt.Sprintf("#%s", routeName)
-		if slices.Contains(ctx.route.firErrorTemplates, routeName) {
-			patchsetData = ctx.dom().ReplaceEl(routeNameSelector,
-				ctx.renderBlock(routeName, map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
-		}
-
+		errs := map[string]any{ctx.event.ID: userError(ctx, err).Error()}
+		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
+		// mark error as set in session
+		ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
+		patchsetData = renderErrorBlock(ctx, eventErrorID, errs)
 		render(patchsetData...)
 		return
 	}
@@ -507,7 +483,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -529,7 +505,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -546,7 +522,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -565,13 +541,13 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
 		renderRoute(ctx)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 	default:
-		errs := make(map[string]any)
+		var errs map[string]any
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
 			if !ok {
@@ -585,7 +561,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		} else {
@@ -605,19 +581,66 @@ func (rt *route) parseTemplate() {
 		if err != nil {
 			panic(err)
 		}
-		rt.findFirErrorTemplates()
+		rt.findAllTemplates()
+		rt.buildEventRenderMapping()
 	}
 }
 
-func (rt *route) findFirErrorTemplates() {
+func (rt *route) findAllTemplates() {
+	rt.allTemplates = []string{}
 	for _, t := range rt.template.Templates() {
-		if t.Name() == rt.layoutContentName {
-			for _, t1 := range t.Templates() {
-				if strings.Contains(t1.Name(), firErrorPrefix) {
-					rt.firErrorTemplates = append(rt.firErrorTemplates, t1.Name())
-				}
-			}
-		}
+		tName := t.Name()
+		rt.allTemplates = append(rt.allTemplates, tName)
 
 	}
+}
+
+func (rt *route) buildEventRenderMapping() {
+	opt := rt.routeOpt
+	if opt.layout == "" && opt.content == "" {
+		return
+	}
+
+	walkFile := func(page string) {
+		pagePath := filepath.Join(opt.publicDir, page)
+		// is layout html content or a file/directory
+		if isFileOrString(pagePath, opt) {
+			parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, strings.NewReader(page))
+		} else {
+			// compile layout
+			commonFiles := []string{pagePath}
+			// global partials
+			for _, partial := range opt.partials {
+				commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
+			}
+			if opt.hasEmbedFS {
+				for _, v := range commonFiles {
+					r, err := opt.embedFS.Open(v)
+					if err != nil {
+						panic(err)
+					}
+					parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, r)
+				}
+			} else {
+				for _, v := range commonFiles {
+					r, err := os.OpenFile(v, os.O_RDONLY, 0644)
+					if err != nil {
+						panic(err)
+					}
+					parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, r)
+				}
+
+			}
+
+		}
+	}
+
+	if opt.layout != "" {
+		walkFile(opt.layout)
+	}
+
+	if opt.content != "" {
+		walkFile(opt.content)
+	}
+
 }

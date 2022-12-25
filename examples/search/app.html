@@ -39,15 +39,15 @@
                             placeholder="Search Cities e.g. Paris"
                             aria-label="Search Cities"
                             autocomplete="off"
-                            @input="$dispatch('query',{query: $event.target.value})" />
+                            @input="$fir.emit('query',{query: $event.target.value})" />
                     </div>
-                    {{ block "cities" . }}
-                        <div id="cities" @query.window="$fir.replaceEl()">
+                    <div id="cities" @fir:query.window="$fir.replace()">
+                        {{ block "cities" . }}
                             {{ range .cities }}
                                 <div>{{ . }}</div>
                             {{ end }}
-                        </div>
-                    {{ end }}
+                        {{ end }}
+                    </div>
                 </div>
             </div>
         </div>

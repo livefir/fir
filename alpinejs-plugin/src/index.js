@@ -36,34 +36,60 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            replaceEl(patch) {
+            replace() {
                 return function (event) {
-                    post(el, buildFirEvent(el, event, patch, 'replace'))
+                    operations['replaceContent']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
                 }
             },
-            appendEl(patch) {
+            replaceEl() {
                 return function (event) {
-                    post(el, buildFirEvent(el, event, patch, 'append'))
+                    operations['replaceElement']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
                 }
             },
-            prependEl(patch) {
+            appendEl() {
                 return function (event) {
-                    post(el, buildFirEvent(el, event, patch, 'prepend'))
+                    operations['append']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
                 }
             },
-            afterEl(patch) {
+            prependEl() {
                 return function (event) {
-                    post(el, buildFirEvent(el, event, patch, 'after'))
+                    operations['prepend']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
                 }
             },
-            beforeEl(patch) {
+            afterEl() {
                 return function (event) {
-                    post(el, buildFirEvent(el, event, patch, 'before'))
+                    operations['after']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
                 }
             },
-            removeEl(patch) {
+            beforeEl() {
                 return function (event) {
-                    post(el, buildFirEvent(el, event, patch, 'remove'))
+                    operations['before']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
+                }
+            },
+            removeEl() {
+                return function (event) {
+                    operations['remove']({
+                        selector: `#${el.id}`,
+                        value: event.detail,
+                    })
                 }
             },
             emit(id, params) {
@@ -93,6 +119,7 @@ const Plugin = (Alpine) => {
                     post(el, {
                         event_id: id,
                         params: params,
+                        source_id: el.id,
                     })
                 }
             },
@@ -174,26 +201,12 @@ const Plugin = (Alpine) => {
                             (value, key) => (params[key] = new Array(value))
                         )
 
-                        const detail = {
-                            isForm: true,
+                        post(el, {
+                            event_id: eventID,
+                            params: params,
                             form_id: form.id,
-                            form_data: params,
-                        }
-
-                        const options = {
-                            detail,
-                            bubbles: true,
-                            // Allows events to pass the shadow DOM barrier.
-                            composed: true,
-                            cancelable: true,
-                        }
-
-                        const submitCustomEvent = new CustomEvent(
-                            eventID.toLowerCase(),
-                            options
-                        )
-
-                        el.dispatchEvent(submitCustomEvent)
+                            source_id: el.id,
+                        })
 
                         if (formMethod.toLowerCase() === 'get') {
                             const url = new URL(window.location)
@@ -236,12 +249,51 @@ const Plugin = (Alpine) => {
     }
 
     const operations = {
-        replace: (operation) =>
+        replaceElement: (operation) =>
             selectAll(operation, (el, value) => {
                 Alpine.morph(el, value, {
                     key(el) {
                         return el.id
                     },
+                })
+            }),
+        replaceContent: (operation) =>
+            selectAll(operation, (el, value) => {
+                let toHTML = el.cloneNode(false)
+                toHTML.innerHTML = value
+                Alpine.morph(el, toHTML.outerHTML, {
+                    updating(el, toEl, childrenOnly, skip) {
+                        // childrenOnly()
+                        //console.log('updating', el, toEl, childrenOnly, skip)
+                    },
+
+                    updated(el, toEl) {
+                        //console.log('updated', el, toEl)
+                    },
+
+                    removing(el, skip) {
+                        // console.log('removing', el, skip)
+                    },
+
+                    removed(el) {
+                        // console.log('removed', el)
+                    },
+
+                    adding(el, skip) {
+                        //console.log('adding', el, skip)
+                    },
+
+                    added(el) {
+                        // console.log('added', el)
+                    },
+
+                    key(el) {
+                        // By default Alpine uses the `key=""` HTML attribute.
+                        // console.log('key', el.id)
+                        return el.id
+                    },
+
+                    lookahead: false, // Default: false
                 })
             }),
         after: (operation) =>
@@ -273,70 +325,21 @@ const Plugin = (Alpine) => {
             }),
         navigate: (operation) => window.location.replace(operation.selector),
         store: (operation) => updateStore(operation.selector, operation.value),
-    }
-
-    const buildFirEvent = (el, event, patch, action) => {
-        const buildPatch = (patch) => {
-            if (!patch.selector) {
-                throw new Error('patchset requires a selector')
+        dispatchEvent: (operation) => {
+            const event = new CustomEvent(operation.selector, {
+                detail: operation.value,
+                bubbles: true,
+                // Allows events to pass the shadow DOM barrier.
+                composed: true,
+                cancelable: true,
+            })
+            if (!operation.eid) {
+                document.dispatchEvent(event)
+                return
             }
-
-            if (!operations[patch.op]) {
-                throw new Error(`patchset op ${patch.op} not supported`)
-            }
-            let value = el.dataset['firBlock']
-            if (patch.block) {
-                value = patch.block
-            } else if (patch.template) {
-                value = patch.template
-            }
-            if (value == undefined) {
-                value = el.id
-            }
-
-            if (typeof value !== 'string') {
-                throw new Error(
-                    'patch requires either block or template to be a string'
-                )
-            }
-
-            return {
-                selector: patch.selector,
-                op: patch.op,
-                value: value,
-            }
-        }
-
-        if (!patch) {
-            patch = {
-                op: action,
-                selector: `#${el.id}`,
-            }
-        } else {
-            if (typeof patch !== 'object') {
-                console.error(
-                    `arg to ${action} must be an object. e.g. {selector: '#id', block: 'id'}`
-                )
-                return {}
-            }
-            patch.op = action
-            if (!patch.selector) {
-                patch.selector = `#${el.id}`
-            }
-        }
-        if (event.detail && event.detail.isForm) {
-            return {
-                event_id: event.type,
-                params: event.detail.form_data,
-                patchset: [buildPatch(patch)],
-                form_id: event.detail.form_id,
-            }
-        }
-        return {
-            event_id: event.type,
-            params: event.detail,
-            patchset: [buildPatch(patch)],
-        }
+            const eventSourceElement = document.getElementById(operation.eid)
+            eventSourceElement.dispatchEvent(event)
+        },
     }
 
     const post = (el, firEvent) => {
@@ -349,12 +352,6 @@ const Plugin = (Alpine) => {
             params: firEvent.params,
         }
 
-        let eventName = 'fir:emit'
-        let startEventName = 'fir:emit-start'
-        let startEventNameCamel = 'fir:emitStart'
-        let endEventName = 'fir:emit-end'
-        let endEventNameCamel = 'fir:emitEnd'
-
         const options = {
             detail,
             bubbles: true,
@@ -363,47 +360,30 @@ const Plugin = (Alpine) => {
             cancelable: true,
         }
 
-        const eventIdlower = firEvent.event_id.toLowerCase()
+        const eventIdLower = firEvent.event_id.toLowerCase()
         // camel to kebab case
         const eventIdKebab = firEvent.event_id
             .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
             .toLowerCase()
 
-        el.dispatchEvent(new CustomEvent(startEventName, options))
         el.dispatchEvent(
-            new CustomEvent(`${startEventName}:${eventIdlower}`, options)
+            new CustomEvent(`fir:${eventIdLower}:pending`, options)
         )
-        el.dispatchEvent(
-            new CustomEvent(`${startEventNameCamel}:${eventIdlower}`, options)
-        )
-        el.dispatchEvent(
-            new CustomEvent(`${startEventName}:${eventIdKebab}`, options)
-        )
-        el.dispatchEvent(
-            new CustomEvent(`${eventName}:${eventIdKebab}`, options)
-        )
-
-        el.dispatchEvent(
-            new CustomEvent(`${eventName}:${eventIdlower}`, options)
-        )
+        if (eventIdLower !== eventIdKebab) {
+            el.dispatchEvent(
+                new CustomEvent(`fir:${eventIdKebab}:pending`, options)
+            )
+        }
 
         if (socket.emit(firEvent)) {
-            el.dispatchEvent(new CustomEvent(endEventName, options))
             el.dispatchEvent(
-                new CustomEvent(`${endEventName}:${eventIdlower}`, options)
+                new CustomEvent(`fir:${eventIdLower}:done`, options)
             )
-            el.dispatchEvent(
-                new CustomEvent(`${eventName}:${eventIdlower}`, options)
-            )
-            el.dispatchEvent(
-                new CustomEvent(`${endEventNameCamel}:${eventIdlower}`, options)
-            )
-            el.dispatchEvent(
-                new CustomEvent(`${endEventName}:${eventIdKebab}`, options)
-            )
-            el.dispatchEvent(
-                new CustomEvent(`${eventName}:${eventIdKebab}`, options)
-            )
+            if (eventIdLower !== eventIdKebab) {
+                el.dispatchEvent(
+                    new CustomEvent(`fir:${eventIdKebab}:done`, options)
+                )
+            }
         } else {
             const body = JSON.stringify(firEvent)
             fetch(window.location.pathname, {
@@ -427,31 +407,14 @@ const Plugin = (Alpine) => {
                     )
                 })
                 .finally(() => {
-                    el.dispatchEvent(new CustomEvent(endEventName, options))
                     el.dispatchEvent(
-                        new CustomEvent(
-                            `${endEventName}:${eventIdlower}`,
-                            options
+                        new CustomEvent(`fir:${eventIdLower}:done`, options)
+                    )
+                    if (eventIdLower !== eventIdKebab) {
+                        el.dispatchEvent(
+                            new CustomEvent(`fir:${eventIdKebab}:done`, options)
                         )
-                    )
-                    el.dispatchEvent(
-                        new CustomEvent(`${eventName}:${eventIdlower}`, options)
-                    )
-                    el.dispatchEvent(
-                        new CustomEvent(
-                            `${endEventNameCamel}:${eventIdlower}`,
-                            options
-                        )
-                    )
-                    el.dispatchEvent(
-                        new CustomEvent(
-                            `${endEventName}:${eventIdKebab}`,
-                            options
-                        )
-                    )
-                    el.dispatchEvent(
-                        new CustomEvent(`${eventName}:${eventIdKebab}`, options)
-                    )
+                    }
                 })
         }
     }
