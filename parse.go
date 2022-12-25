@@ -130,7 +130,7 @@ func parseTemplate(opt routeOpt) (*template.Template, error) {
 	return layoutSetContentSet(opt)
 }
 
-func parseEventRenderMapping(allTemplates []string, eventTemplateMap map[string]string, r io.Reader) {
+func parseEventRenderMapping(rt *route, r io.Reader) {
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
 		panic(err)
@@ -140,9 +140,9 @@ func parseEventRenderMapping(allTemplates []string, eventTemplateMap map[string]
 			if strings.HasPrefix(a.Key, "@fir:") || strings.HasPrefix(a.Key, "x-on:fir:") {
 				templateName, exists := node.Attr("id")
 				if exists {
-					if !slices.Contains(allTemplates, templateName) {
+					if !slices.Contains(rt.allTemplates, templateName) {
 						// try to match the id with template as a pattern
-						for _, pattern := range allTemplates {
+						for _, pattern := range rt.allTemplates {
 							if !match.IsPattern(pattern) {
 								continue
 							}
@@ -162,7 +162,9 @@ func parseEventRenderMapping(allTemplates []string, eventTemplateMap map[string]
 					if len(parts) > 0 {
 						eventID = parts[0]
 					}
-					eventTemplateMap[eventID] = templateName
+					rt.Lock()
+					rt.eventTemplateMap[eventID] = templateName
+					rt.Unlock()
 				}
 			}
 		}

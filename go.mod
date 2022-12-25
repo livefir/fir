@@ -5,6 +5,7 @@ go 1.19
 require (
 	entgo.io/ent v0.11.4
 	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/alecthomas/chroma v0.10.0
 	github.com/alexedwards/scs/v2 v2.5.0
 	github.com/davecgh/go-spew v1.1.1
@@ -31,7 +32,6 @@ require (
 	ariga.io/atlas v0.7.3-0.20221011160332-3ca609863edd // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
-	github.com/PuerkitoBio/goquery v1.8.0 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect

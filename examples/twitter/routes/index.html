@@ -43,19 +43,25 @@
                 {{ block "tweet*" . }}
                     <div
                         id="tweet-{{ .ID }}"
-                        @fir:like-tweet="$fir.replaceEl()"
                         @fir:delete-tweet="$fir.removeEl()"
                         style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                         <div style="margin-right:1rem">
                             Tweet:
                             {{ .Body }}
                         </div>
-                        <div style="margin-right:1rem">
-                            Likes:
-                            {{ .LikesCount }}
+                        <div
+                            id="like-tweet-{{ .ID }}"
+                            @fir:like-tweet="$fir.replace()"
+                            style="margin-right:1rem">
+                            {{ block "like-tweet*" . }}
+                                <div>
+                                    Likes:
+                                    {{ .LikesCount }}
+                                </div>
+                            {{ end }}
                         </div>
                         <form
-                            id="tweet-{{ .ID }}"
+                            id="update-tweet-{{ .ID }}"
                             method="post"
                             @submit.prevent="$fir.submit()"
                             style="margin-right:1rem">

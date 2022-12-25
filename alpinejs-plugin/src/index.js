@@ -337,8 +337,21 @@ const Plugin = (Alpine) => {
                 document.dispatchEvent(event)
                 return
             }
-            const eventSourceElement = document.getElementById(operation.eid)
-            eventSourceElement.dispatchEvent(event)
+
+            const elem = document.getElementById(operation.eid)
+            const getSiblings = (elm) =>
+                elm &&
+                elm.parentNode &&
+                [...elm.parentNode.children].filter(
+                    (node) =>
+                        node != elm &&
+                        (node.hasAttribute(`@${operation.selector}`) ||
+                            node.hasAttribute(`x-on:${operation.selector}`))
+                )
+
+            const sibs = getSiblings(elem)
+            sibs.forEach((sib) => sib.dispatchEvent(event))
+            elem.dispatchEvent(event)
         },
     }
 
