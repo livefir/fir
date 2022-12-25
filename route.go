@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/google/uuid"
@@ -152,6 +153,7 @@ type route struct {
 	allTemplates     []string
 	eventTemplateMap map[string]string
 	routeOpt
+	sync.RWMutex
 }
 
 func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
@@ -605,7 +607,7 @@ func (rt *route) buildEventRenderMapping() {
 		pagePath := filepath.Join(opt.publicDir, page)
 		// is layout html content or a file/directory
 		if isFileOrString(pagePath, opt) {
-			parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, strings.NewReader(page))
+			parseEventRenderMapping(rt, strings.NewReader(page))
 		} else {
 			// compile layout
 			commonFiles := []string{pagePath}
@@ -619,7 +621,7 @@ func (rt *route) buildEventRenderMapping() {
 					if err != nil {
 						panic(err)
 					}
-					parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, r)
+					parseEventRenderMapping(rt, r)
 				}
 			} else {
 				for _, v := range commonFiles {
@@ -627,7 +629,7 @@ func (rt *route) buildEventRenderMapping() {
 					if err != nil {
 						panic(err)
 					}
-					parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, r)
+					parseEventRenderMapping(rt, r)
 				}
 
 			}
