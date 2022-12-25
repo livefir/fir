@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"github.com/livefir/fir/internal/dom"
-	"github.com/tidwall/match"
 )
 
 var firErrorPrefix = "fir-error-"
@@ -148,19 +148,19 @@ type routeOpt struct {
 }
 
 type route struct {
-	cntrl             *controller
-	template          *template.Template
-	allTemplates      []string
-	firErrorTemplates []string
-	eventTemplateMap  map[string]string
+	cntrl            *controller
+	template         *template.Template
+	allTemplates     []string
+	eventTemplateMap map[string]string
 	routeOpt
 }
 
 func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	routeOpt.opt = cntrl.opt
 	rt := &route{
-		routeOpt: *routeOpt,
-		cntrl:    cntrl,
+		routeOpt:         *routeOpt,
+		cntrl:            cntrl,
+		eventTemplateMap: make(map[string]string),
 	}
 	rt.parseTemplate()
 	return rt
@@ -210,7 +210,6 @@ func renderPatch(ctx RouteContext) patchRenderer {
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rt.parseTemplate()
 	sessionID := rt.session.GetString(r.Context(), "id")
 	if sessionID == "" {
 		sessionID = uuid.New().String()
@@ -330,16 +329,24 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderErrorBlock(ctx RouteContext, eventErrorID string, errs map[string]any) dom.Patchset {
+	sourceID := ""
+	if ctx.event.SourceID != nil {
+		sourceID = *ctx.event.SourceID
+	}
 	return ctx.dom().DispatchEvent(
 		eventErrorID,
-		*ctx.event.SourceID,
+		sourceID,
 		ctx.renderBlock(ctx.route.eventTemplateMap[eventErrorID],
 			map[string]any{"fir": newRouteDOMContext(ctx, map[string]any{ctx.event.ID: errs})})).Patchset()
 }
 
 func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	if err == nil {
-		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, *ctx.event.SourceID, nil).Patchset()
+		sourceID := ""
+		if ctx.event.SourceID != nil {
+			sourceID = *ctx.event.SourceID
+		}
+		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID, nil).Patchset()
 		// check if error was previously set for this event
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// if error was previously set, then remove it and dispatch event to unset error
@@ -355,7 +362,11 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	switch errVal := err.(type) {
 	case *fieldErrors:
 		fieldErrorsData := *errVal
-		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, *ctx.event.SourceID, nil).Patchset()
+		sourceID := ""
+		if ctx.event.SourceID != nil {
+			sourceID = *ctx.event.SourceID
+		}
+		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID, nil).Patchset()
 
 		for field, err := range fieldErrorsData {
 			eventErrorID := fmt.Sprintf("%s:%s:error", ctx.event.ID, field)
@@ -387,6 +398,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	case *routeData:
 		data := *errVal
 		eventSuccessID := fmt.Sprintf("%s:success", ctx.event.ID)
+
 		block, ok := ctx.route.eventTemplateMap[eventSuccessID]
 		if !ok {
 			block, ok = ctx.route.eventTemplateMap[ctx.event.ID]
@@ -396,7 +408,11 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			}
 
 		}
-		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, *ctx.event.SourceID,
+		sourceID := ""
+		if ctx.event.SourceID != nil {
+			sourceID = *ctx.event.SourceID
+		}
+		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID,
 			ctx.renderBlock(block, data)).Patchset()
 
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
@@ -447,7 +463,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -469,7 +485,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -486,7 +502,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -505,7 +521,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -525,7 +541,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					//"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"route":      fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		} else {
@@ -545,69 +561,66 @@ func (rt *route) parseTemplate() {
 		if err != nil {
 			panic(err)
 		}
+		rt.findAllTemplates()
 		rt.buildEventRenderMapping()
-		rt.findFirErrorTemplates()
 	}
 }
 
-func (rt *route) findFirErrorTemplates() {
+func (rt *route) findAllTemplates() {
 	rt.allTemplates = []string{}
 	for _, t := range rt.template.Templates() {
 		tName := t.Name()
 		rt.allTemplates = append(rt.allTemplates, tName)
-		if tName == rt.layoutContentName {
-			for _, t1 := range t.Templates() {
-				if strings.Contains(t1.Name(), firErrorPrefix) {
-					rt.firErrorTemplates = append(rt.firErrorTemplates, t1.Name())
-				}
-			}
-		}
 
 	}
 }
 
 func (rt *route) buildEventRenderMapping() {
-	rt.eventTemplateMap = map[string]string{}
-	var page bytes.Buffer
-	err := rt.template.Execute(&page, nil)
-	if err != nil {
-		panic(err)
+	opt := rt.routeOpt
+	if opt.layout == "" && opt.content == "" {
+		return
 	}
 
-	doc, err := goquery.NewDocumentFromReader(&page)
-	if err != nil {
-		panic(err)
-	}
-	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
-		for _, a := range node.Get(0).Attr {
-			if strings.HasPrefix(a.Key, "@fir:") || strings.HasPrefix(a.Key, "x-on:fir:") {
-				templateName, exists := node.Attr("id")
-				if exists {
-					for _, pattern := range rt.allTemplates {
-						if !match.IsPattern(pattern) {
-							continue
-						}
-						if ok, stopped := match.MatchLimit(templateName, pattern, 10); ok || stopped {
-							if stopped {
-								glog.Errorf("template match stopped: %s, %s", templateName, pattern)
-								break
-							}
-							templateName = pattern
-							break
-						}
-					}
-					eventID := strings.TrimPrefix(a.Key, "@fir:")
-					eventID = strings.TrimPrefix(eventID, "x-on:fir:")
-					parts := strings.SplitN(eventID, ".", -1)
-					if len(parts) > 0 {
-						eventID = parts[0]
-					}
-
-					rt.eventTemplateMap[eventID] = templateName
-				}
+	walkFile := func(page string) {
+		pagePath := filepath.Join(opt.publicDir, page)
+		// is layout html content or a file/directory
+		if isFileOrString(pagePath, opt) {
+			parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, strings.NewReader(page))
+		} else {
+			// compile layout
+			commonFiles := []string{pagePath}
+			// global partials
+			for _, partial := range opt.partials {
+				commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
 			}
-		}
+			if opt.hasEmbedFS {
+				for _, v := range commonFiles {
+					r, err := opt.embedFS.Open(v)
+					if err != nil {
+						panic(err)
+					}
+					parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, r)
+				}
+			} else {
+				for _, v := range commonFiles {
+					r, err := os.OpenFile(v, os.O_RDONLY, 0644)
+					if err != nil {
+						panic(err)
+					}
+					parseEventRenderMapping(rt.allTemplates, rt.eventTemplateMap, r)
+				}
 
-	})
+			}
+
+		}
+	}
+
+	if opt.layout != "" {
+		walkFile(opt.layout)
+	}
+
+	if opt.content != "" {
+		walkFile(opt.content)
+	}
 
 }

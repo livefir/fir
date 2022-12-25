@@ -54,7 +54,7 @@ func NewCounterIndex(pubsub pubsub.Adapter) *index {
 		id:          "counter",
 	}
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Second * 2)
 	pattern := fmt.Sprintf("*:%s", c.id)
 
 	go func() {
@@ -84,8 +84,8 @@ type index struct {
 func (i *index) Options() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.ID(i.id),
-		fir.Content(content),
-		fir.Layout(layout),
+		fir.Content("count.html"),
+		fir.Layout("layout.html"),
 		fir.OnLoad(i.load),
 		fir.OnEvent("inc", i.inc),
 		fir.OnEvent("dec", i.dec),
@@ -95,7 +95,7 @@ func (i *index) Options() fir.RouteOptions {
 }
 
 func (i *index) load(ctx fir.RouteContext) error {
-	return ctx.Data(map[string]any{"count": i.model.Count()})
+	return ctx.Data(map[string]any{"count": i.model.Count(), "updated": i.model.Updated()})
 }
 
 func (i *index) inc(ctx fir.RouteContext) error {
@@ -111,48 +111,8 @@ func (i *index) updated(ctx fir.RouteContext) error {
 	if err != nil {
 		return err
 	}
-	return ctx.Data(req)
+	return ctx.Data(map[string]any{"updated": req.CountUpdated})
 }
-
-var content = `
-{{define "content" }} 
-<div class="my-6" style="height: 500px">
-	<div class="columns is-mobile is-centered is-vcentered">
-		<div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-			<div>Count updated: <span x-text="$store.fir.CountUpdated || 0"></span> seconds ago</div>
-			<hr>
-			{{block "count" .}}
-				<div @inc.window="$fir.replaceEl()" @dec.window="$fir.replaceEl()" id="count">
-					{{.count}}
-				</div>
-			{{end}}
-			<button class="button has-background-primary" @click="$dispatch('inc')">+
-			</button>
-			<button class="button has-background-primary" @click="$dispatch('dec')">-
-			</button>
-		</div>
-	</div>
-</div>
-{{end}}`
-
-var layout = `<!DOCTYPE html>
-	<html lang="en">
-	
-	<head>
-		<title>{{.app_name}}</title>
-		<meta charset="UTF-8">
-		<meta name="description" content="A counter app">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-		<!-- <script defer src="http://localhost:8000/cdn.js"></script> -->
-		<script defer src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-		<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-	</head>
-	
-	<body>
-		{{template "content" .}}
-	</body>
-	
-	</html>`
 
 func main() {
 	pubsubAdapter := pubsub.NewInmem()

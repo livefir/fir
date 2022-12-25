@@ -261,13 +261,39 @@ const Plugin = (Alpine) => {
             selectAll(operation, (el, value) => {
                 let toHTML = el.cloneNode(false)
                 toHTML.innerHTML = value
-                Alpine.morph(el, toHTML, {
+                Alpine.morph(el, toHTML.outerHTML, {
+                    updating(el, toEl, childrenOnly, skip) {
+                        // childrenOnly()
+                        //console.log('updating', el, toEl, childrenOnly, skip)
+                    },
+
+                    updated(el, toEl) {
+                        //console.log('updated', el, toEl)
+                    },
+
+                    removing(el, skip) {
+                        // console.log('removing', el, skip)
+                    },
+
+                    removed(el) {
+                        // console.log('removed', el)
+                    },
+
+                    adding(el, skip) {
+                        //console.log('adding', el, skip)
+                    },
+
+                    added(el) {
+                        // console.log('added', el)
+                    },
+
                     key(el) {
+                        // By default Alpine uses the `key=""` HTML attribute.
+                        // console.log('key', el.id)
                         return el.id
                     },
-                    lookahead: true,
-                }).catch((e) => {
-                    el.innerHTML = value
+
+                    lookahead: false, // Default: false
                 })
             }),
         after: (operation) =>
@@ -334,26 +360,30 @@ const Plugin = (Alpine) => {
             cancelable: true,
         }
 
-        const eventIdlower = firEvent.event_id.toLowerCase()
+        const eventIdLower = firEvent.event_id.toLowerCase()
         // camel to kebab case
         const eventIdKebab = firEvent.event_id
             .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
             .toLowerCase()
 
         el.dispatchEvent(
-            new CustomEvent(`fir:${eventIdlower}:pending`, options)
+            new CustomEvent(`fir:${eventIdLower}:pending`, options)
         )
-        el.dispatchEvent(
-            new CustomEvent(`fir:${eventIdKebab}:pending`, options)
-        )
+        if (eventIdLower !== eventIdKebab) {
+            el.dispatchEvent(
+                new CustomEvent(`fir:${eventIdKebab}:pending`, options)
+            )
+        }
 
         if (socket.emit(firEvent)) {
             el.dispatchEvent(
-                new CustomEvent(`fir:${eventIdlower}:done`, options)
+                new CustomEvent(`fir:${eventIdLower}:done`, options)
             )
-            el.dispatchEvent(
-                new CustomEvent(`fir:${eventIdKebab}:done`, options)
-            )
+            if (eventIdLower !== eventIdKebab) {
+                el.dispatchEvent(
+                    new CustomEvent(`fir:${eventIdKebab}:done`, options)
+                )
+            }
         } else {
             const body = JSON.stringify(firEvent)
             fetch(window.location.pathname, {
@@ -378,11 +408,13 @@ const Plugin = (Alpine) => {
                 })
                 .finally(() => {
                     el.dispatchEvent(
-                        new CustomEvent(`fir:${eventIdlower}:done`, options)
+                        new CustomEvent(`fir:${eventIdLower}:done`, options)
                     )
-                    el.dispatchEvent(
-                        new CustomEvent(`fir:${eventIdKebab}:done`, options)
-                    )
+                    if (eventIdLower !== eventIdKebab) {
+                        el.dispatchEvent(
+                            new CustomEvent(`fir:${eventIdKebab}:done`, options)
+                        )
+                    }
                 })
         }
     }

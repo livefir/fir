@@ -1,49 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <title>{{ .app_name }}</title>
+        <meta charset="UTF-8" />
+        <meta name="description" content="A fir autocomplete app" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
+        <link
+            rel="preload"
+            as="style"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"
+            integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
+            crossorigin="anonymous" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+        <script defer src="http://localhost:8000/cdn.js"></script>
+        {{/* <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        */}}
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
 
-<head>
-    <title>{{.app_name}}</title>
-    <meta charset="UTF-8">
-    <meta name="description" content="A fir autocomplete app">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
-    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"
-        integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
-        crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-    {{/* <script defer src="http://localhost:8000/cdn.js"></script> */}}
-    <script defer src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
+    <body>
+        <div class="my-6" style="height: 500px">
+            <div class="columns is-mobile is-centered is-vcentered">
+                <div
+                    x-data
+                    class="column is-one-third-desktop has-text-centered is-narrow">
+                    <div class="py-5">
+                        <input
+                            name="query"
+                            class="input"
+                            list="cities"
+                            type="search"
+                            placeholder="Search Cities e.g. Paris"
+                            aria-label="Search Cities"
+                            autocomplete="off"
+                            autofocus
+                            @input="$fir.emit('query',{query: $event.target.value})" />
+                    </div>
 
-<body>
-    <div class="my-6" style="height: 500px">
-        <div class="columns is-mobile is-centered is-vcentered">
-            <div x-data class="column is-one-third-desktop has-text-centered is-narrow">
-                <div class="py-5">
-                    <input name="query" class="input" list="cities" type="search"
-                        placeholder="Search Cities e.g. Paris" aria-label="Search Cities" autocomplete="off" autofocus
-                        @input="$dispatch('query',{query: $event.target.value})">
-                </div>
-                {{ block "cities" .}}
-                <div>
-                    <datalist id="cities" @query.window="$fir.replaceEl()">
-                        {{range .cities}}
-                            <option value="{{.}}"></option>
-                        {{end}}
+                    <datalist id="cities" @fir:query.window="$fir.replace()">
+                        {{ block "cities" . }}
+                            {{ range .cities }}
+                                <option value="{{ . }}"></option>
+                            {{ end }}
+                        {{ end }}
                     </datalist>
                 </div>
-                {{end}}
             </div>
         </div>
-    </div>
-    </div>
-    <footer class="footer">
-        <div class="content has-text-centered">
-            <p>
-                {{.app_name}}, 2022
-            </p>
-        </div>
-    </footer>
-</body>
-
+        <footer class="footer">
+            <div class="content has-text-centered">
+                <p>{{ .app_name }}, 2022</p>
+            </div>
+        </footer>
+    </body>
 </html>

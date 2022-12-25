@@ -3,7 +3,14 @@ package fir
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"path/filepath"
+	"strings"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/golang/glog"
+	"github.com/tidwall/match"
+	"golang.org/x/exp/slices"
 )
 
 func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
@@ -121,4 +128,44 @@ func parseTemplate(opt routeOpt) (*template.Template, error) {
 
 	// both layout and content are set
 	return layoutSetContentSet(opt)
+}
+
+func parseEventRenderMapping(allTemplates []string, eventTemplateMap map[string]string, r io.Reader) {
+	doc, err := goquery.NewDocumentFromReader(r)
+	if err != nil {
+		panic(err)
+	}
+	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
+		for _, a := range node.Get(0).Attr {
+			if strings.HasPrefix(a.Key, "@fir:") || strings.HasPrefix(a.Key, "x-on:fir:") {
+				templateName, exists := node.Attr("id")
+				if exists {
+					if !slices.Contains(allTemplates, templateName) {
+						// try to match the id with template as a pattern
+						for _, pattern := range allTemplates {
+							if !match.IsPattern(pattern) {
+								continue
+							}
+							if ok, stopped := match.MatchLimit(templateName, pattern, 10); ok || stopped {
+								if stopped {
+									glog.Errorf("template match stopped: %s, %s", templateName, pattern)
+									break
+								}
+								templateName = pattern
+								break
+							}
+						}
+					}
+					eventID := strings.TrimPrefix(a.Key, "@fir:")
+					eventID = strings.TrimPrefix(eventID, "x-on:fir:")
+					parts := strings.SplitN(eventID, ".", -1)
+					if len(parts) > 0 {
+						eventID = parts[0]
+					}
+					eventTemplateMap[eventID] = templateName
+				}
+			}
+		}
+
+	})
 }

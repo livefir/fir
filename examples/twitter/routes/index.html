@@ -1,13 +1,16 @@
 {{ define "content" }}
     <div x-data id="content">
-        {{ block "fir-error-route" . }}
-            <p id="fir-error-route">
-                {{ .fir.Error "route" }}
-            </p>
-        {{ end }}
+        <p
+            id="create-tweet-err"
+            @fir:create-tweet:error.window="$fir.replace()">
+            {{ block "create-tweet-err" . }}
+                {{ .fir.Error "create-tweet" }}
+            {{ end }}
+        </p>
+
         <div
-            @fir:emit-start:create-tweet.window="console.log('create tweet start')"
-            @fir:emit-end:create-tweet.window="console.log('create tweet done')"></div>
+            @fir:create-tweet:pending.window="console.log('create tweet start')"
+            @fir:create-tweet:done.window="console.log('create tweet done')"></div>
 
         <form
             id="create-tweet"
@@ -17,34 +20,42 @@
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
             <!-- validation error for the name=body set by ctx.FieldError(...) -->
-            {{ block "fir-error-create-tweet-body" . }}
-                <p id="fir-error-create-tweet-body">
+
+            <p
+                id="body-err"
+                @fir:create-tweet:body:error.window="$fir.replace()">
+                {{ block "body-err" . }}
                     {{ .fir.Error "create-tweet.body" }}
-                </p>
-            {{ end }}
+                {{ end }}
+            </p>
+
             <button type="submit">Submit</button>
         </form>
-        <div id="tweets" @create-tweet.window="$fir.appendEl()">
+        <div id="tweets" @fir:create-tweet.window="$fir.appendEl()">
             {{ range .tweets }}
                 <!-- block "tweet*" matches the element id of event listeners: 
-                @like-tweet(tweet-{{ .ID }}),
-                @delete-tweet(tweet-{{ .ID }})
-                @create-tweet(tweets)
+                @fir:like-tweet(tweet-{{ .ID }}),
+                @fir:delete-tweet(tweet-{{ .ID }})
+                @fir:create-tweet(tweets)
                 The block is re-rendered on the server aftter the event is emitted by $fir.xxxEl()
                 The output html is patched(replaceEl,removeEl,appendEl) to the element on the client.
                -->
                 {{ block "tweet*" . }}
                     <div
                         id="tweet-{{ .ID }}"
-                        @like-tweet="$fir.replaceEl()"
-                        @delete-tweet="$fir.removeEl()"
+                        @fir:like-tweet="$fir.replaceEl()"
+                        @fir:delete-tweet="$fir.removeEl()"
                         style="display: flex;margin-top:1rem;margin-bottom:1rem;">
-                        <div style="margin-right:1rem">Tweet: {{ .Body }}</div>
+                        <div style="margin-right:1rem">
+                            Tweet:
+                            {{ .Body }}
+                        </div>
                         <div style="margin-right:1rem">
                             Likes:
                             {{ .LikesCount }}
                         </div>
                         <form
+                            id="tweet-{{ .ID }}"
                             method="post"
                             @submit.prevent="$fir.submit()"
                             style="margin-right:1rem">

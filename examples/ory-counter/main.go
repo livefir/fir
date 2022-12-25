@@ -93,7 +93,7 @@ func (i *index) dec(ctx fir.RouteContext) error {
 func (i *index) Options() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.ID("counter"),
-		fir.Content(content),
+		fir.Content("count.html"),
 		fir.OnLoad(i.load),
 		fir.OnEvent("inc", i.inc),
 		fir.OnEvent("dec", i.dec),

@@ -212,23 +212,19 @@ func (p *patcher) Error() string {
 // MarshalPatchset renders the patch operations to a json string
 func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 	var renderedPatchset []Patch
-	firErrorPatchExists := false
 	for _, p := range patchset {
 		switch p.Type {
 		case Store, Navigate, ResetForm, Reload, Remove:
 			renderedPatchset = append(renderedPatchset, p)
 		case ReplaceElement, After, Before, Append, Prepend, DispatchEvent:
 			if p.Value == nil {
+				renderedPatchset = append(renderedPatchset, p)
 				continue
 			}
 			tmpl, ok := p.Value.(map[string]any)
 			if !ok {
 				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
 				continue
-			}
-
-			if *p.Selector == "#fir-error" {
-				firErrorPatchExists = true
 			}
 
 			var err error
@@ -240,20 +236,8 @@ func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 
 			renderedPatchset = append(renderedPatchset, p)
 		default:
+			renderedPatchset = append(renderedPatchset, p)
 			continue
-		}
-	}
-
-	if !firErrorPatchExists {
-		// unset error patch
-		firError := "#fir-error"
-		tmplVal, err := buildTemplateValue(t, "fir-error", nil)
-		if err == nil {
-			renderedPatchset = append([]Patch{{
-				Type:     ReplaceElement,
-				Selector: &firError,
-				Value:    tmplVal,
-			}}, renderedPatchset...)
 		}
 	}
 
