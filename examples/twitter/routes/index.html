@@ -16,7 +16,7 @@
             id="create-tweet"
             method="post"
             action="/?event=create-tweet"
-            @submit.prevent="$fir.submit('create-tweet')"
+            @submit.prevent="$fir.submit()"
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
             <!-- validation error for the name=body set by ctx.FieldError(...) -->
