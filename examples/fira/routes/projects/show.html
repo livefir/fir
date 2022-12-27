@@ -20,47 +20,66 @@
                 <div id="project">
                     <form
                         method="post"
-                        id="project-update"
-                        @fir:submit:project-update.window="toggle"
-                        @submit.prevent="$fir.emit()">
-                        <div class="field">
-                            <input name="action" value="update" type="hidden" />
-                        </div>
+                        id="update-project"
+                        action="/?event=update-project"
+                        @fir:update-project:pending.window="toggle"
+                        @fir:update-project:done.window="toggle"
+                        @submit.prevent="$fir.submit()">
+                        <input
+                            type="hidden"
+                            name="projectID"
+                            value="{{ .ID }}" />
                         <div class="field">
                             <label class="label"> Title </label>
-                            <div class="control">
-                                <input
-                                    name="title"
-                                    class="input"
-                                    type="text"
-                                    value="{{ .Title }}"
-                                    placeholder="Title" />
+
+                            <div
+                                id="title"
+                                @fir:update-project:success.window="$fir.replace()"
+                                class="control">
+                                {{ block "title" . }}
+                                    <input
+                                        name="title"
+                                        class="input"
+                                        type="text"
+                                        value="{{ .Title }}"
+                                        placeholder="Title" />
+                                {{ end }}
                             </div>
-                            {{ block "title-error" . }}
-                                <div id="title-error">
+
+                            <div
+                                id="title-err"
+                                @fir:update-project:title:error.window="$fir.replace()">
+                                {{ block "title-err" . }}
                                     <p class="help is-danger">
-                                        {{ .titleError }}
+                                        {{ .fir.Error "update-project.title" }}
                                     </p>
-                                </div>
-                            {{ end }}
+                                {{ end }}
+                            </div>
                         </div>
                         <div class="field">
                             <label class="label"> Description </label>
-                            <div class="control">
-                                <input
-                                    name="description"
-                                    class="input"
-                                    type="text"
-                                    value="{{ .Description }}"
-                                    placeholder="Description" />
+                            <div
+                                id="description"
+                                @fir:update-project:success.window="$fir.replace()"
+                                class="control">
+                                {{ block "description" . }}
+                                    <input
+                                        name="description"
+                                        class="input"
+                                        type="text"
+                                        value="{{ .Description }}"
+                                        placeholder="Description" />
+                                {{ end }}
                             </div>
-                            {{ block "description-error" . }}
-                                <div id="title-error">
+                            <div
+                                id="description-err"
+                                @fir:update-project:description:error.window="$fir.replace()">
+                                {{ block "description-err" . }}
                                     <p class="help is-danger">
-                                        {{ .descriptionError }}
+                                        {{ .fir.Error "update-project.description" }}
                                     </p>
-                                </div>
-                            {{ end }}
+                                {{ end }}
+                            </div>
                         </div>
                         <div class="field">
                             <div class="control">
@@ -75,10 +94,14 @@
                     </form>
                     <form
                         method="post"
-                        id="project-delete"
+                        id="delete-project"
+                        action="/?event=delete-project"
                         class="mt-2"
-                        @submit.prevent="$fir.emit()">
-                        <input name="action" value="delete" type="hidden" />
+                        @submit.prevent="$fir.submit()">
+                        <input
+                            type="hidden"
+                            name="projectID"
+                            value="{{ .ID }}" />
                         <div class="control">
                             <button type="submit" class="button is-danger">
                                 Delete

@@ -6,9 +6,9 @@
 
         <form
             method="post"
-            id="createProject"
-            action="/?id=createProject"
-            @submit.prevent="$fir.emit()">
+            id="create-project"
+            action="/?event=create-project"
+            @submit.prevent="$fir.submit()">
             <div class="field">
                 <label class="label"> Title </label>
                 <div class="control">
@@ -19,13 +19,16 @@
                         value=""
                         placeholder="Title" />
                 </div>
-                {{ block "fir-error-createProject-title" . }}
-                    <div id="fir-error-createProject-title">
+
+                <div
+                    id="title-err"
+                    @fir:create-project:title:error.window="$fir.replace()">
+                    {{ block "title-err" . }}
                         <p class="help is-danger">
-                            {{ .fir.Error "createProject.title" }}
+                            {{ .fir.Error "create-project.title" }}
                         </p>
-                    </div>
-                {{ end }}
+                    {{ end }}
+                </div>
             </div>
             <div class="field">
                 <label class="label"> Description </label>
@@ -37,13 +40,15 @@
                         value=""
                         placeholder="Description" />
                 </div>
-                {{ block "description-error" . }}
-                    <div id="title-error">
+                <div
+                    id="description-err"
+                    @fir:create-project:description:error.window="$fir.replace()">
+                    {{ block "description-err" . }}
                         <p class="help is-danger">
-                            {{ .descriptionError }}
+                            {{ .fir.Error "create-project.description" }}
                         </p>
-                    </div>
-                {{ end }}
+                    {{ end }}
+                </div>
             </div>
             <div class="field">
                 <div class="control">

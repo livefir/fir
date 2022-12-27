@@ -5,11 +5,9 @@
         role="navigation"
         aria-label="main navigation">
         <div class="navbar-brand py-4">
-            <a
-                class="navbar-item"
-                href="/">
+            <a class="navbar-item" href="/">
                 <!--                <img src="/static/images/logo.svg" alt="logo">-->
-                <strong>{{ .app_name }}</strong>
+                <strong>{{ .fir.Name }}</strong>
             </a>
 
             <a
@@ -34,28 +32,28 @@
                     <div class="buttons">
                         {{ if .is_logged_in }}
                             <a
-                                class="button {{ .fir.ActiveRoute "/" "is-primary" }}"
+                                class="button {{ .fir.ActiveRoute '/' 'is-primary' }}"
                                 href="/">
                                 Boards
                             </a>
                             <a
-                                class="button {{ .fir.ActiveRoute "/account" "is-primary" }}"
+                                class="button {{ .fir.ActiveRoute '/account' 'is-primary' }}"
                                 href="/account">
                                 Account
                             </a>
                         {{ else }}
                             <a
-                                class="button {{ .fir.ActiveRoute "/" "is-primary" }}"
+                                class="button {{ .fir.ActiveRoute '/' 'is-primary' }}"
                                 href="/">
                                 Boards
                             </a>
                             <a
-                                class="button {{ .fir.ActiveRoute "/login" "is-primary" }}"
+                                class="button {{ .fir.ActiveRoute '/login' 'is-primary' }}"
                                 href="/login">
                                 Sign in
                             </a>
                             <a
-                                class="button {{ .fir.ActiveRoute "/signup" "is-primary" }}"
+                                class="button {{ .fir.ActiveRoute '/signup' 'is-primary' }}"
                                 href="/signup">
                                 Sign up
                             </a>
