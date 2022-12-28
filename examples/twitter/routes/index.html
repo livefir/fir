@@ -1,10 +1,8 @@
 {{ define "content" }}
     <div x-data id="content">
-        <p
-            id="create-tweet-err"
-            @fir:create-tweet:error.window="$fir.replace()">
-            {{ block "create-tweet-err" . }}
-                {{ .fir.Error "create-tweet" }}
+        <p @fir:create-tweet:error:err.window="$fir.replace()">
+            {{ block "err" . }}
+                {{ .fir.Error "create-tweet.route" }}
             {{ end }}
         </p>
 
@@ -22,9 +20,7 @@
             <!-- validation error for the name=body set by ctx.FieldError(...) -->
             <!-- $fir.replace replaces the content of the element on which it is invoked -->
             <!-- $fir.replaceEl replaces the element on which it is invoked -->
-            <p
-                id="body-err"
-                @fir:create-tweet:body:error.window="$fir.replace()">
+            <p @fir:create-tweet:error:body-err.window="$fir.replace()">
                 {{ block "body-err" . }}
                     {{ .fir.Error "create-tweet.body" }}
                 {{ end }}
@@ -32,30 +28,21 @@
 
             <button type="submit">Submit</button>
         </form>
-        <div id="tweets" @fir:create-tweet.window="$fir.appendEl()">
+        <div @fir:create-tweet:ok:tweet.window="$fir.appendEl()">
             {{ range .tweets }}
-                <!-- block "tweet*" matches the element id of event listeners: 
-                @fir:delete-tweet(tweet-{{ .ID }})
-                @fir:create-tweet(tweets)
-                Similary, block "like-tweet*" matches the element id of event listeners:
-                @fir:like-tweet(tweet-{{ .ID }})
-                The block is re-rendered on the server aftter the event is emitted by $fir.submit()
-                The output html is patched(removeEl,appendEl,replace,) to the element on the client.
-               -->
-                {{ block "tweet*" . }}
+                {{ block "tweet" . }}
                     <div
                         id="tweet-{{ .ID }}"
-                        @fir:delete-tweet="$fir.removeEl()"
+                        @fir:delete-tweet:ok="$fir.removeEl()"
                         style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                         <div style="margin-right:1rem">
                             Tweet:
                             {{ .Body }}
                         </div>
                         <div
-                            id="like-tweet-{{ .ID }}"
-                            @fir:like-tweet="$fir.replace()"
+                            @fir:like-tweet:ok:like-count="$fir.replace()"
                             style="margin-right:1rem">
-                            {{ block "like-tweet*" . }}
+                            {{ block "like-count" . }}
                                 <div>
                                     Likes:
                                     {{ .LikesCount }}
