@@ -68,9 +68,8 @@ func main() {
     <body>
         <div x-data>
             <div
-                id="count"
-                @fir:inc.window="$fir.replace()"
-                @fir:dec.window="$fir.replace()">
+                @fir:inc:ok:count.window="$fir.replace()"
+                @fir:dec:ok:count.window="$fir.replace()">
                 {{ block "count" . }}
                     <div>Count: {{ .count }}</div>
                 {{ end }}
@@ -82,9 +81,8 @@ func main() {
         </div>
     </body>
 </html>
-
 ```
 
-In the above example, `@inc.window="$fir.replaceEl()"` marks `<div id="count">` to be replaced by the content of a `block` which matches the element's div id `count` which in this case is `{{ block "count" . }} ... {{ end }}`. The matching is done on the server and block action names can contain a wildcard, for e.g. `block "count*` would match `count` or `count-1`.
+In the above example, `@fir:inc:ok:count.window="$fir.replace()"` marks content of that div to be replaced by the content of `block count`. Event namespacing is used to indicate the server renderer which `block` to re-render and send on a successful event response(`ok`). The allowed event namespace format is `@fir:<event-name>:<ok|error>:<block-name>`. 
 
-`$fir.submit` is a helper which prevents the form submission and dispatches browser events `inc` and `dec` which is then captured by `@inc.window, @dec.window` listeners registered on `<div id="count">`. It also captures any form data and attaches it to the event before its sent to the server by `$fir.replaceEl`. In this example we don't have any form data.
+`$fir.submit` is a helper which prevents the form submission and dispatches browser events `inc` and `dec` which is then captured by `@fir:inc:ok:count.window, @fir:dec:ok:count.window` listeners. It also captures any form data and attaches it to the event before its sent to the server by `$fir.replace`. In this example we don't have any form data.
