@@ -8,6 +8,7 @@ import (
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/examples/fira/ent"
 	projects "github.com/livefir/fir/examples/fira/routes/projects"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {

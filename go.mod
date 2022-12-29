@@ -19,6 +19,7 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/ory/client-go v1.0.2
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/cobra v1.6.1

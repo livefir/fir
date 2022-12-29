@@ -22,7 +22,7 @@
 
                 <div
                     id="title-err"
-                    @fir:create-project:title:error.window="$fir.replace()">
+                    @fir:create-project:error:title-err.window="$fir.replace()">
                     {{ block "title-err" . }}
                         <p class="help is-danger">
                             {{ .fir.Error "create-project.title" }}
@@ -42,7 +42,7 @@
                 </div>
                 <div
                     id="description-err"
-                    @fir:create-project:description:error.window="$fir.replace()">
+                    @fir:create-project:error:description-err.window="$fir.replace()">
                     {{ block "description-err" . }}
                         <p class="help is-danger">
                             {{ .fir.Error "create-project.description" }}

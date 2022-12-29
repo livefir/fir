@@ -1,21 +1,31 @@
 {{ define "content" }}
-    <div
-        x-data
-        class="columns mt-5">
+    <div x-data class="columns mt-5">
+        {{ block "err" . }}
+            {{ .fir.Error "route" }}
+        {{ end }}
+        <p @fir:create-tweet:error:create-err.window="$fir.replace()">
+            {{ block "create-err" . }}
+                {{ .fir.Error "create-project.route" }}
+            {{ end }}
+        </p>
         <div class="column is-4">
             {{ template "createproject" . }}
         </div>
         <div class="column is-8">
             {{ template "toolbar" . }}
-            {{ block "projects" . }}
-                <div id="projects">
-                    {{ range .projects }}
-                        {{ template "projectitem" . }}
-                    {{ else }}
-                        Nothing here
-                    {{ end }}
-                </div>
-            {{ end }}
+            <div @fir:project-query:ok:projects="$fir.replace()">
+                {{ block "projects" . }}
+                    <div
+                        id="projects"
+                        @fir:create-project:ok:projectitem.window="$fir.appendEl()">
+                        {{ range .projects }}
+                            {{ template "projectitem" . }}
+                        {{ else }}
+                            Nothing here
+                        {{ end }}
+                    </div>
+                {{ end }}
+            </div>
         </div>
     </div>
 {{ end }}

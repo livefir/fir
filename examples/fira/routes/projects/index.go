@@ -1,6 +1,8 @@
 package projects
 
 import (
+	"errors"
+
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/examples/fira/ent"
 	"github.com/livefir/fir/examples/fira/ent/project"
@@ -74,9 +76,32 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 	}
 }
 
+type createReq struct {
+	Title       string `json:"title" schema:"title,required"`
+	Description string `json:"description" schema:"description,required"`
+}
+
 func createProject(db *ent.Client) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
-		return ctx.Data(map[string]any{})
+		var req createReq
+		if err := ctx.Bind(&req); err != nil {
+			return err
+		}
+		if len(req.Title) < 3 {
+			return ctx.FieldError("title", errors.New("title is too short"))
+		}
+		if len(req.Description) < 3 {
+			return ctx.FieldError("description", errors.New("description is too short"))
+		}
+		project, err := db.Project.
+			Create().
+			SetTitle(req.Title).
+			SetDescription(req.Description).
+			Save(ctx.Request().Context())
+		if err != nil {
+			return err
+		}
+		return ctx.Data(project)
 	}
 }
 
@@ -86,9 +111,9 @@ func Index(db *ent.Client) fir.RouteFunc {
 			fir.ID("projects"),
 			fir.Content("routes/projects/index.html"),
 			fir.Layout("routes/layout.html"),
-			fir.Partials("routes/partials"),
+			fir.Partials("routes/partials", "routes/projects/partials"),
 			fir.OnLoad(loadProjects(db)),
-			fir.OnEvent("createProject", createProject(db)),
+			fir.OnEvent("create-project", createProject(db)),
 		}
 	}
 }
