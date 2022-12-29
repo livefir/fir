@@ -9,7 +9,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/golang/glog"
-	"github.com/tidwall/match"
 	"golang.org/x/exp/slices"
 )
 
@@ -137,35 +136,71 @@ func parseEventRenderMapping(rt *route, r io.Reader) {
 	}
 	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
 		for _, a := range node.Get(0).Attr {
+
 			if strings.HasPrefix(a.Key, "@fir:") || strings.HasPrefix(a.Key, "x-on:fir:") {
-				templateName, exists := node.Attr("id")
-				if exists {
-					if !slices.Contains(rt.allTemplates, templateName) {
-						// try to match the id with template as a pattern
-						for _, pattern := range rt.allTemplates {
-							if !match.IsPattern(pattern) {
-								continue
-							}
-							if ok, stopped := match.MatchLimit(templateName, pattern, 10); ok || stopped {
-								if stopped {
-									glog.Errorf("template match stopped: %s, %s", templateName, pattern)
-									break
-								}
-								templateName = pattern
-								break
-							}
+
+				eventns := strings.TrimPrefix(a.Key, "@fir:")
+				eventns = strings.TrimPrefix(eventns, "x-on:fir:")
+				eventnsParts := strings.SplitN(eventns, ".", -1)
+				if len(eventnsParts) > 3 {
+					glog.Errorf(`
+					error: invalid event namespace: %s. 
+					must be of the format => @fir:<event>:<ok|error>:<block>`, eventns)
+					continue
+				}
+
+				if len(eventnsParts) > 0 {
+					eventns = eventnsParts[0]
+				}
+
+				eventnsParts = strings.SplitN(eventns, ":", -1)
+				if len(eventnsParts) == 0 {
+					continue
+				}
+				eventID := eventnsParts[0]
+				if len(eventnsParts) >= 2 {
+					if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventnsParts[1]) {
+						glog.Errorf(`
+						error: invalid event namespace: %s. 
+						it must be of the format => 
+						@fir:<event>:<ok|error>:<block> or
+						@fir:<event>:<pending|done>`, eventns)
+						continue
+					}
+					if len(eventnsParts) == 2 {
+						if eventnsParts[1] == "pending" || eventnsParts[1] == "done" {
+							continue
 						}
 					}
-					eventID := strings.TrimPrefix(a.Key, "@fir:")
-					eventID = strings.TrimPrefix(eventID, "x-on:fir:")
-					parts := strings.SplitN(eventID, ".", -1)
-					if len(parts) > 0 {
-						eventID = parts[0]
-					}
-					rt.Lock()
-					rt.eventTemplateMap[eventID] = templateName
-					rt.Unlock()
+					eventID = strings.Join(eventnsParts[0:2], ":")
 				}
+
+				templateName := ""
+				if len(eventnsParts) == 3 {
+					if !slices.Contains([]string{"ok", "error"}, eventnsParts[1]) {
+						glog.Errorf(`
+						error: invalid event namespace: %s. 
+						it must be of the format => 
+						@fir:<event>:<ok|error>:<block> or
+						@fir:<event>:<pending|done>.
+						<block> cannot be set for <pending|done>`, eventns)
+						continue
+					}
+					templateName = eventnsParts[2]
+				}
+
+				rt.Lock()
+				blocks, ok := rt.eventTemplateMap[eventID]
+				if !ok {
+					blocks = make(map[string]struct{})
+				}
+				if templateName != "" {
+					blocks[templateName] = struct{}{}
+				}
+				//fmt.Printf("eventID: %s, blocks: %v\n", eventID, blocks)
+				rt.eventTemplateMap[eventID] = blocks
+				rt.Unlock()
+
 			}
 		}
 

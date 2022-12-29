@@ -91,55 +91,67 @@ type patcher struct {
 }
 
 func (p *patcher) ReplaceEl(selector string, t TemplateRenderer) Patcher {
+	templateName := t.Name()
+	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
 		Type:     ReplaceElement,
 		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+		Value:    map[string]any{"name": templateName, "data": templateData},
 	})
 	return p
 }
 
 func (p *patcher) ReplaceContent(selector string, t TemplateRenderer) Patcher {
+	templateName := t.Name()
+	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
 		Type:     ReplaceContent,
 		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+		Value:    map[string]any{"name": templateName, "data": templateData},
 	})
 	return p
 }
 
 func (p *patcher) AfterEl(selector string, t TemplateRenderer) Patcher {
+	templateName := t.Name()
+	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
 		Type:     After,
 		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+		Value:    map[string]any{"name": templateName, "data": templateData},
 	})
 	return p
 }
 
 func (p *patcher) BeforeEl(selector string, t TemplateRenderer) Patcher {
+	templateName := t.Name()
+	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
 		Type:     Before,
 		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+		Value:    map[string]any{"name": templateName, "data": templateData},
 	})
 	return p
 }
 
 func (p *patcher) AppendEl(selector string, t TemplateRenderer) Patcher {
+	templateName := t.Name()
+	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
 		Type:     Append,
 		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+		Value:    map[string]any{"name": templateName, "data": templateData},
 	})
 	return p
 }
 
 func (p *patcher) PrependEl(selector string, t TemplateRenderer) Patcher {
+	templateName := t.Name()
+	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
 		Type:     Prepend,
 		Selector: &selector,
-		Value:    map[string]any{"name": t.Name(), "data": t.Data()},
+		Value:    map[string]any{"name": templateName, "data": templateData},
 	})
 	return p
 }
@@ -194,7 +206,11 @@ func (p *patcher) DispatchEvent(selector, eventSourceID string, t TemplateRender
 	}
 
 	if t != nil {
-		patch.Value = map[string]any{"name": t.Name(), "data": t.Data()}
+		templateName := t.Name()
+		templateData := t.Data()
+		selector = fmt.Sprintf("fir:%s:%s", selector, templateName)
+		patch.Selector = &selector
+		patch.Value = map[string]any{"name": templateName, "data": templateData}
 	}
 	p.patchset = append(p.patchset, patch)
 	return p

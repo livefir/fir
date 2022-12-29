@@ -15,7 +15,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"github.com/livefir/fir/internal/dom"
-	"golang.org/x/exp/slices"
 )
 
 // RouteOption is a function that sets route options
@@ -151,7 +150,7 @@ type route struct {
 	cntrl            *controller
 	template         *template.Template
 	allTemplates     []string
-	eventTemplateMap map[string]string
+	eventTemplateMap map[string]map[string]struct{}
 	routeOpt
 	sync.RWMutex
 }
@@ -161,7 +160,7 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	rt := &route{
 		routeOpt:         *routeOpt,
 		cntrl:            cntrl,
-		eventTemplateMap: make(map[string]string),
+		eventTemplateMap: make(map[string]map[string]struct{}),
 	}
 	rt.parseTemplate()
 	return rt
@@ -334,11 +333,15 @@ func renderErrorBlock(ctx RouteContext, eventErrorID string, errs map[string]any
 	if ctx.event.SourceID != nil {
 		sourceID = *ctx.event.SourceID
 	}
-	return ctx.dom().DispatchEvent(
-		eventErrorID,
-		sourceID,
-		ctx.renderBlock(ctx.route.eventTemplateMap[eventErrorID],
-			map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+	var patchsetData dom.Patchset
+	for block := range ctx.route.eventTemplateMap[eventErrorID] {
+		patchsetData = ctx.dom().DispatchEvent(
+			eventErrorID,
+			sourceID,
+			ctx.renderBlock(block,
+				map[string]any{"fir": newRouteDOMContext(ctx, errs)})).Patchset()
+	}
+	return patchsetData
 }
 
 func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
@@ -347,13 +350,16 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		if ctx.event.SourceID != nil {
 			sourceID = *ctx.event.SourceID
 		}
-		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID, nil).Patchset()
+		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
+		patchsetData := ctx.dom().DispatchEvent(eventOkID, sourceID, nil).Patchset()
 		// check if error was previously set for this event
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// if error was previously set, then remove it and dispatch event to unset error
 		if ctx.session.GetInt(ctx.request.Context(), eventErrorID) == 1 {
 			ctx.session.Remove(ctx.request.Context(), eventErrorID)
+			ctx.route.RLock()
 			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
+			ctx.route.RUnlock()
 		}
 
 		render(patchsetData...)
@@ -363,69 +369,41 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	switch errVal := err.(type) {
 	case *fieldErrors:
 		fieldErrorsData := *errVal
-		sourceID := ""
-		if ctx.event.SourceID != nil {
-			sourceID = *ctx.event.SourceID
-		}
-		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID, nil).Patchset()
-
-		var errSkipList []string
+		fieldErrors := make(map[string]any)
 		for field, err := range fieldErrorsData {
-			eventErrorID := fmt.Sprintf("%s:%s:error", ctx.event.ID, field)
-			// mark error as set in session
-			errSkipList = append(errSkipList, eventErrorID)
-			ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
-			errs := map[string]any{ctx.event.ID: map[string]any{field: err.Error()}}
-			patchsetData = renderErrorBlock(ctx, eventErrorID, errs)
+			fieldErrors[field] = err.Error()
 		}
-
-		// check if errors were set  in a previous sesion
-		for eventErrorID := range ctx.route.eventTemplateMap {
-			// skip if not error event
-			if !strings.HasSuffix(eventErrorID, ":error") {
-				continue
-			}
-			if ctx.session.GetInt(ctx.request.Context(), eventErrorID) != 1 {
-				continue
-			}
-			// skip if error was set for this field above
-			if slices.Contains(errSkipList, eventErrorID) {
-				continue
-			}
-
-			// remove error from session
-			ctx.session.Remove(ctx.request.Context(), eventErrorID)
-			// unset error if previously set
-			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
-		}
+		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
+		ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
+		ctx.route.RLock()
+		patchsetData := renderErrorBlock(ctx, eventErrorID, map[string]any{ctx.event.ID: fieldErrors})
+		ctx.route.RUnlock()
 
 		render(patchsetData...)
 		return
 	case *routeData:
 		data := *errVal
-		eventSuccessID := fmt.Sprintf("%s:success", ctx.event.ID)
 
-		block, ok := ctx.route.eventTemplateMap[eventSuccessID]
-		if !ok {
-			block, ok = ctx.route.eventTemplateMap[ctx.event.ID]
-			if !ok {
-				glog.Errorf("no block found to render for event %s", ctx.event.ID)
-				return
-			}
-
-		}
+		var patchsetData dom.Patchset
 		sourceID := ""
 		if ctx.event.SourceID != nil {
 			sourceID = *ctx.event.SourceID
 		}
-		patchsetData := ctx.dom().DispatchEvent(ctx.event.ID, sourceID,
-			ctx.renderBlock(block, data)).Patchset()
+
+		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
+		ctx.route.RLock()
+		for block := range ctx.route.eventTemplateMap[eventOkID] {
+			patchsetData = ctx.dom().DispatchEvent(eventOkID, sourceID,
+				ctx.renderBlock(block, data)).Patchset()
+		}
+		ctx.route.RUnlock()
 
 		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
 			patchsetData = ctx.dom().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
 		}
 
-		// check if errors were set  in a previous sesion
+		ctx.route.RLock()
+		// check if errors were set in a previous sesion
 		for eventErrorID := range ctx.route.eventTemplateMap {
 			// skip if not error event
 			if !strings.HasSuffix(eventErrorID, ":error") {
@@ -440,7 +418,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			// unset error if previously set
 			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
 		}
-
+		ctx.route.RUnlock()
 		render(patchsetData...)
 		return
 	default:
@@ -449,7 +427,9 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// mark error as set in session
 		ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
+		ctx.route.RLock()
 		patchsetData = renderErrorBlock(ctx, eventErrorID, errs)
+		ctx.route.RUnlock()
 		render(patchsetData...)
 		return
 	}

@@ -38,58 +38,38 @@ const Plugin = (Alpine) => {
         return {
             replace() {
                 return function (event) {
-                    operations['replaceContent']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    console.log('replace')
+                    morphElementContent(el, event.detail)
                 }
             },
             replaceEl() {
                 return function (event) {
-                    operations['replaceElement']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    morphElement(el, event.detail)
                 }
             },
             appendEl() {
                 return function (event) {
-                    operations['append']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    appendElement(el, event.detail)
                 }
             },
             prependEl() {
                 return function (event) {
-                    operations['prepend']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    prependElement(el, event.detail)
                 }
             },
             afterEl() {
                 return function (event) {
-                    operations['after']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    afterElement(el, event.detail)
                 }
             },
             beforeEl() {
                 return function (event) {
-                    operations['before']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    beforeElement(el, event.detail)
                 }
             },
             removeEl() {
                 return function (event) {
-                    operations['remove']({
-                        selector: `#${el.id}`,
-                        value: event.detail,
-                    })
+                    removeElement(el, event.detail)
                 }
             },
             emit(id, params) {
@@ -248,73 +228,101 @@ const Plugin = (Alpine) => {
         return template.content.firstChild
     }
 
+    const morphElement = (el, value) => {
+        Alpine.morph(el, value, {
+            key(el) {
+                return el.id
+            },
+        })
+    }
+
+    const morphElementContent = (el, value) => {
+        let toHTML = el.cloneNode(false)
+        toHTML.innerHTML = value
+        Alpine.morph(el, toHTML.outerHTML, {
+            updating(el, toEl, childrenOnly, skip) {
+                // childrenOnly()
+                //console.log('updating', el, toEl, childrenOnly, skip)
+            },
+
+            updated(el, toEl) {
+                //console.log('updated', el, toEl)
+            },
+
+            removing(el, skip) {
+                // console.log('removing', el, skip)
+            },
+
+            removed(el) {
+                // console.log('removed', el)
+            },
+
+            adding(el, skip) {
+                //console.log('adding', el, skip)
+            },
+
+            added(el) {
+                // console.log('added', el)
+            },
+
+            key(el) {
+                // By default Alpine uses the `key=""` HTML attribute.
+                // console.log('key', el.id)
+                return el.id
+            },
+
+            lookahead: false, // Default: false
+        })
+    }
+
+    const afterElement = (el, value) => {
+        el.insertBefore(toElement(value), el.nextSibling)
+    }
+
+    const beforeElement = (el, value) => {
+        el.insertBefore(toElement(value), el)
+    }
+
+    const appendElement = (el, value) => {
+        el.append(...toElements(value))
+    }
+
+    const prependElement = (el, value) => {
+        el.prepend(...toElements(value))
+    }
+
+    const removeElement = (el) => {
+        el.remove()
+    }
+
     const operations = {
         replaceElement: (operation) =>
             selectAll(operation, (el, value) => {
-                Alpine.morph(el, value, {
-                    key(el) {
-                        return el.id
-                    },
-                })
+                morphElement(el, value)
             }),
         replaceContent: (operation) =>
             selectAll(operation, (el, value) => {
-                let toHTML = el.cloneNode(false)
-                toHTML.innerHTML = value
-                Alpine.morph(el, toHTML.outerHTML, {
-                    updating(el, toEl, childrenOnly, skip) {
-                        // childrenOnly()
-                        //console.log('updating', el, toEl, childrenOnly, skip)
-                    },
-
-                    updated(el, toEl) {
-                        //console.log('updated', el, toEl)
-                    },
-
-                    removing(el, skip) {
-                        // console.log('removing', el, skip)
-                    },
-
-                    removed(el) {
-                        // console.log('removed', el)
-                    },
-
-                    adding(el, skip) {
-                        //console.log('adding', el, skip)
-                    },
-
-                    added(el) {
-                        // console.log('added', el)
-                    },
-
-                    key(el) {
-                        // By default Alpine uses the `key=""` HTML attribute.
-                        // console.log('key', el.id)
-                        return el.id
-                    },
-
-                    lookahead: false, // Default: false
-                })
+                morphElementContent(el, value)
             }),
         after: (operation) =>
             selectAll(operation, (el, value) => {
-                el.insertBefore(toElement(value), el.nextSibling)
+                afterElement(el, value)
             }),
         before: (operation) =>
             selectAll(operation, (el, value) => {
-                el.insertBefore(toElement(value), el)
+                beforeElement(el, value)
             }),
         append: (operation) =>
             selectAll(operation, (el, value) => {
-                el.append(...toElements(value))
+                appendElement(el, value)
             }),
         prepend: (operation) =>
             selectAll(operation, (el, value) => {
-                el.prepend(...toElements(value))
+                prependElement(el, value)
             }),
         remove: (operation) =>
             selectAll(operation, (el, value) => {
-                el.remove()
+                removeElement(el)
             }),
         reload: () => window.location.reload(),
         resetForm: (operation) =>
@@ -335,6 +343,7 @@ const Plugin = (Alpine) => {
             })
             if (!operation.eid) {
                 document.dispatchEvent(event)
+                window.dispatchEvent(event)
                 return
             }
 

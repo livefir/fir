@@ -4,8 +4,8 @@
             <div
                 x-data
                 class="column is-one-third-desktop has-text-centered is-narrow">
-                <div id="count_update" @fir:updated.window="$fir.replace()">
-                    {{ block "count_update" . }}
+                <div @fir:updated:ok:count-update.window="$fir.replace()">
+                    {{ block "count-update" . }}
                         <div>Count updated: {{ .updated }} seconds ago</div>
                     {{ end }}
                 </div>
@@ -13,8 +13,8 @@
                 <hr />
                 <div
                     id="count"
-                    @fir:inc.window="$fir.replace()"
-                    @fir:dec.window="$fir.replace()">
+                    @fir:inc:ok:count.window="$fir.replace()"
+                    @fir:dec:ok:count.window="$fir.replace()">
                     {{ block "count" . }}
                         <div>Count: {{ .count }}</div>
                     {{ end }}
