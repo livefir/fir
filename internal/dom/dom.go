@@ -10,7 +10,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
-	"github.com/tidwall/match"
 )
 
 // NewPatcher creates a new dom patcher
@@ -275,21 +274,7 @@ func buildTemplateValue(t *template.Template, name string, data any) (string, er
 	if name == "_fir_html" {
 		buf.WriteString(data.(string))
 	} else {
-
 		t.Option("missingkey=zero")
-		for _, tmpl := range t.Templates() {
-			if !match.IsPattern(tmpl.Name()) {
-				continue
-			}
-			if ok, stopped := match.MatchLimit(name, tmpl.Name(), 10); ok || stopped {
-				if stopped {
-					glog.Errorf("template match stopped: %s, %s", name, tmpl.Name())
-					break
-				}
-				name = tmpl.Name()
-				break
-			}
-		}
 		err := t.ExecuteTemplate(&buf, name, data)
 		if err != nil {
 			return "", err
