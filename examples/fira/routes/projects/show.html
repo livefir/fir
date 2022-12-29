@@ -34,7 +34,7 @@
 
                             <div
                                 id="title"
-                                @fir:update-project:success.window="$fir.replace()"
+                                @fir:update-project:ok:title.window="$fir.replace()"
                                 class="control">
                                 {{ block "title" . }}
                                     <input
@@ -48,7 +48,7 @@
 
                             <div
                                 id="title-err"
-                                @fir:update-project:title:error.window="$fir.replace()">
+                                @fir:update-project:error:title-err.window="$fir.replace()">
                                 {{ block "title-err" . }}
                                     <p class="help is-danger">
                                         {{ .fir.Error "update-project.title" }}
@@ -60,7 +60,7 @@
                             <label class="label"> Description </label>
                             <div
                                 id="description"
-                                @fir:update-project:success.window="$fir.replace()"
+                                @fir:update-project:ok:description.window="$fir.replace()"
                                 class="control">
                                 {{ block "description" . }}
                                     <input
@@ -73,7 +73,7 @@
                             </div>
                             <div
                                 id="description-err"
-                                @fir:update-project:description:error.window="$fir.replace()">
+                                @fir:update-project:error:description-err.window="$fir.replace()">
                                 {{ block "description-err" . }}
                                     <p class="help is-danger">
                                         {{ .fir.Error "update-project.description" }}
