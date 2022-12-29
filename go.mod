@@ -22,7 +22,6 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/tdewolff/minify/v2 v2.12.4
 	github.com/tidwall/gjson v1.14.4
-	github.com/tidwall/match v1.1.1
 	github.com/timshannon/bolthold v0.0.0-20210913165410-232392fc8a6a
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20221204150635-6dcec336b2bb
@@ -55,6 +54,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tdewolff/parse/v2 v2.6.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
