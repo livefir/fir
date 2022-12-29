@@ -101,6 +101,9 @@ func (c RouteContext) BindQueryParams(v any) error {
 }
 
 func (c RouteContext) BindEventParams(v any) error {
+	if c.event.Params == nil {
+		return nil
+	}
 	if c.event.FormID != nil {
 		if len(c.urlValues) == 0 {
 			var urlValues url.Values
@@ -111,6 +114,7 @@ func (c RouteContext) BindEventParams(v any) error {
 		}
 		return c.route.formDecoder.Decode(v, c.urlValues)
 	}
+
 	return json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(v)
 }
 
