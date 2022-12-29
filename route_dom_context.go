@@ -49,7 +49,7 @@ func (rc *RouteDOMContext) Error(paths ...string) any {
 func getErrorLookupPath(paths ...string) string {
 	path := ""
 	if len(paths) == 0 {
-		path = "route"
+		path = "default"
 	} else {
 		for _, p := range paths {
 			p = strings.Trim(p, ".")

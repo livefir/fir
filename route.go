@@ -461,11 +461,11 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"route":      onFormErr.Error()}
+					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -483,11 +483,11 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"route":      onFormErr.Error()}
+					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -500,11 +500,11 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"route":      onFormErr.Error()}
+					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -519,11 +519,11 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"route":      onFormErr.Error()}
+					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -538,18 +538,18 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 				mergedErr := fmt.Errorf("%v %v", err, onFormErr)
 				errs = map[string]any{
 					ctx.event.ID: mergedErr,
-					"route":      mergedErr,
+					"default":    mergedErr,
 				}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.toMap(),
-					"route":      fmt.Sprintf("%v", fieldErrorsVal),
+					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		} else {
 			errs = map[string]any{
 				ctx.event.ID: err.Error(),
-				"route":      err.Error()}
+				"default":    err.Error()}
 		}
 		renderRoute(ctx)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 	}

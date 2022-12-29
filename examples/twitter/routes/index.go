@@ -32,8 +32,19 @@ func insertTweet(ctx fir.RouteContext, db *bolthold.Store) (*Tweet, error) {
 	return tweet, nil
 }
 
+type queryReq struct {
+	Order  string `json:"order" schema:"order"`
+	Search string `json:"search" schema:"search"`
+	Offset int    `json:"offset" schema:"offset"`
+	Limit  int    `json:"limit" schema:"limit"`
+}
+
 func loadTweets(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
+		var req queryReq
+		if err := ctx.Bind(&req); err != nil {
+			return err
+		}
 		var tweets []Tweet
 		if err := db.Find(&tweets, &bolthold.Query{}); err != nil {
 			return err

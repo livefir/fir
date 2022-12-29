@@ -14,12 +14,12 @@ import (
 // 	routeName := "fir-err-route"
 // 	routeNameSelector := fmt.Sprintf("#%s", routeName)
 // 	return func(err error) []patch.Patch {
-// 			errs := map[string]any{ctx.event.ID: err.Error(), "route": err.Error()}
+// 			errs := map[string]any{ctx.event.ID: err.Error(), "default": err.Error()}
 // 			return []patch.Patch{
 // 				patch.Replace(eventNameSelector, patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})),
 // 				patch.Replace(routeNameSelector, patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)}))}
 // 		}, func() []patch.Patch {
-// 			errs := map[string]any{ctx.event.ID: nil, "route": nil}
+// 			errs := map[string]any{ctx.event.ID: nil, "default": nil}
 // 			return []patch.Patch{
 // 				patch.Replace(eventNameSelector, patch.Block(eventIdName, map[string]any{"fir": newRouteContext(ctx, errs)})),
 // 				patch.Replace(routeNameSelector, patch.Block(routeName, map[string]any{"fir": newRouteContext(ctx, errs)}))}
