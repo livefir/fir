@@ -14,9 +14,8 @@
     <body>
         <div x-data>
             <div
-                id="count"
-                @fir:inc.window="$fir.replace()"
-                @fir:dec.window="$fir.replace()">
+                @fir:inc:ok:count.window="$fir.replace()"
+                @fir:dec:ok:count.window="$fir.replace()">
                 {{ block "count" . }}
                     <div>Count: {{ .count }}</div>
                 {{ end }}

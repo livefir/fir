@@ -41,7 +41,7 @@
                             autocomplete="off"
                             @input="$fir.emit('query',{query: $event.target.value})" />
                     </div>
-                    <div id="cities" @fir:query.window="$fir.replace()">
+                    <div @fir:query:ok:cities.window="$fir.replace()">
                         {{ block "cities" . }}
                             {{ range .cities }}
                                 <div>{{ . }}</div>

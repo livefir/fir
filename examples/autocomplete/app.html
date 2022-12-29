@@ -45,7 +45,9 @@
                             @input="$fir.emit('query',{query: $event.target.value})" />
                     </div>
 
-                    <datalist id="cities" @fir:query.window="$fir.replace()">
+                    <datalist
+                        id="cities"
+                        @fir:query:ok:cities.window="$fir.replace()">
                         {{ block "cities" . }}
                             {{ range .cities }}
                                 <option value="{{ . }}"></option>

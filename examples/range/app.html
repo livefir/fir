@@ -32,8 +32,9 @@
                         x-model="count"
                         value="0"
                         @input="$fir.emit('update',{count: $event.target.value})" />
-                    <div id="total" @fir:update.window="$fir.replace()">
-                        {{ block "total" . }}
+
+                    <div @fir:update:ok:price.window="$fir.replace()">
+                        {{ block "price" . }}
                             <div>
                                 Price:
                                 {{ .total }}

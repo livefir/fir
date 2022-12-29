@@ -38,6 +38,7 @@ const Plugin = (Alpine) => {
         return {
             replace() {
                 return function (event) {
+                    console.log('replace')
                     morphElementContent(el, event.detail)
                 }
             },
@@ -342,6 +343,7 @@ const Plugin = (Alpine) => {
             })
             if (!operation.eid) {
                 document.dispatchEvent(event)
+                window.dispatchEvent(event)
                 return
             }
 
