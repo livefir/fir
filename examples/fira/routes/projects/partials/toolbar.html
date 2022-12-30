@@ -1,11 +1,17 @@
 {{ define "toolbar" }}
-    <form class="mb-4" id="project-query" @submit.prevent="$fir.submit()">
+    <form
+        class="mb-4"
+        id="project-query"
+        @query-changed="$fir.submit()"
+        @submit.prevent="$fir.submit()">
         <div class="field is-horizontal">
             <div class="field-body">
                 <div class="field has-addons">
                     <div class="control is-expanded">
                         <div class="select is-fullwidth">
-                            <select name="order" @change="$fir.submit()">
+                            <select
+                                name="order"
+                                @change="$dispatch('query-changed')">
                                 <option
                                     value="newest"
                                     {{ if eq .order "newest" }}
@@ -32,7 +38,7 @@
                 <div class="field has-addons">
                     <div class="control is-expanded">
                         <input
-                            @input.debounce.500ms="$fir.submit()"
+                            @input.debounce.500ms="$dispatch('query-changed')"
                             name="search"
                             class="input"
                             type="text"
