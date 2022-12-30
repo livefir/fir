@@ -106,9 +106,17 @@ const Plugin = (Alpine) => {
             submit(id) {
                 return function (event) {
                     if (event.type !== 'submit') {
-                        console.error(
-                            `event type ${event.type} is not submit. $fir.submit() can only be used on forms.`
-                        )
+                        if (el instanceof HTMLFormElement) {
+                            event.stopImmediatePropagation()
+                            event.preventDefault()
+                            el.trigger('submit')
+                            return
+                        } else {
+                            console.error(
+                                `event type ${event.type} is not submit. $fir.submit() can only be used on forms.`
+                            )
+                            return
+                        }
                         return
                     }
 
