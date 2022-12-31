@@ -146,33 +146,43 @@ func (c RouteContext) KV(key string, data any) error {
 }
 
 // Data sets the data to be hydrated into the route's template or an event's associated template/block action
-// It accepts either a map or struct type so that fir can inject
-// utility functions: .fir.Error, .fir.ActiveRoute etc.
-func (c RouteContext) Data(data any) error {
+// It accepts either a map or struct type so that fir can inject utility functions: .fir.Error, .fir.ActiveRoute etc.
+// If the data is a struct, it will be converted to a map using github.com/fatih/structs
+// If the data is a pointer to a struct, it will be dereferenced and converted to a map using github.com/fatih/structs
+// If the data is a map, it will be used as is
+// If the data is a pointer to a map, it will be dereferenced and used as is
+// The function will return nil if no data is passed
+// The function accepts variadic arguments so that you can pass multiple structs or maps which will be merged
+func (c RouteContext) Data(dataset ...any) error {
+	if len(dataset) == 0 {
+		return nil
+	}
 	m := routeData{}
-	val := reflect.ValueOf(data)
-	if val.Kind() == reflect.Ptr {
-		el := val.Elem() // dereference the pointer
-		if el.Kind() == reflect.Struct {
+	for _, data := range dataset {
+		val := reflect.ValueOf(data)
+		if val.Kind() == reflect.Ptr {
+			el := val.Elem() // dereference the pointer
+			if el.Kind() == reflect.Struct {
+				for k, v := range structs.Map(data) {
+					m[k] = v
+				}
+			}
+		} else if val.Kind() == reflect.Struct {
 			for k, v := range structs.Map(data) {
 				m[k] = v
 			}
-		}
-	} else if val.Kind() == reflect.Struct {
-		for k, v := range structs.Map(data) {
-			m[k] = v
-		}
-	} else if val.Kind() == reflect.Map {
-		ms, ok := data.(map[string]any)
-		if !ok {
+		} else if val.Kind() == reflect.Map {
+			ms, ok := data.(map[string]any)
+			if !ok {
+				return errors.New("data must be a map[string]any , struct or pointer to a struct")
+			}
+
+			for k, v := range ms {
+				m[k] = v
+			}
+		} else {
 			return errors.New("data must be a map[string]any , struct or pointer to a struct")
 		}
-
-		for k, v := range ms {
-			m[k] = v
-		}
-	} else {
-		return errors.New("data must be a map[string]any , struct or pointer to a struct")
 	}
 
 	return &m
