@@ -6,7 +6,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/mixin"
 	"github.com/google/uuid"
-	"github.com/livefir/fir/gen"
 )
 
 // Issue holds the schema definition for the Issue entity.
@@ -24,8 +23,8 @@ func (Issue) Mixin() []ent.Mixin {
 func (Issue) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.String("title").Validate(gen.MinMaxLenField("title", 3, 140)),
-		field.Text("description").Validate(gen.MinMaxLenField("description", 3, 280)),
+		field.String("title").MinLen(3).MaxLen(140),
+		field.Text("description").MinLen(3).MaxLen(280),
 	}
 }
 
