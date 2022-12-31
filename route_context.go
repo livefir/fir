@@ -11,6 +11,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/fatih/structs"
 	"github.com/livefir/fir/internal/dom"
+	firErrors "github.com/livefir/fir/internal/errors"
 )
 
 // RouteContext is the context for a route handler.
@@ -193,15 +194,15 @@ func (c RouteContext) FieldError(field string, err error) error {
 	if err == nil || field == "" {
 		return nil
 	}
-	return &fieldErrors{field: userError(c, err)}
+	return &firErrors.Fields{field: firErrors.User(err)}
 }
 
 // FieldErrors sets the error messages for the given fields and can be looked up by {{.fir.Error "myevent.field"}}
 func (c RouteContext) FieldErrors(fields map[string]error) error {
-	m := fieldErrors{}
+	m := firErrors.Fields{}
 	for field, err := range fields {
 		if err != nil {
-			m[field] = userError(c, err)
+			m[field] = firErrors.User(err)
 		}
 	}
 	return &m

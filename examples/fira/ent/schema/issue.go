@@ -24,8 +24,8 @@ func (Issue) Mixin() []ent.Mixin {
 func (Issue) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.String("title").Validate(gen.MinMax(3, 140)),
-		field.Text("description").Validate(gen.MinMax(3, 280)),
+		field.String("title").Validate(gen.MinMaxLenField("title", 3, 140)),
+		field.Text("description").Validate(gen.MinMaxLenField("description", 3, 280)),
 	}
 }
 
