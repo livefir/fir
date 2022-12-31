@@ -15,6 +15,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"github.com/livefir/fir/internal/dom"
+	firErrors "github.com/livefir/fir/internal/errors"
 )
 
 // RouteOption is a function that sets route options
@@ -367,7 +368,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 	}
 
 	switch errVal := err.(type) {
-	case *fieldErrors:
+	case *firErrors.Fields:
 		fieldErrorsData := *errVal
 		fieldErrors := make(map[string]any)
 		for field, err := range fieldErrorsData {
@@ -423,7 +424,7 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		return
 	default:
 		var patchsetData dom.Patchset
-		errs := map[string]any{ctx.event.ID: userError(ctx, err).Error()}
+		errs := map[string]any{ctx.event.ID: firErrors.User(err).Error()}
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// mark error as set in session
 		ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
@@ -463,14 +464,14 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 	if err == nil {
 		errs := make(map[string]any)
 		if onFormErr != nil {
-			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
 					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.event.ID: fieldErrorsVal.Map(),
 					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -485,31 +486,31 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 		onLoadData := *errVal
 		errs := make(map[string]any)
 		if onFormErr != nil {
-			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
 					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.event.ID: fieldErrorsVal.Map(),
 					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
 		onLoadData["fir"] = newRouteDOMContext(ctx, errs)
 		renderRoute(ctx)(onLoadData)
-	case fieldErrors:
+	case firErrors.Fields:
 		errs := make(map[string]any)
 		if onFormErr != nil {
-			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
 					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.event.ID: fieldErrorsVal.Map(),
 					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -521,14 +522,14 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 		 onLoad must return either an error or call ctx.Data, ctx.KV \n`, ctx.route)
 		errs := make(map[string]any)
 		if onFormErr != nil {
-			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
 					"default":    onFormErr.Error()}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.event.ID: fieldErrorsVal.Map(),
 					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
@@ -537,7 +538,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 	default:
 		var errs map[string]any
 		if onFormErr != nil {
-			fieldErrorsVal, ok := onFormErr.(*fieldErrors)
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
 			if !ok {
 				// err is not nil and not routeData and onFormErr is not nil and not fieldErrors
 				// merge err and onFormErr
@@ -548,7 +549,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 				}
 			} else {
 				errs = map[string]any{
-					ctx.event.ID: fieldErrorsVal.toMap(),
+					ctx.event.ID: fieldErrorsVal.Map(),
 					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
