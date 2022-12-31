@@ -42,7 +42,9 @@ const Plugin = (Alpine) => {
                     //console.log(el)
                     //console.log(event)
                     //console.log(event.detail)
-                    morphElementContent(el, event.detail)
+                    let toHTML = el.cloneNode(false)
+                    toHTML.innerHTML = event.detail.trim()
+                    morphElement(el, toHTML.outerHTML)
                 }
             },
             replaceEl() {
@@ -256,45 +258,6 @@ const Plugin = (Alpine) => {
         })
     }
 
-    const morphElementContent = (el, value) => {
-        let toHTML = el.cloneNode(false)
-        toHTML.innerHTML = value.trim()
-        Alpine.morph(el, toHTML.outerHTML, {
-            updating(el, toEl, childrenOnly, skip) {
-                //console.log('updating', el, toEl)
-                childrenOnly()
-            },
-
-            updated(el, toEl) {
-                //console.log('updated', el, toEl)
-            },
-
-            removing(el, skip) {
-                //console.log('removing', el, skip)
-            },
-
-            removed(el) {
-                //console.log('removed', el)
-            },
-
-            adding(el, skip) {
-                //console.log('adding', el, skip)
-            },
-
-            added(el) {
-                //console.log('added', el)
-            },
-
-            key(el) {
-                // By default Alpine uses the `key=""` HTML attribute.
-                //console.log('key', el.id)
-                return el.id
-            },
-
-            lookahead: false, // Default: false
-        })
-    }
-
     const afterElement = (el, value) => {
         el.insertBefore(toElement(value), el.nextSibling)
     }
@@ -322,7 +285,9 @@ const Plugin = (Alpine) => {
             }),
         replaceContent: (operation) =>
             selectAll(operation, (el, value) => {
-                morphElementContent(el, value)
+                let toHTML = el.cloneNode(false)
+                toHTML.innerHTML = value.trim()
+                morphElement(el, toHTML.outerHTML)
             }),
         after: (operation) =>
             selectAll(operation, (el, value) => {
