@@ -38,7 +38,10 @@ const Plugin = (Alpine) => {
         return {
             replace() {
                 return function (event) {
-                    console.log('replace')
+                    //console.log('=====================>')
+                    //console.log(el)
+                    //console.log(event)
+                    //console.log(event.detail)
                     morphElementContent(el, event.detail)
                 }
             },
@@ -105,31 +108,30 @@ const Plugin = (Alpine) => {
             },
             submit(id) {
                 return function (event) {
-                    if (event.type !== 'submit') {
-                        if (el instanceof HTMLFormElement) {
-                            event.stopImmediatePropagation()
-                            event.preventDefault()
-                            el.trigger('submit')
-                            return
-                        } else {
-                            console.error(
-                                `event type ${event.type} is not submit. $fir.submit() can only be used on forms.`
-                            )
-                            return
-                        }
+                    if (
+                        event.type !== 'submit' &&
+                        !(el instanceof HTMLFormElement)
+                    ) {
+                        console.error(
+                            `event type ${event.type} is not submit nor the element is an instance of HTMLFormElement.
+                             $fir.submit() can only be used on forms.`
+                        )
                         return
                     }
 
-                    const form = event.target
+                    let form
+                    if (el instanceof HTMLFormElement) {
+                        form = el
+                    } else {
+                        form = event.target
+                    }
 
                     if (
-                        !id &&
-                        !form.id &&
-                        !event.submitter &&
-                        !event.submitter.formAction
+                        (!id && !form.id && !form.action && !event.submitter) ||
+                        (event.submitter && !event.submitter.formAction)
                     ) {
-                        console.error(`event id is empty, the form element id is not set, 
-                        or it wasn't sumbmitted by a button with formaction set. can't emit event`)
+                        console.error(`event id is empty, form element id is not set, form action is not set,
+                        or it wasn't sumbmitted by a button with formaction set. can't submit form`)
                         return
                     }
 
@@ -161,7 +163,7 @@ const Plugin = (Alpine) => {
                                 eventID = form.id
                             }
                             if (form.action) {
-                                const url = new URL(event.submitter.formAction)
+                                const url = new URL(form.action)
                                 if (url.searchParams.get('event')) {
                                     eventID = url.searchParams.get('event')
                                 }
@@ -189,18 +191,28 @@ const Plugin = (Alpine) => {
                             (value, key) => (params[key] = new Array(value))
                         )
 
+                        let redirect = false
+                        if (formMethod.toLowerCase() === 'post') {
+                            redirect = true
+                        }
+                        // post event to server
                         post(el, {
                             event_id: eventID,
                             params: params,
                             form_id: form.id,
                             source_id: el.id,
+                            redirect: redirect,
                         })
 
                         if (formMethod.toLowerCase() === 'get') {
                             const url = new URL(window.location)
-                            formData.forEach((value, key) =>
-                                url.searchParams.set(key, value)
-                            )
+                            formData.forEach((value, key) => {
+                                if (value) {
+                                    url.searchParams.set(key, value)
+                                } else {
+                                    url.searchParams.delete(key)
+                                }
+                            })
                             window.history.pushState({}, '', url)
                         }
                         return
@@ -246,11 +258,11 @@ const Plugin = (Alpine) => {
 
     const morphElementContent = (el, value) => {
         let toHTML = el.cloneNode(false)
-        toHTML.innerHTML = value
+        toHTML.innerHTML = value.trim()
         Alpine.morph(el, toHTML.outerHTML, {
             updating(el, toEl, childrenOnly, skip) {
-                // childrenOnly()
-                //console.log('updating', el, toEl, childrenOnly, skip)
+                //console.log('updating', el, toEl)
+                childrenOnly()
             },
 
             updated(el, toEl) {
@@ -258,11 +270,11 @@ const Plugin = (Alpine) => {
             },
 
             removing(el, skip) {
-                // console.log('removing', el, skip)
+                //console.log('removing', el, skip)
             },
 
             removed(el) {
-                // console.log('removed', el)
+                //console.log('removed', el)
             },
 
             adding(el, skip) {
@@ -270,12 +282,12 @@ const Plugin = (Alpine) => {
             },
 
             added(el) {
-                // console.log('added', el)
+                //console.log('added', el)
             },
 
             key(el) {
                 // By default Alpine uses the `key=""` HTML attribute.
-                // console.log('key', el.id)
+                //console.log('key', el.id)
                 return el.id
             },
 
@@ -350,7 +362,7 @@ const Plugin = (Alpine) => {
                 cancelable: true,
             })
             if (!operation.eid) {
-                document.dispatchEvent(event)
+                //document.dispatchEvent(event)
                 window.dispatchEvent(event)
                 return
             }
