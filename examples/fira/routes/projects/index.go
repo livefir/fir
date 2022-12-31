@@ -11,10 +11,12 @@ import (
 var defaultPageSize = 5
 
 type queryReq struct {
-	Order  string `json:"order"`
-	Search string `json:"search"`
-	Offset int    `json:"offset"`
-	Limit  int    `json:"limit"`
+	Order           string `json:"order"`
+	Search          string `json:"search"`
+	Offset          int    `json:"offset"`
+	Limit           int    `json:"limit"`
+	pageSize        int
+	defaultPageSize int
 }
 
 func projectQuery(db *ent.Client, req queryReq) *ent.ProjectQuery {
@@ -36,7 +38,7 @@ func projectQuery(db *ent.Client, req queryReq) *ent.ProjectQuery {
 	return q
 }
 
-func paginationData(req queryReq, boardLen int) map[string]any {
+func paginationData(req queryReq) map[string]any {
 	prev := req.Offset - defaultPageSize
 	hasPrevious := true
 	if prev < 0 || req.Offset == 0 {
@@ -44,7 +46,7 @@ func paginationData(req queryReq, boardLen int) map[string]any {
 	}
 	next := defaultPageSize + req.Offset
 	hasNext := true
-	if boardLen < defaultPageSize {
+	if req.pageSize < defaultPageSize {
 		hasNext = false
 	}
 	return map[string]any{
@@ -68,8 +70,11 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 			return err
 		}
 
+		q.pageSize = len(projects)
+		q.defaultPageSize = defaultPageSize
+
 		data := map[string]any{"projects": projects}
-		for k, v := range paginationData(q, len(projects)) {
+		for k, v := range paginationData(q) {
 			data[k] = v
 		}
 		return ctx.Data(data)
