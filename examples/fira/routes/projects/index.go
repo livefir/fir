@@ -2,28 +2,25 @@ package projects
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/examples/fira/ent"
 	"github.com/livefir/fir/examples/fira/ent/project"
 )
 
-var defaultPageSize = 5
+var pageSize = 5
 
 type queryReq struct {
-	Order           string `json:"order"`
-	Search          string `json:"search"`
-	Offset          int    `json:"offset"`
-	Limit           int    `json:"limit"`
-	pageSize        int
-	defaultPageSize int
+	Order      string `json:"order"`
+	Search     string `json:"search"`
+	Page       int    `json:"page"`
+	resultSize int
 }
 
 func projectQuery(db *ent.Client, req queryReq) *ent.ProjectQuery {
-	if req.Limit == 0 {
-		req.Limit = defaultPageSize
-	}
-	q := db.Project.Query().Offset(req.Offset).Limit(req.Limit)
+	offset := (req.Page - 1) * pageSize
+	q := db.Project.Query().Offset(offset).Limit(pageSize + 1)
 
 	if req.Search != "" {
 		q = q.Where(project.TitleContains(req.Search))
@@ -39,30 +36,36 @@ func projectQuery(db *ent.Client, req queryReq) *ent.ProjectQuery {
 }
 
 func paginationData(req queryReq) map[string]any {
-	prev := req.Offset - defaultPageSize
-	hasPrevious := true
-	if prev < 0 || req.Offset == 0 {
-		hasPrevious = false
+	var hasNext bool
+	if req.resultSize > pageSize {
+		hasNext = true
 	}
-	next := defaultPageSize + req.Offset
-	hasNext := true
-	if req.pageSize < defaultPageSize {
-		hasNext = false
+
+	var hasPrev bool
+	if req.Page > 1 {
+		hasPrev = true
 	}
+
 	return map[string]any{
-		"prev":        prev,
-		"next":        next,
-		"hasPrevious": hasPrevious,
+		"prev":        req.Page - 1,
+		"next":        req.Page + 1,
+		"hasPrevious": hasPrev,
 		"hasNext":     hasNext,
 		"search":      req.Search,
+		"order":       req.Order,
 	}
 }
 
 func loadProjects(db *ent.Client) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
+		fmt.Println("loadProjects")
 		var q queryReq
 		if err := ctx.Bind(&q); err != nil {
 			return err
+		}
+
+		if q.Page == 0 {
+			q.Page = 1
 		}
 
 		projects, err := projectQuery(db, q).All(ctx.Request().Context())
@@ -70,11 +73,11 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 			return err
 		}
 
-		q.pageSize = len(projects)
-		q.defaultPageSize = defaultPageSize
+		q.resultSize = len(projects)
 
 		data := map[string]any{"projects": projects}
-		return ctx.Data(data, paginationData(q))
+		pageData := paginationData(q)
+		return ctx.Data(data, pageData)
 	}
 }
 
@@ -117,7 +120,8 @@ func Index(db *ent.Client) fir.RouteFunc {
 			fir.Layout("routes/layout.html"),
 			fir.Partials("routes/partials", "routes/projects/partials"),
 			fir.OnLoad(loadProjects(db)),
-			fir.OnEvent("create-project", createProject(db)),
+			fir.OnEvent("create", createProject(db)),
+			fir.OnEvent("query", loadProjects(db)),
 		}
 	}
 }

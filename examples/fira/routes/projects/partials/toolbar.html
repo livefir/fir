@@ -1,7 +1,7 @@
 {{ define "toolbar" }}
     <form
         class="mb-4"
-        id="project-query"
+        action="/?event=query"
         @query-changed="$fir.submit()"
         @submit.prevent="$fir.submit()">
         <div class="field is-horizontal">
@@ -53,31 +53,33 @@
                 </div>
             </div>
         </div>
-        {{ block "pagination" . }}
-            <nav
-                id="pagination"
-                class="pagination is-right mt-4"
-                role="navigation"
-                aria-label="pagination">
-                <button
-                    type="submit"
-                    class="button is-small {{ if not .hasPrevious }}
-                        is-static
-                    {{ end }}"
-                    name="offset"
-                    value="{{ .prev }}">
-                    Previous
-                </button>
-                <button
-                    type="submit"
-                    class="button is-small {{ if not .hasNext }}
-                        is-static
-                    {{ end }}"
-                    name="offset"
-                    value="{{ .next }}">
-                    Next
-                </button>
-            </nav>
-        {{ end }}
+        <div @fir:query:ok:pagination="$fir.replace()">
+            {{ block "pagination" . }}
+                <nav
+                    id="pagination"
+                    class="pagination is-right mt-4"
+                    role="navigation"
+                    aria-label="pagination">
+                    <button
+                        type="submit"
+                        class="button is-small {{ if not .hasPrevious }}
+                            is-static
+                        {{ end }}"
+                        name="page"
+                        value="{{ .prev }}">
+                        Previous
+                    </button>
+                    <button
+                        type="submit"
+                        class="button is-small {{ if not .hasNext }}
+                            is-static
+                        {{ end }}"
+                        name="page"
+                        value="{{ .next }}">
+                        Next
+                    </button>
+                </nav>
+            {{ end }}
+        </div>
     </form>
 {{ end }}

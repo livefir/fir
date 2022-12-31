@@ -6,8 +6,7 @@
 
         <form
             method="post"
-            id="create-project"
-            action="/?event=create-project"
+            action="/?event=create"
             @submit.prevent="$fir.submit()">
             <div class="field">
                 <label class="label"> Title </label>
@@ -22,10 +21,10 @@
 
                 <div
                     id="title-err"
-                    @fir:create-project:error:title-err.window="$fir.replace()">
+                    @fir:create:error:title-err.window="$fir.replace()">
                     {{ block "title-err" . }}
                         <p class="help is-danger">
-                            {{ .fir.Error "create-project.title" }}
+                            {{ .fir.Error "create.title" }}
                         </p>
                     {{ end }}
                 </div>
@@ -42,10 +41,10 @@
                 </div>
                 <div
                     id="description-err"
-                    @fir:create-project:error:description-err.window="$fir.replace()">
+                    @fir:create:error:description-err.window="$fir.replace()">
                     {{ block "description-err" . }}
                         <p class="help is-danger">
-                            {{ .fir.Error "create-project.description" }}
+                            {{ .fir.Error "create.description" }}
                         </p>
                     {{ end }}
                 </div>

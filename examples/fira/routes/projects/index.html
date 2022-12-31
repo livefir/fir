@@ -3,9 +3,9 @@
         {{ block "err" . }}
             {{ .fir.Error "route" }}
         {{ end }}
-        <p @fir:create-tweet:error:create-err.window="$fir.replace()">
+        <p @fir:create:error:create-err.window="$fir.replace()">
             {{ block "create-err" . }}
-                {{ .fir.Error "create-project.route" }}
+                {{ .fir.Error "create.route" }}
             {{ end }}
         </p>
         <div class="column is-4">
@@ -13,11 +13,11 @@
         </div>
         <div class="column is-8">
             {{ template "toolbar" . }}
-            <div @fir:project-query:ok:projects="$fir.replace()">
+            <div @fir:query:ok:projects.window="$fir.replace()">
                 {{ block "projects" . }}
                     <div
                         id="projects"
-                        @fir:create-project:ok:projectitem.window="$fir.appendEl()">
+                        @fir:create:ok:projectitem.window="$fir.appendEl()">
                         {{ range .projects }}
                             {{ template "projectitem" . }}
                         {{ else }}
