@@ -79,8 +79,16 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 }
 
 type createReq struct {
-	Title       string `json:"title" schema:"title,required"`
-	Description string `json:"description" schema:"description,required"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+func toFieldError(ctx fir.RouteContext, err error) error {
+	var validError *ent.ValidationError
+	if errors.As(err, &validError) {
+		return ctx.FieldError(validError.Name, validError.Unwrap())
+	}
+	return err
 }
 
 func createProject(db *ent.Client) fir.OnEventFunc {
@@ -89,19 +97,13 @@ func createProject(db *ent.Client) fir.OnEventFunc {
 		if err := ctx.Bind(&req); err != nil {
 			return err
 		}
-		if len(req.Title) < 3 {
-			return ctx.FieldError("title", errors.New("title is too short"))
-		}
-		if len(req.Description) < 3 {
-			return ctx.FieldError("description", errors.New("description is too short"))
-		}
 		project, err := db.Project.
 			Create().
 			SetTitle(req.Title).
 			SetDescription(req.Description).
 			Save(ctx.Request().Context())
 		if err != nil {
-			return err
+			return toFieldError(ctx, err)
 		}
 		return ctx.Data(project)
 	}

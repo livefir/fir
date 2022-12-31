@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/livefir/fir/examples/fira/ent/project"
 	"github.com/google/uuid"
+	"github.com/livefir/fir/examples/fira/ent/project"
 )
 
 // Project is the model entity for the Project schema.

@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/livefir/fir/examples/fira/ent/issue"
 	"github.com/livefir/fir/examples/fira/ent/project"
-	"github.com/google/uuid"
 )
 
 // Issue is the model entity for the Issue schema.

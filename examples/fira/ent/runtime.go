@@ -5,10 +5,10 @@ package ent
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/livefir/fir/examples/fira/ent/issue"
 	"github.com/livefir/fir/examples/fira/ent/project"
 	"github.com/livefir/fir/examples/fira/ent/schema"
-	"github.com/google/uuid"
 )
 
 // The init function reads all schema descriptors with runtime code

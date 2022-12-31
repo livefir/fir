@@ -10,10 +10,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/livefir/fir/examples/fira/ent/issue"
 	"github.com/livefir/fir/examples/fira/ent/predicate"
 	"github.com/livefir/fir/examples/fira/ent/project"
-	"github.com/google/uuid"
 )
 
 // IssueQuery is the builder for querying Issue entities.

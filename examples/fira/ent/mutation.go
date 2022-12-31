@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/livefir/fir/examples/fira/ent/issue"
 	"github.com/livefir/fir/examples/fira/ent/predicate"
 	"github.com/livefir/fir/examples/fira/ent/project"
-	"github.com/google/uuid"
 
 	"entgo.io/ent"
 )

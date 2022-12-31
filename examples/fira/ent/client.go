@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/livefir/fir/examples/fira/ent/migrate"
 	"github.com/google/uuid"
+	"github.com/livefir/fir/examples/fira/ent/migrate"
 
 	"github.com/livefir/fir/examples/fira/ent/issue"
 	"github.com/livefir/fir/examples/fira/ent/project"
