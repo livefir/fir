@@ -53,9 +53,9 @@
                 </div>
             </div>
         </div>
-        <div @fir:query:ok:pagination="$fir.replace()">
+        <div @fir:query:ok:pagination.window="$fir.replace()">
             {{ block "pagination" . }}
-                <nav
+                <div
                     id="pagination"
                     class="pagination is-right mt-4"
                     role="navigation"
@@ -78,7 +78,7 @@
                         value="{{ .next }}">
                         Next
                     </button>
-                </nav>
+                </div>
             {{ end }}
         </div>
     </form>
