@@ -211,6 +211,10 @@ func renderPatch(ctx RouteContext) patchRenderer {
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/favicon.ico" {
+		http.NotFound(w, r)
+		return
+	}
 	sessionID := rt.session.GetString(r.Context(), "id")
 	if sessionID == "" {
 		sessionID = uuid.New().String()
