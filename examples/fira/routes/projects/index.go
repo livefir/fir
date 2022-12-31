@@ -74,10 +74,7 @@ func loadProjects(db *ent.Client) fir.OnEventFunc {
 		q.defaultPageSize = defaultPageSize
 
 		data := map[string]any{"projects": projects}
-		for k, v := range paginationData(q) {
-			data[k] = v
-		}
-		return ctx.Data(data)
+		return ctx.Data(data, paginationData(q))
 	}
 }
 
