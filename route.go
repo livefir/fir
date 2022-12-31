@@ -437,17 +437,23 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 
 func handlePostFormResult(err error, ctx RouteContext) {
 	if err == nil {
-		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+		if ctx.event.Redirect {
+			http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+		}
 		return
 	}
 
 	switch err.(type) {
 	case *routeData:
 		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
-		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+		if ctx.event.Redirect {
+			http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+		}
 	case dom.Patcher:
 		// ignore patchset since this is a full page render
-		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+		if ctx.event.Redirect {
+			http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+		}
 	default:
 		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
 	}

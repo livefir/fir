@@ -29,6 +29,7 @@ type Event struct {
 	Params   json.RawMessage `json:"params"`
 	FormID   *string         `json:"form_id,omitempty"`
 	SourceID *string         `json:"source_id,omitempty"`
+	Redirect bool            `json:"redirect,omitempty"`
 }
 
 // String returns the string representation of the event

@@ -31,7 +31,7 @@ func filterCities(str string) map[string]any {
 			result = append(result, city)
 		}
 	}
-	return map[string]any{"cities": result}
+	return map[string]any{"cities": result, "query": str}
 }
 
 type queryRequest struct {
@@ -39,15 +39,17 @@ type queryRequest struct {
 }
 
 func index() fir.RouteOptions {
+	query := func(ctx fir.RouteContext) error {
+		req := new(queryRequest)
+		if err := ctx.Bind(req); err != nil {
+			return err
+		}
+		return ctx.Data(filterCities(req.Query))
+	}
 	return fir.RouteOptions{
 		fir.Content("app.html"),
-		fir.OnEvent("query", func(ctx fir.RouteContext) error {
-			req := new(queryRequest)
-			if err := ctx.Bind(req); err != nil {
-				return err
-			}
-			return ctx.Data(filterCities(req.Query))
-		}),
+		fir.OnLoad(query),
+		fir.OnEvent("query", query),
 	}
 }
 
