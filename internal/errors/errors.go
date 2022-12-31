@@ -2,7 +2,6 @@ package errors
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -18,8 +17,8 @@ func (f Fields) Map() map[string]string {
 
 func (f Fields) Error() string {
 	var errs []string
-	for field, err := range f {
-		errs = append(errs, fmt.Sprintf("%s: %s", field, err.Error()))
+	for _, err := range f {
+		errs = append(errs, err.Error())
 	}
 	return strings.Join(errs, ", ")
 }
