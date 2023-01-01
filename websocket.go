@@ -15,7 +15,7 @@ import (
 	"github.com/livefir/fir/internal/dom"
 )
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
+func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionUserStore userStore) {
 	channel := route.channelFunc(r, route.id)
 	if channel == nil {
 		glog.Errorf("[onWebsocket] error: channel is empty")
@@ -33,6 +33,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 
 	// eventSender
 	go func() {
+
 		for event := range route.eventSender {
 			eventCtx := RouteContext{
 				event:      event,
@@ -40,7 +41,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 				response:   w,
 				route:      route,
 				domPatcher: dom.NewPatcher(),
-				session:    route.session,
+				// ignore user store for server events because you don't want to affect user state from a non-user event
+				userStore: make(map[string]any),
 			}
 			glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 			onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
@@ -49,7 +51,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route) {
 				continue
 			}
 
-			handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
+			// ignore user store for server events
+			_ = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
 		}
 	}()
 
@@ -109,7 +112,7 @@ loop:
 			response:   w,
 			route:      route,
 			domPatcher: dom.NewPatcher(),
-			session:    route.session,
+			userStore:  sessionUserStore,
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)
@@ -119,7 +122,7 @@ loop:
 			continue
 		}
 
-		handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
+		sessionUserStore = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
 	}
 }
 

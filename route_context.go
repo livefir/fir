@@ -2,17 +2,25 @@ package fir
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 
-	"github.com/alexedwards/scs/v2"
 	"github.com/fatih/structs"
+	"github.com/gorilla/sessions"
 	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 )
+
+type userStore map[string]any
+
+func init() {
+	gob.Register(userStore{})
+}
 
 // RouteContext is the context for a route handler.
 // Its methods are used to return data or patch operations to the client.
@@ -24,7 +32,8 @@ type RouteContext struct {
 	route      *route
 	isOnLoad   bool
 	domPatcher dom.Patcher
-	session    *scs.SessionManager
+	userStore  userStore
+	session    *sessions.Session
 }
 
 func (c RouteContext) Event() Event {
@@ -221,4 +230,8 @@ func (c *RouteContext) renderBlock(name string, data any) dom.TemplateRenderer {
 // renderHTML is a utility function for rendering raw html on the server
 func (c *RouteContext) renderHTML(html string) dom.TemplateRenderer {
 	return c.renderTemplate("_fir_html", html)
+}
+
+func (c *RouteContext) routeKey(suffix string) string {
+	return fmt.Sprintf("%s:%s", c.route.id, suffix)
 }

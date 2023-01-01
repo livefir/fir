@@ -1,11 +1,11 @@
 {{ define "content" }}
     <div x-data id="content">
         <p>
-            {{ .fir.Error "default" }}
+            {{ .fir.Error "onload" }}
         </p>
         <p @fir:create-tweet:error:create-err.window="$fir.replace()">
             {{ block "create-err" . }}
-                {{ .fir.Error "create-tweet.route" }}
+                {{ .fir.Error "create-tweet" }}
             {{ end }}
         </p>
 

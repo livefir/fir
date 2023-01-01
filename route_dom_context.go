@@ -44,7 +44,12 @@ func (rc *RouteDOMContext) NotActiveRoute(path, class string) string {
 // It can be used in conjunction with ctx.FieldError to get the error for a field
 func (rc *RouteDOMContext) Error(paths ...string) any {
 	data, _ := json.Marshal(rc.errors)
-	return gjson.GetBytes(data, getErrorLookupPath(paths...)).Value()
+	val := gjson.GetBytes(data, getErrorLookupPath(paths...)).Value()
+	_, ok := val.(map[string]any)
+	if ok {
+		return nil
+	}
+	return val
 }
 func getErrorLookupPath(paths ...string) string {
 	path := ""
