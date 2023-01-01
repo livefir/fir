@@ -409,7 +409,7 @@ const Plugin = (Alpine) => {
                 })
                 .catch((error) => {
                     console.error(
-                        `${endEventName} error: ${error}, request body: ${body}`,
+                        `${eventIdLower} error: ${error}, request body: ${body}`,
                         error
                     )
                 })
