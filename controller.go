@@ -8,10 +8,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
+	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
+	"github.com/lithammer/shortuuid/v4"
 	"github.com/livefir/fir/pubsub"
 )
 
@@ -27,6 +29,7 @@ type opt struct {
 	websocketUpgrader websocket.Upgrader
 
 	disableTemplateCache bool
+	disableWebsocket     bool
 	debugLog             bool
 	enableWatch          bool
 	watchExts            []string
@@ -38,11 +41,28 @@ type opt struct {
 	appName              string
 	formDecoder          *schema.Decoder
 	validator            *validator.Validate
-	session              *scs.SessionManager
+	sessionStore         sessions.Store
+	sessionKeyPairs      [][]byte
+	sessionName          string
 }
 
 // ControllerOption is an option for the controller.
 type ControllerOption func(*opt)
+
+// WithSessionKey is an option to set the secret cookie session key for the controller.
+// https://pkg.go.dev/github.com/gorilla/sessions#NewCookie
+func WithSessionKeyPairs(sessionKeyPairs ...[]byte) ControllerOption {
+	return func(o *opt) {
+		o.sessionKeyPairs = sessionKeyPairs
+	}
+}
+
+// WithSessionName is an option to set the cookie session name for the controller.
+func WithSessionName(name string) ControllerOption {
+	return func(o *opt) {
+		o.sessionName = name
+	}
+}
 
 // WithChannelFunc is an option to set a function to construct the channel name for the controller's views.
 func WithChannel(f func(r *http.Request, viewID string) *string) ControllerOption {
@@ -91,6 +111,12 @@ func WithFormDecoder(decoder *schema.Decoder) ControllerOption {
 func WithValidator(validator *validator.Validate) ControllerOption {
 	return func(o *opt) {
 		o.validator = validator
+	}
+}
+
+func WithDisableWebsocket() ControllerOption {
+	return func(o *opt) {
+		o.disableWebsocket = true
 	}
 }
 
@@ -146,9 +172,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 		return name
 	})
 
-	sessionManager := scs.New()
-	sessionManager.Cookie.Name = "_fir_session_"
-
 	o := &opt{
 		channelFunc:       defaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
@@ -157,12 +180,15 @@ func NewController(name string, options ...ControllerOption) Controller {
 		appName:           name,
 		formDecoder:       formDecoder,
 		validator:         validate,
-		session:           sessionManager,
+		sessionKeyPairs:   [][]byte{[]byte(securecookie.GenerateRandomKey(32))},
+		sessionName:       "_fir_session_",
 	}
 
 	for _, option := range options {
 		option(o)
 	}
+
+	o.sessionStore = sessions.NewCookieStore(o.sessionKeyPairs...)
 
 	if o.publicDir == "" {
 		var publicDir string
@@ -202,6 +228,7 @@ type controller struct {
 }
 
 var defaultRouteOpt = &routeOpt{
+	id:                shortuuid.New(),
 	content:           "Hello Fir App!",
 	layoutContentName: "content",
 	partials:          []string{"./routes/partials"},
@@ -219,7 +246,7 @@ func (c *controller) Route(route Route) http.HandlerFunc {
 		option(defaultRouteOpt)
 	}
 
-	return c.sessionHandlerFunc(newRoute(c, defaultRouteOpt))
+	return newRoute(c, defaultRouteOpt).ServeHTTP
 }
 
 // RouteFunc returns an http.HandlerFunc that renders the route
@@ -228,9 +255,5 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 		option(defaultRouteOpt)
 	}
 
-	return c.sessionHandlerFunc(newRoute(c, defaultRouteOpt))
-}
-
-func (c *controller) sessionHandlerFunc(route *route) http.HandlerFunc {
-	return c.session.LoadAndSave(route).ServeHTTP
+	return newRoute(c, defaultRouteOpt).ServeHTTP
 }

@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	"github.com/google/uuid"
 	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 )
@@ -202,7 +201,13 @@ func renderPatch(ctx RouteContext) patchRenderer {
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, patchset...)
 		if err != nil {
-			glog.Errorf("[onPatchEvent] error publishing patch: %v\n", err)
+			glog.Warningf("[onPatchEvent] error publishing patch: %v\n", err)
+		}
+		ctx.session.Values["user-store"] = ctx.userStore
+		// Save it before we write to the response/return from the handler.
+		err = ctx.session.Save(ctx.request, ctx.response)
+		if err != nil {
+			http.Error(ctx.response, err.Error(), http.StatusInternalServerError)
 			return err
 		}
 		ctx.response.Write(dom.MarshalPatchset(ctx.route.template, patchset))
@@ -215,15 +220,29 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	sessionID := rt.session.GetString(r.Context(), "id")
-	if sessionID == "" {
-		sessionID = uuid.New().String()
-		rt.session.Put(r.Context(), "id", sessionID)
-	}
+
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
 		// onWebsocket: upgrade to websocket
-		onWebsocket(w, r, rt)
+		if rt.disableWebsocket {
+			http.Error(w, "websocket is disabled", http.StatusForbidden)
+			return
+		}
+	}
+
+	session, err := rt.sessionStore.Get(r, rt.sessionName)
+	if err != nil {
+		glog.Errorf("[ServeHTTP] error getting session: %v\n", err)
+	}
+
+	sessionUserStore := userStore{}
+	if val, ok := session.Values["user-store"]; ok {
+		sessionUserStore = val.(userStore)
+	}
+
+	if r.Header.Get("Connection") == "Upgrade" &&
+		r.Header.Get("Upgrade") == "websocket" {
+		onWebsocket(w, r, rt, sessionUserStore)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
@@ -249,6 +268,8 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			response:   w,
 			route:      rt,
 			domPatcher: dom.NewPatcher(),
+			userStore:  sessionUserStore,
+			session:    session,
 		}
 
 		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
@@ -303,7 +324,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				route:      rt,
 				urlValues:  urlValues,
 				domPatcher: dom.NewPatcher(),
-				session:    rt.session,
+				userStore:  sessionUserStore,
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -324,7 +345,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				route:      rt,
 				isOnLoad:   true,
 				domPatcher: dom.NewPatcher(),
-				session:    rt.session,
+				userStore:  sessionUserStore,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
@@ -349,7 +370,7 @@ func renderErrorBlock(ctx RouteContext, eventErrorID string, errs map[string]any
 	return patchsetData
 }
 
-func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
+func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) userStore {
 	if err == nil {
 		sourceID := ""
 		if ctx.event.SourceID != nil {
@@ -360,15 +381,15 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 		// check if error was previously set for this event
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// if error was previously set, then remove it and dispatch event to unset error
-		if ctx.session.GetInt(ctx.request.Context(), eventErrorID) == 1 {
-			ctx.session.Remove(ctx.request.Context(), eventErrorID)
+		if _, ok := ctx.userStore[ctx.routeKey(eventErrorID)]; ok {
+			delete(ctx.userStore, ctx.routeKey(eventErrorID))
 			ctx.route.RLock()
 			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
 			ctx.route.RUnlock()
 		}
 
 		render(patchsetData...)
-		return
+		return ctx.userStore
 	}
 
 	switch errVal := err.(type) {
@@ -379,13 +400,13 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			fieldErrors[field] = err.Error()
 		}
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
-		ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
+		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
 		ctx.route.RLock()
 		patchsetData := renderErrorBlock(ctx, eventErrorID, map[string]any{ctx.event.ID: fieldErrors})
 		ctx.route.RUnlock()
 
 		render(patchsetData...)
-		return
+		return ctx.userStore
 	case *routeData:
 		data := *errVal
 
@@ -414,51 +435,44 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) {
 			if !strings.HasSuffix(eventErrorID, ":error") {
 				continue
 			}
-			if ctx.session.GetInt(ctx.request.Context(), eventErrorID) != 1 {
+			if _, ok := ctx.userStore[ctx.routeKey(eventErrorID)]; !ok {
 				continue
 			}
 
 			// remove error from session
-			ctx.session.Remove(ctx.request.Context(), eventErrorID)
+			delete(ctx.userStore, ctx.routeKey(eventErrorID))
 			// unset error if previously set
 			patchsetData = renderErrorBlock(ctx, eventErrorID, nil)
 		}
 		ctx.route.RUnlock()
 		render(patchsetData...)
-		return
+		return ctx.userStore
 	default:
 		var patchsetData dom.Patchset
 		errs := map[string]any{ctx.event.ID: firErrors.User(err).Error()}
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// mark error as set in session
-		ctx.session.Put(ctx.request.Context(), eventErrorID, 1)
+		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
 		ctx.route.RLock()
 		patchsetData = renderErrorBlock(ctx, eventErrorID, errs)
 		ctx.route.RUnlock()
 		render(patchsetData...)
-		return
+		return ctx.userStore
 	}
 }
 
 func handlePostFormResult(err error, ctx RouteContext) {
 	if err == nil {
-		if ctx.event.Redirect {
-			http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
-		}
+		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 		return
 	}
 
 	switch err.(type) {
 	case *routeData:
-		handleOnLoadResult(ctx.route.onLoad(ctx), nil, ctx)
-		if ctx.event.Redirect {
-			http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
-		}
+		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 	case dom.Patcher:
 		// ignore patchset since this is a full page render
-		if ctx.event.Redirect {
-			http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
-		}
+		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 	default:
 		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
 	}
@@ -472,11 +486,10 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"default":    onFormErr.Error()}
+				}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.Map(),
-					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -494,11 +507,10 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"default":    onFormErr.Error()}
+				}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.Map(),
-					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -511,11 +523,11 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				errs = map[string]any{
 					ctx.event.ID: onFormErr.Error(),
-					"default":    onFormErr.Error()}
+					"onload":     fmt.Sprintf("%v", errVal)}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.Map(),
-					"default":    fmt.Sprintf("%v", fieldErrorsVal),
+					"onload":     fmt.Sprintf("%v", errVal),
 				}
 			}
 		}
@@ -529,12 +541,10 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
 			if !ok {
 				errs = map[string]any{
-					ctx.event.ID: onFormErr.Error(),
-					"default":    onFormErr.Error()}
+					ctx.event.ID: onFormErr.Error()}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.Map(),
-					"default":    fmt.Sprintf("%v", fieldErrorsVal),
 				}
 			}
 		}
@@ -546,21 +556,20 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			if !ok {
 				// err is not nil and not routeData and onFormErr is not nil and not fieldErrors
 				// merge err and onFormErr
-				mergedErr := fmt.Errorf("%v %v", err, onFormErr)
+
 				errs = map[string]any{
-					ctx.event.ID: mergedErr,
-					"default":    mergedErr,
+					ctx.event.ID: onFormErr,
+					"onload":     errVal,
 				}
 			} else {
 				errs = map[string]any{
 					ctx.event.ID: fieldErrorsVal.Map(),
-					"default":    fmt.Sprintf("%v", fieldErrorsVal),
+					"onload":     fmt.Sprintf("%v", errVal),
 				}
 			}
 		} else {
 			errs = map[string]any{
-				ctx.event.ID: err.Error(),
-				"default":    err.Error()}
+				"onload": err.Error()}
 		}
 		renderRoute(ctx)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 	}
