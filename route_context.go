@@ -218,17 +218,22 @@ func (c RouteContext) FieldErrors(fields map[string]error) error {
 }
 
 // renderTemplate renders a partial template on the server
-func (c *RouteContext) renderTemplate(name string, data any) dom.TemplateRenderer {
+func (c *RouteContext) renderTemplate(name string, data any) dom.Renderer {
 	return dom.NewTemplateRenderer(name, data)
 }
 
 // renderBlock renders a partial template on the server and is an alias for RenderTemplate(...)
-func (c *RouteContext) renderBlock(name string, data any) dom.TemplateRenderer {
+func (c *RouteContext) renderBlock(name string, data any) dom.Renderer {
 	return c.renderTemplate(name, data)
 }
 
+// renderJSON renders json
+func (c *RouteContext) renderJSON(data any) dom.Renderer {
+	return dom.NewJSONRenderer(data)
+}
+
 // renderHTML is a utility function for rendering raw html on the server
-func (c *RouteContext) renderHTML(html string) dom.TemplateRenderer {
+func (c *RouteContext) renderHTML(html string) dom.Renderer {
 	return c.renderTemplate("_fir_html", html)
 }
 

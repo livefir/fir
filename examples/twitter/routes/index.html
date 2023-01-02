@@ -15,9 +15,11 @@
 
         <form
             id="create-tweet"
+            x-ref="createTweet"
             method="post"
             action="/?event=create-tweet"
             @submit.prevent="$fir.submit()"
+            @fir:create-tweet:ok.window="$refs.createTweet.reset()"
             style="margin-top:1rem;margin-bottom:1rem;">
             <input type="text" name="body" placeholder="a new tweet" />
             <!-- validation error for the name=body set by ctx.FieldError(...) -->

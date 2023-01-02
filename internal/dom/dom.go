@@ -21,17 +21,17 @@ func NewPatcher() Patcher {
 
 type Patcher interface {
 	// ReplaceEl patches the dom element at the given selector with the rendered template
-	ReplaceEl(selector string, t TemplateRenderer) Patcher
+	ReplaceEl(selector string, t Renderer) Patcher
 	// ReplaceContent patches the dom element content at the given selector with the rendered template
-	ReplaceContent(selector string, t TemplateRenderer) Patcher
+	ReplaceContent(selector string, t Renderer) Patcher
 	// After patches the dom element after the given selector with the rendered template
-	AfterEl(selector string, t TemplateRenderer) Patcher
+	AfterEl(selector string, t Renderer) Patcher
 	// Before patches the dom element before the given selector with the rendered template
-	BeforeEl(selector string, t TemplateRenderer) Patcher
+	BeforeEl(selector string, t Renderer) Patcher
 	// Append patches the dom element  after the given selector with the rendered template
-	AppendEl(selector string, t TemplateRenderer) Patcher
+	AppendEl(selector string, t Renderer) Patcher
 	// Prepend patches the dom element before the given selector with the rendered template
-	PrependEl(selector string, t TemplateRenderer) Patcher
+	PrependEl(selector string, t Renderer) Patcher
 	// Remove patches the dom element to remove the given selector
 	RemoveEl(selector string) Patcher
 	// Reload patches the dom  to reload the page
@@ -43,7 +43,7 @@ type Patcher interface {
 	// Navigate patches the dom to navigate to the given url
 	Navigate(url string) Patcher
 	// DispatchEvent patches the dom to dispatch the given event
-	DispatchEvent(selector, eventSourceID string, t TemplateRenderer) Patcher
+	DispatchEvent(selector, eventSourceID string, t Renderer) Patcher
 	// Patchset returns the patchset
 	Patchset() Patchset
 	// Error satisfies the error interface so that Context can return a Patcher
@@ -89,7 +89,7 @@ type patcher struct {
 	patchset Patchset
 }
 
-func (p *patcher) ReplaceEl(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) ReplaceEl(selector string, t Renderer) Patcher {
 	templateName := t.Name()
 	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
@@ -100,7 +100,7 @@ func (p *patcher) ReplaceEl(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) ReplaceContent(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) ReplaceContent(selector string, t Renderer) Patcher {
 	templateName := t.Name()
 	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
@@ -111,7 +111,7 @@ func (p *patcher) ReplaceContent(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) AfterEl(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) AfterEl(selector string, t Renderer) Patcher {
 	templateName := t.Name()
 	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
@@ -122,7 +122,7 @@ func (p *patcher) AfterEl(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) BeforeEl(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) BeforeEl(selector string, t Renderer) Patcher {
 	templateName := t.Name()
 	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
@@ -133,7 +133,7 @@ func (p *patcher) BeforeEl(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) AppendEl(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) AppendEl(selector string, t Renderer) Patcher {
 	templateName := t.Name()
 	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
@@ -144,7 +144,7 @@ func (p *patcher) AppendEl(selector string, t TemplateRenderer) Patcher {
 	return p
 }
 
-func (p *patcher) PrependEl(selector string, t TemplateRenderer) Patcher {
+func (p *patcher) PrependEl(selector string, t Renderer) Patcher {
 	templateName := t.Name()
 	templateData := t.Data()
 	p.patchset = append(p.patchset, Patch{
@@ -195,7 +195,7 @@ func (p *patcher) Navigate(url string) Patcher {
 	return p
 }
 
-func (p *patcher) DispatchEvent(selector, eventSourceID string, t TemplateRenderer) Patcher {
+func (p *patcher) DispatchEvent(selector, eventSourceID string, t Renderer) Patcher {
 	eventID := fmt.Sprintf("fir:%s", selector)
 	patch := Patch{
 		Type:          DispatchEvent,
@@ -207,8 +207,10 @@ func (p *patcher) DispatchEvent(selector, eventSourceID string, t TemplateRender
 	if t != nil {
 		templateName := t.Name()
 		templateData := t.Data()
-		selector = fmt.Sprintf("fir:%s:%s", selector, templateName)
-		patch.Selector = &selector
+		if templateName != "" {
+			selector = fmt.Sprintf("fir:%s:%s", selector, templateName)
+			patch.Selector = &selector
+		}
 		patch.Value = map[string]any{"name": templateName, "data": templateData}
 	}
 	p.patchset = append(p.patchset, patch)
@@ -242,11 +244,20 @@ func MarshalPatchset(t *template.Template, patchset []Patch) []byte {
 				continue
 			}
 
-			var err error
-			p.Value, err = buildTemplateValue(t, tmpl["name"].(string), tmpl["data"])
-			if err != nil {
-				glog.Errorf("[warning]buildPatchOperations error: %v,%+v \n", err, tmpl)
+			if tmpl["name"] == nil || tmpl["data"] == nil {
+				glog.Errorf("[buildPatchOperations] invalid patch template data: %v", p.Value)
 				continue
+			}
+
+			if tmpl["name"].(string) == "" {
+				p.Value = tmpl["data"]
+			} else {
+				var err error
+				p.Value, err = buildTemplateValue(t, tmpl["name"].(string), tmpl["data"])
+				if err != nil {
+					glog.Errorf("[warning]buildPatchOperations error: %v,%+v \n", err, tmpl)
+					continue
+				}
 			}
 
 			renderedPatchset = append(renderedPatchset, p)

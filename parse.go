@@ -145,7 +145,7 @@ func parseEventRenderMapping(rt *route, r io.Reader) {
 				if len(eventnsParts) > 3 {
 					glog.Errorf(`
 					error: invalid event namespace: %s. 
-					must be of the format => @fir:<event>:<ok|error>:<block>`, eventns)
+					must be of the format => @fir:<event>:<ok|error>:<block-name|optional>`, eventns)
 					continue
 				}
 
@@ -175,7 +175,7 @@ func parseEventRenderMapping(rt *route, r io.Reader) {
 					eventID = strings.Join(eventnsParts[0:2], ":")
 				}
 
-				templateName := ""
+				templateName := "-"
 				if len(eventnsParts) == 3 {
 					if !slices.Contains([]string{"ok", "error"}, eventnsParts[1]) {
 						glog.Errorf(`
@@ -194,13 +194,12 @@ func parseEventRenderMapping(rt *route, r io.Reader) {
 				if !ok {
 					blocks = make(map[string]struct{})
 				}
-				if templateName != "" {
-					blocks[templateName] = struct{}{}
-				}
+
+				blocks[templateName] = struct{}{}
+
 				//fmt.Printf("eventID: %s, blocks: %v\n", eventID, blocks)
 				rt.eventTemplateMap[eventID] = blocks
 				rt.Unlock()
-
 			}
 		}
 
