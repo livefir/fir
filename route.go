@@ -361,6 +361,13 @@ func renderErrorBlock(ctx RouteContext, eventErrorID string, errs map[string]any
 	}
 	var patchsetData dom.Patchset
 	for block := range ctx.route.eventTemplateMap[eventErrorID] {
+		if block == "-" {
+			patchsetData = ctx.dom().DispatchEvent(
+				eventErrorID,
+				sourceID,
+				ctx.renderJSON(errs)).Patchset()
+			continue
+		}
 		patchsetData = ctx.dom().DispatchEvent(
 			eventErrorID,
 			sourceID,
@@ -419,16 +426,15 @@ func handleOnEventResult(err error, ctx RouteContext, render patchRenderer) user
 		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
 		ctx.route.RLock()
 		for block := range ctx.route.eventTemplateMap[eventOkID] {
+			if block == "-" {
+				patchsetData = ctx.dom().DispatchEvent(eventOkID, sourceID,
+					ctx.renderJSON(data)).Patchset()
+				continue
+			}
 			patchsetData = ctx.dom().DispatchEvent(eventOkID, sourceID,
 				ctx.renderBlock(block, data)).Patchset()
 		}
-		ctx.route.RUnlock()
 
-		if ctx.event.FormID != nil && *ctx.event.FormID != "" {
-			patchsetData = ctx.dom().ResetForm(fmt.Sprintf("#%s", *ctx.event.FormID)).Patchset()
-		}
-
-		ctx.route.RLock()
 		// check if errors were set in a previous sesion
 		for eventErrorID := range ctx.route.eventTemplateMap {
 			// skip if not error event

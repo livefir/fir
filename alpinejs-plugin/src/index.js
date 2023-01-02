@@ -215,6 +215,11 @@ const Plugin = (Alpine) => {
                                     url.searchParams.delete(key)
                                 }
                             })
+                            url.searchParams.forEach((value, key) => {
+                                if (!formData.has(key)) {
+                                    url.searchParams.delete(key)
+                                }
+                            })
                             window.history.pushState({}, '', url)
                         }
                         return
