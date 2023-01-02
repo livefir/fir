@@ -1,5 +1,6 @@
 {{ define "toolbar" }}
     <form
+        x-ref="queryForm"
         class="mb-4"
         action="/?event=query"
         @query-changed="$fir.submit()"
@@ -38,6 +39,7 @@
                 <div class="field has-addons">
                     <div class="control is-expanded">
                         <input
+                            x-ref="search"
                             @input.debounce.500ms="$dispatch('query-changed')"
                             name="search"
                             class="input"
@@ -61,7 +63,6 @@
                     role="navigation"
                     aria-label="pagination">
                     <button
-                        x-ref="prev"
                         type="submit"
                         class="button is-small {{ if not .hasPrevious }}
                             is-static
@@ -71,7 +72,6 @@
                         Previous
                     </button>
                     <button
-                        x-ref="next"
                         type="submit"
                         class="button is-small {{ if not .hasNext }}
                             is-static
