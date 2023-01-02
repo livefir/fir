@@ -61,6 +61,7 @@
                     role="navigation"
                     aria-label="pagination">
                     <button
+                        x-ref="prev"
                         type="submit"
                         class="button is-small {{ if not .hasPrevious }}
                             is-static
@@ -70,6 +71,7 @@
                         Previous
                     </button>
                     <button
+                        x-ref="next"
                         type="submit"
                         class="button is-small {{ if not .hasNext }}
                             is-static
