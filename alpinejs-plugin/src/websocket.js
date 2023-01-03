@@ -59,9 +59,9 @@ export default websocket = (url, socketOptions, invokeOperation) => {
         socket.onclose = (event) => reOpenSocket()
         socket.onmessage = (event) => {
             try {
-                const patchOperations = JSON.parse(event.data)
-                patchOperations.forEach((patchOperation) => {
-                    invokeOperation(patchOperation)
+                const serverEvents = JSON.parse(event.data)
+                serverEvents.forEach((ev) => {
+                    invokeOperation(ev)
                 })
             } catch (e) {}
         }

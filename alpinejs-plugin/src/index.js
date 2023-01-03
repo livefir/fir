@@ -25,9 +25,13 @@ const Plugin = (Alpine) => {
     const socket = websocket(
         connectURL,
         [],
-        (patchOperation) => operations[patchOperation.op](patchOperation),
+        (ev) => dispatchServerEvent(ev),
         updateStore
     )
+
+    window.addEventListener('fir:reload', () => {
+        window.location.reload()
+    })
 
     Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
         const val = evaluate(expression)
@@ -104,7 +108,7 @@ const Plugin = (Alpine) => {
                     post(el, {
                         event_id: id,
                         params: params,
-                        source_id: el.id,
+                        target: el.id,
                     })
                 }
             },
@@ -202,7 +206,7 @@ const Plugin = (Alpine) => {
                             event_id: eventID,
                             params: params,
                             form_id: form.id,
-                            source_id: el.id,
+                            target: el.id,
                             redirect: redirect,
                         })
 
@@ -283,75 +287,34 @@ const Plugin = (Alpine) => {
         el.remove()
     }
 
-    const operations = {
-        replaceElement: (operation) =>
-            selectAll(operation, (el, value) => {
-                morphElement(el, value)
-            }),
-        replaceContent: (operation) =>
-            selectAll(operation, (el, value) => {
-                let toHTML = el.cloneNode(false)
-                toHTML.innerHTML = value.trim()
-                morphElement(el, toHTML.outerHTML)
-            }),
-        after: (operation) =>
-            selectAll(operation, (el, value) => {
-                afterElement(el, value)
-            }),
-        before: (operation) =>
-            selectAll(operation, (el, value) => {
-                beforeElement(el, value)
-            }),
-        append: (operation) =>
-            selectAll(operation, (el, value) => {
-                appendElement(el, value)
-            }),
-        prepend: (operation) =>
-            selectAll(operation, (el, value) => {
-                prependElement(el, value)
-            }),
-        remove: (operation) =>
-            selectAll(operation, (el, value) => {
-                removeElement(el)
-            }),
-        reload: () => window.location.reload(),
-        resetForm: (operation) =>
-            selectAll(operation, (el, value) => {
-                if (el instanceof HTMLFormElement) {
-                    el.reset()
-                }
-            }),
-        navigate: (operation) => window.location.replace(operation.selector),
-        store: (operation) => updateStore(operation.selector, operation.value),
-        dispatchEvent: (operation) => {
-            const event = new CustomEvent(operation.selector, {
-                detail: operation.value,
-                bubbles: true,
-                // Allows events to pass the shadow DOM barrier.
-                composed: true,
-                cancelable: true,
-            })
-            if (!operation.eid) {
-                //document.dispatchEvent(event)
-                window.dispatchEvent(event)
-                return
-            }
+    const dispatchServerEvent = (serverEvent) => {
+        const customEvent = new CustomEvent(serverEvent.type, {
+            detail: serverEvent.detail,
+            bubbles: true,
+            // Allows events to pass the shadow DOM barrier.
+            composed: true,
+            cancelable: true,
+        })
+        if (!serverEvent.target) {
+            //document.dispatchEvent(event)
+            window.dispatchEvent(customEvent)
+            return
+        }
 
-            const elem = document.getElementById(operation.eid)
-            const getSiblings = (elm) =>
-                elm &&
-                elm.parentNode &&
-                [...elm.parentNode.children].filter(
-                    (node) =>
-                        node != elm &&
-                        (node.hasAttribute(`@${operation.selector}`) ||
-                            node.hasAttribute(`x-on:${operation.selector}`))
-                )
+        const elem = document.getElementById(serverEvent.target)
+        const getSiblings = (elm) =>
+            elm &&
+            elm.parentNode &&
+            [...elm.parentNode.children].filter(
+                (node) =>
+                    node != elm &&
+                    (node.hasAttribute(`@${serverEvent.type}`) ||
+                        node.hasAttribute(`x-on:${serverEvent.type}`))
+            )
 
-            const sibs = getSiblings(elem)
-            sibs.forEach((sib) => sib.dispatchEvent(event))
-            elem.dispatchEvent(event)
-        },
+        const sibs = getSiblings(elem)
+        sibs.forEach((sib) => sib.dispatchEvent(customEvent))
+        elem.dispatchEvent(customEvent)
     }
 
     const post = (el, firEvent) => {
@@ -407,9 +370,9 @@ const Plugin = (Alpine) => {
                 body: body,
             })
                 .then((response) => response.json())
-                .then((patchOperations) => {
-                    patchOperations.forEach((patchOperation) => {
-                        operations[patchOperation.op](patchOperation)
+                .then((serverEvents) => {
+                    serverEvents.forEach((ev) => {
+                        dispatchServerEvent(ev)
                     })
                 })
                 .catch((error) => {

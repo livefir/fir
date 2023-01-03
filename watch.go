@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/pubsub"
 	"golang.org/x/exp/slices"
 )
 
@@ -38,8 +38,7 @@ func watchTemplates(wc *controller) {
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					patcher := dom.NewPatcher()
-					wc.pubsub.Publish(context.Background(), devReloadChannel, patcher.Reload().Patchset()...)
+					wc.pubsub.Publish(context.Background(), devReloadChannel, pubsub.Event{Type: fir("reload")})
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:

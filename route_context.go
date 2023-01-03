@@ -12,7 +12,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/gorilla/sessions"
-	"github.com/livefir/fir/internal/dom"
+
 	firErrors "github.com/livefir/fir/internal/errors"
 )
 
@@ -25,23 +25,18 @@ func init() {
 // RouteContext is the context for a route handler.
 // Its methods are used to return data or patch operations to the client.
 type RouteContext struct {
-	event      Event
-	request    *http.Request
-	response   http.ResponseWriter
-	urlValues  url.Values
-	route      *route
-	isOnLoad   bool
-	domPatcher dom.Patcher
-	userStore  userStore
-	session    *sessions.Session
+	event     Event
+	request   *http.Request
+	response  http.ResponseWriter
+	urlValues url.Values
+	route     *route
+	isOnLoad  bool
+	userStore userStore
+	session   *sessions.Session
 }
 
 func (c RouteContext) Event() Event {
 	return c.event
-}
-
-func (c RouteContext) dom() dom.Patcher {
-	return c.domPatcher
 }
 
 // Bind decodes the event params into the given struct
@@ -215,26 +210,6 @@ func (c RouteContext) FieldErrors(fields map[string]error) error {
 		}
 	}
 	return &m
-}
-
-// renderTemplate renders a partial template on the server
-func (c *RouteContext) renderTemplate(name string, data any) dom.Renderer {
-	return dom.NewTemplateRenderer(name, data)
-}
-
-// renderBlock renders a partial template on the server and is an alias for RenderTemplate(...)
-func (c *RouteContext) renderBlock(name string, data any) dom.Renderer {
-	return c.renderTemplate(name, data)
-}
-
-// renderJSON renders json
-func (c *RouteContext) renderJSON(data any) dom.Renderer {
-	return dom.NewJSONRenderer(data)
-}
-
-// renderHTML is a utility function for rendering raw html on the server
-func (c *RouteContext) renderHTML(html string) dom.Renderer {
-	return c.renderTemplate("_fir_html", html)
 }
 
 func (c *RouteContext) routeKey(suffix string) string {

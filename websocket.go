@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
-	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/pubsub"
 )
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionUserStore userStore) {
@@ -36,11 +36,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionUs
 
 		for event := range route.eventSender {
 			eventCtx := RouteContext{
-				event:      event,
-				request:    r,
-				response:   w,
-				route:      route,
-				domPatcher: dom.NewPatcher(),
+				event:    event,
+				request:  r,
+				response: w,
+				route:    route,
 				// ignore user store for server events because you don't want to affect user state from a non-user event
 				userStore: make(map[string]any),
 			}
@@ -52,7 +51,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionUs
 			}
 
 			// ignore user store for server events
-			_ = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
+			_ = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 		}
 	}()
 
@@ -66,7 +65,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionUs
 
 	go func() {
 		for patchset := range subscription.C() {
-			go writePatchOperations(conn, *channel, route.template, patchset)
+			go writeDOMevents(conn, *channel, route.template, patchset)
 		}
 	}()
 
@@ -81,7 +80,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, route *route, sessionUs
 
 		go func() {
 			for patchset := range reloadSubscriber.C() {
-				go writePatchOperations(conn, devReloadChannel, route.template, patchset)
+				go writeDOMevents(conn, devReloadChannel, route.template, patchset)
 			}
 		}()
 	}
@@ -107,12 +106,11 @@ loop:
 		}
 
 		eventCtx := RouteContext{
-			event:      event,
-			request:    r,
-			response:   w,
-			route:      route,
-			domPatcher: dom.NewPatcher(),
-			userStore:  sessionUserStore,
+			event:     event,
+			request:   r,
+			response:  w,
+			route:     route,
+			userStore: sessionUserStore,
 		}
 
 		glog.Errorf("[onWebsocket] received event: %+v\n", event)
@@ -122,14 +120,14 @@ loop:
 			continue
 		}
 
-		sessionUserStore = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishPatch(ctx, eventCtx))
+		sessionUserStore = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 	}
 }
 
-func writePatchOperations(conn *websocket.Conn, channel string, t *template.Template, patchset dom.Patchset) error {
-	message := dom.MarshalPatchset(t, patchset)
+func writeDOMevents(conn *websocket.Conn, channel string, t *template.Template, pubsubEvents []pubsub.Event) error {
+	message := domEvents(t, pubsubEvents)
 	if len(message) == 0 {
-		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, patchset %+v", channel, patchset)
+		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, events %+v", channel, pubsubEvents)
 		log.Println(err)
 		return err
 	}
