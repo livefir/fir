@@ -11,7 +11,7 @@
 
         <div
             @fir:create-tweet:pending.window="console.log('create tweet start')"
-            @fir:create-tweet:done.window="console.log('create tweet done')"></div>
+            @fir:create-tweet:ok.window="console.log('create tweet done')"></div>
 
         <form
             id="create-tweet"
@@ -31,7 +31,7 @@
                 {{ end }}
             </p>
 
-            <button type="submit">Submit</button>
+            <button type="submit">Tweet it!</button>
         </form>
         <div @fir:create-tweet:ok:tweet.window="$fir.appendEl()">
             {{ range .tweets }}

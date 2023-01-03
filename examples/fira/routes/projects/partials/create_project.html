@@ -5,6 +5,8 @@
         </p>
 
         <form
+            x-ref="createForm"
+            @fir:create:ok.window="$refs.createForm.reset()"
             method="post"
             action="/?event=create"
             @submit.prevent="$fir.submit()">
