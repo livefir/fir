@@ -358,6 +358,7 @@ func buildErrorEvents(ctx RouteContext, eventErrorID string, errs map[string]any
 	}
 	var pubsubEvents []pubsub.Event
 	for block := range ctx.route.eventTemplateMap[eventErrorID] {
+		block := block
 		if block == "-" {
 			pubsubEvents = append(pubsubEvents, pubsub.Event{
 				Type:   fir(eventErrorID),
@@ -430,6 +431,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
 		ctx.route.RLock()
 		for block := range ctx.route.eventTemplateMap[eventOkID] {
+			block := block
 			if block == "-" {
 				pubsubEvents = append(pubsubEvents, pubsub.Event{
 					Type:   fir(eventOkID),
