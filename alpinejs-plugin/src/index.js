@@ -351,14 +351,6 @@ const Plugin = (Alpine) => {
         }
 
         if (socket.emit(firEvent)) {
-            el.dispatchEvent(
-                new CustomEvent(`fir:${eventIdLower}:done`, options)
-            )
-            if (eventIdLower !== eventIdKebab) {
-                el.dispatchEvent(
-                    new CustomEvent(`fir:${eventIdKebab}:done`, options)
-                )
-            }
         } else {
             const body = JSON.stringify(firEvent)
             fetch(window.location.pathname, {
@@ -380,16 +372,6 @@ const Plugin = (Alpine) => {
                         `${eventIdLower} error: ${error}, request body: ${body}`,
                         error
                     )
-                })
-                .finally(() => {
-                    el.dispatchEvent(
-                        new CustomEvent(`fir:${eventIdLower}:done`, options)
-                    )
-                    if (eventIdLower !== eventIdKebab) {
-                        el.dispatchEvent(
-                            new CustomEvent(`fir:${eventIdKebab}:done`, options)
-                        )
-                    }
                 })
         }
     }

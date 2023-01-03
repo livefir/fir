@@ -159,16 +159,16 @@ func parseEventRenderMapping(rt *route, r io.Reader) {
 				}
 				eventID := eventnsParts[0]
 				if len(eventnsParts) >= 2 {
-					if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventnsParts[1]) {
+					if !slices.Contains([]string{"ok", "error", "pending"}, eventnsParts[1]) {
 						glog.Errorf(`
 						error: invalid event namespace: %s. 
 						it must be of the format => 
-						@fir:<event>:<ok|error>:<block> or
-						@fir:<event>:<pending|done>`, eventns)
+						@fir:<event>:<ok|error>:<block|optional> or
+						@fir:<event>:<pending>`, eventns)
 						continue
 					}
 					if len(eventnsParts) == 2 {
-						if eventnsParts[1] == "pending" || eventnsParts[1] == "done" {
+						if eventnsParts[1] == "pending" {
 							continue
 						}
 					}
@@ -181,9 +181,9 @@ func parseEventRenderMapping(rt *route, r io.Reader) {
 						glog.Errorf(`
 						error: invalid event namespace: %s. 
 						it must be of the format => 
-						@fir:<event>:<ok|error>:<block> or
-						@fir:<event>:<pending|done>.
-						<block> cannot be set for <pending|done>`, eventns)
+						@fir:<event>:<ok|error>:<block|optional> or
+						@fir:<event>:<pending>.
+						<block> cannot be set for <pending> since its client only`, eventns)
 						continue
 					}
 					templateName = eventnsParts[2]
