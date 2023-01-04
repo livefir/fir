@@ -11,21 +11,23 @@
     <body>
         <div x-data>
             {{ define "input-text" }}
-                <form
-                    method="post"
-                    @submit="$fir.submit()"
-                    @fir:rm-input-text:ok="$fir.deleteEl()">
-                    <input
-                        type="text"
-                        name="text"
-                        placeholder="input something" />
-                    <button
-                        formaction="/?event=remove"
-                        name="element"
-                        value="input-text">
-                        Remove
-                    </button>
-                </form>
+                <div @fir:remove:ok="$fir.removeEl()">
+                    <form
+                        :id="$id('input-text')"
+                        method="post"
+                        @submit.prevent="$fir.submit()">
+                        <input
+                            type="text"
+                            name="text"
+                            placeholder="input something" />
+                        <button
+                            formaction="/?event=remove"
+                            name="element"
+                            value="input-text">
+                            Remove
+                        </button>
+                    </form>
+                </div>
             {{ end }}
 
 
@@ -38,7 +40,7 @@
                 </button>
             </form>
 
-            <div @fir:add:ok:input-text="$fir.appendEl()"></div>
+            <div @fir:add:ok:input-text.window="$fir.appendEl()"></div>
         </div>
     </body>
 </html>

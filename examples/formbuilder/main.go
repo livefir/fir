@@ -8,7 +8,7 @@ import (
 
 func index() fir.RouteOptions {
 	return fir.RouteOptions{
-		fir.ID("quickstart"),
+		fir.ID("formbuilder"),
 		fir.Content("app.html"),
 		fir.OnLoad(func(ctx fir.RouteContext) error {
 			return nil
@@ -23,7 +23,7 @@ func index() fir.RouteOptions {
 }
 
 func main() {
-	controller := fir.NewController("quickstart_app", fir.DevelopmentMode(true))
+	controller := fir.NewController("formbuilder", fir.DevelopmentMode(true))
 	http.Handle("/", controller.RouteFunc(index))
 	http.ListenAndServe(":9867", nil)
 }
