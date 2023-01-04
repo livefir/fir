@@ -377,28 +377,46 @@ func buildErrorEvents(ctx RouteContext, eventErrorID string, errs map[string]any
 	return pubsubEvents
 }
 
+func buildOKEvents(ctx RouteContext, eventOKID string, data map[string]any) []pubsub.Event {
+	target := ""
+	if ctx.event.Target != nil {
+		target = *ctx.event.Target
+	}
+	var pubsubEvents []pubsub.Event
+	for block := range ctx.route.eventTemplateMap[eventOKID] {
+		block := block
+		if block == "-" {
+			pubsubEvents = append(pubsubEvents, pubsub.Event{
+				Type:   fir(eventOKID),
+				Target: &target,
+				Data:   data,
+			})
+			continue
+		}
+		pubsubEvents = append(pubsubEvents, pubsub.Event{
+			Type:         fir(eventOKID, block),
+			Target:       &target,
+			TemplateName: &block,
+			Data:         data,
+		})
+	}
+	return pubsubEvents
+}
+
 func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) userStore {
 	if err == nil {
-		sourceID := ""
-		if ctx.event.Target != nil {
-			sourceID = *ctx.event.Target
-		}
 		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
-		var pubsubEvents []pubsub.Event
-		pubsubEvents = append(pubsubEvents, pubsub.Event{
-			Type:   fir(eventOkID),
-			Target: &sourceID,
-		})
-
+		ctx.route.RLock()
+		pubsubEvents := buildOKEvents(ctx, eventOkID, nil)
 		// check if error was previously set for this event
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// if error was previously set, then remove it and dispatch event to unset error
 		if _, ok := ctx.userStore[ctx.routeKey(eventErrorID)]; ok {
 			delete(ctx.userStore, ctx.routeKey(eventErrorID))
-			ctx.route.RLock()
 			pubsubEvents = append(pubsubEvents, buildErrorEvents(ctx, eventErrorID, nil)...)
-			ctx.route.RUnlock()
+
 		}
+		ctx.route.RUnlock()
 
 		publish(pubsubEvents...)
 		return ctx.userStore
@@ -421,34 +439,9 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 		return ctx.userStore
 	case *routeData:
 		data := *errVal
-
-		var pubsubEvents []pubsub.Event
-		target := ""
-		if ctx.event.Target != nil {
-			target = *ctx.event.Target
-		}
-
 		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
 		ctx.route.RLock()
-		for block := range ctx.route.eventTemplateMap[eventOkID] {
-			block := block
-			if block == "-" {
-				pubsubEvents = append(pubsubEvents, pubsub.Event{
-					Type:   fir(eventOkID),
-					Target: &target,
-					Data:   data,
-				})
-				continue
-			}
-			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				Type:         fir(eventOkID, block),
-				Target:       &target,
-				TemplateName: &block,
-				Data:         data,
-			})
-
-		}
-
+		pubsubEvents := buildOKEvents(ctx, eventOkID, data)
 		// check if errors were set in a previous sesion
 		for eventErrorID := range ctx.route.eventTemplateMap {
 			// skip if not error event
