@@ -40,7 +40,6 @@ type opt struct {
 	pubsub               pubsub.Adapter
 	appName              string
 	formDecoder          *schema.Decoder
-	validator            *validator.Validate
 	sessionStore         sessions.Store
 	sessionKeyPairs      [][]byte
 	sessionName          string
@@ -104,13 +103,6 @@ func WithPublicDir(path string) ControllerOption {
 func WithFormDecoder(decoder *schema.Decoder) ControllerOption {
 	return func(o *opt) {
 		o.formDecoder = decoder
-	}
-}
-
-// WithValidator is an option to set the validator(go-playground/validator) for the controller.
-func WithValidator(validator *validator.Validate) ControllerOption {
-	return func(o *opt) {
-		o.validator = validator
 	}
 }
 
@@ -179,7 +171,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 		pubsub:            pubsub.NewInmem(),
 		appName:           name,
 		formDecoder:       formDecoder,
-		validator:         validate,
 		sessionKeyPairs:   [][]byte{[]byte(securecookie.GenerateRandomKey(32))},
 		sessionName:       "_fir_session_",
 	}
