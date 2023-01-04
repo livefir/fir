@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        <div x-data>
+            {{ define "input-text" }}
+                <form
+                    method="post"
+                    @submit="$fir.submit()"
+                    @fir:rm-input-text:ok="$fir.deleteEl()">
+                    <input
+                        type="text"
+                        name="text"
+                        placeholder="input something" />
+                    <button
+                        formaction="/?event=remove"
+                        name="element"
+                        value="input-text">
+                        Remove
+                    </button>
+                </form>
+            {{ end }}
+
+
+            <form method="post" @submit.prevent="$fir.submit()">
+                <button
+                    formaction="/?event=add"
+                    name="element"
+                    value="input-text">
+                    Add input
+                </button>
+            </form>
+
+            <div @fir:add:ok:input-text="$fir.appendEl()"></div>
+        </div>
+    </body>
+</html>
