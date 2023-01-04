@@ -1,19 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <title>{{.app_name}}</title>
-    <meta charset="UTF-8">
-    <script defer src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-</head>
-
-<body>
-    <div x-data>
-        {{block "count" .}}<div id="count">{{.count}}</div>{{end}}
-        <button @click="$fir.emit('inc')">+</button>
-        <button @click="$fir.emit('dec')">-</button>
-    </div>
-</body>
-
+    <head>
+        <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        <div x-data>
+            <div
+                @fir:inc:ok:count.window="$fir.replace()"
+                @fir:dec:ok:count.window="$fir.replace()">
+                {{ block "count" . }}
+                    <div>
+                        Count:
+                        {{ .count }}
+                    </div>
+                {{ end }}
+            </div>
+            <form method="post" @submit.prevent="$fir.submit()">
+                <button formaction="/?event=inc" type="submit">+</button>
+                <button formaction="/?event=dec" type="submit">-</button>
+            </form>
+        </div>
+    </body>
 </html>

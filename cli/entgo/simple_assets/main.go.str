@@ -8,31 +8,24 @@ import (
 )
 
 func index() fir.RouteOptions {
-	var value int32
-
-	load := func(ctx fir.Context) error {
-		return ctx.KV("count", atomic.LoadInt32(&value))
-	}
-
-	inc := func(ctx fir.Context) error {
-		return ctx.ReplaceKV("count", atomic.AddInt32(&value, 1))
-	}
-
-	dec := func(ctx fir.Context) error {
-		return ctx.ReplaceKV("count", atomic.AddInt32(&value, -1))
-	}
-
+	var count int32
 	return fir.RouteOptions{
-		fir.ID("counter"),
+		fir.ID("quickstart"),
 		fir.Content("app.html"),
-		fir.OnLoad(load),
-		fir.OnEvent("inc", inc),
-		fir.OnEvent("dec", dec),
+		fir.OnLoad(func(ctx fir.RouteContext) error {
+			return ctx.KV("count", atomic.LoadInt32(&count))
+		}),
+		fir.OnEvent("inc", func(ctx fir.RouteContext) error {
+			return ctx.KV("count", atomic.AddInt32(&count, 1))
+		}),
+		fir.OnEvent("dec", func(ctx fir.RouteContext) error {
+			return ctx.KV("count", atomic.AddInt32(&count, -1))
+		}),
 	}
 }
 
 func main() {
-	controller := fir.NewController("app", fir.DevelopmentMode(true))
+	controller := fir.NewController("quickstart_app", fir.DevelopmentMode(true))
 	http.Handle("/", controller.RouteFunc(index))
 	http.ListenAndServe(":9867", nil)
 }
