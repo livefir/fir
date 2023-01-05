@@ -230,6 +230,12 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var pathParams PathParams
+	if rt.pathParamsFunc != nil {
+		pathParams = rt.pathParamsFunc(r)
+		r = r.WithContext(context.WithValue(r.Context(), PathParamsKey, pathParams))
+	}
+
 	session, err := rt.sessionStore.Get(r, rt.sessionName)
 	if err != nil {
 		glog.Errorf("[ServeHTTP] error getting session: %v\n", err)

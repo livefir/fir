@@ -16,6 +16,17 @@ import (
 	firErrors "github.com/livefir/fir/internal/errors"
 )
 
+type ContextKey int
+
+const (
+	// PathParamsKey is the key for the path params in the request context.
+	PathParamsKey ContextKey = iota
+	// UserIDKey is the key for the user id in the request context. It is used in the default channel function.
+	UserIDKey
+)
+
+type PathParams map[string]any
+
 type userStore map[string]any
 
 func init() {
@@ -79,19 +90,23 @@ func (c RouteContext) BindPathParams(v any) error {
 		v = m
 		return nil
 	}
+	pathParams, ok := c.request.Context().Value(PathParamsKey).(PathParams)
+	if !ok {
+		return nil
+	}
 	s := structs.New(v)
 	for _, field := range s.Fields() {
 		if field.IsExported() {
-			if value := c.request.Context().Value(field.Tag("json")); value != nil && !reflect.ValueOf(v).IsZero() {
-				err := field.Set(value)
+			if v, ok := pathParams[field.Tag("json")]; ok {
+				err := field.Set(v)
 				if err != nil {
 					return err
 				}
 				continue
 			}
 
-			if value := c.request.Context().Value(field.Name()); value != nil && !reflect.ValueOf(v).IsZero() {
-				err := field.Set(value)
+			if v, ok := pathParams[field.Tag("json")]; ok {
+				err := field.Set(v)
 				if err != nil {
 					return err
 				}

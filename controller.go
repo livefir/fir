@@ -26,6 +26,7 @@ type Controller interface {
 
 type opt struct {
 	channelFunc       func(r *http.Request, viewID string) *string
+	pathParamsFunc    func(r *http.Request) PathParams
 	websocketUpgrader websocket.Upgrader
 
 	disableTemplateCache bool
@@ -64,9 +65,15 @@ func WithSessionName(name string) ControllerOption {
 }
 
 // WithChannelFunc is an option to set a function to construct the channel name for the controller's views.
-func WithChannel(f func(r *http.Request, viewID string) *string) ControllerOption {
+func WithChannelFunc(f func(r *http.Request, viewID string) *string) ControllerOption {
 	return func(o *opt) {
 		o.channelFunc = f
+	}
+}
+
+func WithPathParamsFunc(f func(r *http.Request) PathParams) ControllerOption {
+	return func(o *opt) {
+		o.pathParamsFunc = f
 	}
 }
 
