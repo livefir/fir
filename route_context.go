@@ -227,6 +227,10 @@ func (c RouteContext) FieldErrors(fields map[string]error) error {
 	return &m
 }
 
-func (c *RouteContext) routeKey(suffix string) string {
+func (c RouteContext) Status(code int, err error) error {
+	return &firErrors.Status{Code: code, Err: firErrors.User(err)}
+}
+
+func (c RouteContext) routeKey(suffix string) string {
 	return fmt.Sprintf("%s:%s", c.route.id, suffix)
 }

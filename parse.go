@@ -12,15 +12,15 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
+func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*template.Template, error) {
 	// is content html content or a file/directory
-	pageContentPath := filepath.Join(opt.publicDir, opt.content)
+	pageContentPath := filepath.Join(opt.publicDir, content)
 	if isFileOrString(pageContentPath, opt) {
 		return template.Must(
 			template.New(
-				opt.layoutContentName).
+				layoutContentName).
 				Funcs(opt.funcMap).
-				Parse(opt.content)), nil
+				Parse(content)), nil
 	}
 	// content must be  a file or directory
 
@@ -41,11 +41,11 @@ func layoutEmptyContentSet(opt routeOpt) (*template.Template, error) {
 	return contentTemplate, nil
 }
 
-func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
-	pageLayoutPath := filepath.Join(opt.publicDir, opt.layout)
+func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, error) {
+	pageLayoutPath := filepath.Join(opt.publicDir, layout)
 	// is layout html content or a file/directory
 	if isFileOrString(pageLayoutPath, opt) {
-		return template.Must(template.New("").Funcs(opt.funcMap).Parse(opt.layout)), nil
+		return template.Must(template.New("").Funcs(opt.funcMap).Parse(layout)), nil
 	}
 
 	// layout must be  a file
@@ -69,8 +69,8 @@ func layoutSetContentEmpty(opt routeOpt) (*template.Template, error) {
 	return template.Must(layoutTemplate.Clone()), nil
 }
 
-func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
-	layoutTemplate, err := layoutSetContentEmpty(opt)
+func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string) (*template.Template, error) {
+	layoutTemplate, err := layoutSetContentEmpty(opt, layout)
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +83,13 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 	// 2. add content to layout
 	// check if content is a not a file or directory
 	var pageTemplate *template.Template
-	pageContentPath := filepath.Join(opt.publicDir, opt.content)
+	pageContentPath := filepath.Join(opt.publicDir, content)
 	if isFileOrString(pageContentPath, opt) {
-		pageTemplate = template.Must(layoutTemplate.Parse((opt.content)))
+		pageTemplate = template.Must(layoutTemplate.Parse((content)))
 	} else {
 		var pageFiles []string
 		// page and its partials
-		pageFiles = append(pageFiles, find(opt, filepath.Join(opt.publicDir, opt.content), opt.extensions)...)
+		pageFiles = append(pageFiles, find(opt, filepath.Join(opt.publicDir, content), opt.extensions)...)
 		if opt.hasEmbedFS {
 			pageTemplate = template.Must(layoutTemplate.Funcs(opt.funcMap).ParseFS(opt.embedFS, pageFiles...))
 		} else {
@@ -98,16 +98,16 @@ func layoutSetContentSet(opt routeOpt) (*template.Template, error) {
 	}
 
 	// check if the final pageTemplate contains a content child template which is `content` by default.
-	if ct := pageTemplate.Lookup(opt.layoutContentName); ct == nil {
+	if ct := pageTemplate.Lookup(layoutContentName); ct == nil {
 		return nil,
 			fmt.Errorf("err looking up layoutContent: the layout %s expects a template named %s",
-				opt.layout, opt.layoutContentName)
+				layout, layoutContentName)
 	}
 
 	return pageTemplate, nil
 }
 
-// creates a html/template from the Page type.
+// creates a html/template for the route
 func parseTemplate(opt routeOpt) (*template.Template, error) {
 	// if both layout and content is empty show a default page.
 	if opt.layout == "" && opt.content == "" {
@@ -117,16 +117,42 @@ func parseTemplate(opt routeOpt) (*template.Template, error) {
 
 	// if layout is set and content is empty
 	if opt.layout != "" && opt.content == "" {
-		return layoutSetContentEmpty(opt)
+		return layoutSetContentEmpty(opt, opt.layout)
 	}
 
 	// if layout is empty and content is set
 	if opt.layout == "" && opt.content != "" {
-		return layoutEmptyContentSet(opt)
+		return layoutEmptyContentSet(opt, opt.content, opt.layoutContentName)
 	}
 
 	// both layout and content are set
-	return layoutSetContentSet(opt)
+	return layoutSetContentSet(opt, opt.content, opt.layout, opt.layoutContentName)
+}
+
+// creates a html/template for the route errors
+func parseErrorTemplate(opt routeOpt) (*template.Template, error) {
+	if opt.errorLayout == "" {
+		opt.errorLayout = opt.layout
+		opt.errorLayoutContentName = opt.layoutContentName
+	}
+	// if both layout and content is empty show a default page.
+	if opt.errorLayout == "" && opt.errorContent == "" {
+		return template.Must(template.New("").
+			Parse(`<div style="text-align:center"> This is a default page. </div>`)), nil
+	}
+
+	// if layout is set and content is empty
+	if opt.errorLayout != "" && opt.errorContent == "" {
+		return layoutSetContentEmpty(opt, opt.errorLayout)
+	}
+
+	// if layout is empty and content is set
+	if opt.errorLayout == "" && opt.errorContent != "" {
+		return layoutEmptyContentSet(opt, opt.errorContent, opt.errorLayoutContentName)
+	}
+
+	// both layout and content are set
+	return layoutSetContentSet(opt, opt.errorContent, opt.errorLayout, opt.errorLayoutContentName)
 }
 
 func parseEventRenderMapping(rt *route, r io.Reader) {

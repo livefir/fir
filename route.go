@@ -68,6 +68,35 @@ func LayoutContentName(name string) RouteOption {
 	}
 }
 
+// ErrorLayout sets the layout for the route's template engine
+func ErrorLayout(layout string) RouteOption {
+	return func(opt *routeOpt) {
+		opt.errorLayout = layout
+	}
+}
+
+// ErrorContent sets the content for the route
+func ErrorContent(content string) RouteOption {
+	return func(opt *routeOpt) {
+		opt.errorContent = content
+	}
+}
+
+// ErrorLayoutContentName sets the name of the template which contains the content.
+/*
+ {{define "layout"}}
+ {{ define "content" }}
+ {{ end }}
+ {{end}}
+
+ Here "content" is the default layout content name
+*/
+func ErrorLayoutContentName(name string) RouteOption {
+	return func(opt *routeOpt) {
+		opt.errorLayoutContentName = name
+	}
+}
+
 // Partials sets the template partials for the route's template engine
 func Partials(partials ...string) RouteOption {
 	return func(opt *routeOpt) {
@@ -133,22 +162,26 @@ func (r *routeData) Error() string {
 type routeRenderer func(data routeData) error
 type eventPublisher func(events ...pubsub.Event) error
 type routeOpt struct {
-	id                string
-	layout            string
-	content           string
-	layoutContentName string
-	partials          []string
-	extensions        []string
-	funcMap           template.FuncMap
-	eventSender       chan Event
-	onLoad            OnEventFunc
-	onEvents          map[string]OnEventFunc
+	id                     string
+	layout                 string
+	errorLayout            string
+	errorContent           string
+	content                string
+	layoutContentName      string
+	errorLayoutContentName string
+	partials               []string
+	extensions             []string
+	funcMap                template.FuncMap
+	eventSender            chan Event
+	onLoad                 OnEventFunc
+	onEvents               map[string]OnEventFunc
 	opt
 }
 
 type route struct {
 	cntrl            *controller
 	template         *template.Template
+	errorTemplate    *template.Template
 	allTemplates     []string
 	eventTemplateMap map[string]map[string]struct{}
 	routeOpt
@@ -162,16 +195,20 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 		cntrl:            cntrl,
 		eventTemplateMap: make(map[string]map[string]struct{}),
 	}
-	rt.parseTemplate()
+	rt.parseTemplates()
 	return rt
 }
 
-func renderRoute(ctx RouteContext) routeRenderer {
+func renderRoute(ctx RouteContext, errorRoute bool) routeRenderer {
 	return func(data routeData) error {
-		ctx.route.parseTemplate()
-		ctx.route.template.Option("missingkey=zero")
+		ctx.route.parseTemplates()
 		var buf bytes.Buffer
-		err := ctx.route.template.Execute(&buf, data)
+		tmpl := ctx.route.template
+		if errorRoute {
+			tmpl = ctx.route.errorTemplate
+		}
+		tmpl.Option("missingkey=zero")
+		err := tmpl.Execute(&buf, data)
 		if err != nil {
 			glog.Errorf("[renderRoute] error executing template: %v\n", err)
 			return err
@@ -185,7 +222,7 @@ func renderRoute(ctx RouteContext) routeRenderer {
 func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 	return func(pubsubEvents ...pubsub.Event) error {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
-		eventCtx.route.parseTemplate()
+		eventCtx.route.parseTemplates()
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvents...)
 		if err != nil {
 			glog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
@@ -197,7 +234,7 @@ func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 
 func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 	return func(pubsubEvents ...pubsub.Event) error {
-		ctx.route.parseTemplate()
+		ctx.route.parseTemplates()
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvents...)
 		if err != nil {
@@ -429,6 +466,16 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 	}
 
 	switch errVal := err.(type) {
+	case *firErrors.Status:
+		errs := map[string]any{ctx.event.ID: firErrors.User(errVal.Err).Error()}
+		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
+		// mark error as set in session
+		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
+		ctx.route.RLock()
+		pubsubEvents := buildErrorEvents(ctx, eventErrorID, errs)
+		ctx.route.RUnlock()
+		publish(pubsubEvents...)
+		return ctx.userStore
 	case *firErrors.Fields:
 		fieldErrorsData := *errVal
 		fieldErrors := make(map[string]any)
@@ -440,7 +487,6 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 		ctx.route.RLock()
 		pubsubEvents := buildErrorEvents(ctx, eventErrorID, map[string]any{ctx.event.ID: fieldErrors})
 		ctx.route.RUnlock()
-
 		publish(pubsubEvents...)
 		return ctx.userStore
 	case *routeData:
@@ -467,7 +513,6 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 		publish(pubsubEvents...)
 		return ctx.userStore
 	default:
-
 		errs := map[string]any{ctx.event.ID: firErrors.User(err).Error()}
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// mark error as set in session
@@ -510,7 +555,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, false)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 		return
 	}
 
@@ -531,7 +576,25 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 		onLoadData["fir"] = newRouteDOMContext(ctx, errs)
-		renderRoute(ctx)(onLoadData)
+		renderRoute(ctx, false)(onLoadData)
+
+	case firErrors.Status:
+		errs := make(map[string]any)
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
+			if !ok {
+				errs = map[string]any{
+					ctx.event.ID: onFormErr.Error(),
+					"onload":     fmt.Sprintf("%v", errVal.Error())}
+			} else {
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.Map(),
+					"onload":     fmt.Sprintf("%v", errVal.Error()),
+				}
+			}
+		}
+
+		renderRoute(ctx, true)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 	case firErrors.Fields:
 		errs := make(map[string]any)
 		if onFormErr != nil {
@@ -548,7 +611,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, false)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 	default:
 		var errs map[string]any
 		if onFormErr != nil {
@@ -571,15 +634,19 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			errs = map[string]any{
 				"onload": err.Error()}
 		}
-		renderRoute(ctx)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, false)(routeData{"fir": newRouteDOMContext(ctx, errs)})
 	}
 
 }
 
-func (rt *route) parseTemplate() {
+func (rt *route) parseTemplates() {
 	var err error
 	if rt.template == nil || (rt.template != nil && rt.disableTemplateCache) {
 		rt.template, err = parseTemplate(rt.routeOpt)
+		if err != nil {
+			panic(err)
+		}
+		rt.errorTemplate, err = parseErrorTemplate(rt.routeOpt)
 		if err != nil {
 			panic(err)
 		}

@@ -2,6 +2,7 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -29,4 +30,13 @@ func User(err error) error {
 		userError = wrappedUserError
 	}
 	return userError
+}
+
+type Status struct {
+	Code int
+	Err  error
+}
+
+func (s Status) Error() string {
+	return fmt.Sprintf("%d: %s", s.Code, s.Err.Error())
 }
