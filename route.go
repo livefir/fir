@@ -265,12 +265,10 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "websocket is disabled", http.StatusForbidden)
 			return
 		}
-	}
-
-	var pathParams PathParams
-	if rt.pathParamsFunc != nil {
-		pathParams = rt.pathParamsFunc(r)
-		r = r.WithContext(context.WithValue(r.Context(), PathParamsKey, pathParams))
+	} else {
+		if rt.pathParamsFunc != nil {
+			r = r.WithContext(context.WithValue(r.Context(), PathParamsKey, rt.pathParamsFunc(r)))
+		}
 	}
 
 	session, err := rt.sessionStore.Get(r, rt.sessionName)

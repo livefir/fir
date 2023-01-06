@@ -96,7 +96,7 @@ loop:
 		var event Event
 		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
 		if err != nil {
-			glog.Errorf("[onWebsocket] err: parsing event, msg %s \n", string(message))
+			glog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
 			continue
 		}
 
