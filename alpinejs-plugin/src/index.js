@@ -89,13 +89,13 @@ const Plugin = (Alpine) => {
                             return
                         }
                     } else {
-                        if (!el.id) {
+                        if (!el.getAttribute('id')) {
                             console.error(
                                 `event id is empty and element id is not set. can't emit event`
                             )
                             return
                         }
-                        id = el.id
+                        id = el.getAttribute('id')
                     }
                     if (params) {
                         if (!isObject(params)) {
@@ -108,7 +108,7 @@ const Plugin = (Alpine) => {
                     post(el, {
                         event_id: id,
                         params: params,
-                        target: el.id,
+                        target: el.getAttribute('id'),
                     })
                 }
             },
@@ -133,7 +133,10 @@ const Plugin = (Alpine) => {
                     }
 
                     if (
-                        (!id && !form.id && !form.action && !event.submitter) ||
+                        (!id &&
+                            !form.getAttribute('id') &&
+                            !form.action &&
+                            !event.submitter) ||
                         (event.submitter && !event.submitter.formAction)
                     ) {
                         console.error(`event id is empty, form element id is not set, form action is not set,
@@ -158,15 +161,18 @@ const Plugin = (Alpine) => {
                     }
 
                     // update form errors store
-                    const prevStore = Object.assign({}, Alpine.store(form.id))
+                    const prevStore = Object.assign(
+                        {},
+                        Alpine.store(form.getAttribute('id'))
+                    )
                     const nextStore = { ...prevStore, ...formErrors }
-                    Alpine.store(form.id, nextStore)
+                    Alpine.store(form.getAttribute('id'), nextStore)
                     if (Object.keys(formErrors.errors).length == 0) {
                         let formData = new FormData(form)
                         let eventID = id
                         if (!eventID) {
-                            if (form.id) {
-                                eventID = form.id
+                            if (form.getAttribute('id')) {
+                                eventID = form.getAttribute('id')
                             }
                             if (form.action) {
                                 const url = new URL(form.action)
@@ -201,12 +207,13 @@ const Plugin = (Alpine) => {
                         if (formMethod.toLowerCase() === 'post') {
                             redirect = true
                         }
+
                         // post event to server
                         post(el, {
                             event_id: eventID,
                             params: params,
-                            form_id: form.id,
-                            target: el.id,
+                            form_id: form.getAttribute('id'),
+                            target: el.getAttribute('id'),
                             redirect: redirect,
                         })
 
