@@ -16,6 +16,13 @@ const Plugin = (Alpine) => {
         Alpine.store(storeName, nextStore)
     }
 
+    const getRouteIDFromCookie = () => {
+        return document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('_fir_route_id='))
+            ?.split('=')[1]
+    }
+
     // connect to websocket
     let connectURL = `ws://${window.location.host}${window.location.pathname}`
     if (window.location.protocol === 'https:') {
@@ -23,11 +30,11 @@ const Plugin = (Alpine) => {
     }
 
     let socket
-    if (getRouteIDFromCookie) {
+    if (getRouteIDFromCookie()) {
         socket = websocket(
             connectURL,
             [],
-            (ev) => dispatchServerEvent(ev),
+            (events) => dispatchServerEvents(events),
             updateStore
         )
     } else {
@@ -287,20 +294,79 @@ const Plugin = (Alpine) => {
         el.remove()
     }
 
+    const dispatchServerEvents = (serverEvents) => {
+        if (!serverEvents) {
+            console.error(`server events is empty`)
+            return
+        }
+        if (serverEvents.length == 0) {
+            console.error(`server events is empty`)
+            return
+        }
+
+        const doneEvents = new Set()
+        serverEvents.forEach((serverEvent) => {
+            if (!serverEvent) {
+                console.error(`server event is empty`)
+                return
+            }
+            if (serverEvent && serverEvent.type == '') {
+                console.error(`server event type is empty`)
+                return
+            }
+
+            const parts = serverEvent.type.split(':')
+            if (parts.length < 2) {
+                console.error(
+                    `server event type ${serverEvent.type} is invalid`
+                )
+                return
+            }
+
+            if (parts[0] != 'fir') {
+                console.error(
+                    `server event type ${serverEvent.type} is invalid`
+                )
+                return
+            }
+            const eventName = parts[1]
+
+            if (eventName === 'onevent' || eventName === 'onload') {
+                return
+            }
+            if (doneEvents.has(eventName)) {
+                return
+            }
+            doneEvents.add(eventName)
+            serverEvents.push({
+                type: `fir:${eventName}:done`,
+                target: serverEvent.target,
+                detail: serverEvent.detail,
+            })
+        })
+
+        for (const doneEvent of doneEvents) {
+            serverEvents.push(doneEvent)
+        }
+        serverEvents.forEach((serverEvent) => {
+            dispatchServerEvent(serverEvent)
+        })
+    }
+
     const dispatchServerEvent = (serverEvent) => {
-        const customEvent = new CustomEvent(serverEvent.type, {
+        const opts = {
             detail: serverEvent.detail,
             bubbles: true,
             // Allows events to pass the shadow DOM barrier.
             composed: true,
             cancelable: true,
-        })
+        }
+        const renderEvent = new CustomEvent(serverEvent.type, opts)
         if (!serverEvent.target) {
             //document.dispatchEvent(event)
-            window.dispatchEvent(customEvent)
+            window.dispatchEvent(renderEvent)
             return
         }
-
         const elem = document.getElementById(serverEvent.target)
         const getSiblings = (elm) =>
             elm &&
@@ -311,10 +377,11 @@ const Plugin = (Alpine) => {
                     (node.hasAttribute(`@${serverEvent.type}`) ||
                         node.hasAttribute(`x-on:${serverEvent.type}`))
             )
-
         const sibs = getSiblings(elem)
-        sibs.forEach((sib) => sib.dispatchEvent(customEvent))
-        elem.dispatchEvent(customEvent)
+        sibs.forEach((sib) => {
+            sib.dispatchEvent(renderEvent)
+        })
+        elem.dispatchEvent(renderEvent)
     }
 
     const post = (el, firEvent) => {
@@ -364,9 +431,7 @@ const Plugin = (Alpine) => {
             })
                 .then((response) => response.json())
                 .then((serverEvents) => {
-                    serverEvents.forEach((ev) => {
-                        dispatchServerEvent(ev)
-                    })
+                    dispatchServerEvents(serverEvents)
                 })
                 .catch((error) => {
                     console.error(
@@ -375,13 +440,6 @@ const Plugin = (Alpine) => {
                     )
                 })
         }
-    }
-
-    const getRouteIDFromCookie = () => {
-        return document.cookie
-            .split('; ')
-            .find((row) => row.startsWith('_fir_route_id='))
-            ?.split('=')[1]
     }
 
     Alpine.plugin(morph)

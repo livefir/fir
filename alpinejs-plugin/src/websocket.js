@@ -1,6 +1,6 @@
 const reopenTimeouts = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
 
-export default websocket = (url, socketOptions, invokeOperation) => {
+export default websocket = (url, socketOptions, dispatchServerEvents) => {
     let socket, openPromise, reopenTimeoutHandler
     let reopenCount = 0
 
@@ -60,9 +60,7 @@ export default websocket = (url, socketOptions, invokeOperation) => {
         socket.onmessage = (event) => {
             try {
                 const serverEvents = JSON.parse(event.data)
-                serverEvents.forEach((ev) => {
-                    invokeOperation(ev)
-                })
+                dispatchServerEvents(serverEvents)
             } catch (e) {}
         }
 
