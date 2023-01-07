@@ -262,7 +262,6 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	fmt.Println(rt.cntrl.routes)
 
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
@@ -686,7 +685,6 @@ func (rt *route) buildEventRenderMapping() {
 	}
 
 	walkFile := func(page string) {
-		fmt.Printf("walkFile: %v, page: %v \n", rt.id, page)
 		pagePath := filepath.Join(opt.publicDir, page)
 		// is layout html content or a file/directory
 		if isFileOrString(pagePath, opt) {
@@ -735,5 +733,4 @@ func (rt *route) buildEventRenderMapping() {
 	if opt.errorContent != "" {
 		walkFile(opt.errorContent)
 	}
-	fmt.Printf("rt.eventRenderMapping %+v\n", rt.eventTemplateMap)
 }

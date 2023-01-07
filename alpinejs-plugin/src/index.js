@@ -22,12 +22,17 @@ const Plugin = (Alpine) => {
         connectURL = `wss://${window.location.host}${window.location.pathname}`
     }
 
-    const socket = websocket(
-        connectURL,
-        [],
-        (ev) => dispatchServerEvent(ev),
-        updateStore
-    )
+    let socket
+    if (getRouteIDFromCookie) {
+        socket = websocket(
+            connectURL,
+            [],
+            (ev) => dispatchServerEvent(ev),
+            updateStore
+        )
+    } else {
+        console.error('no route id found in cookie. websocket disabled')
+    }
 
     window.addEventListener('fir:reload', () => {
         window.location.reload()
