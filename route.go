@@ -199,12 +199,12 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	return rt
 }
 
-func renderRoute(ctx RouteContext, errorRoute bool) routeRenderer {
+func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	return func(data routeData) error {
 		ctx.route.parseTemplates()
 		var buf bytes.Buffer
 		tmpl := ctx.route.template
-		if errorRoute {
+		if errorRouteTemplate {
 			tmpl = ctx.route.errorTemplate
 		}
 		tmpl.Option("missingkey=zero")
@@ -359,6 +359,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			event := Event{
 				ID:     formAction,
 				Params: params,
+				IsForm: true,
 			}
 
 			eventCtx := RouteContext{

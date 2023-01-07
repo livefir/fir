@@ -31,7 +31,6 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, connRoute *route, sessi
 	for _, rt := range connRoute.cntrl.routes {
 		go func(route *route) {
 			defer wg.Done()
-			fmt.Printf("route: %+v\n", route.id)
 			channel := route.channelFunc(r, route.id)
 			if channel == nil {
 				glog.Errorf("[onWebsocket] error: channel is empty")
