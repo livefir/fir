@@ -198,8 +198,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 	}
 
 	c := &controller{
-		opt:  *o,
-		name: name,
+		opt:    *o,
+		name:   name,
+		routes: make(map[string]*route),
 	}
 	if c.developmentMode {
 		log.Println("controller starting in developer mode ...", c.developmentMode)
@@ -221,7 +222,8 @@ func NewController(name string, options ...ControllerOption) Controller {
 }
 
 type controller struct {
-	name string
+	name   string
+	routes map[string]*route
 	opt
 }
 
@@ -244,7 +246,9 @@ func (c *controller) Route(route Route) http.HandlerFunc {
 		option(defaultRouteOpt)
 	}
 
-	return newRoute(c, defaultRouteOpt).ServeHTTP
+	r := newRoute(c, defaultRouteOpt)
+	c.routes[r.id] = r
+	return r.ServeHTTP
 }
 
 // RouteFunc returns an http.HandlerFunc that renders the route
@@ -252,6 +256,7 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 	for _, option := range opts() {
 		option(defaultRouteOpt)
 	}
-
-	return newRoute(c, defaultRouteOpt).ServeHTTP
+	r := newRoute(c, defaultRouteOpt)
+	c.routes[r.id] = r
+	return r.ServeHTTP
 }

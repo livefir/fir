@@ -124,7 +124,7 @@ func (c RouteContext) BindEventParams(v any) error {
 	if c.event.Params == nil {
 		return nil
 	}
-	if c.event.FormID != nil {
+	if c.event.IsForm {
 		if len(c.urlValues) == 0 {
 			var urlValues url.Values
 			if err := json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(&urlValues); err != nil {

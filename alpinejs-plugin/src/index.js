@@ -4,7 +4,6 @@ import morph from '@alpinejs/morph'
 
 const Plugin = (Alpine) => {
     const iodine = new Iodine()
-
     // init default store
     Alpine.store('fir', {})
     const updateStore = (storeName, data) => {
@@ -22,6 +21,7 @@ const Plugin = (Alpine) => {
     if (window.location.protocol === 'https:') {
         connectURL = `wss://${window.location.host}${window.location.pathname}`
     }
+
     const socket = websocket(
         connectURL,
         [],
@@ -109,6 +109,7 @@ const Plugin = (Alpine) => {
                         event_id: id,
                         params: params,
                         target: el.getAttribute('id'),
+                        route_id: getRouteIDFromCookie(),
                     })
                 }
             },
@@ -212,9 +213,10 @@ const Plugin = (Alpine) => {
                         post(el, {
                             event_id: eventID,
                             params: params,
-                            form_id: form.getAttribute('id'),
+                            is_form: true,
                             target: el.getAttribute('id'),
                             redirect: redirect,
+                            route_id: getRouteIDFromCookie(),
                         })
 
                         if (formMethod.toLowerCase() === 'get') {
@@ -239,20 +241,6 @@ const Plugin = (Alpine) => {
             },
         }
     })
-
-    const selectAll = (operation, callbackfn) => {
-        const prevFocusElement = document.activeElement
-        const elements = document.querySelectorAll(operation.selector)
-        elements.forEach((el) => el && callbackfn(el, operation.value))
-        const currFocusElement = document.activeElement
-        if (
-            prevFocusElement &&
-            prevFocusElement.focus &&
-            prevFocusElement !== currFocusElement
-        ) {
-            prevFocusElement.focus()
-        }
-    }
 
     const toElements = (htmlString) => {
         var template = document.createElement('template')
@@ -351,13 +339,14 @@ const Plugin = (Alpine) => {
         el.dispatchEvent(
             new CustomEvent(`fir:${eventIdLower}:pending`, options)
         )
+
         if (eventIdLower !== eventIdKebab) {
             el.dispatchEvent(
                 new CustomEvent(`fir:${eventIdKebab}:pending`, options)
             )
         }
 
-        if (socket.emit(firEvent)) {
+        if (socket && socket.emit(firEvent)) {
         } else {
             const body = JSON.stringify(firEvent)
             fetch(window.location.pathname, {
@@ -381,6 +370,13 @@ const Plugin = (Alpine) => {
                     )
                 })
         }
+    }
+
+    const getRouteIDFromCookie = () => {
+        return document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('_fir_route_id='))
+            ?.split('=')[1]
     }
 
     Alpine.plugin(morph)

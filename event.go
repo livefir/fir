@@ -34,9 +34,10 @@ type Event struct {
 	ID string `json:"event_id"`
 	// Params is the json rawmessage to be passed to the event
 	Params   json.RawMessage `json:"params"`
-	FormID   *string         `json:"form_id,omitempty"`
 	Target   *string         `json:"target,omitempty"`
 	Redirect bool            `json:"redirect,omitempty"`
+	IsForm   bool            `json:"is_form,omitempty"`
+	RouteID  *string         `json:"route_id,omitempty"`
 }
 
 // String returns the string representation of the event

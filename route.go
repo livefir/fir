@@ -214,6 +214,13 @@ func renderRoute(ctx RouteContext, errorRoute bool) routeRenderer {
 			return err
 		}
 
+		http.SetCookie(ctx.response, &http.Cookie{
+			Name:   "_fir_route_id",
+			Value:  ctx.route.id,
+			MaxAge: 0,
+			Path:   "/",
+		})
+
 		ctx.response.Write(buf.Bytes())
 		return nil
 	}
@@ -222,7 +229,6 @@ func renderRoute(ctx RouteContext, errorRoute bool) routeRenderer {
 func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 	return func(pubsubEvents ...pubsub.Event) error {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
-		eventCtx.route.parseTemplates()
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvents...)
 		if err != nil {
 			glog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
@@ -234,7 +240,6 @@ func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 
 func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 	return func(pubsubEvents ...pubsub.Event) error {
-		ctx.route.parseTemplates()
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvents...)
 		if err != nil {
@@ -257,6 +262,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	fmt.Println(rt.cntrl.routes)
 
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
@@ -354,7 +360,6 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			event := Event{
 				ID:     formAction,
 				Params: params,
-				FormID: &formAction,
 			}
 
 			eventCtx := RouteContext{
@@ -397,23 +402,29 @@ func buildErrorEvents(ctx RouteContext, eventErrorID string, errs map[string]any
 	if ctx.event.Target != nil {
 		target = *ctx.event.Target
 	}
+	catchAllErrorEventID := "onevent:error"
+
+	errIDs := []string{eventErrorID, catchAllErrorEventID}
+
 	var pubsubEvents []pubsub.Event
-	for block := range ctx.route.eventTemplateMap[eventErrorID] {
-		block := block
-		if block == "-" {
+	for _, errID := range errIDs {
+		for block := range ctx.route.eventTemplateMap[errID] {
+			block := block
+			if block == "-" {
+				pubsubEvents = append(pubsubEvents, pubsub.Event{
+					Type:   fir(errID),
+					Target: &target,
+					Data:   errs,
+				})
+				continue
+			}
 			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				Type:   fir(eventErrorID),
-				Target: &target,
-				Data:   errs,
+				Type:         fir(errID, block),
+				Target:       &target,
+				TemplateName: &block,
+				Data:         map[string]any{"fir": newRouteDOMContext(ctx, errs)},
 			})
-			continue
 		}
-		pubsubEvents = append(pubsubEvents, pubsub.Event{
-			Type:         fir(eventErrorID, block),
-			Target:       &target,
-			TemplateName: &block,
-			Data:         map[string]any{"fir": newRouteDOMContext(ctx, errs)},
-		})
 	}
 	return pubsubEvents
 }
@@ -424,6 +435,7 @@ func buildOKEvents(ctx RouteContext, eventOKID string, data map[string]any) []pu
 		target = *ctx.event.Target
 	}
 	var pubsubEvents []pubsub.Event
+
 	for block := range ctx.route.eventTemplateMap[eventOKID] {
 		block := block
 		if block == "-" {
@@ -455,7 +467,6 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 		if _, ok := ctx.userStore[ctx.routeKey(eventErrorID)]; ok {
 			delete(ctx.userStore, ctx.routeKey(eventErrorID))
 			pubsubEvents = append(pubsubEvents, buildErrorEvents(ctx, eventErrorID, nil)...)
-
 		}
 		ctx.route.RUnlock()
 
@@ -465,7 +476,10 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 
 	switch errVal := err.(type) {
 	case *firErrors.Status:
-		errs := map[string]any{ctx.event.ID: firErrors.User(errVal.Err).Error()}
+		errs := map[string]any{
+			ctx.event.ID: firErrors.User(errVal.Err).Error(),
+			"onevent":    firErrors.User(errVal.Err).Error(),
+		}
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// mark error as set in session
 		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
@@ -511,7 +525,10 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 		publish(pubsubEvents...)
 		return ctx.userStore
 	default:
-		errs := map[string]any{ctx.event.ID: firErrors.User(err).Error()}
+		errs := map[string]any{
+			ctx.event.ID: firErrors.User(err).Error(),
+			"onevent":    firErrors.User(err).Error(),
+		}
 		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
 		// mark error as set in session
 		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
@@ -669,6 +686,7 @@ func (rt *route) buildEventRenderMapping() {
 	}
 
 	walkFile := func(page string) {
+		fmt.Printf("walkFile: %v, page: %v \n", rt.id, page)
 		pagePath := filepath.Join(opt.publicDir, page)
 		// is layout html content or a file/directory
 		if isFileOrString(pagePath, opt) {
@@ -710,4 +728,12 @@ func (rt *route) buildEventRenderMapping() {
 		walkFile(opt.content)
 	}
 
+	if opt.errorLayout != "" {
+		walkFile(opt.errorLayout)
+	}
+
+	if opt.errorContent != "" {
+		walkFile(opt.errorContent)
+	}
+	fmt.Printf("rt.eventRenderMapping %+v\n", rt.eventTemplateMap)
 }
