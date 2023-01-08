@@ -216,18 +216,12 @@ const Plugin = (Alpine) => {
                             (value, key) => (params[key] = new Array(value))
                         )
 
-                        let redirect = false
-                        if (formMethod.toLowerCase() === 'post') {
-                            redirect = true
-                        }
-
                         // post event to server
                         post(el, {
                             event_id: eventID,
                             params: params,
                             is_form: true,
                             target: el.getAttribute('id'),
-                            redirect: redirect,
                             route_id: getRouteIDFromCookie(),
                         })
 
