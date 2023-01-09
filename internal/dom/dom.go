@@ -12,13 +12,13 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type EventState int
+type EventState string
 
 const (
-	OK EventState = iota
-	Error
-	Pending
-	Done
+	OK      EventState = "ok"
+	Error   EventState = "error"
+	Pending EventState = "pending"
+	Done    EventState = "done"
 )
 
 type Event struct {
