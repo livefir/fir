@@ -288,7 +288,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
-		onWebsocket(w, r, rt, sessionUserStore)
+		onWebsocket(w, r, rt.cntrl, sessionUserStore)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event

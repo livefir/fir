@@ -16,8 +16,8 @@ import (
 	"github.com/livefir/fir/pubsub"
 )
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, connRoute *route, sessionUserStore userStore) {
-	conn, err := connRoute.websocketUpgrader.Upgrade(w, r, nil)
+func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sessionUserStore userStore) {
+	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
@@ -26,9 +26,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, connRoute *route, sessi
 	ctx := context.Background()
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
-	wg.Add(len(connRoute.cntrl.routes))
+	wg.Add(len(cntrl.routes))
 
-	for _, rt := range connRoute.cntrl.routes {
+	for _, rt := range cntrl.routes {
 		go func(route *route) {
 			defer wg.Done()
 			channel := route.channelFunc(r, route.id)
@@ -114,7 +114,7 @@ loop:
 			continue
 		}
 
-		eventRoute := connRoute.cntrl.routes[*event.RouteID]
+		eventRoute := cntrl.routes[*event.RouteID]
 
 		eventCtx := RouteContext{
 			event:     event,
