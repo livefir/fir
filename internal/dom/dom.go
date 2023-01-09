@@ -25,8 +25,9 @@ type Event struct {
 	Type   *string `json:"type,omitempty"`
 	Target *string `json:"target,omitempty"`
 	Detail any     `json:"detail,omitempty"`
-	id     string
-	state  EventState
+	// Private fields
+	ID    string     `json:"-"`
+	State EventState `json:"-"`
 }
 
 func NewBindings(id string) Bindings {
