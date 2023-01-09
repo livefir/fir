@@ -12,10 +12,21 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type EventState int
+
+const (
+	OK EventState = iota
+	Error
+	Pending
+	Done
+)
+
 type Event struct {
 	Type   *string `json:"type,omitempty"`
 	Target *string `json:"target,omitempty"`
 	Detail any     `json:"detail,omitempty"`
+	id     string
+	state  EventState
 }
 
 func NewBindings(id string) Bindings {
