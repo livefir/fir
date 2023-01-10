@@ -66,21 +66,21 @@ func domEvents(t *template.Template, pubsubEvents []pubsub.Event) []byte {
 	for _, e := range pubsubEvents {
 		if e.TemplateName == nil {
 			events = append(events, DOMEvent{
-				Type:   e.Type,
+				Type:   e.ID,
 				Target: e.Target,
-				Detail: e.Data,
+				Detail: e.Detail,
 			})
 			continue
 		}
 
-		detail, err := buildTemplateValue(t, *e.TemplateName, e.Data)
+		detail, err := buildTemplateValue(t, *e.TemplateName, e.Detail)
 		if err != nil {
 			glog.Errorf("[warning]event buildTemplateValue error: %v,%+v \n", err, e)
 			continue
 		}
 
 		events = append(events, DOMEvent{
-			Type:   e.Type,
+			Type:   e.ID,
 			Target: e.Target,
 			Detail: detail,
 		})

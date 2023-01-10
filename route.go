@@ -412,17 +412,17 @@ func buildErrorEvents(ctx RouteContext, eventErrorID string, errs map[string]any
 			block := block
 			if block == "-" {
 				pubsubEvents = append(pubsubEvents, pubsub.Event{
-					Type:   fir(errID),
+					ID:     fir(errID),
 					Target: &target,
-					Data:   errs,
+					Detail: errs,
 				})
 				continue
 			}
 			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				Type:         fir(errID, block),
+				ID:           fir(errID, block),
 				Target:       &target,
 				TemplateName: &block,
-				Data:         map[string]any{"fir": newRouteDOMContext(ctx, errs)},
+				Detail:       map[string]any{"fir": newRouteDOMContext(ctx, errs)},
 			})
 		}
 	}
@@ -440,17 +440,17 @@ func buildOKEvents(ctx RouteContext, eventOKID string, data map[string]any) []pu
 		block := block
 		if block == "-" {
 			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				Type:   fir(eventOKID),
+				ID:     fir(eventOKID),
 				Target: &target,
-				Data:   data,
+				Detail: data,
 			})
 			continue
 		}
 		pubsubEvents = append(pubsubEvents, pubsub.Event{
-			Type:         fir(eventOKID, block),
+			ID:           fir(eventOKID, block),
 			Target:       &target,
 			TemplateName: &block,
-			Data:         data,
+			Detail:       data,
 		})
 	}
 	return pubsubEvents

@@ -10,15 +10,17 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
+	"github.com/livefir/fir/internal/eventstate"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
 
 type Event struct {
-	Type         *string `json:"type"`
-	Target       *string `json:"target"`
-	TemplateName *string `json:"template_name"`
-	Data         any     `json:"data"`
+	ID           *string         `json:"id"`
+	State        eventstate.Type `json:"state"`
+	Target       *string         `json:"target"`
+	TemplateName *string         `json:"template_name"`
+	Detail       any             `json:"detail"`
 }
 
 // Subscription is a subscription to a channel.
