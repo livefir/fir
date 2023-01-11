@@ -13,6 +13,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/gorilla/sessions"
 
+	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 )
 
@@ -44,6 +45,7 @@ type RouteContext struct {
 	isOnLoad  bool
 	userStore userStore
 	session   *sessions.Session
+	bindings  *dom.Bindings
 }
 
 func (c RouteContext) Event() Event {

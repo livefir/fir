@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
+	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
 )
 
@@ -70,8 +70,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 			defer subscription.Close()
 
 			go func() {
-				for patchset := range subscription.C() {
-					go writeDOMevents(wsConn, *channel, route.template, patchset)
+				for pubsubEvent := range subscription.C() {
+					routeCtx := RouteContext{
+						request:   r,
+						response:  w,
+						route:     route,
+						userStore: sessionUserStore,
+					}
+					go renderAndWriteEvent(wsConn, *channel, routeCtx, pubsubEvent)
 				}
 			}()
 
@@ -85,8 +91,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 				defer reloadSubscriber.Close()
 
 				go func() {
-					for patchset := range reloadSubscriber.C() {
-						go writeDOMevents(wsConn, devReloadChannel, route.template, patchset)
+					for pubsubEvent := range reloadSubscriber.C() {
+						go writeEvent(wsConn, pubsubEvent)
 					}
 				}()
 			}
@@ -142,19 +148,44 @@ type websocketConn struct {
 	sync.Mutex
 }
 
-func writeDOMevents(ws *websocketConn, channel string, t *template.Template, pubsubEvents []pubsub.Event) error {
+func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) (userStore, error) {
 	ws.Lock()
 	defer ws.Unlock()
-	message := domEvents(t, pubsubEvents)
-	if len(message) == 0 {
-		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, events %+v", channel, pubsubEvents)
+	events := renderDOMEvents(ctx, pubsubEvent)
+	events, ctx.userStore = unsetErrors(ctx.userStore, events)
+	eventsData, err := json.Marshal(events)
+	if err != nil {
+		glog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
+		return ctx.userStore, err
+	}
+	if len(eventsData) == 0 {
+		err := fmt.Errorf("[writeDOMevents] error: message is empty, channel %s, events %+v", channel, pubsubEvent)
 		log.Println(err)
+		return ctx.userStore, err
+	}
+	glog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
+	err = ws.conn.WriteMessage(websocket.TextMessage, eventsData)
+	if err != nil {
+		glog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		ws.conn.Close()
+	}
+	return ctx.userStore, err
+}
+
+func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
+	ws.Lock()
+	defer ws.Unlock()
+	reload := dom.Event{
+		Type: pubsubEvent.ID,
+	}
+	reloadData, err := json.Marshal(reload)
+	if err != nil {
+		glog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
 		return err
 	}
-	glog.Errorf("[writePatchOperations] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(message))
-	err := ws.conn.WriteMessage(websocket.TextMessage, message)
+	err = ws.conn.WriteMessage(websocket.TextMessage, reloadData)
 	if err != nil {
-		glog.Errorf("[writePatchOperations] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		glog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
 		ws.conn.Close()
 	}
 	return err

@@ -1,8 +1,6 @@
 package dom
 
 import (
-	"bytes"
-	"fmt"
 	"html/template"
 	"io"
 	"strings"
@@ -11,9 +9,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/eventstate"
-	"github.com/livefir/fir/pubsub"
-	"github.com/tdewolff/minify/v2"
-	"github.com/tdewolff/minify/v2/html"
 	"golang.org/x/exp/slices"
 )
 
@@ -38,7 +33,7 @@ type Bindings struct {
 	id             string
 	tmpl           *template.Template
 	eventTemplates map[string][]string
-	sync.RWMutex
+	*sync.RWMutex
 }
 
 func (b *Bindings) AddFile(rd io.Reader) {
@@ -121,56 +116,8 @@ func (b *Bindings) AddFile(rd io.Reader) {
 
 }
 
-func (b *Bindings) Events(pubsubEvent pubsub.Event) []Event {
+func (b *Bindings) GetTemplate(eventIDWithState string) []string {
 	b.RLock()
-	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
-	templates, ok := b.eventTemplates[eventIDWithState]
-	b.RUnlock()
-	if !ok {
-		return []Event{}
-	}
-	var events []Event
-	for _, templateName := range templates {
-		value, err := buildTemplateValue(b.tmpl, templateName, pubsubEvent.Detail)
-		if err != nil {
-			glog.Errorf("Bindings.Events buildTemplateValue error: %s", err)
-			continue
-		}
-		eventType := fmt.Sprintf("fir:%s:%s", eventIDWithState, templateName)
-		events = append(events, Event{
-			ID:     b.id,
-			State:  pubsubEvent.State,
-			Type:   &eventType,
-			Target: pubsubEvent.Target,
-			Detail: value,
-		})
-	}
-
-	return events
-}
-
-func buildTemplateValue(t *template.Template, name string, data any) (string, error) {
-	var buf bytes.Buffer
-	defer buf.Reset()
-	if name == "_fir_html" {
-		buf.WriteString(data.(string))
-	} else {
-		t.Option("missingkey=zero")
-		err := t.ExecuteTemplate(&buf, name, data)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	m := minify.New()
-	m.Add("text/html", &html.Minifier{})
-	r := m.Reader("text/html", &buf)
-	var buf1 bytes.Buffer
-	defer buf1.Reset()
-	_, err := io.Copy(&buf1, r)
-	if err != nil {
-		return "", err
-	}
-	value := buf1.String()
-	return value, nil
+	defer b.RUnlock()
+	return b.eventTemplates[eventIDWithState]
 }
