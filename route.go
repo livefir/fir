@@ -408,64 +408,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func buildErrorEvents(ctx RouteContext, eventErrorID string, errs map[string]any) []pubsub.Event {
-	target := ""
-	if ctx.event.Target != nil {
-		target = *ctx.event.Target
-	}
-	catchAllErrorEventID := "onevent:error"
-
-	errIDs := []string{eventErrorID, catchAllErrorEventID}
-
-	var pubsubEvents []pubsub.Event
-	for _, errID := range errIDs {
-		for block := range ctx.route.eventTemplateMap[errID] {
-			block := block
-			if block == "-" {
-				pubsubEvents = append(pubsubEvents, pubsub.Event{
-					ID:     fir(errID),
-					Target: &target,
-					Detail: errs,
-				})
-				continue
-			}
-			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				ID:     fir(errID, block),
-				Target: &target,
-				Detail: map[string]any{"fir": newRouteDOMContext(ctx, errs)},
-			})
-		}
-	}
-	return pubsubEvents
-}
-
-func buildOKEvents(ctx RouteContext, eventOKID string, data map[string]any) []pubsub.Event {
-	target := ""
-	if ctx.event.Target != nil {
-		target = *ctx.event.Target
-	}
-	var pubsubEvents []pubsub.Event
-
-	for block := range ctx.route.eventTemplateMap[eventOKID] {
-		block := block
-		if block == "-" {
-			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				ID:     fir(eventOKID),
-				Target: &target,
-				Detail: data,
-			})
-			continue
-		}
-		pubsubEvents = append(pubsubEvents, pubsub.Event{
-			ID:     fir(eventOKID, block),
-			Target: &target,
-			Detail: data,
-		})
-	}
-	return pubsubEvents
-}
-
-func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) userStore {
+func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 	target := ""
 	if ctx.event.Target != nil {
 		target = *ctx.event.Target
@@ -476,7 +419,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 			State:  eventstate.OK,
 			Target: &target,
 		})
-		return ctx.userStore
+		return
 	}
 
 	switch errVal := err.(type) {
@@ -491,7 +434,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 			Target: &target,
 			Detail: errs,
 		})
-		return ctx.userStore
+		return
 	case *firErrors.Fields:
 		fieldErrorsData := *errVal
 		fieldErrors := make(map[string]any)
@@ -505,7 +448,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 			Target: &target,
 			Detail: errs,
 		})
-		return ctx.userStore
+		return
 	case *routeData:
 		data := *errVal
 		publish(pubsub.Event{
@@ -514,7 +457,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 			Target: &target,
 			Detail: data,
 		})
-		return ctx.userStore
+		return
 	default:
 		errs := map[string]any{
 			ctx.event.ID: firErrors.User(err).Error(),
@@ -526,7 +469,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 			Target: &target,
 			Detail: errs,
 		})
-		return ctx.userStore
+		return
 	}
 }
 

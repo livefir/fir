@@ -13,8 +13,9 @@ import (
 	"github.com/tdewolff/minify/v2/html"
 )
 
-func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event, templateNames []string) []dom.Event {
+func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
+	templateNames := ctx.route.bindings.GetTemplate(eventIDWithState)
 	var events []dom.Event
 	for _, templateName := range templateNames {
 		if templateName == "-" {

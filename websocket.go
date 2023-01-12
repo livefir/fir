@@ -31,12 +31,32 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 	for _, rt := range cntrl.routes {
 		go func(route *route) {
 			defer wg.Done()
-			channel := route.channelFunc(r, route.id)
-			if channel == nil {
+			routeChannel := route.channelFunc(r, route.id)
+			if routeChannel == nil {
 				glog.Errorf("[onWebsocket] error: channel is empty")
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
+
+			// subscribers
+			subscription, err := route.pubsub.Subscribe(ctx, *routeChannel)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer subscription.Close()
+
+			go func() {
+				for pubsubEvent := range subscription.C() {
+					routeCtx := RouteContext{
+						request:   r,
+						response:  w,
+						route:     route,
+						userStore: sessionUserStore,
+					}
+					go renderAndWriteEvent(wsConn, *routeChannel, routeCtx, pubsubEvent)
+				}
+			}()
 
 			// eventSender
 			go func() {
@@ -57,27 +77,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 					}
 
 					// ignore user store for server events
-					_ = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
-				}
-			}()
-
-			// subscribers
-			subscription, err := route.pubsub.Subscribe(ctx, *channel)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer subscription.Close()
-
-			go func() {
-				for pubsubEvent := range subscription.C() {
-					routeCtx := RouteContext{
-						request:   r,
-						response:  w,
-						route:     route,
-						userStore: sessionUserStore,
-					}
-					go renderAndWriteEvent(wsConn, *channel, routeCtx, pubsubEvent)
+					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 				}
 			}()
 
@@ -137,7 +137,7 @@ loop:
 			continue
 		}
 
-		sessionUserStore = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+		handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 	}
 	close(done)
 	wg.Wait()
