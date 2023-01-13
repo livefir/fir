@@ -25,7 +25,7 @@ func RouteBindings(id string, tmpl *template.Template) *Bindings {
 	return &Bindings{
 		id:             id,
 		tmpl:           tmpl,
-		eventTemplates: make(map[string][]string),
+		eventTemplates: make(map[string]map[string]struct{}),
 		RWMutex:        &sync.RWMutex{},
 	}
 }
@@ -33,7 +33,7 @@ func RouteBindings(id string, tmpl *template.Template) *Bindings {
 type Bindings struct {
 	id             string
 	tmpl           *template.Template
-	eventTemplates map[string][]string
+	eventTemplates map[string]map[string]struct{}
 	*sync.RWMutex
 }
 
@@ -102,10 +102,10 @@ func (b *Bindings) AddFile(rd io.Reader) {
 
 				templates, ok := b.eventTemplates[eventID]
 				if !ok {
-					templates = []string{}
+					templates = make(map[string]struct{})
 				}
 
-				templates = append(templates, templateName)
+				templates[templateName] = struct{}{}
 
 				//fmt.Printf("eventID: %s, blocks: %v\n", eventID, blocks)
 				b.eventTemplates[eventID] = templates
@@ -117,8 +117,12 @@ func (b *Bindings) AddFile(rd io.Reader) {
 
 }
 
-func (b *Bindings) GetTemplate(eventIDWithState string) []string {
+func (b *Bindings) TemplateNames(eventIDWithState string) []string {
 	b.RLock()
 	defer b.RUnlock()
-	return b.eventTemplates[eventIDWithState]
+	var templateNames []string
+	for k := range b.eventTemplates[eventIDWithState] {
+		templateNames = append(templateNames, k)
+	}
+	return templateNames
 }
