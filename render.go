@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
@@ -27,6 +28,15 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 				Detail: pubsubEvent.Detail,
 			})
 			continue
+		}
+		if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
+			errs, ok := pubsubEvent.Detail.(map[string]any)
+			if !ok {
+				glog.Errorf("Bindings.Events error: %s", "pubsubEvent.Detail is not a map[string]any")
+				continue
+			}
+			pubsubEvent.Detail = map[string]any{"fir": newRouteDOMContext(ctx, errs)}
+
 		}
 		value, err := buildTemplateValue(ctx.route.template, templateName, pubsubEvent.Detail)
 		if err != nil {

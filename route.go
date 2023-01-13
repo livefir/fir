@@ -590,7 +590,8 @@ func (rt *route) parseTemplates() {
 			panic(err)
 		}
 		rt.findAllTemplates()
-		rt.buildEventRenderMapping()
+		rt.bindings = dom.RouteBindings(rt.id, rt.template)
+		rt.buildRouteBindigs()
 	}
 }
 
@@ -603,7 +604,7 @@ func (rt *route) findAllTemplates() {
 	}
 }
 
-func (rt *route) buildEventRenderMapping() {
+func (rt *route) buildRouteBindigs() {
 	opt := rt.routeOpt
 	if opt.layout == "" && opt.content == "" {
 		return
@@ -613,7 +614,7 @@ func (rt *route) buildEventRenderMapping() {
 		pagePath := filepath.Join(opt.publicDir, page)
 		// is layout html content or a file/directory
 		if isFileOrString(pagePath, opt) {
-			parseEventRenderMapping(rt, strings.NewReader(page))
+			rt.bindings.AddFile(strings.NewReader(page))
 		} else {
 			// compile layout
 			commonFiles := []string{pagePath}
@@ -627,7 +628,7 @@ func (rt *route) buildEventRenderMapping() {
 					if err != nil {
 						panic(err)
 					}
-					parseEventRenderMapping(rt, r)
+					rt.bindings.AddFile(r)
 				}
 			} else {
 				for _, v := range commonFiles {
@@ -635,7 +636,7 @@ func (rt *route) buildEventRenderMapping() {
 					if err != nil {
 						panic(err)
 					}
-					parseEventRenderMapping(rt, r)
+					rt.bindings.AddFile(r)
 				}
 
 			}

@@ -21,11 +21,12 @@ type Event struct {
 	State eventstate.Type `json:"-"`
 }
 
-func RouteBindings(id string, tmpl *template.Template) Bindings {
-	return Bindings{
+func RouteBindings(id string, tmpl *template.Template) *Bindings {
+	return &Bindings{
 		id:             id,
 		tmpl:           tmpl,
 		eventTemplates: make(map[string][]string),
+		RWMutex:        &sync.RWMutex{},
 	}
 }
 
