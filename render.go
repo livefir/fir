@@ -10,6 +10,7 @@ import (
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
+	"github.com/patrickmn/go-cache"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
 )
@@ -51,6 +52,36 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 			Detail: value,
 		})
 	}
+
+	v, ok := ctx.route.cache.Get(*pubsubEvent.SessionID)
+	if !ok {
+		return events
+	}
+	prevErrors, ok := v.(map[string]string)
+	if !ok {
+		return events
+	}
+	// unset previously set errors
+	for k, v := range prevErrors {
+		k := k
+		v := v
+		eventType := &k
+		target := v
+		events = append(events, dom.Event{
+			Type:   eventType,
+			Target: &target,
+		})
+	}
+	newErrors := make(map[string]string)
+	// track new errors
+	for _, event := range events {
+		if event.State == eventstate.OK {
+			continue
+		}
+		newErrors[*event.Type] = *event.Target
+	}
+
+	ctx.route.cache.Set(*pubsubEvent.SessionID, newErrors, cache.DefaultExpiration)
 
 	return events
 }

@@ -3,13 +3,7 @@ package fir
 import (
 	"fmt"
 	"html/template"
-	"io"
 	"path/filepath"
-	"strings"
-
-	"github.com/PuerkitoBio/goquery"
-	"github.com/golang/glog"
-	"golang.org/x/exp/slices"
 )
 
 func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*template.Template, error) {
@@ -153,81 +147,4 @@ func parseErrorTemplate(opt routeOpt) (*template.Template, error) {
 
 	// both layout and content are set
 	return layoutSetContentSet(opt, opt.errorContent, opt.errorLayout, opt.errorLayoutContentName)
-}
-
-func parseEventRenderMapping(rt *route, r io.Reader) {
-	doc, err := goquery.NewDocumentFromReader(r)
-	if err != nil {
-		panic(err)
-	}
-	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
-		for _, a := range node.Get(0).Attr {
-
-			if strings.HasPrefix(a.Key, "@fir:") || strings.HasPrefix(a.Key, "x-on:fir:") {
-
-				eventns := strings.TrimPrefix(a.Key, "@fir:")
-				eventns = strings.TrimPrefix(eventns, "x-on:fir:")
-				eventnsParts := strings.SplitN(eventns, ".", -1)
-				if len(eventnsParts) > 3 {
-					glog.Errorf(`
-					error: invalid event namespace: %s. 
-					must be of the format => @fir:<event>:<ok|error>:<block-name|optional>`, eventns)
-					continue
-				}
-
-				if len(eventnsParts) > 0 {
-					eventns = eventnsParts[0]
-				}
-
-				eventnsParts = strings.SplitN(eventns, ":", -1)
-				if len(eventnsParts) == 0 {
-					continue
-				}
-				eventID := eventnsParts[0]
-				if len(eventnsParts) >= 2 {
-					if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventnsParts[1]) {
-						glog.Errorf(`
-						error: invalid event namespace: %s. 
-						it must be of the format => 
-						@fir:<event>:<ok|error>:<block|optional> or
-						@fir:<event>:<pending|done>`, eventns)
-						continue
-					}
-					if len(eventnsParts) == 2 {
-						if eventnsParts[1] == "pending" || eventnsParts[1] == "done" {
-							continue
-						}
-					}
-					eventID = strings.Join(eventnsParts[0:2], ":")
-				}
-
-				templateName := "-"
-				if len(eventnsParts) == 3 {
-					if !slices.Contains([]string{"ok", "error"}, eventnsParts[1]) {
-						glog.Errorf(`
-						error: invalid event namespace: %s. 
-						it must be of the format => 
-						@fir:<event>:<ok|error>:<block|optional> or
-						@fir:<event>:<pending|done>.
-						<block> cannot be set for <pending|done> since they are client only`, eventns)
-						continue
-					}
-					templateName = eventnsParts[2]
-				}
-
-				rt.Lock()
-				blocks, ok := rt.eventTemplateMap[eventID]
-				if !ok {
-					blocks = make(map[string]struct{})
-				}
-
-				blocks[templateName] = struct{}{}
-
-				//fmt.Printf("eventID: %s, blocks: %v\n", eventID, blocks)
-				rt.eventTemplateMap[eventID] = blocks
-				rt.Unlock()
-			}
-		}
-
-	})
 }

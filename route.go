@@ -17,7 +17,6 @@ import (
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
-	"github.com/patrickmn/go-cache"
 )
 
 // RouteOption is a function that sets route options
@@ -218,15 +217,15 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			return err
 		}
 
-		encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
-		if err != nil {
-			glog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
-			return err
-		}
+		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
+		// if err != nil {
+		// 	glog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
+		// 	return err
+		// }
 
 		http.SetCookie(ctx.response, &http.Cookie{
 			Name:   ctx.route.cookieName,
-			Value:  encodedRouteID,
+			Value:  ctx.route.id,
 			MaxAge: 0,
 			Path:   "/",
 		})
@@ -256,7 +255,6 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 			glog.Warningf("[writeAndPublishEvents] error publishing patch: %v\n", err)
 		}
 		events := renderDOMEvents(ctx, pubsubEvent)
-		events = unsetErrors(*pubsubEvent.SessionID, ctx.route.cntrl.cache, events)
 
 		eventsData, err := json.Marshal(events)
 		if err != nil {
@@ -659,38 +657,4 @@ func (rt *route) buildRouteBindigs() {
 	if opt.errorContent != "" {
 		walkFile(opt.errorContent)
 	}
-}
-
-func unsetErrors(sessionID string, c *cache.Cache, events []dom.Event) []dom.Event {
-	v, ok := c.Get(sessionID)
-	if !ok {
-		return events
-	}
-	prevErrors, ok := v.(map[string]string)
-	if !ok {
-		return events
-	}
-	// unset previously set errors
-	for k, v := range prevErrors {
-		k := k
-		v := v
-		eventType := &k
-		target := v
-		events = append(events, dom.Event{
-			Type:   eventType,
-			Target: &target,
-		})
-	}
-	newErrors := make(map[string]string)
-	// track new errors
-	for _, event := range events {
-		if event.State == eventstate.OK {
-			continue
-		}
-		newErrors[*event.Type] = *event.Target
-	}
-
-	c.Set(sessionID, newErrors, cache.DefaultExpiration)
-
-	return events
 }

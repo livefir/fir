@@ -122,13 +122,13 @@ loop:
 			continue
 		}
 
-		var routeID string
-		if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
-			glog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
-			continue
-		}
+		// var routeID string
+		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
+		// 	glog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
+		// 	continue
+		// }
 
-		eventRoute := cntrl.routes[routeID]
+		eventRoute := cntrl.routes[*event.SessionID]
 
 		eventCtx := RouteContext{
 			event:    event,
@@ -159,7 +159,6 @@ func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pu
 	ws.Lock()
 	defer ws.Unlock()
 	events := renderDOMEvents(ctx, pubsubEvent)
-	events = unsetErrors(*pubsubEvent.SessionID, ctx.route.cntrl.cache, events)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
 		glog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
