@@ -16,10 +16,10 @@ const Plugin = (Alpine) => {
         Alpine.store(storeName, nextStore)
     }
 
-    const getRouteIDFromCookie = () => {
+    const getSessionIDFromCookie = () => {
         return document.cookie
             .split('; ')
-            .find((row) => row.startsWith('_fir_route_id='))
+            .find((row) => row.startsWith('_fir_session_='))
             ?.split('=')[1]
     }
 
@@ -30,7 +30,7 @@ const Plugin = (Alpine) => {
     }
 
     let socket
-    if (getRouteIDFromCookie()) {
+    if (getSessionIDFromCookie()) {
         socket = websocket(
             connectURL,
             [],
@@ -121,7 +121,7 @@ const Plugin = (Alpine) => {
                         event_id: id,
                         params: params,
                         target: el.getAttribute('id'),
-                        route_id: getRouteIDFromCookie(),
+                        session_id: getSessionIDFromCookie(),
                     })
                 }
             },
@@ -222,7 +222,7 @@ const Plugin = (Alpine) => {
                             params: params,
                             is_form: true,
                             target: el.getAttribute('id'),
-                            route_id: getRouteIDFromCookie(),
+                            session_id: getSessionIDFromCookie(),
                         })
 
                         if (formMethod.toLowerCase() === 'get') {

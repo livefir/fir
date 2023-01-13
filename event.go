@@ -32,8 +32,8 @@ type Event struct {
 	Target *string `json:"target,omitempty"`
 	// IsForm is a boolean that indicates whether the event was triggered by a form submission
 	IsForm bool `json:"is_form,omitempty"`
-	// RouteID is the id of the route that the event was triggered for
-	RouteID *string `json:"route_id,omitempty"`
+	// SessionID is the id of the session that the event was triggered for
+	SessionID *string `json:"session_id,omitempty"`
 }
 
 // String returns the string representation of the event

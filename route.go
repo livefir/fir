@@ -17,6 +17,7 @@ import (
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
+	"github.com/patrickmn/go-cache"
 )
 
 // RouteOption is a function that sets route options
@@ -217,9 +218,15 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			return err
 		}
 
+		encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
+		if err != nil {
+			glog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
+			return err
+		}
+
 		http.SetCookie(ctx.response, &http.Cookie{
-			Name:   "_fir_route_id",
-			Value:  ctx.route.id,
+			Name:   ctx.route.cookieName,
+			Value:  encodedRouteID,
 			MaxAge: 0,
 			Path:   "/",
 		})
@@ -249,14 +256,7 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 			glog.Warningf("[writeAndPublishEvents] error publishing patch: %v\n", err)
 		}
 		events := renderDOMEvents(ctx, pubsubEvent)
-		events, ctx.userStore = unsetErrors(ctx.userStore, events)
-		ctx.session.Values["user-store"] = ctx.userStore
-		// Save it before we write to the response/return from the handler.
-		err = ctx.session.Save(ctx.request, ctx.response)
-		if err != nil {
-			http.Error(ctx.response, err.Error(), http.StatusInternalServerError)
-			return err
-		}
+		events = unsetErrors(*pubsubEvent.SessionID, ctx.route.cntrl.cache, events)
 
 		eventsData, err := json.Marshal(events)
 		if err != nil {
@@ -287,19 +287,9 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	session, err := rt.sessionStore.Get(r, rt.sessionName)
-	if err != nil {
-		glog.Errorf("[ServeHTTP] error getting session: %v\n", err)
-	}
-
-	sessionUserStore := userStore{}
-	if val, ok := session.Values["user-store"]; ok {
-		sessionUserStore = val.(userStore)
-	}
-
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
-		onWebsocket(w, r, rt.cntrl, sessionUserStore)
+		onWebsocket(w, r, rt.cntrl)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
@@ -320,12 +310,10 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventCtx := RouteContext{
-			event:     event,
-			request:   r,
-			response:  w,
-			route:     rt,
-			userStore: sessionUserStore,
-			session:   session,
+			event:    event,
+			request:  r,
+			response: w,
+			route:    rt,
 		}
 
 		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
@@ -379,7 +367,6 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				response:  w,
 				route:     rt,
 				urlValues: urlValues,
-				userStore: sessionUserStore,
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -394,12 +381,11 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := RouteContext{
-				event:     event,
-				request:   r,
-				response:  w,
-				route:     rt,
-				isOnLoad:  true,
-				userStore: sessionUserStore,
+				event:    event,
+				request:  r,
+				response: w,
+				route:    rt,
+				isOnLoad: true,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
@@ -415,9 +401,10 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 	}
 	if err == nil {
 		publish(pubsub.Event{
-			ID:     &ctx.event.ID,
-			State:  eventstate.OK,
-			Target: &target,
+			ID:        &ctx.event.ID,
+			State:     eventstate.OK,
+			Target:    &target,
+			SessionID: ctx.event.SessionID,
 		})
 		return
 	}
@@ -429,10 +416,11 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			"onevent":    firErrors.User(errVal.Err).Error(),
 		}
 		publish(pubsub.Event{
-			ID:     &ctx.event.ID,
-			State:  eventstate.Error,
-			Target: &target,
-			Detail: errs,
+			ID:        &ctx.event.ID,
+			State:     eventstate.Error,
+			Target:    &target,
+			Detail:    errs,
+			SessionID: ctx.event.SessionID,
 		})
 		return
 	case *firErrors.Fields:
@@ -443,19 +431,21 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 		}
 		errs := map[string]any{ctx.event.ID: fieldErrors}
 		publish(pubsub.Event{
-			ID:     &ctx.event.ID,
-			State:  eventstate.Error,
-			Target: &target,
-			Detail: errs,
+			ID:        &ctx.event.ID,
+			State:     eventstate.Error,
+			Target:    &target,
+			Detail:    errs,
+			SessionID: ctx.event.SessionID,
 		})
 		return
 	case *routeData:
 		data := *errVal
 		publish(pubsub.Event{
-			ID:     &ctx.event.ID,
-			State:  eventstate.OK,
-			Target: &target,
-			Detail: data,
+			ID:        &ctx.event.ID,
+			State:     eventstate.OK,
+			Target:    &target,
+			Detail:    data,
+			SessionID: ctx.event.SessionID,
 		})
 		return
 	default:
@@ -464,10 +454,11 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			"onevent":    firErrors.User(err).Error(),
 		}
 		publish(pubsub.Event{
-			ID:     &ctx.event.ID,
-			State:  eventstate.Error,
-			Target: &target,
-			Detail: errs,
+			ID:        &ctx.event.ID,
+			State:     eventstate.Error,
+			Target:    &target,
+			Detail:    errs,
+			SessionID: ctx.event.SessionID,
 		})
 		return
 	}
@@ -669,25 +660,36 @@ func (rt *route) buildEventRenderMapping() {
 	}
 }
 
-func unsetErrors(store userStore, events []dom.Event) ([]dom.Event, userStore) {
+func unsetErrors(sessionID string, c *cache.Cache, events []dom.Event) []dom.Event {
+	v, ok := c.Get(sessionID)
+	if !ok {
+		return events
+	}
+	prevErrors, ok := v.(map[string]string)
+	if !ok {
+		return events
+	}
 	// unset previously set errors
-	for k, v := range store {
+	for k, v := range prevErrors {
 		k := k
 		v := v
 		eventType := &k
-		target := v.(string)
+		target := v
 		events = append(events, dom.Event{
 			Type:   eventType,
 			Target: &target,
 		})
 	}
+	newErrors := make(map[string]string)
 	// track new errors
 	for _, event := range events {
 		if event.State == eventstate.OK {
 			continue
 		}
-		store[*event.Type] = *event.Target
+		newErrors[*event.Type] = *event.Target
 	}
 
-	return events, store
+	c.Set(sessionID, newErrors, cache.DefaultExpiration)
+
+	return events
 }

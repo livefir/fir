@@ -5,15 +5,12 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 
 	"github.com/fatih/structs"
-	"github.com/gorilla/sessions"
 
-	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 )
 
@@ -43,9 +40,6 @@ type RouteContext struct {
 	urlValues url.Values
 	route     *route
 	isOnLoad  bool
-	userStore userStore
-	session   *sessions.Session
-	bindings  *dom.Bindings
 }
 
 func (c RouteContext) Event() Event {
@@ -231,8 +225,4 @@ func (c RouteContext) FieldErrors(fields map[string]error) error {
 
 func (c RouteContext) Status(code int, err error) error {
 	return &firErrors.Status{Code: code, Err: firErrors.User(err)}
-}
-
-func (c RouteContext) routeKey(suffix string) string {
-	return fmt.Sprintf("%s:%s", c.route.id, suffix)
 }

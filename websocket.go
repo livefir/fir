@@ -16,7 +16,7 @@ import (
 	"github.com/livefir/fir/pubsub"
 )
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sessionUserStore userStore) {
+func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -49,10 +49,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 			go func() {
 				for pubsubEvent := range subscription.C() {
 					routeCtx := RouteContext{
-						request:   r,
-						response:  w,
-						route:     route,
-						userStore: sessionUserStore,
+						request:  r,
+						response: w,
+						route:    route,
 					}
 					go renderAndWriteEvent(wsConn, *routeChannel, routeCtx, pubsubEvent)
 				}
@@ -66,8 +65,6 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 						request:  r,
 						response: w,
 						route:    route,
-						// ignore user store for server events because you don't want to affect user state from a non-user event
-						userStore: make(map[string]any),
 					}
 					glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
@@ -120,14 +117,24 @@ loop:
 			continue
 		}
 
-		eventRoute := cntrl.routes[*event.RouteID]
+		if event.SessionID == nil {
+			glog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required\n", event)
+			continue
+		}
+
+		var routeID string
+		if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
+			glog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
+			continue
+		}
+
+		eventRoute := cntrl.routes[routeID]
 
 		eventCtx := RouteContext{
-			event:     event,
-			request:   r,
-			response:  w,
-			route:     eventRoute,
-			userStore: sessionUserStore,
+			event:    event,
+			request:  r,
+			response: w,
+			route:    eventRoute,
 		}
 
 		glog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event)
@@ -148,20 +155,20 @@ type websocketConn struct {
 	sync.Mutex
 }
 
-func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) (userStore, error) {
+func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
 	ws.Lock()
 	defer ws.Unlock()
 	events := renderDOMEvents(ctx, pubsubEvent)
-	events, ctx.userStore = unsetErrors(ctx.userStore, events)
+	events = unsetErrors(*pubsubEvent.SessionID, ctx.route.cntrl.cache, events)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
 		glog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
-		return ctx.userStore, err
+		return err
 	}
 	if len(eventsData) == 0 {
 		err := fmt.Errorf("[writeDOMevents] error: message is empty, channel %s, events %+v", channel, pubsubEvent)
 		log.Println(err)
-		return ctx.userStore, err
+		return err
 	}
 	glog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
 	err = ws.conn.WriteMessage(websocket.TextMessage, eventsData)
@@ -169,7 +176,7 @@ func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pu
 		glog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
 		ws.conn.Close()
 	}
-	return ctx.userStore, err
+	return err
 }
 
 func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
