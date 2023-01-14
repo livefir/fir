@@ -7,14 +7,15 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 	"github.com/gorilla/securecookie"
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/livefir/fir/pubsub"
+	"github.com/patrickmn/go-cache"
 )
 
 // Controller is an interface which encapsulates a group of views. It routes requests to the appropriate view.
@@ -41,26 +42,24 @@ type opt struct {
 	pubsub               pubsub.Adapter
 	appName              string
 	formDecoder          *schema.Decoder
-	sessionStore         sessions.Store
-	sessionKeyPairs      [][]byte
-	sessionName          string
+	cookieName           string
+	secureCookie         *securecookie.SecureCookie
+	cache                *cache.Cache
 }
 
 // ControllerOption is an option for the controller.
 type ControllerOption func(*opt)
 
-// WithSessionKey is an option to set the secret cookie session key for the controller.
-// https://pkg.go.dev/github.com/gorilla/sessions#NewCookie
-func WithSessionKeyPairs(sessionKeyPairs ...[]byte) ControllerOption {
+func WithSecureCookie(s *securecookie.SecureCookie) ControllerOption {
 	return func(o *opt) {
-		o.sessionKeyPairs = sessionKeyPairs
+		o.secureCookie = s
 	}
 }
 
-// WithSessionName is an option to set the cookie session name for the controller.
-func WithSessionName(name string) ControllerOption {
+// WithCookieName is an option to set the cookie session name for the controller.
+func WithCookieName(name string) ControllerOption {
 	return func(o *opt) {
-		o.sessionName = name
+		o.cookieName = name
 	}
 }
 
@@ -178,15 +177,17 @@ func NewController(name string, options ...ControllerOption) Controller {
 		pubsub:            pubsub.NewInmem(),
 		appName:           name,
 		formDecoder:       formDecoder,
-		sessionKeyPairs:   [][]byte{[]byte(securecookie.GenerateRandomKey(32))},
-		sessionName:       "_fir_session_",
+		cookieName:        "_fir_session_",
+		secureCookie: securecookie.New(
+			securecookie.GenerateRandomKey(64),
+			securecookie.GenerateRandomKey(32),
+		),
+		cache: cache.New(5*time.Minute, 10*time.Minute),
 	}
 
 	for _, option := range options {
 		option(o)
 	}
-
-	o.sessionStore = sessions.NewCookieStore(o.sessionKeyPairs...)
 
 	if o.publicDir == "" {
 		var publicDir string

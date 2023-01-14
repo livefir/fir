@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -13,10 +12,11 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
+	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
 )
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sessionUserStore userStore) {
+func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -31,12 +31,31 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 	for _, rt := range cntrl.routes {
 		go func(route *route) {
 			defer wg.Done()
-			channel := route.channelFunc(r, route.id)
-			if channel == nil {
+			routeChannel := route.channelFunc(r, route.id)
+			if routeChannel == nil {
 				glog.Errorf("[onWebsocket] error: channel is empty")
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
+
+			// subscribers
+			subscription, err := route.pubsub.Subscribe(ctx, *routeChannel)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer subscription.Close()
+
+			go func() {
+				for pubsubEvent := range subscription.C() {
+					routeCtx := RouteContext{
+						request:  r,
+						response: w,
+						route:    route,
+					}
+					go renderAndWriteEvent(wsConn, *routeChannel, routeCtx, pubsubEvent)
+				}
+			}()
 
 			// eventSender
 			go func() {
@@ -46,8 +65,6 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 						request:  r,
 						response: w,
 						route:    route,
-						// ignore user store for server events because you don't want to affect user state from a non-user event
-						userStore: make(map[string]any),
 					}
 					glog.Errorf("[onWebsocket] received server event: %+v\n", event)
 					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
@@ -57,21 +74,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 					}
 
 					// ignore user store for server events
-					_ = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
-				}
-			}()
-
-			// subscribers
-			subscription, err := route.pubsub.Subscribe(ctx, *channel)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer subscription.Close()
-
-			go func() {
-				for patchset := range subscription.C() {
-					go writeDOMevents(wsConn, *channel, route.template, patchset)
+					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 				}
 			}()
 
@@ -85,8 +88,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller, sess
 				defer reloadSubscriber.Close()
 
 				go func() {
-					for patchset := range reloadSubscriber.C() {
-						go writeDOMevents(wsConn, devReloadChannel, route.template, patchset)
+					for pubsubEvent := range reloadSubscriber.C() {
+						go writeEvent(wsConn, pubsubEvent)
 					}
 				}()
 			}
@@ -114,14 +117,24 @@ loop:
 			continue
 		}
 
-		eventRoute := cntrl.routes[*event.RouteID]
+		if event.SessionID == nil {
+			glog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required\n", event)
+			continue
+		}
+
+		// var routeID string
+		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
+		// 	glog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
+		// 	continue
+		// }
+
+		eventRoute := cntrl.routes[*event.SessionID]
 
 		eventCtx := RouteContext{
-			event:     event,
-			request:   r,
-			response:  w,
-			route:     eventRoute,
-			userStore: sessionUserStore,
+			event:    event,
+			request:  r,
+			response: w,
+			route:    eventRoute,
 		}
 
 		glog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event)
@@ -131,7 +144,7 @@ loop:
 			continue
 		}
 
-		sessionUserStore = handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+		handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 	}
 	close(done)
 	wg.Wait()
@@ -142,19 +155,43 @@ type websocketConn struct {
 	sync.Mutex
 }
 
-func writeDOMevents(ws *websocketConn, channel string, t *template.Template, pubsubEvents []pubsub.Event) error {
+func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
 	ws.Lock()
 	defer ws.Unlock()
-	message := domEvents(t, pubsubEvents)
-	if len(message) == 0 {
-		err := fmt.Errorf("[writePatchOperations] error: message is empty, channel %s, events %+v", channel, pubsubEvents)
+	events := renderDOMEvents(ctx, pubsubEvent)
+	eventsData, err := json.Marshal(events)
+	if err != nil {
+		glog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
+		return err
+	}
+	if len(eventsData) == 0 {
+		err := fmt.Errorf("[writeDOMevents] error: message is empty, channel %s, events %+v", channel, pubsubEvent)
 		log.Println(err)
 		return err
 	}
-	glog.Errorf("[writePatchOperations] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(message))
-	err := ws.conn.WriteMessage(websocket.TextMessage, message)
+	glog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
+	err = ws.conn.WriteMessage(websocket.TextMessage, eventsData)
 	if err != nil {
-		glog.Errorf("[writePatchOperations] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		glog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		ws.conn.Close()
+	}
+	return err
+}
+
+func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
+	ws.Lock()
+	defer ws.Unlock()
+	reload := dom.Event{
+		Type: pubsubEvent.ID,
+	}
+	reloadData, err := json.Marshal(reload)
+	if err != nil {
+		glog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
+		return err
+	}
+	err = ws.conn.WriteMessage(websocket.TextMessage, reloadData)
+	if err != nil {
+		glog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
 		ws.conn.Close()
 	}
 	return err

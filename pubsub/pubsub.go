@@ -10,21 +10,23 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/glog"
+	"github.com/livefir/fir/internal/eventstate"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
 
 type Event struct {
-	Type         *string `json:"type"`
-	Target       *string `json:"target"`
-	TemplateName *string `json:"template_name"`
-	Data         any     `json:"data"`
+	ID        *string         `json:"id"`
+	State     eventstate.Type `json:"state"`
+	Target    *string         `json:"target"`
+	Detail    any             `json:"detail"`
+	SessionID *string         `json:"session_id"`
 }
 
 // Subscription is a subscription to a channel.
 type Subscription interface {
 	// C returns a receive-only go channel of events published
-	C() <-chan []Event
+	C() <-chan Event
 	// Close closes the subscription.
 	Close()
 }
@@ -32,7 +34,7 @@ type Subscription interface {
 // Adapter is an interface for a pubsub adapter. It allows to publish and subscribe []PubsubEvent to views.
 type Adapter interface {
 	// Publish publishes a events to a channel.
-	Publish(ctx context.Context, channel string, events ...Event) error
+	Publish(ctx context.Context, channel string, event Event) error
 	// Subscribe subscribes to a channel.
 	Subscribe(ctx context.Context, channel string) (Subscription, error)
 	// HasSubscribers returns true if there are subscribers to the given pattern.
@@ -48,14 +50,14 @@ func NewInmem() Adapter {
 
 type subscriptionInmem struct {
 	channel string
-	ch      chan []Event
+	ch      chan Event
 	once    sync.Once
 	pubsub  *pubsubInmem
 }
 
 // C returns a receive-only go channel of events published
 // on the channel this subscription is subscribed to.
-func (s *subscriptionInmem) C() <-chan []Event {
+func (s *subscriptionInmem) C() <-chan Event {
 	return s.ch
 }
 
@@ -86,7 +88,7 @@ func (p *pubsubInmem) removeSubscription(subscription *subscriptionInmem) {
 	}
 }
 
-func (p *pubsubInmem) Publish(ctx context.Context, channel string, events ...Event) error {
+func (p *pubsubInmem) Publish(ctx context.Context, channel string, event Event) error {
 	p.Lock()
 	defer p.Unlock()
 	if channel == "" {
@@ -102,7 +104,7 @@ func (p *pubsubInmem) Publish(ctx context.Context, channel string, events ...Eve
 	}
 
 	for subscription := range subscriptions {
-		go func(sub *subscriptionInmem) { sub.ch <- events }(subscription)
+		go func(sub *subscriptionInmem) { sub.ch <- event }(subscription)
 	}
 
 	return nil
@@ -117,7 +119,7 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 
 	sub := &subscriptionInmem{
 		channel: channel,
-		ch:      make(chan []Event),
+		ch:      make(chan Event),
 		pubsub:  p,
 	}
 
@@ -158,15 +160,15 @@ func NewRedis(client *redis.Client) Adapter {
 
 type subscriptionRedis struct {
 	channel string
-	ch      chan []Event
+	ch      chan Event
 	once    sync.Once
 	pubsub  *redis.PubSub
 }
 
-func (s *subscriptionRedis) C() <-chan []Event {
+func (s *subscriptionRedis) C() <-chan Event {
 	go func() {
 		for msg := range s.pubsub.Channel() {
-			var events []Event
+			var events Event
 			err := json.Unmarshal([]byte(msg.Payload), &events)
 			if err != nil {
 				glog.Errorf("failed to unmarshal events payload: %v", err)
@@ -189,14 +191,14 @@ type pubsubRedis struct {
 	client *redis.Client
 }
 
-func (p *pubsubRedis) Publish(ctx context.Context, channel string, events ...Event) error {
+func (p *pubsubRedis) Publish(ctx context.Context, channel string, event Event) error {
 
-	eventsBytes, err := json.Marshal(events)
+	eventBytes, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
 
-	return p.client.Publish(ctx, channel, eventsBytes).Err()
+	return p.client.Publish(ctx, channel, eventBytes).Err()
 }
 
 func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscription, error) {
@@ -204,7 +206,7 @@ func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscripti
 		return nil, fmt.Errorf("channel is empty")
 	}
 	pubsub := p.client.Subscribe(ctx, channel)
-	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan []Event)}, nil
+	return &subscriptionRedis{pubsub: pubsub, channel: channel, ch: make(chan Event)}, nil
 }
 
 func (p *pubsubRedis) HasSubscribers(ctx context.Context, pattern string) bool {

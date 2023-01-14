@@ -13,7 +13,9 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
+	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
 )
 
@@ -160,7 +162,7 @@ func (r *routeData) Error() string {
 }
 
 type routeRenderer func(data routeData) error
-type eventPublisher func(events ...pubsub.Event) error
+type eventPublisher func(event pubsub.Event) error
 type routeOpt struct {
 	id                     string
 	layout                 string
@@ -184,6 +186,7 @@ type route struct {
 	errorTemplate    *template.Template
 	allTemplates     []string
 	eventTemplateMap map[string]map[string]struct{}
+	bindings         *dom.Bindings
 	routeOpt
 	sync.RWMutex
 }
@@ -214,8 +217,14 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			return err
 		}
 
+		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
+		// if err != nil {
+		// 	glog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
+		// 	return err
+		// }
+
 		http.SetCookie(ctx.response, &http.Cookie{
-			Name:   "_fir_route_id",
+			Name:   ctx.route.cookieName,
 			Value:  ctx.route.id,
 			MaxAge: 0,
 			Path:   "/",
@@ -227,9 +236,9 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 }
 
 func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
-	return func(pubsubEvents ...pubsub.Event) error {
+	return func(pubsubEvent pubsub.Event) error {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
-		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvents...)
+		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvent)
 		if err != nil {
 			glog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 			return err
@@ -239,20 +248,20 @@ func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 }
 
 func writeAndPublishEvents(ctx RouteContext) eventPublisher {
-	return func(pubsubEvents ...pubsub.Event) error {
+	return func(pubsubEvent pubsub.Event) error {
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
-		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvents...)
+		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
-			glog.Warningf("[onPatchEvent] error publishing patch: %v\n", err)
+			glog.Warningf("[writeAndPublishEvents] error publishing patch: %v\n", err)
 		}
-		ctx.session.Values["user-store"] = ctx.userStore
-		// Save it before we write to the response/return from the handler.
-		err = ctx.session.Save(ctx.request, ctx.response)
+		events := renderDOMEvents(ctx, pubsubEvent)
+
+		eventsData, err := json.Marshal(events)
 		if err != nil {
-			http.Error(ctx.response, err.Error(), http.StatusInternalServerError)
+			glog.Errorf("[writeAndPublishEvents] error marshaling patch: %v\n", err)
 			return err
 		}
-		ctx.response.Write(domEvents(ctx.route.template, pubsubEvents))
+		ctx.response.Write(eventsData)
 		return nil
 	}
 }
@@ -276,19 +285,9 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	session, err := rt.sessionStore.Get(r, rt.sessionName)
-	if err != nil {
-		glog.Errorf("[ServeHTTP] error getting session: %v\n", err)
-	}
-
-	sessionUserStore := userStore{}
-	if val, ok := session.Values["user-store"]; ok {
-		sessionUserStore = val.(userStore)
-	}
-
 	if r.Header.Get("Connection") == "Upgrade" &&
 		r.Header.Get("Upgrade") == "websocket" {
-		onWebsocket(w, r, rt.cntrl, sessionUserStore)
+		onWebsocket(w, r, rt.cntrl)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
 		var event Event
@@ -309,12 +308,10 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventCtx := RouteContext{
-			event:     event,
-			request:   r,
-			response:  w,
-			route:     rt,
-			userStore: sessionUserStore,
-			session:   session,
+			event:    event,
+			request:  r,
+			response: w,
+			route:    rt,
 		}
 
 		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
@@ -368,7 +365,6 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				response:  w,
 				route:     rt,
 				urlValues: urlValues,
-				userStore: sessionUserStore,
 			}
 
 			onEventFunc, ok := rt.onEvents[event.ID]
@@ -383,12 +379,11 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// onLoad
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := RouteContext{
-				event:     event,
-				request:   r,
-				response:  w,
-				route:     rt,
-				isOnLoad:  true,
-				userStore: sessionUserStore,
+				event:    event,
+				request:  r,
+				response: w,
+				route:    rt,
+				isOnLoad: true,
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
@@ -397,81 +392,19 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func buildErrorEvents(ctx RouteContext, eventErrorID string, errs map[string]any) []pubsub.Event {
+func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 	target := ""
 	if ctx.event.Target != nil {
 		target = *ctx.event.Target
 	}
-	catchAllErrorEventID := "onevent:error"
-
-	errIDs := []string{eventErrorID, catchAllErrorEventID}
-
-	var pubsubEvents []pubsub.Event
-	for _, errID := range errIDs {
-		for block := range ctx.route.eventTemplateMap[errID] {
-			block := block
-			if block == "-" {
-				pubsubEvents = append(pubsubEvents, pubsub.Event{
-					Type:   fir(errID),
-					Target: &target,
-					Data:   errs,
-				})
-				continue
-			}
-			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				Type:         fir(errID, block),
-				Target:       &target,
-				TemplateName: &block,
-				Data:         map[string]any{"fir": newRouteDOMContext(ctx, errs)},
-			})
-		}
-	}
-	return pubsubEvents
-}
-
-func buildOKEvents(ctx RouteContext, eventOKID string, data map[string]any) []pubsub.Event {
-	target := ""
-	if ctx.event.Target != nil {
-		target = *ctx.event.Target
-	}
-	var pubsubEvents []pubsub.Event
-
-	for block := range ctx.route.eventTemplateMap[eventOKID] {
-		block := block
-		if block == "-" {
-			pubsubEvents = append(pubsubEvents, pubsub.Event{
-				Type:   fir(eventOKID),
-				Target: &target,
-				Data:   data,
-			})
-			continue
-		}
-		pubsubEvents = append(pubsubEvents, pubsub.Event{
-			Type:         fir(eventOKID, block),
-			Target:       &target,
-			TemplateName: &block,
-			Data:         data,
-		})
-	}
-	return pubsubEvents
-}
-
-func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) userStore {
 	if err == nil {
-		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
-		ctx.route.RLock()
-		pubsubEvents := buildOKEvents(ctx, eventOkID, nil)
-		// check if error was previously set for this event
-		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
-		// if error was previously set, then remove it and dispatch event to unset error
-		if _, ok := ctx.userStore[ctx.routeKey(eventErrorID)]; ok {
-			delete(ctx.userStore, ctx.routeKey(eventErrorID))
-			pubsubEvents = append(pubsubEvents, buildErrorEvents(ctx, eventErrorID, nil)...)
-		}
-		ctx.route.RUnlock()
-
-		publish(pubsubEvents...)
-		return ctx.userStore
+		publish(pubsub.Event{
+			ID:        &ctx.event.ID,
+			State:     eventstate.OK,
+			Target:    &target,
+			SessionID: ctx.event.SessionID,
+		})
+		return
 	}
 
 	switch errVal := err.(type) {
@@ -480,63 +413,52 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) us
 			ctx.event.ID: firErrors.User(errVal.Err).Error(),
 			"onevent":    firErrors.User(errVal.Err).Error(),
 		}
-		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
-		// mark error as set in session
-		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
-		ctx.route.RLock()
-		pubsubEvents := buildErrorEvents(ctx, eventErrorID, errs)
-		ctx.route.RUnlock()
-		publish(pubsubEvents...)
-		return ctx.userStore
+		publish(pubsub.Event{
+			ID:        &ctx.event.ID,
+			State:     eventstate.Error,
+			Target:    &target,
+			Detail:    errs,
+			SessionID: ctx.event.SessionID,
+		})
+		return
 	case *firErrors.Fields:
 		fieldErrorsData := *errVal
 		fieldErrors := make(map[string]any)
 		for field, err := range fieldErrorsData {
 			fieldErrors[field] = err.Error()
 		}
-		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
-		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
-		ctx.route.RLock()
-		pubsubEvents := buildErrorEvents(ctx, eventErrorID, map[string]any{ctx.event.ID: fieldErrors})
-		ctx.route.RUnlock()
-		publish(pubsubEvents...)
-		return ctx.userStore
+		errs := map[string]any{ctx.event.ID: fieldErrors}
+		publish(pubsub.Event{
+			ID:        &ctx.event.ID,
+			State:     eventstate.Error,
+			Target:    &target,
+			Detail:    errs,
+			SessionID: ctx.event.SessionID,
+		})
+		return
 	case *routeData:
 		data := *errVal
-		eventOkID := fmt.Sprintf("%s:ok", ctx.event.ID)
-		ctx.route.RLock()
-		pubsubEvents := buildOKEvents(ctx, eventOkID, data)
-		// check if errors were set in a previous sesion
-		for eventErrorID := range ctx.route.eventTemplateMap {
-			// skip if not error event
-			if !strings.HasSuffix(eventErrorID, ":error") {
-				continue
-			}
-			if _, ok := ctx.userStore[ctx.routeKey(eventErrorID)]; !ok {
-				continue
-			}
-
-			// remove error from session
-			delete(ctx.userStore, ctx.routeKey(eventErrorID))
-			// unset error if previously set
-			pubsubEvents = append(pubsubEvents, buildErrorEvents(ctx, eventErrorID, nil)...)
-		}
-		ctx.route.RUnlock()
-		publish(pubsubEvents...)
-		return ctx.userStore
+		publish(pubsub.Event{
+			ID:        &ctx.event.ID,
+			State:     eventstate.OK,
+			Target:    &target,
+			Detail:    data,
+			SessionID: ctx.event.SessionID,
+		})
+		return
 	default:
 		errs := map[string]any{
 			ctx.event.ID: firErrors.User(err).Error(),
 			"onevent":    firErrors.User(err).Error(),
 		}
-		eventErrorID := fmt.Sprintf("%s:error", ctx.event.ID)
-		// mark error as set in session
-		ctx.userStore[ctx.routeKey(eventErrorID)] = 1
-		ctx.route.RLock()
-		pubsubEvents := buildErrorEvents(ctx, eventErrorID, errs)
-		ctx.route.RUnlock()
-		publish(pubsubEvents...)
-		return ctx.userStore
+		publish(pubsub.Event{
+			ID:        &ctx.event.ID,
+			State:     eventstate.Error,
+			Target:    &target,
+			Detail:    errs,
+			SessionID: ctx.event.SessionID,
+		})
+		return
 	}
 }
 
@@ -666,7 +588,8 @@ func (rt *route) parseTemplates() {
 			panic(err)
 		}
 		rt.findAllTemplates()
-		rt.buildEventRenderMapping()
+		rt.bindings = dom.RouteBindings(rt.id, rt.template)
+		rt.buildRouteBindigs()
 	}
 }
 
@@ -679,7 +602,7 @@ func (rt *route) findAllTemplates() {
 	}
 }
 
-func (rt *route) buildEventRenderMapping() {
+func (rt *route) buildRouteBindigs() {
 	opt := rt.routeOpt
 	if opt.layout == "" && opt.content == "" {
 		return
@@ -689,7 +612,7 @@ func (rt *route) buildEventRenderMapping() {
 		pagePath := filepath.Join(opt.publicDir, page)
 		// is layout html content or a file/directory
 		if isFileOrString(pagePath, opt) {
-			parseEventRenderMapping(rt, strings.NewReader(page))
+			rt.bindings.AddFile(strings.NewReader(page))
 		} else {
 			// compile layout
 			commonFiles := []string{pagePath}
@@ -703,7 +626,7 @@ func (rt *route) buildEventRenderMapping() {
 					if err != nil {
 						panic(err)
 					}
-					parseEventRenderMapping(rt, r)
+					rt.bindings.AddFile(r)
 				}
 			} else {
 				for _, v := range commonFiles {
@@ -711,7 +634,7 @@ func (rt *route) buildEventRenderMapping() {
 					if err != nil {
 						panic(err)
 					}
-					parseEventRenderMapping(rt, r)
+					rt.bindings.AddFile(r)
 				}
 
 			}

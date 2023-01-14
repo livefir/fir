@@ -38,7 +38,7 @@ func watchTemplates(wc *controller) {
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					wc.pubsub.Publish(context.Background(), devReloadChannel, pubsub.Event{Type: fir("reload")})
+					wc.pubsub.Publish(context.Background(), devReloadChannel, pubsub.Event{ID: fir("reload")})
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:
