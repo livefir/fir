@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"strings"
 
 	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/dom"
@@ -126,8 +125,6 @@ func buildTemplateValue(t *template.Template, name string, data any) (string, er
 	}
 	var dataBuf bytes.Buffer
 	defer dataBuf.Reset()
-	var nilDataBuf bytes.Buffer
-	defer nilDataBuf.Reset()
 	if name == "_fir_html" {
 		dataBuf.WriteString(data.(string))
 	} else {
@@ -136,16 +133,7 @@ func buildTemplateValue(t *template.Template, name string, data any) (string, er
 		if err != nil {
 			return "", err
 		}
-		err = t.ExecuteTemplate(&nilDataBuf, name, nil)
-		if err != nil {
-			return "", err
-		}
-		// no change in output, return empty string
-		newHTML := strings.TrimSpace(dataBuf.String())
-		prevHTML := strings.TrimSpace(nilDataBuf.String())
-		if newHTML == prevHTML {
-			return "", nil
-		}
+
 	}
 
 	m := minify.New()
