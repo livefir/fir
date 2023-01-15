@@ -184,7 +184,7 @@ func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
 	reload := dom.Event{
 		Type: pubsubEvent.ID,
 	}
-	reloadData, err := json.Marshal(reload)
+	reloadData, err := json.Marshal([]dom.Event{reload})
 	if err != nil {
 		glog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
 		return err
