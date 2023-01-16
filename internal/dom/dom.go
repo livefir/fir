@@ -3,6 +3,7 @@ package dom
 import (
 	"html/template"
 	"io"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -23,17 +24,19 @@ type Event struct {
 
 func RouteBindings(id string, tmpl *template.Template) *Bindings {
 	return &Bindings{
-		id:             id,
-		tmpl:           tmpl,
-		eventTemplates: make(map[string]map[string]struct{}),
-		RWMutex:        &sync.RWMutex{},
+		id:                id,
+		tmpl:              tmpl,
+		eventTemplates:    make(map[string]map[string]struct{}),
+		RWMutex:           &sync.RWMutex{},
+		templateNameRegex: regexp.MustCompile(`^[ A-Za-z0-9\-:]*$`),
 	}
 }
 
 type Bindings struct {
-	id             string
-	tmpl           *template.Template
-	eventTemplates map[string]map[string]struct{}
+	id                string
+	tmpl              *template.Template
+	eventTemplates    map[string]map[string]struct{}
+	templateNameRegex *regexp.Regexp
 	*sync.RWMutex
 }
 
@@ -105,11 +108,15 @@ func (b *Bindings) AddFile(rd io.Reader) {
 					templates = make(map[string]struct{})
 				}
 
+				if !b.templateNameRegex.MatchString(templateName) {
+					glog.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v\n", templateName)
+					continue
+				}
+
 				templates[templateName] = struct{}{}
 
 				//fmt.Printf("eventID: %s, blocks: %v\n", eventID, blocks)
 				b.eventTemplates[eventID] = templates
-
 			}
 		}
 

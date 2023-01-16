@@ -93,7 +93,7 @@ const Plugin = (Alpine) => {
                     removeElement(el, event.detail)
                 }
             },
-            emit(id, params) {
+            emit(id, params, target) {
                 return function (event) {
                     if (id) {
                         if (typeof id !== 'string') {
@@ -117,15 +117,26 @@ const Plugin = (Alpine) => {
                     } else {
                         params = {}
                     }
+                    if (!target) {
+                        target = `#${el.getAttribute('id')}`
+                    }
+                    if (
+                        target &&
+                        !target.startsWith('#') &&
+                        !target.startsWith('.')
+                    ) {
+                        console.error('target must start with # or .')
+                        return
+                    }
                     post(el, {
                         event_id: id,
                         params: params,
-                        target: el.getAttribute('id'),
+                        target: target,
                         session_id: getSessionIDFromCookie(),
                     })
                 }
             },
-            submit(id) {
+            submit(opts) {
                 return function (event) {
                     if (
                         event.type !== 'submit' &&
@@ -146,8 +157,7 @@ const Plugin = (Alpine) => {
                     }
 
                     if (
-                        (!id &&
-                            !form.getAttribute('id') &&
+                        (!form.getAttribute('id') &&
                             !form.action &&
                             !event.submitter) ||
                         (event.submitter && !event.submitter.formAction)
@@ -182,7 +192,7 @@ const Plugin = (Alpine) => {
                     Alpine.store(form.getAttribute('id'), nextStore)
                     if (Object.keys(formErrors.errors).length == 0) {
                         let formData = new FormData(form)
-                        let eventID = id
+                        let eventID
                         if (!eventID) {
                             if (form.getAttribute('id')) {
                                 eventID = form.getAttribute('id')
@@ -215,13 +225,44 @@ const Plugin = (Alpine) => {
                         formData.forEach(
                             (value, key) => (params[key] = new Array(value))
                         )
+                        let target = ''
+                        if (form.getAttribute('id')) {
+                            target = `#${form.getAttribute('id')}`
+                        }
+                        if (opts) {
+                            if (opts.event) {
+                                eventID = opts.event
+                            }
+                            if (opts.params) {
+                                params = opts.params
+                            }
+                            if (opts.target) {
+                                target = opts.target
+                            }
+                        }
+
+                        if (
+                            target &&
+                            !target.startsWith('#') &&
+                            !target.startsWith('.')
+                        ) {
+                            console.error('target must start with # or .')
+                            return
+                        }
+
+                        if (!eventID) {
+                            console.error(
+                                `event id is empty and element id is not set. can't emit event`
+                            )
+                            return
+                        }
 
                         // post event to server
                         post(el, {
                             event_id: eventID,
                             params: params,
                             is_form: true,
-                            target: el.getAttribute('id'),
+                            target: target,
                             session_id: getSessionIDFromCookie(),
                         })
 
@@ -356,26 +397,31 @@ const Plugin = (Alpine) => {
             cancelable: true,
         }
         const renderEvent = new CustomEvent(serverEvent.type, opts)
-        if (!serverEvent.target) {
-            //document.dispatchEvent(event)
-            window.dispatchEvent(renderEvent)
-            return
+        window.dispatchEvent(renderEvent)
+        if (serverEvent.target.startsWith('#')) {
+            const elem = document.getElementById(serverEvent.target)
+            const getSiblings = (elm) =>
+                elm &&
+                elm.parentNode &&
+                [...elm.parentNode.children].filter(
+                    (node) =>
+                        node != elm &&
+                        (node.hasAttribute(`@${serverEvent.type}`) ||
+                            node.hasAttribute(`x-on:${serverEvent.type}`))
+                )
+            const sibs = getSiblings(elem)
+            sibs.forEach((sib) => {
+                sib.dispatchEvent(renderEvent)
+            })
+            elem.dispatchEvent(renderEvent)
         }
-        const elem = document.getElementById(serverEvent.target)
-        const getSiblings = (elm) =>
-            elm &&
-            elm.parentNode &&
-            [...elm.parentNode.children].filter(
-                (node) =>
-                    node != elm &&
-                    (node.hasAttribute(`@${serverEvent.type}`) ||
-                        node.hasAttribute(`x-on:${serverEvent.type}`))
-            )
-        const sibs = getSiblings(elem)
-        sibs.forEach((sib) => {
-            sib.dispatchEvent(renderEvent)
-        })
-        elem.dispatchEvent(renderEvent)
+
+        if (serverEvent.target.startsWith('.')) {
+            const elems = document.querySelectorAll(serverEvent.target)
+            for (let i = 0; i < elems.length; i++) {
+                elems[i].dispatchEvent(renderEvent)
+            }
+        }
     }
 
     const post = (el, firEvent) => {
