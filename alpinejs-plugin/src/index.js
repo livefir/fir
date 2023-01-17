@@ -52,45 +52,73 @@ const Plugin = (Alpine) => {
 
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
-            replace() {
+            replace(detail) {
                 return function (event) {
                     //console.log('=====================>')
                     //console.log(el)
                     //console.log(event)
                     //console.log(event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
                     let toHTML = el.cloneNode(false)
-                    toHTML.innerHTML = event.detail.trim()
+                    toHTML.innerHTML = eventDetail.trim()
                     morphElement(el, toHTML.outerHTML)
                 }
             },
-            replaceEl() {
+            replaceEl(detail) {
                 return function (event) {
-                    morphElement(el, event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    morphElement(el, eventDetail)
                 }
             },
-            appendEl() {
+            appendEl(detail) {
                 return function (event) {
-                    appendElement(el, event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    appendElement(el, eventDetail)
                 }
             },
-            prependEl() {
+            prependEl(detail) {
                 return function (event) {
-                    prependElement(el, event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    prependElement(el, eventDetail)
                 }
             },
-            afterEl() {
+            afterEl(detail) {
                 return function (event) {
-                    afterElement(el, event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    afterElement(el, eventDetail)
                 }
             },
-            beforeEl() {
+            beforeEl(detail) {
                 return function (event) {
-                    beforeElement(el, event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    beforeElement(el, eventDetail)
                 }
             },
-            removeEl() {
+            removeEl(detail) {
                 return function (event) {
-                    removeElement(el, event.detail)
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    removeElement(el, eventDetail)
                 }
             },
             emit(id, params, target) {
