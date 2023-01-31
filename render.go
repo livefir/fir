@@ -32,6 +32,7 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 			})
 			continue
 		}
+		eventType := fir(eventIDWithState, templateName)
 		templateData := pubsubEvent.Detail
 		if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
 			errs, ok := pubsubEvent.Detail.(map[string]any)
@@ -43,7 +44,7 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		}
 		value, err := buildTemplateValue(ctx.route.template, templateName, templateData)
 		if err != nil {
-			glog.Errorf("Bindings.Events buildTemplateValue error: %s", err)
+			glog.Errorf("Bindings.Events buildTemplateValue error for eventType: %v, err: %v", *eventType, err)
 			continue
 		}
 		if pubsubEvent.State == eventstate.Error && value == "" {
@@ -53,7 +54,7 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		events = append(events, dom.Event{
 			ID:     eventIDWithState,
 			State:  pubsubEvent.State,
-			Type:   fir(eventIDWithState, templateName),
+			Type:   eventType,
 			Target: pubsubEvent.Target,
 			Detail: value,
 		})
