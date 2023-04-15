@@ -8,12 +8,6 @@
 **Status**: This is a work in progress. Checkout examples to see what works today: [examples](./examples/)
 
 
-Fir is a toolkit for building server-rendered HTML applications and progressively enhancing them to enable real-time user experiences. It is intended for developers who want to build real-time web apps using Go, server-rendered HTML (html/template), CSS, and sprinkles of declarative javascript (Alpine.js). The toolkit can be used to build a completely server-rendered web application with zero javascript, and the same app can then be progressively enhanced on the client to a real-time dynamic app with little bits of javascript while still using Go's html/template engine on the server. Fir can be used to build various types of web applications, including static websites like landing pages or blogs, interactive CRUD apps like ticket helpdesks, and real-time apps like metrics dashboards or social media streams.
-
-Fir enhances a standard `html/template` web page with `alpine.js` allowing predefined parts of the page updatable on user interaction. A `html/template` page is decomposed into updatable parts using the `block` action. This allows Fir to re-compile the targeted block on the server and update the web page over the *wire*(http & websocket) and without page reloads. 
-The HTML itself is largely quite standard i.e. its free of magics or special attributes except what’s exposed by the alpinejs plugin. The plugin exposes a small API and is designed to be unobtrusive and easy to remove incase one wants to migrate the HTML to another framework. 
-
-
 ## Example
 
 Using fir's alpinejs plugin, the page below has been progressively enhanced to a real-time single page app. Open two tabs to see the count update in both. Disable javascript in your browser to see it still work without the enhancements.
@@ -86,3 +80,10 @@ func main() {
 In the above example, `@fir:inc:ok:count.window="$fir.replace()"` marks content of that div to be replaced by the content of `block count`. Event namespacing is used to indicate the server renderer which `block` to re-render and send on a successful event response(`ok`). The allowed event namespace format is `@fir:<event-name>:<ok|error>:<block-name>`. 
 
 `$fir.submit` is a helper which prevents the form submission and dispatches browser events `inc` and `dec` which is then captured by `@fir:inc:ok:count.window, @fir:dec:ok:count.window` listeners. It also captures any form data and attaches it to the event before its sent to the server by `$fir.replace`. In this example we don't have any form data.
+
+## About Fir
+
+Fir is a toolkit for building server-rendered HTML applications and progressively enhancing them to enable real-time user experiences. It is intended for developers who want to build real-time web apps using Go, server-rendered HTML (html/template), CSS, and sprinkles of declarative javascript (Alpine.js). The toolkit can be used to build a completely server-rendered web application with zero javascript, and the same app can then be progressively enhanced on the client to a real-time dynamic app with little bits of javascript while still using Go's html/template engine on the server. Fir can be used to build various types of web applications, including static websites like landing pages or blogs, interactive CRUD apps like ticket helpdesks, and real-time apps like metrics dashboards or social media streams.
+
+Fir enhances a standard `html/template` web page with `alpine.js` allowing predefined parts of the page updatable on user interaction. A `html/template` page is decomposed into updatable parts using the `block` action. This allows Fir to re-compile the targeted block on the server and update the web page over the *wire*(http & websocket) and without page reloads. 
+The HTML itself is largely quite standard i.e. its free of magics or special attributes except what’s exposed by the alpinejs plugin. The plugin exposes a small API and is designed to be unobtrusive and easy to remove incase one wants to migrate the HTML to another framework. 
