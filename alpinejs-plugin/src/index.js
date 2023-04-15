@@ -221,28 +221,23 @@ const Plugin = (Alpine) => {
                     if (Object.keys(formErrors.errors).length == 0) {
                         let formData = new FormData(form)
                         let eventID
-                        if (!eventID) {
-                            if (form.getAttribute('id')) {
-                                eventID = form.getAttribute('id')
-                            }
-                            if (form.action) {
-                                const url = new URL(form.action)
-                                if (url.searchParams.get('event')) {
-                                    eventID = url.searchParams.get('event')
-                                }
-                            }
-                            if (event.submitter && event.submitter.formAction) {
-                                const url = new URL(event.submitter.formAction)
-                                if (url.searchParams.get('event')) {
-                                    eventID = url.searchParams.get('event')
-                                }
-                            }
-                        } else {
-                            if (typeof eventID !== 'string') {
-                                console.error(`id ${eventID} is not a string.`)
-                                return
+
+                        if (form.getAttribute('id')) {
+                            eventID = form.getAttribute('id')
+                        }
+                        if (form.action) {
+                            const url = new URL(form.action)
+                            if (url.searchParams.get('event')) {
+                                eventID = url.searchParams.get('event')
                             }
                         }
+                        if (event.submitter && event.submitter.formAction) {
+                            const url = new URL(event.submitter.formAction)
+                            if (url.searchParams.get('event')) {
+                                eventID = url.searchParams.get('event')
+                            }
+                        }
+
                         if (event.submitter && event.submitter.name) {
                             formData.append(
                                 event.submitter.name,
