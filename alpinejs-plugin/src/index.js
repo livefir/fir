@@ -50,6 +50,7 @@ const Plugin = (Alpine) => {
         Alpine.store('fir', val)
     })
 
+    // source from https://dev.to/iamcherta/hotwire-empty-states-with-alpinejs-4gpo
     Alpine.directive(
         'fir-mutation-observer',
         (el, { expression, modifiers }, { evaluateLater, cleanup }) => {
@@ -62,9 +63,9 @@ const Plugin = (Alpine) => {
             })
 
             observer.observe(el, {
-                childList: true,
-                subtree: true,
-                attributes: true,
+                childList: modifiers.includes('child-list'),
+                attributes: modifiers.includes('attributes'),
+                subtree: modifiers.includes('subtree'),
             })
 
             cleanup(() => {
