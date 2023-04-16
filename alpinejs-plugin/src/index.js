@@ -50,6 +50,29 @@ const Plugin = (Alpine) => {
         Alpine.store('fir', val)
     })
 
+    Alpine.directive(
+        'fir-mutation-observer',
+        (el, { expression, modifiers }, { evaluateLater, cleanup }) => {
+            let callback = evaluateLater(expression)
+
+            callback()
+
+            let observer = new MutationObserver(() => {
+                callback()
+            })
+
+            observer.observe(el, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+            })
+
+            cleanup(() => {
+                observer.disconnect()
+            })
+        }
+    )
+
     Alpine.magic('fir', (el, { Alpine }) => {
         return {
             replace(detail) {
