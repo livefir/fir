@@ -227,10 +227,10 @@ func (c RouteContext) Status(code int, err error) error {
 	return &firErrors.Status{Code: code, Err: firErrors.User(err)}
 }
 
-func (c RouteContext) GetUserFromContext() *string {
-	user, ok := c.request.Context().Value(UserKey).(*string)
+func (c RouteContext) GetUserFromContext() string {
+	user, ok := c.request.Context().Value(UserKey).(string)
 	if !ok {
-		return nil
+		panic("user not found in context")
 	}
 	return user
 }
