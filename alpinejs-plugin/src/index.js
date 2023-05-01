@@ -349,6 +349,10 @@ const Plugin = (Alpine) => {
     }
 
     const morphElement = (el, value) => {
+        if (!value) {
+            console.error(`morph value is null`)
+            return
+        }
         Alpine.morph(el, value, {
             key(el) {
                 return el.id
