@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 // NewEvent creates a new event
 func NewEvent(id string, params any) Event {
 	data, err := json.Marshal(params)
 	if err != nil {
-		glog.Errorf("error marshaling event params: %v, %v, %v \n,", id, params, err)
+		klog.Errorf("error marshaling event params: %v, %v, %v \n,", id, params, err)
 		return Event{
 			ID: id,
 		}

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
+	"k8s.io/klog/v2"
 )
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
@@ -33,7 +33,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 			defer wg.Done()
 			routeChannel := route.channelFunc(r, route.id)
 			if routeChannel == nil {
-				glog.Errorf("[onWebsocket] error: channel is empty")
+				klog.Errorf("[onWebsocket] error: channel is empty")
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
@@ -66,10 +66,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					glog.Errorf("[onWebsocket] received server event: %+v\n", event)
+					klog.Errorf("[onWebsocket] received server event: %+v\n", event)
 					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 					if !ok {
-						glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
+						klog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
 						continue
 					}
 
@@ -108,23 +108,23 @@ loop:
 		var event Event
 		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
 		if err != nil {
-			glog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
+			klog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
 			continue
 		}
 
 		if event.ID == "" {
-			glog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
+			klog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
 			continue
 		}
 
 		if event.SessionID == nil {
-			glog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required\n", event)
+			klog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required\n", event)
 			continue
 		}
 
 		// var routeID string
 		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
-		// 	glog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
+		// 	klog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
 		// 	continue
 		// }
 
@@ -137,10 +137,10 @@ loop:
 			route:    eventRoute,
 		}
 
-		glog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event)
+		klog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event)
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
-			glog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
+			klog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
 			continue
 		}
 
@@ -161,7 +161,7 @@ func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pu
 	events := renderDOMEvents(ctx, pubsubEvent)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
-		glog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
+		klog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
 		return err
 	}
 	if len(eventsData) == 0 {
@@ -169,10 +169,10 @@ func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pu
 		log.Println(err)
 		return err
 	}
-	glog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
+	klog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
 	err = ws.conn.WriteMessage(websocket.TextMessage, eventsData)
 	if err != nil {
-		glog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
+		klog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
 		ws.conn.Close()
 	}
 	return err
@@ -186,12 +186,12 @@ func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
 	}
 	reloadData, err := json.Marshal([]dom.Event{reload})
 	if err != nil {
-		glog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
+		klog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
 		return err
 	}
 	err = ws.conn.WriteMessage(websocket.TextMessage, reloadData)
 	if err != nil {
-		glog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
+		klog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
 		ws.conn.Close()
 	}
 	return err

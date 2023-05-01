@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 )
 
 func defaultChannelFunc(r *http.Request, viewID string) *string {
@@ -16,9 +16,9 @@ func defaultChannelFunc(r *http.Request, viewID string) *string {
 		}
 	}
 
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	userID, ok := r.Context().Value(UserKey).(string)
 	if !ok || userID == "" {
-		glog.Warningf("warning: no user id in request context. user is anonymous, viewID: %s \n", viewID)
+		klog.Warningf("warning: no user id in request context. user is anonymous, viewID: %s \n", viewID)
 		userID = "anonymous"
 	}
 	channel := fmt.Sprintf("%s:%s", userID, viewID)

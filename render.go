@@ -6,13 +6,13 @@ import (
 	"html/template"
 	"io"
 
-	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
+	"k8s.io/klog/v2"
 )
 
 // renderDOMEvents renders the DOM events for the given pubsub event.
@@ -37,14 +37,14 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
 			errs, ok := pubsubEvent.Detail.(map[string]any)
 			if !ok {
-				glog.Errorf("Bindings.Events error: %s", "pubsubEvent.Detail is not a map[string]any")
+				klog.Errorf("Bindings.Events error: %s", "pubsubEvent.Detail is not a map[string]any")
 				continue
 			}
 			templateData = map[string]any{"fir": newRouteDOMContext(ctx, errs)}
 		}
 		value, err := buildTemplateValue(ctx.route.template, templateName, templateData)
 		if err != nil {
-			glog.Errorf("Bindings.Events buildTemplateValue error for eventType: %v, err: %v", *eventType, err)
+			klog.Errorf("Bindings.Events buildTemplateValue error for eventType: %v, err: %v", *eventType, err)
 			continue
 		}
 		if pubsubEvent.State == eventstate.Error && value == "" {

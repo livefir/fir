@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/eventstate"
 	"golang.org/x/exp/slices"
+	"k8s.io/klog/v2"
 )
 
 type Event struct {
@@ -57,7 +57,7 @@ func (b *Bindings) AddFile(rd io.Reader) {
 				eventns = strings.TrimPrefix(eventns, "x-on:fir:")
 				eventnsParts := strings.SplitN(eventns, ".", -1)
 				if len(eventnsParts) > 3 {
-					glog.Errorf(`
+					klog.Errorf(`
 					error: invalid event namespace: %s. 
 					must be of the format => @fir:<event>:<ok|error>:<block-name|optional>`, eventns)
 					continue
@@ -74,7 +74,7 @@ func (b *Bindings) AddFile(rd io.Reader) {
 				eventID := eventnsParts[0]
 				if len(eventnsParts) >= 2 {
 					if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventnsParts[1]) {
-						glog.Errorf(`
+						klog.Errorf(`
 						error: invalid event namespace: %s. 
 						it must be of the format => 
 						@fir:<event>:<ok|error>:<block|optional> or
@@ -92,7 +92,7 @@ func (b *Bindings) AddFile(rd io.Reader) {
 				templateName := "-"
 				if len(eventnsParts) == 3 {
 					if !slices.Contains([]string{"ok", "error"}, eventnsParts[1]) {
-						glog.Errorf(`
+						klog.Errorf(`
 						error: invalid event namespace: %s. 
 						it must be of the format => 
 						@fir:<event>:<ok|error>:<block|optional> or
@@ -109,7 +109,7 @@ func (b *Bindings) AddFile(rd io.Reader) {
 				}
 
 				if !b.templateNameRegex.MatchString(templateName) {
-					glog.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v\n", templateName)
+					klog.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v\n", templateName)
 					continue
 				}
 

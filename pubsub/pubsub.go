@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/eventstate"
+	"k8s.io/klog/v2"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
@@ -171,7 +171,7 @@ func (s *subscriptionRedis) C() <-chan Event {
 			var events Event
 			err := json.Unmarshal([]byte(msg.Payload), &events)
 			if err != nil {
-				glog.Errorf("failed to unmarshal events payload: %v", err)
+				klog.Errorf("failed to unmarshal events payload: %v", err)
 				continue
 			}
 			s.ch <- events
@@ -212,7 +212,7 @@ func (p *pubsubRedis) Subscribe(ctx context.Context, channel string) (Subscripti
 func (p *pubsubRedis) HasSubscribers(ctx context.Context, pattern string) bool {
 	channels, err := p.client.PubSubChannels(ctx, pattern).Result()
 	if err != nil {
-		glog.Errorf("error getting channels for pattern: %v : err, %v", pattern, err)
+		klog.Errorf("error getting channels for pattern: %v : err, %v", pattern, err)
 		return false
 	}
 	if len(channels) == 0 {

@@ -70,6 +70,7 @@ func WithChannelFunc(f func(r *http.Request, viewID string) *string) ControllerO
 	}
 }
 
+// WithPathParamsFunc is an option to set a function to construct the path params for the controller's views.
 func WithPathParamsFunc(f func(r *http.Request) PathParams) ControllerOption {
 	return func(o *opt) {
 		o.pathParamsFunc = f
@@ -112,6 +113,7 @@ func WithFormDecoder(decoder *schema.Decoder) ControllerOption {
 	}
 }
 
+// WithDisableWebsocket is an option to disable websocket.
 func WithDisableWebsocket() ControllerOption {
 	return func(o *opt) {
 		o.disableWebsocket = true

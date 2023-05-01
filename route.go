@@ -12,11 +12,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/glog"
 	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
+	"k8s.io/klog/v2"
 )
 
 // RouteOption is a function that sets route options
@@ -213,13 +213,13 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 		tmpl.Option("missingkey=zero")
 		err := tmpl.Execute(&buf, data)
 		if err != nil {
-			glog.Errorf("[renderRoute] error executing template: %v\n", err)
+			klog.Errorf("[renderRoute] error executing template: %v\n", err)
 			return err
 		}
 
 		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
 		// if err != nil {
-		// 	glog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
+		// 	klog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
 		// 	return err
 		// }
 
@@ -240,7 +240,7 @@ func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvent)
 		if err != nil {
-			glog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
+			klog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
 			return err
 		}
 		return nil
@@ -252,13 +252,13 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
-			glog.Warningf("[writeAndPublishEvents] error publishing patch: %v\n", err)
+			klog.Warningf("[writeAndPublishEvents] error publishing patch: %v\n", err)
 		}
 		events := renderDOMEvents(ctx, pubsubEvent)
 
 		eventsData, err := json.Marshal(events)
 		if err != nil {
-			glog.Errorf("[writeAndPublishEvents] error marshaling patch: %v\n", err)
+			klog.Errorf("[writeAndPublishEvents] error marshaling patch: %v\n", err)
 			return err
 		}
 		ctx.response.Write(eventsData)

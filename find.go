@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/glog"
 	"golang.org/x/exp/slices"
+	"k8s.io/klog/v2"
 )
 
 func find(opt routeOpt, path string, extensions []string) []string {
@@ -76,14 +76,14 @@ func isDir(path string, opt routeOpt) bool {
 	if opt.hasEmbedFS {
 		fileInfo, err := fs.Stat(opt.embedFS, path)
 		if err != nil {
-			glog.Warningf("[warning]isDir warn: ", err)
+			klog.Warningf("[warning]isDir warn: ", err)
 			return false
 		}
 		return fileInfo.IsDir()
 	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		glog.Warningf("[warning]isDir error: ", err)
+		klog.Warningf("[warning]isDir error: ", err)
 		return false
 	}
 
