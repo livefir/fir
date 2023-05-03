@@ -62,8 +62,8 @@ func main() {
     <body>
         <div x-data>
             <div
-                @fir:inc:ok:count.window="$fir.replace()"
-                @fir:dec:ok:count.window="$fir.replace()">
+                @fir:inc:ok::count.window="$fir.replace()"
+                @fir:dec:ok::count.window="$fir.replace()">
                 {{ block "count" . }}
                     <div>Count: {{ .count }}</div>
                 {{ end }}
@@ -77,9 +77,9 @@ func main() {
 </html>
 ```
 
-In the above example, `@fir:inc:ok:count.window="$fir.replace()"` marks content of that div to be replaced by the content of `block count`. Event namespacing is used to indicate the server renderer which `block` to re-render and send on a successful event response(`ok`). The allowed event namespace format is `@fir:<event-name>:<ok|error>:<block-name>`. 
+In the above example, `@fir:inc:ok::count.window="$fir.replace()"` marks content of that div to be replaced by the content of `block count`. Event namespacing is used to indicate the server renderer which `block` to re-render and send on a successful event response(`ok`). The allowed event namespace format is `@fir:<event-name>:<ok|error>:<block-name>`. 
 
-`$fir.submit` is a helper which prevents the form submission and dispatches browser events `inc` and `dec` which is then captured by `@fir:inc:ok:count.window, @fir:dec:ok:count.window` listeners. It also captures any form data and attaches it to the event before its sent to the server by `$fir.replace`. In this example we don't have any form data.
+`$fir.submit` is a helper which prevents the form submission and dispatches browser events `inc` and `dec` which is then captured by `@fir:inc:ok::count.window, @fir:dec:ok::count.window` listeners. It also captures any form data and attaches it to the event before its sent to the server by `$fir.replace`. In this example we don't have any form data.
 
 ## About Fir
 

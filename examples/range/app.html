@@ -15,7 +15,9 @@
     </head>
 
     <body>
-        <div class="my-6" style="height: 500px">
+        <div
+            class="my-6"
+            style="height: 500px">
             <div class="columns is-mobile is-centered is-vcentered">
                 <div
                     x-data="{count: 0}"
@@ -33,7 +35,7 @@
                         value="0"
                         @input="$fir.emit('update',{count: $event.target.value})" />
 
-                    <div @fir:update:ok:price.window="$fir.replace()">
+                    <div @fir:update:ok::price.window="$fir.replace()">
                         {{ block "price" . }}
                             <div>
                                 Price:

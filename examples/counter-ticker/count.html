@@ -1,10 +1,12 @@
 {{ define "content" }}
-    <div class="my-6" style="height: 500px">
+    <div
+        class="my-6"
+        style="height: 500px">
         <div class="columns is-mobile is-centered is-vcentered">
             <div
                 x-data
                 class="column is-one-third-desktop has-text-centered is-narrow">
-                <div @fir:updated:ok:count-update.window="$fir.replace()">
+                <div @fir:updated:ok::count-update.window="$fir.replace()">
                     {{ block "count-update" . }}
                         <div>Count updated: {{ .updated }} seconds ago</div>
                     {{ end }}
@@ -13,8 +15,8 @@
                 <hr />
                 <div
                     id="count"
-                    @fir:inc:ok:count.window="$fir.replace()"
-                    @fir:dec:ok:count.window="$fir.replace()">
+                    @fir:inc:ok::count.window="$fir.replace()"
+                    @fir:dec:ok::count.window="$fir.replace()">
                     {{ block "count" . }}
                         <div>Count: {{ .count }}</div>
                     {{ end }}

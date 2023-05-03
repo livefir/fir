@@ -11,7 +11,11 @@
                         <a href="/"> Projects </a>
                     </li>
                     <li class="is-active">
-                        <a href="#" aria-current="page"> Edit </a>
+                        <a
+                            href="#"
+                            aria-current="page">
+                            Edit
+                        </a>
                     </li>
                 </ul>
             </nav>
@@ -34,7 +38,7 @@
 
                             <div
                                 id="title"
-                                @fir:update-project:ok:title.window="$fir.replace()"
+                                @fir:update-project:ok::title.window="$fir.replace()"
                                 class="control">
                                 {{ block "title" . }}
                                     <input
@@ -48,7 +52,7 @@
 
                             <div
                                 id="title-err"
-                                @fir:update-project:error:title-err.window="$fir.replace()">
+                                @fir:update-project:error::title-err.window="$fir.replace()">
                                 {{ block "title-err" . }}
                                     <p class="help is-danger">
                                         {{ .fir.Error "update-project.title" }}
@@ -60,7 +64,7 @@
                             <label class="label"> Description </label>
                             <div
                                 id="description"
-                                @fir:update-project:ok:description.window="$fir.replace()"
+                                @fir:update-project:ok::description.window="$fir.replace()"
                                 class="control">
                                 {{ block "description" . }}
                                     <input
@@ -73,7 +77,7 @@
                             </div>
                             <div
                                 id="description-err"
-                                @fir:update-project:error:description-err.window="$fir.replace()">
+                                @fir:update-project:error::description-err.window="$fir.replace()">
                                 {{ block "description-err" . }}
                                     <p class="help is-danger">
                                         {{ .fir.Error "update-project.description" }}
@@ -103,7 +107,9 @@
                             name="projectID"
                             value="{{ .ID }}" />
                         <div class="control">
-                            <button type="submit" class="button is-danger">
+                            <button
+                                type="submit"
+                                class="button is-danger">
                                 Delete
                             </button>
                         </div>

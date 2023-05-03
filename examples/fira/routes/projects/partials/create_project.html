@@ -23,7 +23,7 @@
 
                 <div
                     id="title-err"
-                    @fir:create:error:title-err.window="$fir.replace()">
+                    @fir:create:error::title-err.window="$fir.replace()">
                     {{ block "title-err" . }}
                         <p class="help is-danger">
                             {{ .fir.Error "create.title" }}
@@ -43,7 +43,7 @@
                 </div>
                 <div
                     id="description-err"
-                    @fir:create:error:description-err.window="$fir.replace()">
+                    @fir:create:error::description-err.window="$fir.replace()">
                     {{ block "description-err" . }}
                         <p class="help is-danger">
                             {{ .fir.Error "create.description" }}
@@ -53,7 +53,11 @@
             </div>
             <div class="field">
                 <div class="control">
-                    <button type="submit" class="button is-link">Submit</button>
+                    <button
+                        type="submit"
+                        class="button is-link">
+                        Submit
+                    </button>
                 </div>
             </div>
         </form>

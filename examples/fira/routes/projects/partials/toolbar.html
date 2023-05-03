@@ -31,7 +31,9 @@
                         </div>
                     </div>
                     <div class="control">
-                        <button type="submit" class="button is-info">
+                        <button
+                            type="submit"
+                            class="button is-info">
                             Sort
                         </button>
                     </div>
@@ -48,14 +50,16 @@
                             placeholder="Find a project" />
                     </div>
                     <div class="control">
-                        <button type="submit" class="button is-info">
+                        <button
+                            type="submit"
+                            class="button is-info">
                             Search
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-        <div @fir:query:ok:pagination.window="$fir.replace()">
+        <div @fir:query:ok::pagination.window="$fir.replace()">
             {{ block "pagination" . }}
                 <div
                     id="pagination"

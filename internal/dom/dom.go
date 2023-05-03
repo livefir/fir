@@ -1,6 +1,7 @@
 package dom
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"regexp"
@@ -40,6 +41,13 @@ type Bindings struct {
 	*sync.RWMutex
 }
 
+func eventFormatError(eventns string) string {
+	return fmt.Sprintf(`
+	error: invalid event namespace: %s. must be of either of the two formats =>
+	1. @fir:<event>:<ok|error>::<block-name|optional>
+	2. @fir:<event>:<pending|done>`, eventns)
+}
+
 func (b *Bindings) AddFile(rd io.Reader) {
 	b.Lock()
 	defer b.Unlock()
@@ -57,9 +65,7 @@ func (b *Bindings) AddFile(rd io.Reader) {
 				eventns = strings.TrimPrefix(eventns, "x-on:fir:")
 				eventnsParts := strings.SplitN(eventns, ".", -1)
 				if len(eventnsParts) > 3 {
-					klog.Errorf(`
-					error: invalid event namespace: %s. 
-					must be of the format => @fir:<event>:<ok|error>:<block-name|optional>`, eventns)
+					klog.Errorf(eventFormatError(eventns))
 					continue
 				}
 
@@ -67,39 +73,39 @@ func (b *Bindings) AddFile(rd io.Reader) {
 					eventns = eventnsParts[0]
 				}
 
-				eventnsParts = strings.SplitN(eventns, ":", -1)
+				// myevent:ok::myblock
+				eventnsParts = strings.SplitN(eventns, "::", -1)
 				if len(eventnsParts) == 0 {
 					continue
 				}
-				eventID := eventnsParts[0]
-				if len(eventnsParts) >= 2 {
-					if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventnsParts[1]) {
-						klog.Errorf(`
-						error: invalid event namespace: %s. 
-						it must be of the format => 
-						@fir:<event>:<ok|error>:<block|optional> or
-						@fir:<event>:<pending|done>`, eventns)
-						continue
-					}
-					if len(eventnsParts) == 2 {
-						if eventnsParts[1] == "pending" || eventnsParts[1] == "done" {
-							continue
-						}
-					}
-					eventID = strings.Join(eventnsParts[0:2], ":")
+				// [myevent:ok, myblock]
+				if len(eventnsParts) > 2 {
+					klog.Errorf(eventFormatError(eventns))
+					continue
 				}
 
+				// myevent:ok
+				eventID := eventnsParts[0]
+				// [myevent, ok]
+				eventIDParts := strings.SplitN(eventID, ":", -1)
+				if len(eventIDParts) != 2 {
+					klog.Errorf(eventFormatError(eventns))
+					continue
+				}
+				// event name can only be followed by ok, error, pending, done
+				if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventIDParts[1]) {
+					klog.Errorf(eventFormatError(eventns))
+					continue
+				}
+				// assert myevent:ok::myblock or myevent:error::myblock
+				if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
+					klog.Errorf(eventFormatError(eventns))
+					continue
+
+				}
+				// template name is declared for event state i.e. myevent:ok::myblock
 				templateName := "-"
-				if len(eventnsParts) == 3 {
-					if !slices.Contains([]string{"ok", "error"}, eventnsParts[1]) {
-						klog.Errorf(`
-						error: invalid event namespace: %s. 
-						it must be of the format => 
-						@fir:<event>:<ok|error>:<block|optional> or
-						@fir:<event>:<pending|done>.
-						<block> cannot be set for <pending|done> since they are client only`, eventns)
-						continue
-					}
+				if len(eventnsParts) == 2 {
 					templateName = eventnsParts[2]
 				}
 

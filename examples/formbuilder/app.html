@@ -31,7 +31,9 @@
             {{ end }}
 
 
-            <form method="post" @submit.prevent="$fir.submit()">
+            <form
+                method="post"
+                @submit.prevent="$fir.submit()">
                 <button
                     formaction="/?event=add"
                     name="element"
@@ -40,7 +42,7 @@
                 </button>
             </form>
 
-            <div @fir:add:ok:input-text.window="$fir.appendEl()"></div>
+            <div @fir:add:ok::input-text.window="$fir.appendEl()"></div>
         </div>
     </body>
 </html>

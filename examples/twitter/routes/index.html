@@ -1,9 +1,11 @@
 {{ define "content" }}
-    <div x-data id="content">
+    <div
+        x-data
+        id="content">
         <p>
             {{ .fir.Error "onload" }}
         </p>
-        <p @fir:create-tweet:error:create-err.window="$fir.replace()">
+        <p @fir:create-tweet:error::create-err.window="$fir.replace()">
             {{ block "create-err" . }}
                 {{ .fir.Error "create-tweet" }}
             {{ end }}
@@ -21,11 +23,14 @@
             @submit.prevent="$fir.submit()"
             @fir:create-tweet:ok.window="$refs.createTweet.reset()"
             style="margin-top:1rem;margin-bottom:1rem;">
-            <input type="text" name="body" placeholder="a new tweet" />
+            <input
+                type="text"
+                name="body"
+                placeholder="a new tweet" />
             <!-- validation error for the name=body set by ctx.FieldError(...) -->
             <!-- $fir.replace replaces the content of the element on which it is invoked -->
             <!-- $fir.replaceEl replaces the element on which it is invoked -->
-            <p @fir:create-tweet:error:body-err.window="$fir.replace()">
+            <p @fir:create-tweet:error::body-err.window="$fir.replace()">
                 {{ block "body-err" . }}
                     {{ .fir.Error "create-tweet.body" }}
                 {{ end }}
@@ -33,7 +38,7 @@
 
             <button type="submit">Tweet it!</button>
         </form>
-        <div @fir:create-tweet:ok:tweet.window="$fir.appendEl()">
+        <div @fir:create-tweet:ok::tweet.window="$fir.appendEl()">
             {{ range .tweets }}
                 {{ block "tweet" . }}
                     <div
@@ -45,7 +50,7 @@
                             {{ .Body }}
                         </div>
                         <div
-                            @fir:like-tweet:ok:like-count="$fir.replace()"
+                            @fir:like-tweet:ok::like-count="$fir.replace()"
                             style="margin-right:1rem">
                             {{ block "like-count" . }}
                                 <div>

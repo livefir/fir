@@ -3,7 +3,9 @@
     <head>
         <title>{{ .app_name }}</title>
         <meta charset="UTF-8" />
-        <meta name="description" content="A fir autocomplete app" />
+        <meta
+            name="description"
+            content="A fir autocomplete app" />
         <meta
             name="viewport"
             content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
@@ -27,7 +29,9 @@
     </head>
 
     <body>
-        <div class="my-6" style="height: 500px">
+        <div
+            class="my-6"
+            style="height: 500px">
             <div class="columns is-mobile is-centered is-vcentered">
                 <div
                     x-data
@@ -47,7 +51,7 @@
 
                     <datalist
                         id="cities"
-                        @fir:query:ok:cities.window="$fir.replace()">
+                        @fir:query:ok::cities.window="$fir.replace()">
                         {{ block "cities" . }}
                             {{ range .cities }}
                                 <option value="{{ . }}"></option>
