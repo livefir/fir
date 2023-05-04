@@ -106,7 +106,7 @@ func (b *Bindings) AddFile(rd io.Reader) {
 				// template name is declared for event state i.e. myevent:ok::myblock
 				templateName := "-"
 				if len(eventnsParts) == 2 {
-					templateName = eventnsParts[2]
+					templateName = eventnsParts[1]
 				}
 
 				templates, ok := b.eventTemplates[eventID]

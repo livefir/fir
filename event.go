@@ -2,7 +2,7 @@ package fir
 
 import (
 	"encoding/json"
-	"strings"
+	"fmt"
 
 	"k8s.io/klog/v2"
 )
@@ -43,7 +43,21 @@ func (e Event) String() string {
 }
 
 func fir(parts ...string) *string {
-	parts = append([]string{"fir"}, parts...)
-	s := strings.Join(parts, ":")
-	return &s
+	if len(parts) == 0 {
+		panic("fir: fir() called with no arguments")
+	}
+	if len(parts) == 1 {
+		s := fmt.Sprintf("fir:%s", parts[0])
+		return &s
+	}
+	if len(parts) == 2 {
+		s := fmt.Sprintf("fir:%s::%s", parts[0], parts[1])
+		return &s
+	}
+
+	if len(parts) > 2 {
+		panic("fir: fir() called with more than 2 arguments")
+	}
+
+	return nil
 }
