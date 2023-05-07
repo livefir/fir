@@ -11,4 +11,4 @@ This is a work in progress. Checkout [examples](./examples/) to see what works t
 
 [Demo & Quickstart](https://livefir.fly.dev/)
 
-[How it works](https://www.notion.so/adnaan/Fir-2358531aced84bf1b0b1a687760fff3b#b1893c3f19634075bfb4ee7ec6508294)
+[How it works](https://adnaan.notion.site/Fir-2358531aced84bf1b0b1a687760fff3b#b1893c3f19634075bfb4ee7ec6508294)
