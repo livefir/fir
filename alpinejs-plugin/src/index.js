@@ -450,7 +450,11 @@ const Plugin = (Alpine) => {
         const renderEvent = new CustomEvent(serverEvent.type, opts)
         window.dispatchEvent(renderEvent)
         if (serverEvent.target.startsWith('#')) {
-            const elem = document.getElementById(serverEvent.target)
+            const elem = document.getElementById(
+                serverEvent.target.substring(1)
+            )
+
+            elem.dispatchEvent(renderEvent)
             const getSiblings = (elm) =>
                 elm &&
                 elm.parentNode &&
@@ -460,11 +464,11 @@ const Plugin = (Alpine) => {
                         (node.hasAttribute(`@${serverEvent.type}`) ||
                             node.hasAttribute(`x-on:${serverEvent.type}`))
                 )
+
             const sibs = getSiblings(elem)
             sibs.forEach((sib) => {
                 sib.dispatchEvent(renderEvent)
             })
-            elem.dispatchEvent(renderEvent)
         }
 
         if (serverEvent.target.startsWith('.')) {

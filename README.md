@@ -5,12 +5,19 @@
 
 **A Go toolkit to build reactive web interfaces using: [Go](https://go.dev/), [html/template](https://pkg.go.dev/html/template) and [alpinejs](https://alpinejs.dev/).**
 
-**Status**: This is a work in progress. Checkout examples to see what works today: [examples](./examples/)
+## Status
+
+This is a work in progress. Checkout [examples](./examples/) to see what works today.
+
+## How it works ?
+
+On user interaction the fir server re-renders html templates and sends back html to the fir client which selectively updates the changed areas. If there is no fir client(no javascript), the server falls back to a full page reload. Developers can use the same html templates to build a server-rendered web app and progressively enhance it to a real-time app with little bits of javascript.
 
 
 ## Example
 
 Using fir's alpinejs plugin, the page below has been progressively enhanced to a real-time single page app. Open two tabs to see the count update in both. Disable javascript in your browser to see it still work without the enhancements.
+
 
 ```go
 package main
