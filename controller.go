@@ -243,13 +243,15 @@ var defaultRouteOpt = &routeOpt{
 	},
 }
 
-// RouteFunc returns an http.HandlerFunc that renders the route
+// Route returns an http.HandlerFunc that renders the route
 func (c *controller) Route(route Route) http.HandlerFunc {
 	for _, option := range route.Options() {
 		option(defaultRouteOpt)
 	}
 
+	// create new route
 	r := newRoute(c, defaultRouteOpt)
+	// register route in the controller
 	c.routes[r.id] = r
 	return r.ServeHTTP
 }
@@ -259,7 +261,9 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 	for _, option := range opts() {
 		option(defaultRouteOpt)
 	}
+	// create new route
 	r := newRoute(c, defaultRouteOpt)
+	// register route in the controller
 	c.routes[r.id] = r
 	return r.ServeHTTP
 }
