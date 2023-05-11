@@ -449,7 +449,7 @@ const Plugin = (Alpine) => {
         }
         const renderEvent = new CustomEvent(serverEvent.type, opts)
         window.dispatchEvent(renderEvent)
-        if (serverEvent.target.startsWith('#')) {
+        if (serverEvent.target && serverEvent.target.startsWith('#')) {
             const elem = document.getElementById(
                 serverEvent.target.substring(1)
             )
@@ -471,7 +471,7 @@ const Plugin = (Alpine) => {
             })
         }
 
-        if (serverEvent.target.startsWith('.')) {
+        if (serverEvent.target && serverEvent.target.startsWith('.')) {
             const elems = Array.from(
                 document.getElementsByClassName(serverEvent.target.substring(1))
             )
