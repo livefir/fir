@@ -39,6 +39,7 @@ type opt struct {
 	developmentMode      bool
 	embedFS              embed.FS
 	hasEmbedFS           bool
+	readFile             readFileFunc
 	pubsub               pubsub.Adapter
 	appName              string
 	formDecoder          *schema.Decoder
@@ -217,8 +218,10 @@ func NewController(name string, options ...ControllerOption) Controller {
 	}
 
 	if c.hasEmbedFS {
+		c.readFile = readFileFS(c.embedFS)
 		log.Println("read template files embedded in the binary")
 	} else {
+		c.readFile = readFileOS
 		log.Println("read template files from disk")
 	}
 	return c

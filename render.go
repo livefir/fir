@@ -19,7 +19,11 @@ import (
 // the associated templates for the event are rendered and the dom events are returned.
 func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
-	templateNames := ctx.route.bindings.TemplateNames(eventIDWithState)
+	var templateNames []string
+	for k := range ctx.route.eventTemplates[eventIDWithState] {
+		templateNames = append(templateNames, k)
+	}
+
 	resultPool := pool.NewWithResults[dom.Event]()
 	for _, templateName := range templateNames {
 		templateName := templateName
