@@ -28,7 +28,11 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	for _, templateName := range templateNames {
 		templateName := templateName
 		resultPool.Go(func() dom.Event {
-			return *buildDOMEventFromTemplate(ctx, pubsubEvent, eventIDWithState, templateName)
+			ev := buildDOMEventFromTemplate(ctx, pubsubEvent, eventIDWithState, templateName)
+			if ev == nil {
+				return dom.Event{}
+			}
+			return *ev
 		})
 	}
 	events := resultPool.Wait()
@@ -104,6 +108,9 @@ func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event)
 	var newEvents []dom.Event
 	// set new errors & add events to newEvents
 	for _, event := range events {
+		if event.Type == nil {
+			continue
+		}
 		if event.State == eventstate.OK {
 			newEvents = append(newEvents, event)
 			continue

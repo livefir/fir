@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/examples/fira/ent"
 	projects "github.com/livefir/fir/examples/fira/routes/projects"
@@ -25,7 +26,8 @@ func main() {
 	}
 
 	controller := fir.NewController("app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.RouteFunc(projects.Index(db)))
-	http.Handle("/{id}/show", controller.RouteFunc(projects.Show(db)))
-	http.ListenAndServe(":9867", nil)
+	r := chi.NewRouter()
+	r.Handle("/", controller.RouteFunc(projects.Index(db)))
+	r.Handle("/{id}/show", controller.RouteFunc(projects.Show(db)))
+	http.ListenAndServe(":9867", r)
 }
