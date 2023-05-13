@@ -32,16 +32,26 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		})
 	}
 	events := resultPool.Wait()
+
 	return trackErrors(ctx, pubsubEvent, events)
+}
+
+func targetOrClassName(target *string, className string) *string {
+	if target != nil && *target != "" {
+		return target
+	}
+	cls := fmt.Sprintf(".%s", className)
+	return &cls
 }
 
 func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, eventIDWithState, templateName string) *dom.Event {
 	if templateName == "-" {
+		eventType := fir(eventIDWithState)
 		return &dom.Event{
 			ID:     *pubsubEvent.ID,
 			State:  pubsubEvent.State,
-			Type:   fir(eventIDWithState),
-			Target: pubsubEvent.Target,
+			Type:   eventType,
+			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType, pubsubEvent.ElementKey)),
 			Detail: pubsubEvent.Detail,
 		}
 	}
@@ -68,7 +78,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		ID:     eventIDWithState,
 		State:  pubsubEvent.State,
 		Type:   eventType,
-		Target: pubsubEvent.Target,
+		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType, pubsubEvent.ElementKey)),
 		Detail: value,
 	}
 
@@ -76,11 +86,15 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 
 func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event) []dom.Event {
 	var prevErrors map[string]string
-	v, ok := ctx.route.cache.Get(*pubsubEvent.SessionID)
-	if ok {
-		prevErrors, ok = v.(map[string]string)
-		if !ok {
-			panic("fir: cache value is not a map[string]string")
+	if pubsubEvent.SessionID != nil {
+		v, ok := ctx.route.cache.Get(*pubsubEvent.SessionID)
+		if ok {
+			prevErrors, ok = v.(map[string]string)
+			if !ok {
+				panic("fir: cache value is not a map[string]string")
+			}
+		} else {
+			prevErrors = make(map[string]string)
 		}
 	} else {
 		prevErrors = make(map[string]string)
@@ -98,7 +112,9 @@ func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event)
 		newEvents = append(newEvents, event)
 	}
 	// set new errors
-	ctx.route.cache.Set(*pubsubEvent.SessionID, newErrors, cache.DefaultExpiration)
+	if pubsubEvent.SessionID != nil {
+		ctx.route.cache.Set(*pubsubEvent.SessionID, newErrors, cache.DefaultExpiration)
+	}
 	// unset previously set errors
 	for k, v := range prevErrors {
 		k := k
@@ -117,11 +133,12 @@ func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event)
 
 	if len(newEvents) == 0 {
 		eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
+		eventType := fir(eventIDWithState)
 		newEvents = append(newEvents, dom.Event{
 			ID:     *pubsubEvent.ID,
 			State:  pubsubEvent.State,
-			Type:   fir(eventIDWithState),
-			Target: pubsubEvent.Target,
+			Type:   eventType,
+			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType, pubsubEvent.ElementKey)),
 			Detail: pubsubEvent.Detail,
 		})
 	}

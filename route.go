@@ -398,10 +398,11 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 	}
 	if err == nil {
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.OK,
-			Target:    &target,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	}
@@ -413,11 +414,12 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			"onevent":    firErrors.User(errVal.Err).Error(),
 		}
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.Error,
-			Target:    &target,
-			Detail:    errs,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.Error,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     errs,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	case *firErrors.Fields:
@@ -428,21 +430,23 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 		}
 		errs := map[string]any{ctx.event.ID: fieldErrors}
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.Error,
-			Target:    &target,
-			Detail:    errs,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.Error,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     errs,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	case *routeData:
 		data := *errVal
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.OK,
-			Target:    &target,
-			Detail:    data,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     data,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	default:
@@ -451,11 +455,12 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			"onevent":    firErrors.User(err).Error(),
 		}
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.Error,
-			Target:    &target,
-			Detail:    errs,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.Error,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     errs,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	}

@@ -80,19 +80,18 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		}
 		evt = deepMergeEventTemplates(evt, currEvt)
 		if err := checkPageContent(pageTemplate, layoutContentName); err != nil {
-			return nil, evt, err
+			return nil, nil, err
 		}
 		return pageTemplate, evt, nil
 	} else {
-
-		pageFiles := getPartials(opt, []string{})
+		pageFiles := getPartials(opt, []string{pageContentPath})
 		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.funcMap), opt.readFile, pageFiles...)
 		if err != nil {
 			panic(err)
 		}
 		evt = deepMergeEventTemplates(evt, currEvt)
 		if err := checkPageContent(pageTemplate, layoutContentName); err != nil {
-			return nil, evt, err
+			return nil, nil, err
 		}
 		return pageTemplate, evt, nil
 	}
@@ -181,7 +180,7 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 
 	if len(filenames) == 0 {
 		// Not really a problem, but be consistent.
-		return nil, nil, fmt.Errorf("html/template: no files named in call to ParseFiles")
+		return t, nil, nil
 	}
 	resultPool := pool.NewWithResults[fileInfo]()
 	for _, filename := range filenames {
@@ -198,7 +197,7 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 	for _, fi := range fileInfos {
 		evt = deepMergeEventTemplates(evt, fi.eventTemplates)
 		if fi.err != nil {
-			return nil, evt, fi.err
+			return t, evt, fi.err
 		}
 
 		s := string(fi.content)
@@ -219,7 +218,7 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 		}
 		_, err := tmpl.Parse(s)
 		if err != nil {
-			return nil, evt, err
+			return t, evt, err
 		}
 	}
 
@@ -279,14 +278,8 @@ func transform(content []byte) []byte {
 				}
 
 				// fir-myevent-ok--myblock
-				classname := "fir-" + strings.ReplaceAll(eventns, ":", "-")
-				// check if node has attribute "key" present and update the classname
-				// the classname will be fir-myevent-ok--myblock--key
-				// this classname will be used to target the element
-				if key, ok := node.Attr("key"); ok {
-					key = strings.ReplaceAll(key, " ", "-")
-					classname = classname + "--" + key
-				}
+				key, _ := node.Attr("key")
+				classname := fmt.Sprintf("fir-%s", getClassName(eventns, &key))
 				if !node.HasClass(classname) {
 					node.AddClass(classname)
 				}
@@ -300,6 +293,14 @@ func transform(content []byte) []byte {
 		panic(err)
 	}
 	return []byte(html)
+}
+
+func getClassName(eventns string, key *string) string {
+	cls := strings.ReplaceAll(eventns, ":", "-")
+	if key != nil && *key != "" {
+		cls = cls + "--" + strings.ReplaceAll(*key, " ", "-")
+	}
+	return cls
 }
 
 func query(fi fileInfo) fileInfo {

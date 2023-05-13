@@ -169,9 +169,7 @@ const Plugin = (Alpine) => {
                     } else {
                         params = {}
                     }
-                    if (!target) {
-                        target = `#${el.getAttribute('id')}`
-                    }
+
                     if (
                         target &&
                         !target.startsWith('#') &&
@@ -184,6 +182,7 @@ const Plugin = (Alpine) => {
                         event_id: id,
                         params: params,
                         target: target,
+                        element_key: el.getAttribute('key'),
                         session_id: getSessionIDFromCookie(),
                     })
                 }
@@ -273,9 +272,7 @@ const Plugin = (Alpine) => {
                             (value, key) => (params[key] = new Array(value))
                         )
                         let target = ''
-                        if (form.getAttribute('id')) {
-                            target = `#${form.getAttribute('id')}`
-                        }
+
                         if (opts) {
                             if (opts.event) {
                                 eventID = opts.event
@@ -310,6 +307,7 @@ const Plugin = (Alpine) => {
                             params: params,
                             is_form: true,
                             target: target,
+                            element_key: el.getAttribute('key'),
                             session_id: getSessionIDFromCookie(),
                         })
 
