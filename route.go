@@ -1,7 +1,6 @@
 package fir
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
+	"github.com/valyala/bytebufferpool"
 	"k8s.io/klog/v2"
 )
 
@@ -202,13 +202,15 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	return func(data routeData) error {
 		ctx.route.parseTemplates()
-		var buf bytes.Buffer
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
 		tmpl := ctx.route.template
 		if errorRouteTemplate {
 			tmpl = ctx.route.errorTemplate
 		}
 		tmpl.Option("missingkey=zero")
-		err := tmpl.Execute(&buf, data)
+		err := tmpl.Execute(buf, data)
 		if err != nil {
 			klog.Errorf("[renderRoute] error executing template: %v\n", err)
 			return err
@@ -227,7 +229,7 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			Path:   "/",
 		})
 
-		ctx.response.Write(buf.Bytes())
+		ctx.response.Write(transform(buf.Bytes()))
 		return nil
 	}
 }

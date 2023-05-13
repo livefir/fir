@@ -151,7 +151,7 @@ func buildTemplateValue(t *template.Template, templateName string, data any) (st
 	m.Add("text/html", &html.Minifier{
 		KeepDefaultAttrVals: true,
 	})
-	rd, err := m.Bytes("text/html", dataBuf.Bytes())
+	rd, err := m.Bytes("text/html", transform(dataBuf.Bytes()))
 	if err != nil {
 		panic(err)
 	}

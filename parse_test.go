@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_bindEventTemplates(t *testing.T) {
+func Test_query(t *testing.T) {
 	type args struct {
 		fi fileInfo
 	}
@@ -20,7 +20,7 @@ func Test_bindEventTemplates(t *testing.T) {
 		args args
 		want fileInfo
 	}{
-		// TODO: Add test cases.
+
 		{
 			name: "no filters in event string and key is not present",
 			args: args{
@@ -36,10 +36,10 @@ func Test_bindEventTemplates(t *testing.T) {
 			want: fileInfo{
 				name: "test.html",
 				content: []byte(`<!DOCTYPE html> 
-					<div class="fir-event-ok--tmpl1 fir-event-ok" 
+					<div
 						 @fir:event:ok::tmpl1=""
-						 @fir:event:ok="" 
-						 </div>`),
+						 @fir:event:ok=""> 
+					</div>`),
 				eventTemplates: eventTemplates{
 					"event:ok": eventTemplate{
 						"tmpl1": struct{}{},
@@ -67,15 +67,15 @@ func Test_bindEventTemplates(t *testing.T) {
 			want: fileInfo{
 				name: "test.html",
 				content: []byte(`<!DOCTYPE html> 
-						<div class="fir-event-ok--tmpl1 fir-event-ok" 
-							@fir:event:ok::tmpl1=""
-							@fir:event:ok="" 
-						 </div>
-						 <div class="fir-event-ok--tmpl1 fir-event-ok" 
-							@fir:event:ok::tmpl1=""
-							@fir:event:ok="" 
-						 </div>
-						 `),
+					<div
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>
+					<div
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>
+					`),
 				eventTemplates: eventTemplates{
 					"event:ok": eventTemplate{
 						"tmpl1": struct{}{},
@@ -103,15 +103,15 @@ func Test_bindEventTemplates(t *testing.T) {
 			want: fileInfo{
 				name: "test.html",
 				content: []byte(`<!DOCTYPE html> 
-						<div class="fir-event1-ok--tmpl1 fir-event-ok" 
-							@fir:event1:ok::tmpl1=""
-							@fir:event:ok="" 
-						 </div>
-						 <div class="fir-event2-ok--tmpl2 fir-event-ok" 
-							@fir:event2:ok::tmpl2=""
-							@fir:event:ok="" 
-						 </div>
-						 `),
+					<div
+						 @fir:event1:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>
+					<div
+						 @fir:event2:ok::tmpl2=""
+						 @fir:event:ok=""> 
+					</div>
+					`),
 				eventTemplates: eventTemplates{
 					"event:ok": eventTemplate{
 						"-": struct{}{},
@@ -142,15 +142,13 @@ func Test_bindEventTemplates(t *testing.T) {
 			want: fileInfo{
 				name: "test.html",
 				content: []byte(`<!DOCTYPE html> 
-					<div key="1" 
-						 class="fir-event-ok--tmpl1--1 fir-event-ok--tmpl2--1 fir-event-ok--1 fir-event1-ok--tmpl3--1 fir-event2-ok--tmpl3--1" 
+					<div key="1"
 						 @fir:event:ok::tmpl1=""
 						 @fir:event:ok::tmpl2=""  
 						 @fir:event:ok::tmpl2="" 
 						 @fir:event:ok=""
-						 @fir:event1:ok::tmpl3="console.log('hello')"
-						 @fir:event2:ok::tmpl3="console.log('hello')"> 
-						 </div>`),
+						 @fir:[event1:ok,event2:ok]::tmpl3="console.log('hello')"> 
+					</div>`),
 				eventTemplates: eventTemplates{
 					"event:ok": eventTemplate{
 						"tmpl1": struct{}{},
@@ -168,12 +166,116 @@ func Test_bindEventTemplates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := bindEventTemplates(tt.args.fi)
+			got := query(tt.args.fi)
 			if !reflect.DeepEqual(got.eventTemplates, tt.want.eventTemplates) {
 				t.Errorf("eventTemplates = %v, want %v", got.eventTemplates, tt.want.eventTemplates)
 			}
 			if !areHTMLStringsEqual(t, got.content, tt.want.content) {
 				t.Errorf("html \n %v, \n want \n %v", string(got.content), string(tt.want.content))
+			}
+		})
+	}
+}
+
+func Test_transform(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		input []byte
+		want  []byte
+	}{
+		// TODO: Add test cases.
+		{
+			name: "no filters in event string and key is not present",
+			input: []byte(`<!DOCTYPE html> 
+					<div
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>`),
+
+			want: []byte(`<!DOCTYPE html> 
+					<div class="fir-event-ok--tmpl1 fir-event-ok" 
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok="" 
+						 </div>`),
+		},
+		{
+			name: "same event multiple elements: no filters in event string and key is not present",
+			input: []byte(`<!DOCTYPE html> 
+					<div
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>
+					<div
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>
+					`),
+
+			want: []byte(`<!DOCTYPE html> 
+						<div class="fir-event-ok--tmpl1 fir-event-ok" 
+							@fir:event:ok::tmpl1=""
+							@fir:event:ok="" 
+						 </div>
+						 <div class="fir-event-ok--tmpl1 fir-event-ok" 
+							@fir:event:ok::tmpl1=""
+							@fir:event:ok="" 
+						 </div>
+						 `),
+		},
+		{
+			name: "multiple events, multiple templates, multiple elements: no filters in event string and key is not present",
+			input: []byte(`<!DOCTYPE html> 
+					<div
+						 @fir:event1:ok::tmpl1=""
+						 @fir:event:ok=""> 
+					</div>
+					<div
+						 @fir:event2:ok::tmpl2=""
+						 @fir:event:ok=""> 
+					</div>
+					`),
+
+			want: []byte(`<!DOCTYPE html> 
+						<div class="fir-event1-ok--tmpl1 fir-event-ok" 
+							@fir:event1:ok::tmpl1=""
+							@fir:event:ok="" 
+						 </div>
+						 <div class="fir-event2-ok--tmpl2 fir-event-ok" 
+							@fir:event2:ok::tmpl2=""
+							@fir:event:ok="" 
+						 </div>
+						 `),
+		},
+		{
+			name: "filters in event string and key is present",
+			input: []byte(`<!DOCTYPE html> 
+					<div key="1"
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok::tmpl2=""  
+						 @fir:event:ok::tmpl2="" 
+						 @fir:event:ok=""
+						 @fir:[event1:ok,event2:ok]::tmpl3="console.log('hello')"> 
+					</div>`),
+
+			want: []byte(`<!DOCTYPE html> 
+					<div key="1" 
+						 class="fir-event-ok--tmpl1--1 fir-event-ok--tmpl2--1 fir-event-ok--1 fir-event1-ok--tmpl3--1 fir-event2-ok--tmpl3--1" 
+						 @fir:event:ok::tmpl1=""
+						 @fir:event:ok::tmpl2=""  
+						 @fir:event:ok::tmpl2="" 
+						 @fir:event:ok=""
+						 @fir:event1:ok::tmpl3="console.log('hello')"
+						 @fir:event2:ok::tmpl3="console.log('hello')"> 
+						 </div>`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := transform(tt.input)
+
+			if !areHTMLStringsEqual(t, got, tt.want) {
+				t.Errorf("html \n %v, \n want \n %v", string(got), string(tt.want))
 			}
 		})
 	}
@@ -233,18 +335,6 @@ func areHTMLStringsEqual(t *testing.T, html1, html2 []byte) bool {
 		}
 	}
 
-	return true
-}
-
-func stringSlicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
 	return true
 }
 
@@ -342,6 +432,12 @@ func TestGetEventFilter(t *testing.T) {
 		},
 		{
 			input:          "SomeText[invalidFormat]moreText",
+			expectedBefore: "",
+			expectedValues: nil,
+			expectedAfter:  "",
+		},
+		{
+			input:          "SomeTextmoreText",
 			expectedBefore: "",
 			expectedValues: nil,
 			expectedAfter:  "",

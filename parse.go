@@ -172,7 +172,7 @@ type fileInfo struct {
 var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:]*$`)
 
 func parseString(t *template.Template, content string) (*template.Template, eventTemplates, error) {
-	fi := bindEventTemplates(fileInfo{content: []byte(content)})
+	fi := query(fileInfo{content: []byte(content)})
 	t, err := t.Parse(string(fi.content))
 	return t, fi.eventTemplates, err
 }
@@ -188,7 +188,7 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 		filename := filename
 		resultPool.Go(func() fileInfo {
 			name, b, err := readFile(filename)
-			return bindEventTemplates(fileInfo{name: name, content: b, err: err})
+			return query(fileInfo{name: name, content: b, err: err})
 		})
 	}
 
@@ -233,25 +233,13 @@ func eventFormatError(eventns string) string {
 	2. @fir:<event>:<pending|done>`, eventns)
 }
 
-func bindEventTemplates(fi fileInfo) fileInfo {
-	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(fi.content))
+func transform(content []byte) []byte {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(content))
 	if err != nil {
 		panic(err)
 	}
-	evt := make(eventTemplates)
-	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
-		// allAttributes := node.Get(0).Attr
-		// var attributes []html.Attribute
-		// // remove duplicates from attributes
-		// attrkeys := make(map[string]struct{})
-		// for _, attr := range allAttributes {
-		// 	if _, ok := attrkeys[attr.Key]; ok {
-		// 		continue
-		// 	}
-		// 	attrkeys[attr.Key] = struct{}{}
-		// 	attributes = append(attributes, attr)
-		// }
 
+	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
 		for _, attr := range node.Get(0).Attr {
 			if !strings.HasPrefix(attr.Key, "@fir:") && !strings.HasPrefix(attr.Key, "x-on:fir:") {
 				continue
@@ -261,8 +249,12 @@ func bindEventTemplates(fi fileInfo) fileInfo {
 			eventns = strings.TrimPrefix(eventns, "x-on:fir:")
 			// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
 			eventnsParts := strings.SplitN(eventns, ".", -1)
+			var modifiers string
 			if len(eventnsParts) > 0 {
 				eventns = eventnsParts[0]
+			}
+			if len(eventnsParts) > 1 {
+				modifiers = strings.Join(eventnsParts[1:], ".")
 			}
 
 			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
@@ -273,12 +265,17 @@ func bindEventTemplates(fi fileInfo) fileInfo {
 			}
 
 			for _, eventns := range eventnsList {
-
+				eventns = strings.TrimSpace(eventns)
 				// set @fir|x-on:fir:eventns attribute to the node
-				_, atFirOk := node.Attr(fmt.Sprintf("@fir:%s", eventns))
-				_, xOnFirOk := node.Attr(fmt.Sprintf("x-on:fir:%s", eventns))
+				eventnsWithModifiers := fmt.Sprintf("%s.%s", eventns, modifiers)
+				if len(modifiers) == 0 {
+					eventnsWithModifiers = eventns
+				}
+				_, atFirOk := node.Attr(fmt.Sprintf("@fir:%s", eventnsWithModifiers))
+				_, xOnFirOk := node.Attr(fmt.Sprintf("x-on:fir:%s", eventnsWithModifiers))
+				// if the node already has @fir:x attribute, then skip
 				if !atFirOk && !xOnFirOk {
-					node.SetAttr(fmt.Sprintf("@fir:%s", eventns), attr.Val)
+					node.SetAttr(fmt.Sprintf("@fir:%s", eventnsWithModifiers), attr.Val)
 				}
 
 				// fir-myevent-ok--myblock
@@ -293,6 +290,45 @@ func bindEventTemplates(fi fileInfo) fileInfo {
 				if !node.HasClass(classname) {
 					node.AddClass(classname)
 				}
+
+			}
+
+		}
+	})
+	html, err := doc.Html()
+	if err != nil {
+		panic(err)
+	}
+	return []byte(html)
+}
+
+func query(fi fileInfo) fileInfo {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(fi.content))
+	if err != nil {
+		panic(err)
+	}
+	evt := make(eventTemplates)
+	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
+		for _, attr := range node.Get(0).Attr {
+			if !strings.HasPrefix(attr.Key, "@fir:") && !strings.HasPrefix(attr.Key, "x-on:fir:") {
+				continue
+			}
+
+			eventns := strings.TrimPrefix(attr.Key, "@fir:")
+			eventns = strings.TrimPrefix(eventns, "x-on:fir:")
+			// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
+			eventnsParts := strings.SplitN(eventns, ".", -1)
+
+			if len(eventnsParts) > 0 {
+				eventns = eventnsParts[0]
+			}
+
+			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
+			eventnsList, _ := getEventNsList(eventns)
+
+			for _, eventns := range eventnsList {
+				eventns = strings.TrimSpace(eventns)
+				// set @fir|x-on:fir:eventns attribute to the node
 
 				// myevent:ok::myblock
 				eventnsParts = strings.SplitN(eventns, "::", -1)
@@ -350,13 +386,10 @@ func bindEventTemplates(fi fileInfo) fileInfo {
 
 		}
 	})
-	content, err := doc.Html()
-	if err != nil {
-		panic(err)
-	}
+
 	return fileInfo{
 		name:           fi.name,
-		content:        []byte(content),
+		content:        fi.content,
 		err:            fi.err,
 		eventTemplates: evt,
 	}
