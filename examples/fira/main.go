@@ -25,7 +25,14 @@ func main() {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	controller := fir.NewController("app", fir.DevelopmentMode(true))
+	pathParamsOpt := fir.WithPathParamsFunc(
+		func(r *http.Request) fir.PathParams {
+			return fir.PathParams{
+				"id": chi.URLParam(r, "id"),
+			}
+		})
+
+	controller := fir.NewController("app", fir.DevelopmentMode(true), pathParamsOpt)
 	r := chi.NewRouter()
 	r.Handle("/", controller.RouteFunc(projects.Index(db)))
 	r.Handle("/{id}/show", controller.RouteFunc(projects.Show(db)))

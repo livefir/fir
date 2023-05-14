@@ -20,14 +20,21 @@
                 </ul>
             </nav>
             <hr />
+            <div @fir:update:error::update-err="$fir.replace()">
+                {{ block "update-err" . }}
+                    <p class="help is-danger">
+                        {{ .fir.Error "update" }}
+                    </p>
+                {{ end }}
+            </div>
+
             {{ block "project" . }}
                 <div id="project">
                     <form
                         method="post"
-                        id="update-project"
-                        action="/?event=update-project"
-                        @fir:update-project:pending.window="toggle"
-                        @fir:update-project:ok.window="toggle"
+                        id="update"
+                        action="/?event=update"
+                        @fir:[update:pending,update:ok,update:error]="toggle"
                         @submit.prevent="$fir.submit()">
                         <input
                             type="hidden"
@@ -38,7 +45,7 @@
 
                             <div
                                 id="title"
-                                @fir:update-project:ok::title.window="$fir.replace()"
+                                @fir:update:ok::title="$fir.replace()"
                                 class="control">
                                 {{ block "title" . }}
                                     <input
@@ -52,10 +59,10 @@
 
                             <div
                                 id="title-err"
-                                @fir:update-project:error::title-err.window="$fir.replace()">
+                                @fir:update:error::title-err="$fir.replace()">
                                 {{ block "title-err" . }}
                                     <p class="help is-danger">
-                                        {{ .fir.Error "update-project.title" }}
+                                        {{ .fir.Error "update.title" }}
                                     </p>
                                 {{ end }}
                             </div>
@@ -64,7 +71,7 @@
                             <label class="label"> Description </label>
                             <div
                                 id="description"
-                                @fir:update-project:ok::description.window="$fir.replace()"
+                                @fir:update:ok::description="$fir.replace()"
                                 class="control">
                                 {{ block "description" . }}
                                     <input
@@ -77,10 +84,10 @@
                             </div>
                             <div
                                 id="description-err"
-                                @fir:update-project:error::description-err.window="$fir.replace()">
+                                @fir:update:error::description-err="$fir.replace()">
                                 {{ block "description-err" . }}
                                     <p class="help is-danger">
-                                        {{ .fir.Error "update-project.description" }}
+                                        {{ .fir.Error "update.description" }}
                                     </p>
                                 {{ end }}
                             </div>
@@ -98,8 +105,8 @@
                     </form>
                     <form
                         method="post"
-                        id="delete-project"
-                        action="/?event=delete-project"
+                        id="delete"
+                        action="/?event=delete"
                         class="mt-2"
                         @submit.prevent="$fir.submit()">
                         <input

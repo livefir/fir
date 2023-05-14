@@ -5,7 +5,7 @@
         {{ block "err" . }}
             {{ .fir.Error "route" }}
         {{ end }}
-        <p @fir:create:error::create-err.window="$fir.replace()">
+        <p @fir:create:error::create-err="$fir.replace()">
             {{ block "create-err" . }}
                 {{ .fir.Error "create.route" }}
             {{ end }}
@@ -15,11 +15,11 @@
         </div>
         <div class="column is-8">
             {{ template "toolbar" . }}
-            <div @fir:query:ok::projects.window="$fir.replace()">
+            <div @fir:query:ok::projects="$fir.replace()">
                 {{ block "projects" . }}
                     <div
                         id="projects"
-                        @fir:create:ok::projectitem.window="$fir.appendEl()">
+                        @fir:create:ok::projectitem="$fir.appendEl()">
                         {{ range .projects }}
                             {{ template "projectitem" . }}
                         {{ else }}
