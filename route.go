@@ -1,21 +1,18 @@
 package fir
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
+	"github.com/valyala/bytebufferpool"
 	"k8s.io/klog/v2"
 )
 
@@ -181,12 +178,12 @@ type routeOpt struct {
 }
 
 type route struct {
-	cntrl            *controller
-	template         *template.Template
-	errorTemplate    *template.Template
-	allTemplates     []string
-	eventTemplateMap map[string]map[string]struct{}
-	bindings         *dom.Bindings
+	cntrl          *controller
+	template       *template.Template
+	errorTemplate  *template.Template
+	allTemplates   []string
+	eventTemplates eventTemplates
+
 	routeOpt
 	sync.RWMutex
 }
@@ -194,9 +191,9 @@ type route struct {
 func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	routeOpt.opt = cntrl.opt
 	rt := &route{
-		routeOpt:         *routeOpt,
-		cntrl:            cntrl,
-		eventTemplateMap: make(map[string]map[string]struct{}),
+		routeOpt:       *routeOpt,
+		cntrl:          cntrl,
+		eventTemplates: make(eventTemplates),
 	}
 	rt.parseTemplates()
 	return rt
@@ -205,13 +202,15 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	return func(data routeData) error {
 		ctx.route.parseTemplates()
-		var buf bytes.Buffer
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
 		tmpl := ctx.route.template
 		if errorRouteTemplate {
 			tmpl = ctx.route.errorTemplate
 		}
 		tmpl.Option("missingkey=zero")
-		err := tmpl.Execute(&buf, data)
+		err := tmpl.Execute(buf, data)
 		if err != nil {
 			klog.Errorf("[renderRoute] error executing template: %v\n", err)
 			return err
@@ -230,7 +229,7 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			Path:   "/",
 		})
 
-		ctx.response.Write(buf.Bytes())
+		ctx.response.Write(transform(buf.Bytes()))
 		return nil
 	}
 }
@@ -399,10 +398,11 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 	}
 	if err == nil {
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.OK,
-			Target:    &target,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	}
@@ -414,11 +414,12 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			"onevent":    firErrors.User(errVal.Err).Error(),
 		}
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.Error,
-			Target:    &target,
-			Detail:    errs,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.Error,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     errs,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	case *firErrors.Fields:
@@ -429,21 +430,23 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 		}
 		errs := map[string]any{ctx.event.ID: fieldErrors}
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.Error,
-			Target:    &target,
-			Detail:    errs,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.Error,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     errs,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	case *routeData:
 		data := *errVal
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.OK,
-			Target:    &target,
-			Detail:    data,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     data,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	default:
@@ -452,11 +455,12 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			"onevent":    firErrors.User(err).Error(),
 		}
 		publish(pubsub.Event{
-			ID:        &ctx.event.ID,
-			State:     eventstate.Error,
-			Target:    &target,
-			Detail:    errs,
-			SessionID: ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.Error,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     errs,
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	}
@@ -579,17 +583,31 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 func (rt *route) parseTemplates() {
 	var err error
 	if rt.template == nil || (rt.template != nil && rt.disableTemplateCache) {
-		rt.template, err = parseTemplate(rt.routeOpt)
+		var successEventTemplates eventTemplates
+		rt.template, successEventTemplates, err = parseTemplate(rt.routeOpt)
 		if err != nil {
 			panic(err)
 		}
-		rt.errorTemplate, err = parseErrorTemplate(rt.routeOpt)
+		var errorEventTemplates eventTemplates
+		rt.errorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
 		if err != nil {
 			panic(err)
 		}
+
+		rt.eventTemplates = deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
+		for eventID, templates := range rt.eventTemplates {
+			var templatesStr string
+			for k := range templates {
+				if k == "-" {
+					continue
+				}
+				templatesStr += k + " "
+			}
+			fmt.Println("eventID: ", eventID, " templates: ", templatesStr)
+		}
+
 		rt.findAllTemplates()
-		rt.bindings = dom.RouteBindings(rt.id, rt.template)
-		rt.buildRouteBindigs()
+
 	}
 }
 
@@ -599,62 +617,5 @@ func (rt *route) findAllTemplates() {
 		tName := t.Name()
 		rt.allTemplates = append(rt.allTemplates, tName)
 
-	}
-}
-
-func (rt *route) buildRouteBindigs() {
-	opt := rt.routeOpt
-	if opt.layout == "" && opt.content == "" {
-		return
-	}
-
-	walkFile := func(page string) {
-		pagePath := filepath.Join(opt.publicDir, page)
-		// is layout html content or a file/directory
-		if isFileOrString(pagePath, opt) {
-			rt.bindings.AddFile(strings.NewReader(page))
-		} else {
-			// compile layout
-			commonFiles := []string{pagePath}
-			// global partials
-			for _, partial := range opt.partials {
-				commonFiles = append(commonFiles, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
-			}
-			if opt.hasEmbedFS {
-				for _, v := range commonFiles {
-					r, err := opt.embedFS.Open(v)
-					if err != nil {
-						panic(err)
-					}
-					rt.bindings.AddFile(r)
-				}
-			} else {
-				for _, v := range commonFiles {
-					r, err := os.OpenFile(v, os.O_RDONLY, 0644)
-					if err != nil {
-						panic(err)
-					}
-					rt.bindings.AddFile(r)
-				}
-
-			}
-
-		}
-	}
-
-	if opt.layout != "" {
-		walkFile(opt.layout)
-	}
-
-	if opt.content != "" {
-		walkFile(opt.content)
-	}
-
-	if opt.errorLayout != "" {
-		walkFile(opt.errorLayout)
-	}
-
-	if opt.errorContent != "" {
-		walkFile(opt.errorContent)
 	}
 }

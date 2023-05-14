@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        {{/* <script defer src="http://localhost:8000/cdn.js"></script> */}}
         <script
+            defer
+            {{/* src="http://localhost:8000/cdn.js"></script> */}}
+            <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
 
@@ -13,9 +15,7 @@
 
     <body>
         <div x-data>
-            <div
-                @fir:inc:ok::count.window="$fir.replace()"
-                @fir:dec:ok::count.window="$fir.replace()">
+            <div @fir:[inc:ok,dec:ok]::count="$fir.replace()">
                 {{ block "count" . }}
                     <div>Count: {{ .count }}</div>
                 {{ end }}

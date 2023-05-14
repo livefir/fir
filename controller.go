@@ -39,6 +39,7 @@ type opt struct {
 	developmentMode      bool
 	embedFS              embed.FS
 	hasEmbedFS           bool
+	readFile             readFileFunc
 	pubsub               pubsub.Adapter
 	appName              string
 	formDecoder          *schema.Decoder
@@ -217,8 +218,10 @@ func NewController(name string, options ...ControllerOption) Controller {
 	}
 
 	if c.hasEmbedFS {
+		c.readFile = readFileFS(c.embedFS)
 		log.Println("read template files embedded in the binary")
 	} else {
+		c.readFile = readFileOS
 		log.Println("read template files from disk")
 	}
 	return c
@@ -243,13 +246,15 @@ var defaultRouteOpt = &routeOpt{
 	},
 }
 
-// RouteFunc returns an http.HandlerFunc that renders the route
+// Route returns an http.HandlerFunc that renders the route
 func (c *controller) Route(route Route) http.HandlerFunc {
 	for _, option := range route.Options() {
 		option(defaultRouteOpt)
 	}
 
+	// create new route
 	r := newRoute(c, defaultRouteOpt)
+	// register route in the controller
 	c.routes[r.id] = r
 	return r.ServeHTTP
 }
@@ -259,7 +264,9 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 	for _, option := range opts() {
 		option(defaultRouteOpt)
 	}
+	// create new route
 	r := newRoute(c, defaultRouteOpt)
+	// register route in the controller
 	c.routes[r.id] = r
 	return r.ServeHTTP
 }

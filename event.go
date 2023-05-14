@@ -33,7 +33,8 @@ type Event struct {
 	// IsForm is a boolean that indicates whether the event was triggered by a form submission
 	IsForm bool `json:"is_form,omitempty"`
 	// SessionID is the id of the session that the event was triggered for
-	SessionID *string `json:"session_id,omitempty"`
+	SessionID  *string `json:"session_id,omitempty"`
+	ElementKey *string `json:"element_key,omitempty"`
 }
 
 // String returns the string representation of the event

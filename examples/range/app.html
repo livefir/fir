@@ -4,7 +4,10 @@
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-        {{/* <script defer src="http://localhost:8000/cdn.js"></script> */}}
+        {{/* <script
+            defer
+            src="http://localhost:8000/cdn.js"></script>
+        */}}
         <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
@@ -35,7 +38,7 @@
                         value="0"
                         @input="$fir.emit('update',{count: $event.target.value})" />
 
-                    <div @fir:update:ok::price.window="$fir.replace()">
+                    <div @fir:update:ok::price="$fir.replace()">
                         {{ block "price" . }}
                             <div>
                                 Price:
