@@ -5,15 +5,15 @@
         <p>
             {{ .fir.Error "onload" }}
         </p>
-        <p @fir:create-tweet:error::create-err.window="$fir.replace()">
+        <p @fir:create-tweet:error::create-err="$fir.replace()">
             {{ block "create-err" . }}
                 {{ .fir.Error "create-tweet" }}
             {{ end }}
         </p>
 
         <div
-            @fir:create-tweet:pending.window="console.log('create tweet start')"
-            @fir:create-tweet:ok.window="console.log('create tweet done')"></div>
+            @fir:create-tweet:pending="console.log('create tweet start')"
+            @fir:create-tweet:ok="console.log('create tweet done')"></div>
 
         <form
             id="create-tweet"
@@ -21,7 +21,7 @@
             method="post"
             action="/?event=create-tweet"
             @submit.prevent="$fir.submit()"
-            @fir:create-tweet:ok.window="$refs.createTweet.reset()"
+            @fir:create-tweet:ok="$refs.createTweet.reset()"
             style="margin-top:1rem;margin-bottom:1rem;">
             <input
                 type="text"
@@ -30,7 +30,7 @@
             <!-- validation error for the name=body set by ctx.FieldError(...) -->
             <!-- $fir.replace replaces the content of the element on which it is invoked -->
             <!-- $fir.replaceEl replaces the element on which it is invoked -->
-            <p @fir:create-tweet:error::body-err.window="$fir.replace()">
+            <p @fir:create-tweet:error::body-err="$fir.replace()">
                 {{ block "body-err" . }}
                     {{ .fir.Error "create-tweet.body" }}
                 {{ end }}
@@ -38,11 +38,11 @@
 
             <button type="submit">Tweet it!</button>
         </form>
-        <div @fir:create-tweet:ok::tweet.window="$fir.appendEl()">
+        <div @fir:create-tweet:ok::tweet="$fir.appendEl()">
             {{ range .tweets }}
                 {{ block "tweet" . }}
                     <div
-                        id="tweet-{{ .ID }}"
+                        key="{{ .ID }}"
                         @fir:delete-tweet:ok="$fir.removeEl()"
                         style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                         <div style="margin-right:1rem">
@@ -60,7 +60,6 @@
                             {{ end }}
                         </div>
                         <form
-                            id="update-tweet-{{ .ID }}"
                             method="post"
                             @submit.prevent="$fir.submit()"
                             style="margin-right:1rem">
