@@ -186,6 +186,25 @@ func Test_transform(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{
+			name: "add key attribute to children",
+			input: []byte(`<!DOCTYPE html> 
+					<div key="1"> 
+						<div> <button @click="">  </button> </div>
+						<div> <div> <div> <input @change="" > </div> </div> </div>
+						<form @submit=""> </form>
+					</div>
+					`),
+
+			want: []byte(`<!DOCTYPE html> 
+					<div key="1"> 
+						<div @fir:event:ok="" key="1" > </div>
+						<div> <button @click="" key="1">  </button> </div>
+						<div> <div> <div> <input @change="" key="1"> </div> </div> </div>
+						<form @submit="" key="1"> </form>
+					</div>
+					`),
+		},
+		{
 			name: "no filters in event string and key is not present",
 			input: []byte(`<!DOCTYPE html> 
 					<div
@@ -311,7 +330,7 @@ func areHTMLStringsEqual(t *testing.T, html1, html2 []byte) bool {
 	})
 
 	for key, val := range doc1Attr {
-		// fmt.Println("key => ", key)
+		//fmt.Println("key => ", key)
 		if key == "class" {
 			var class1, class2 []string
 			// remove whitespace

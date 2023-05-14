@@ -278,11 +278,24 @@ func transform(content []byte) []byte {
 				}
 
 				// fir-myevent-ok--myblock
-				key, _ := node.Attr("key")
+				key, ok := node.Attr("key")
 				classname := fmt.Sprintf("fir-%s", getClassName(eventns, &key))
 				if !node.HasClass(classname) {
 					node.AddClass(classname)
 				}
+
+				if !ok || key == "" {
+					continue
+				}
+				// if key exists, then add they key attribute to all children which have @fir:x attribute
+				node.Find("*").Each(func(_ int, child *goquery.Selection) {
+					for _, attr := range node.Get(0).Attr {
+						if !strings.HasPrefix(attr.Key, "@") && !strings.HasPrefix(attr.Key, "x-on") {
+							continue
+						}
+						child.SetAttr("key", key)
+					}
+				})
 
 			}
 
