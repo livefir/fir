@@ -424,60 +424,91 @@ func TestGetEventFilter(t *testing.T) {
 		expectedBefore string
 		expectedValues []string
 		expectedAfter  string
+		valid          bool
 	}{
 		{
 			input:          "SomeText[value1:ok,value2:pending,value3:error]moreText",
 			expectedBefore: "SomeText",
 			expectedValues: []string{"value1:ok", "value2:pending", "value3:error"},
 			expectedAfter:  "moreText",
+			valid:          true,
 		},
 		{
 			input:          "[value1:ok,value2:pending,value3:error]moreText",
 			expectedBefore: "",
 			expectedValues: []string{"value1:ok", "value2:pending", "value3:error"},
 			expectedAfter:  "moreText",
+			valid:          true,
 		},
 		{
-			input:          "SomeText[value1:ok,value2:pending,value3:error]",
-			expectedBefore: "SomeText",
+			input:          "[value1:ok,value1-update:ok,value-update:pending,value3:error]",
+			expectedBefore: "",
+			expectedValues: []string{"value1:ok", "value1-update:ok", "value-update:pending", "value3:error"},
+			expectedAfter:  "",
+			valid:          true,
+		},
+		{
+			input:          "SomeText:[value1:ok,value2:pending,value3:error]",
+			expectedBefore: "SomeText:",
 			expectedValues: []string{"value1:ok", "value2:pending", "value3:error"},
 			expectedAfter:  "",
+			valid:          true,
+		},
+		{
+			input:          "SomeText:[value:ok]::moreText",
+			expectedBefore: "SomeText:",
+			expectedValues: []string{"value:ok"},
+			expectedAfter:  "::moreText",
+			valid:          true,
 		},
 		{
 			input:          "SomeText[]moreText",
 			expectedBefore: "SomeText",
 			expectedValues: nil,
 			expectedAfter:  "moreText",
+			valid:          false,
 		},
 		{
 			input:          "SomeText[invalidFormat]moreText",
 			expectedBefore: "",
 			expectedValues: nil,
 			expectedAfter:  "",
+			valid:          false,
 		},
 		{
-			input:          "SomeTextmoreText",
+			input:          "fir:event:ok::tmpl",
 			expectedBefore: "",
-			expectedValues: nil,
+			expectedValues: []string{"fir:event:ok::tmpl"},
 			expectedAfter:  "",
+			valid:          true,
 		},
 	}
 
 	for _, test := range tests {
-		ef := getEventFilter(test.input)
-
-		if ef != nil {
-			if ef.BeforeBracket != test.expectedBefore {
-				t.Errorf("BeforeBracket mismatch for input: %s, expected: %s, got: %s", test.input, test.expectedBefore, ef.BeforeBracket)
-			}
-
-			if !reflect.DeepEqual(ef.Values, test.expectedValues) {
-				t.Errorf("Values mismatch for input: %s, expected: %v, got: %v", test.input, test.expectedValues, ef.Values)
-			}
-
-			if ef.AfterBracket != test.expectedAfter {
-				t.Errorf("AfterBracket mismatch for input: %s, expected: %s, got: %s", test.input, test.expectedAfter, ef.AfterBracket)
-			}
+		ef, err := getEventFilter(test.input)
+		if err != nil && test.valid {
+			t.Fatalf("Failed to parse event filter for input: %s, error: = %v", test.input, err)
 		}
+
+		if err == nil && !test.valid {
+			t.Fatalf("Expected error for input: %s, but got none", test.input)
+		}
+
+		if ef == nil && err != nil {
+			continue
+		}
+
+		if ef.BeforeBracket != test.expectedBefore {
+			t.Errorf("BeforeBracket mismatch for input: %s, expected: %s, got: %s", test.input, test.expectedBefore, ef.BeforeBracket)
+		}
+
+		if !reflect.DeepEqual(ef.Values, test.expectedValues) {
+			t.Errorf("Values mismatch for input: %s, expected: %v, got: %v", test.input, test.expectedValues, ef.Values)
+		}
+
+		if ef.AfterBracket != test.expectedAfter {
+			t.Errorf("AfterBracket mismatch for input: %s, expected: %s, got: %s", test.input, test.expectedAfter, ef.AfterBracket)
+		}
+
 	}
 }

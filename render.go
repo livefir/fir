@@ -55,7 +55,8 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 			ID:     *pubsubEvent.ID,
 			State:  pubsubEvent.State,
 			Type:   eventType,
-			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType, pubsubEvent.ElementKey)),
+			Key:    pubsubEvent.ElementKey,
+			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
 			Detail: pubsubEvent.Detail,
 		}
 	}
@@ -82,7 +83,8 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		ID:     eventIDWithState,
 		State:  pubsubEvent.State,
 		Type:   eventType,
-		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType, pubsubEvent.ElementKey)),
+		Key:    pubsubEvent.ElementKey,
+		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
 		Detail: value,
 	}
 
@@ -145,7 +147,8 @@ func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event)
 			ID:     *pubsubEvent.ID,
 			State:  pubsubEvent.State,
 			Type:   eventType,
-			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType, pubsubEvent.ElementKey)),
+			Key:    pubsubEvent.ElementKey,
+			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
 			Detail: pubsubEvent.Detail,
 		})
 	}

@@ -279,7 +279,7 @@ func transform(content []byte) []byte {
 
 				// fir-myevent-ok--myblock
 				key, ok := node.Attr("key")
-				classname := fmt.Sprintf("fir-%s", getClassName(eventns, &key))
+				classname := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
 				if !node.HasClass(classname) {
 					node.AddClass(classname)
 				}
@@ -308,12 +308,16 @@ func transform(content []byte) []byte {
 	return []byte(html)
 }
 
-func getClassName(eventns string, key *string) string {
-	cls := strings.ReplaceAll(eventns, ":", "-")
+func getClassNameWithKey(eventns string, key *string) string {
+	cls := getClassName(eventns)
 	if key != nil && *key != "" {
 		cls = cls + "--" + strings.ReplaceAll(*key, " ", "-")
 	}
 	return cls
+}
+
+func getClassName(eventns string) string {
+	return strings.ReplaceAll(eventns, ":", "-")
 }
 
 func query(fi fileInfo) fileInfo {
@@ -412,8 +416,9 @@ func query(fi fileInfo) fileInfo {
 // checks if the event string is of the format [event1:ok,event2:ok]:tmpl1 and returns the unbundled list of event strings
 // event1:ok:tmpl1,event2:ok:tmpl1. if not, returns original event string
 func getEventNsList(input string) ([]string, bool) {
-	ef := getEventFilter(input)
-	if ef == nil {
+	ef, err := getEventFilter(input)
+	if err != nil {
+		klog.Warningf("error parsing event filter: %v", err)
 		return []string{input}, false
 	}
 	if len(ef.Values) == 0 {
@@ -432,31 +437,33 @@ type eventFilter struct {
 	AfterBracket  string
 }
 
-func getEventFilter(input string) *eventFilter {
+func getEventFilter(input string) (*eventFilter, error) {
 	// Extract the part of the string before the open square bracket
 	beforeRe := regexp.MustCompile(`^(.*?)\[`)
 	beforeMatch := beforeRe.FindStringSubmatch(input)
 
-	if len(beforeMatch) < 2 {
-		return nil
+	var beforeBracket string
+	if len(beforeMatch) == 2 {
+		beforeBracket = beforeMatch[1]
 	}
-	beforeBracket := beforeMatch[1]
 
 	// Extract the part of the string after the closed square bracket
 	afterRe := regexp.MustCompile(`\](.*)$`)
 	afterMatch := afterRe.FindStringSubmatch(input)
-
-	if len(afterMatch) < 2 {
-		return nil
+	var afterBracket string
+	if len(afterMatch) == 2 {
+		afterBracket = afterMatch[1]
 	}
-	afterBracket := afterMatch[1]
 
 	// Extract the contents of a closed square bracket
 	re := regexp.MustCompile(`\[(.*?)\]`)
 	matches := re.FindStringSubmatch(input)
-
 	if len(matches) < 2 {
-		return nil
+		return &eventFilter{
+			BeforeBracket: beforeBracket,
+			Values:        []string{input},
+			AfterBracket:  afterBracket,
+		}, nil
 	}
 
 	// Remove whitespace and split the contents by comma
@@ -467,7 +474,7 @@ func getEventFilter(input string) *eventFilter {
 	validValues := make([]string, 0)
 	for _, value := range values {
 		if !isValidValue(value) {
-			return nil
+			return nil, fmt.Errorf("invalid value: %s", value)
 		}
 		validValues = append(validValues, formatValue(value))
 	}
@@ -478,11 +485,11 @@ func getEventFilter(input string) *eventFilter {
 		AfterBracket:  afterBracket,
 	}
 
-	return extractedValues
+	return extractedValues, nil
 }
 
 func isValidValue(value string) bool {
-	re := regexp.MustCompile(`^[^-\s]+:(ok|pending|error|done)$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9-]+:(ok|pending|error|done)$`)
 	return re.MatchString(value)
 }
 

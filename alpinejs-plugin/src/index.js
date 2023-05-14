@@ -481,6 +481,22 @@ const Plugin = (Alpine) => {
                     elems[i].dispatchEvent(renderEvent)
                 }
             }
+            // targed with key
+            if (serverEvent.key) {
+                const elems = Array.from(
+                    document.getElementsByClassName(
+                        serverEvent.target.substring(1) + '--' + serverEvent.key
+                    )
+                )
+                for (let i = 0; i < elems.length; i++) {
+                    if (
+                        elems[i].hasAttribute(`@${serverEvent.type}`) ||
+                        elems[i].hasAttribute(`x-on:${serverEvent.type}`)
+                    ) {
+                        elems[i].dispatchEvent(renderEvent)
+                    }
+                }
+            }
         }
     }
 
