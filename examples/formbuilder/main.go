@@ -2,11 +2,15 @@ package main
 
 import (
 	"net/http"
+	"time"
+
+	"math/rand"
 
 	"github.com/livefir/fir"
 )
 
 func index() fir.RouteOptions {
+	rand.Seed(time.Now().UnixNano())
 	return fir.RouteOptions{
 		fir.ID("formbuilder"),
 		fir.Content("app.html"),
@@ -14,7 +18,7 @@ func index() fir.RouteOptions {
 			return nil
 		}),
 		fir.OnEvent("add", func(ctx fir.RouteContext) error {
-			return nil
+			return ctx.KV("key", rand.Intn(1000-1)+1)
 		}),
 		fir.OnEvent("remove", func(ctx fir.RouteContext) error {
 			return nil

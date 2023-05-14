@@ -3,7 +3,12 @@
     <head>
         <script
             defer
+            src="http://localhost:8000/cdn.js"></script>
+
+        {{/* <script
+            defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        */}}
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -11,9 +16,10 @@
     <body>
         <div x-data>
             {{ define "input-text" }}
-                <div @fir:remove:ok="$fir.removeEl()">
+                <div
+                    key="{{ .key }}"
+                    @fir:remove:ok="$fir.removeEl()">
                     <form
-                        :id="$id('input-text')"
                         method="post"
                         @submit.prevent="$fir.submit()">
                         <input
