@@ -229,7 +229,7 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			Path:   "/",
 		})
 
-		ctx.response.Write(transform(buf.Bytes()))
+		ctx.response.Write(addAttributes(buf.Bytes()))
 		return nil
 	}
 }

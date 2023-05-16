@@ -1,7 +1,6 @@
 package fir
 
 import (
-	"bytes"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -9,12 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/sourcegraph/conc/pool"
-	"golang.org/x/exp/slices"
-	"k8s.io/klog/v2"
 )
 
 type eventTemplate map[string]struct{}
@@ -171,7 +166,7 @@ type fileInfo struct {
 var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:]*$`)
 
 func parseString(t *template.Template, content string) (*template.Template, eventTemplates, error) {
-	fi := query(fileInfo{content: []byte(content)})
+	fi := readAttributes(fileInfo{content: []byte(content)})
 	t, err := t.Parse(string(fi.content))
 	return t, fi.eventTemplates, err
 }
@@ -187,7 +182,7 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 		filename := filename
 		resultPool.Go(func() fileInfo {
 			name, b, err := readFile(filename)
-			return query(fileInfo{name: name, content: b, err: err})
+			return readAttributes(fileInfo{name: name, content: b, err: err})
 		})
 	}
 
@@ -225,277 +220,18 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 	return t, evt, nil
 }
 
-func eventFormatError(eventns string) string {
-	return fmt.Sprintf(`
-	error: invalid event namespace: %s. must be of either of the two formats =>
-	1. @fir:<event>:<ok|error>::<block-name|optional>
-	2. @fir:<event>:<pending|done>`, eventns)
+func readFileOS(file string) (name string, b []byte, err error) {
+	name = filepath.Base(file)
+	b, err = os.ReadFile(file)
+	return
 }
 
-func transform(content []byte) []byte {
-	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(content))
-	if err != nil {
-		panic(err)
+func readFileFS(fsys fs.FS) func(string) (string, []byte, error) {
+	return func(file string) (name string, b []byte, err error) {
+		name = path.Base(file)
+		b, err = fs.ReadFile(fsys, file)
+		return
 	}
-
-	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
-		for _, attr := range node.Get(0).Attr {
-			if !strings.HasPrefix(attr.Key, "@fir:") && !strings.HasPrefix(attr.Key, "x-on:fir:") {
-				continue
-			}
-
-			eventns := strings.TrimPrefix(attr.Key, "@fir:")
-			eventns = strings.TrimPrefix(eventns, "x-on:fir:")
-			// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
-			eventnsParts := strings.SplitN(eventns, ".", -1)
-			var modifiers string
-			if len(eventnsParts) > 0 {
-				eventns = eventnsParts[0]
-			}
-			if len(eventnsParts) > 1 {
-				modifiers = strings.Join(eventnsParts[1:], ".")
-			}
-
-			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
-			eventnsList, filterExists := getEventNsList(eventns)
-			// if filter exists remove the current attribute from the node
-			if filterExists {
-				node.RemoveAttr(attr.Key)
-			}
-
-			for _, eventns := range eventnsList {
-				eventns = strings.TrimSpace(eventns)
-				// set @fir|x-on:fir:eventns attribute to the node
-				eventnsWithModifiers := fmt.Sprintf("%s.%s", eventns, modifiers)
-				if len(modifiers) == 0 {
-					eventnsWithModifiers = eventns
-				}
-				_, atFirOk := node.Attr(fmt.Sprintf("@fir:%s", eventnsWithModifiers))
-				_, xOnFirOk := node.Attr(fmt.Sprintf("x-on:fir:%s", eventnsWithModifiers))
-				// if the node already has @fir:x attribute, then skip
-				if !atFirOk && !xOnFirOk {
-					node.SetAttr(fmt.Sprintf("@fir:%s", eventnsWithModifiers), attr.Val)
-				}
-
-				// fir-myevent-ok--myblock
-				key, ok := node.Attr("key")
-				classname := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
-				if !node.HasClass(classname) {
-					node.AddClass(classname)
-				}
-
-				if !ok || key == "" {
-					continue
-				}
-				// if key exists, then add they key attribute to all children which have @fir:x attribute
-				node.Find("*").Each(func(_ int, child *goquery.Selection) {
-					for _, attr := range node.Get(0).Attr {
-						if !strings.HasPrefix(attr.Key, "@") && !strings.HasPrefix(attr.Key, "x-on") {
-							continue
-						}
-						child.SetAttr("key", key)
-					}
-				})
-
-			}
-
-		}
-	})
-	html, err := doc.Html()
-	if err != nil {
-		panic(err)
-	}
-	return []byte(html)
-}
-
-func getClassNameWithKey(eventns string, key *string) string {
-	cls := getClassName(eventns)
-	if key != nil && *key != "" {
-		cls = cls + "--" + strings.ReplaceAll(*key, " ", "-")
-	}
-	return cls
-}
-
-func getClassName(eventns string) string {
-	return strings.ReplaceAll(eventns, ":", "-")
-}
-
-func query(fi fileInfo) fileInfo {
-	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(fi.content))
-	if err != nil {
-		panic(err)
-	}
-	evt := make(eventTemplates)
-	doc.Find("*").Each(func(_ int, node *goquery.Selection) {
-		for _, attr := range node.Get(0).Attr {
-			if !strings.HasPrefix(attr.Key, "@fir:") && !strings.HasPrefix(attr.Key, "x-on:fir:") {
-				continue
-			}
-
-			eventns := strings.TrimPrefix(attr.Key, "@fir:")
-			eventns = strings.TrimPrefix(eventns, "x-on:fir:")
-			// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
-			eventnsParts := strings.SplitN(eventns, ".", -1)
-
-			if len(eventnsParts) > 0 {
-				eventns = eventnsParts[0]
-			}
-
-			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
-			eventnsList, _ := getEventNsList(eventns)
-
-			for _, eventns := range eventnsList {
-				eventns = strings.TrimSpace(eventns)
-				// set @fir|x-on:fir:eventns attribute to the node
-
-				// myevent:ok::myblock
-				eventnsParts = strings.SplitN(eventns, "::", -1)
-				if len(eventnsParts) == 0 {
-					continue
-				}
-
-				// [myevent:ok, myblock]
-				if len(eventnsParts) > 2 {
-					klog.Errorf(eventFormatError(eventns))
-					continue
-				}
-
-				// myevent:ok
-				eventID := eventnsParts[0]
-				// [myevent, ok]
-				eventIDParts := strings.SplitN(eventID, ":", -1)
-				if len(eventIDParts) != 2 {
-					klog.Errorf(eventFormatError(eventns))
-					continue
-				}
-				// event name can only be followed by ok, error, pending, done
-				if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventIDParts[1]) {
-					klog.Errorf(eventFormatError(eventns))
-					continue
-				}
-				// assert myevent:ok::myblock or myevent:error::myblock
-				if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
-					klog.Errorf(eventFormatError(eventns))
-					continue
-
-				}
-				// template name is declared for event state i.e. myevent:ok::myblock
-				templateName := "-"
-				if len(eventnsParts) == 2 {
-					templateName = eventnsParts[1]
-				}
-
-				templates, ok := evt[eventID]
-				if !ok {
-					templates = make(eventTemplate)
-				}
-
-				if !templateNameRegex.MatchString(templateName) {
-					klog.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v\n", templateName)
-					continue
-				}
-
-				templates[templateName] = struct{}{}
-				// fmt.Printf("eventID: %s, templateName: %s\n", eventID, templateName)
-
-				evt[eventID] = templates
-
-			}
-
-		}
-	})
-
-	return fileInfo{
-		name:           fi.name,
-		content:        fi.content,
-		err:            fi.err,
-		eventTemplates: evt,
-	}
-}
-
-// checks if the event string is of the format [event1:ok,event2:ok]:tmpl1 and returns the unbundled list of event strings
-// event1:ok:tmpl1,event2:ok:tmpl1. if not, returns original event string
-func getEventNsList(input string) ([]string, bool) {
-	ef, err := getEventFilter(input)
-	if err != nil {
-		klog.Warningf("error parsing event filter: %v", err)
-		return []string{input}, false
-	}
-	if len(ef.Values) == 0 {
-		return []string{input}, false
-	}
-	var eventnsList []string
-	for _, v := range ef.Values {
-		eventnsList = append(eventnsList, ef.BeforeBracket+v+ef.AfterBracket)
-	}
-	return eventnsList, true
-}
-
-type eventFilter struct {
-	BeforeBracket string
-	Values        []string
-	AfterBracket  string
-}
-
-func getEventFilter(input string) (*eventFilter, error) {
-	// Extract the part of the string before the open square bracket
-	beforeRe := regexp.MustCompile(`^(.*?)\[`)
-	beforeMatch := beforeRe.FindStringSubmatch(input)
-
-	var beforeBracket string
-	if len(beforeMatch) == 2 {
-		beforeBracket = beforeMatch[1]
-	}
-
-	// Extract the part of the string after the closed square bracket
-	afterRe := regexp.MustCompile(`\](.*)$`)
-	afterMatch := afterRe.FindStringSubmatch(input)
-	var afterBracket string
-	if len(afterMatch) == 2 {
-		afterBracket = afterMatch[1]
-	}
-
-	// Extract the contents of a closed square bracket
-	re := regexp.MustCompile(`\[(.*?)\]`)
-	matches := re.FindStringSubmatch(input)
-	if len(matches) < 2 {
-		return &eventFilter{
-			BeforeBracket: beforeBracket,
-			Values:        []string{input},
-			AfterBracket:  afterBracket,
-		}, nil
-	}
-
-	// Remove whitespace and split the contents by comma
-	contents := strings.ReplaceAll(matches[1], " ", "")
-	values := strings.Split(contents, ",")
-
-	// Validate and format each value
-	validValues := make([]string, 0)
-	for _, value := range values {
-		if !isValidValue(value) {
-			return nil, fmt.Errorf("invalid value: %s", value)
-		}
-		validValues = append(validValues, formatValue(value))
-	}
-
-	extractedValues := &eventFilter{
-		BeforeBracket: beforeBracket,
-		Values:        validValues,
-		AfterBracket:  afterBracket,
-	}
-
-	return extractedValues, nil
-}
-
-func isValidValue(value string) bool {
-	re := regexp.MustCompile(`^[a-zA-Z0-9-]+:(ok|pending|error|done)$`)
-	return re.MatchString(value)
-}
-
-func formatValue(value string) string {
-	parts := strings.Split(value, ":")
-	return fmt.Sprintf("%s:%s", parts[0], parts[1])
 }
 
 func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
@@ -514,18 +250,4 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 		}
 	}
 	return merged
-}
-
-func readFileOS(file string) (name string, b []byte, err error) {
-	name = filepath.Base(file)
-	b, err = os.ReadFile(file)
-	return
-}
-
-func readFileFS(fsys fs.FS) func(string) (string, []byte, error) {
-	return func(file string) (name string, b []byte, err error) {
-		name = path.Base(file)
-		b, err = fs.ReadFile(fsys, file)
-		return
-	}
 }
