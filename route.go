@@ -603,7 +603,7 @@ func (rt *route) parseTemplates() {
 				}
 				templatesStr += k + " "
 			}
-			fmt.Println("eventID: ", eventID, " templates: ", templatesStr)
+			klog.Infof("[parseTemplates] eventID: %v templates: %v\n", eventID, templatesStr)
 		}
 
 		rt.findAllTemplates()
