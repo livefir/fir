@@ -9,7 +9,7 @@ import (
 
 type Todo struct {
 	ID        uint64    `json:"id" boltholdKey:"ID"`
-	Text      string    `json:"body"`
+	Text      string    `json:"text"`
 	Done      bool      `json:"done"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -20,7 +20,7 @@ func insertTodo(ctx RouteContext, db *bolthold.Store) (*Todo, error) {
 		return nil, err
 	}
 	if len(todo.Text) < 3 {
-		return nil, ctx.FieldError("body", errors.New("todo is too short"))
+		return nil, ctx.FieldError("text", errors.New("todo is too short"))
 	}
 	todo.CreatedAt = time.Now()
 	if err := db.Insert(bolthold.NextSequence(), todo); err != nil {
@@ -83,11 +83,11 @@ func updateTodo(db *bolthold.Store) OnEventFunc {
 }
 
 func toggleDone(db *bolthold.Store) OnEventFunc {
-	type likeReq struct {
+	type doneReq struct {
 		TodoID uint64 `json:"todoID"`
 	}
 	return func(ctx RouteContext) error {
-		req := new(likeReq)
+		req := new(doneReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
 		}

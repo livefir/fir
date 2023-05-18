@@ -2,19 +2,21 @@ package fir
 
 import (
 	"bytes"
+	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	"github.com/chromedp/chromedp"
 	"github.com/timshannon/bolthold"
 	"github.com/yosssi/gohtml"
 	"golang.org/x/net/html"
 )
 
 func TestSanity(t *testing.T) {
-	dbfile, err := ioutil.TempFile("", "test")
+	dbfile, err := os.CreateTemp("", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +27,6 @@ func TestSanity(t *testing.T) {
 	}
 
 	controller := NewController("todos")
-
 	ts := httptest.NewServer(controller.RouteFunc(todosRoute(db)))
 	defer ts.Close()
 
@@ -43,7 +44,7 @@ func TestSanity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantPage, err := ioutil.ReadFile("example_golden.html")
+	wantPage, err := os.ReadFile("example_golden.html")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +53,28 @@ func TestSanity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := areNodesDeepEqual(gotPageNode, wantPageNode); err != nil {
-		t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(htmlNodeToBytes(gotPageNode))), gohtml.Format(string(htmlNodeToBytes(wantPageNode))))
+		t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err,
+			gohtml.Format(htmlNodetoString(gotPageNode)),
+			gohtml.Format(htmlNodetoString(wantPageNode)))
+	}
+
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+	sel := `input[name="text"]`
+	todo := "test"
+	result := ""
+	if err := chromedp.Run(ctx,
+		chromedp.Navigate(ts.URL),
+		chromedp.WaitVisible(sel, chromedp.ByQuery),
+		chromedp.SendKeys(sel, todo, chromedp.ByQuery),
+		chromedp.Submit(sel, chromedp.ByQuery),
+		chromedp.WaitVisible(`div[id="todo-1"]`, chromedp.ByQuery),
+		chromedp.TextContent(`div[id="todo-1"]`, &result, chromedp.ByQuery),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if removeSpace(result) != todo {
+		t.Fatalf("got %q, want %q", result, todo)
 	}
 
 }

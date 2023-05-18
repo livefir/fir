@@ -33,11 +33,11 @@
                 class="fir-create-ok">
                 <input
                     type="text"
-                    name="body"
+                    name="text"
                     placeholder="a new todo" />
                 <p
-                    @fir:create:error::body-err="$fir.replace()"
-                    class="fir-create-error--body-err"></p>
+                    @fir:create:error::text-err="$fir.replace()"
+                    class="fir-create-error--text-err"></p>
 
                 <button type="submit">new</button>
             </form>

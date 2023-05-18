@@ -35,11 +35,11 @@
                 style="margin-top:1rem;margin-bottom:1rem;">
                 <input
                     type="text"
-                    name="body"
+                    name="text"
                     placeholder="a new todo" />
-                <p @fir:create:error::body-err="$fir.replace()">
-                    {{ block "body-err" . }}
-                        {{ .fir.Error "create.body" }}
+                <p @fir:create:error::text-err="$fir.replace()">
+                    {{ block "text-err" . }}
+                        {{ .fir.Error "create.text" }}
                     {{ end }}
                 </p>
 
@@ -52,7 +52,9 @@
                             key="{{ .ID }}"
                             @fir:delete:ok="$fir.removeEl()"
                             style="display: flex;margin-top:1rem;margin-bottom:1rem;">
-                            <div style="margin-right:1rem">
+                            <div
+                                id="todo-{{ .ID }}"
+                                style="margin-right:1rem">
                                 {{ .Text }}
                             </div>
                             <div
