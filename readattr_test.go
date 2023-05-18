@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/yosssi/gohtml"
 	"golang.org/x/net/html"
 )
 
@@ -171,8 +171,18 @@ func Test_query(t *testing.T) {
 			if !reflect.DeepEqual(got.eventTemplates, tt.want.eventTemplates) {
 				t.Errorf("eventTemplates = %v, want %v", got.eventTemplates, tt.want.eventTemplates)
 			}
-			if err := areHTMLStringsEqual(t, got.content, tt.want.content); err != nil {
-				t.Errorf("error: %v \n got \n %v, \n want \n %v", err, string(got.content), string(tt.want.content))
+
+			gotNode, err := html.Parse(bytes.NewReader(got.content))
+			if err != nil {
+				t.Fatalf("error parsing html: %v", err)
+			}
+			wantNode, err := html.Parse(bytes.NewReader(tt.want.content))
+			if err != nil {
+				t.Fatalf("error parsing html: %v", err)
+			}
+
+			if err := areNodesDeepEqual(gotNode, wantNode); err != nil {
+				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(htmlNodeToBytes(gotNode))), gohtml.Format(string(htmlNodeToBytes(wantNode))))
 			}
 		})
 	}
@@ -263,19 +273,6 @@ func TestGetEventFilter(t *testing.T) {
 	}
 }
 
-// Recursive function to collect attributes
-func collectAttributes(n *html.Node, attributes map[string]string) {
-	if n.Type == html.ElementNode {
-		for _, attr := range n.Attr {
-			attributes[attr.Key] = attr.Val
-		}
-	}
-
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		collectAttributes(c, attributes)
-	}
-}
-
 func removeSpace(s string) string {
 	rr := make([]rune, 0, len(s))
 	for _, r := range s {
@@ -284,56 +281,6 @@ func removeSpace(s string) string {
 		}
 	}
 	return string(rr)
-}
-
-func areHTMLStringsEqual(t *testing.T, got, want []byte) error {
-	// Load the HTML strings into goquery documents
-	gotDoc, err := html.Parse(bytes.NewReader(got))
-	if err != nil {
-		return err
-	}
-
-	wantDoc, err := html.Parse(bytes.NewReader(want))
-	if err != nil {
-		return err
-	}
-
-	gotAttr := make(map[string]string)
-	collectAttributes(gotDoc, gotAttr)
-
-	wantAttr := make(map[string]string)
-	collectAttributes(wantDoc, wantAttr)
-
-	if len(gotAttr) != len(wantAttr) {
-		return fmt.Errorf("len of attrs in got and wat are not equal")
-	}
-
-	for key, val := range wantAttr {
-		// fmt.Printf("attr => key: %s, val: %s\n", key, val)
-		if key == "class" {
-			var gotClass, wantClass []string
-			// remove whitespace
-			for _, class := range strings.Fields(val) {
-				if class == "" {
-					continue
-				}
-				wantClass = append(wantClass, strings.TrimSpace(class))
-			}
-			for _, class := range strings.Fields(gotAttr[key]) {
-				if class == "" {
-					continue
-				}
-				gotClass = append(gotClass, strings.TrimSpace(class))
-			}
-			assert.ElementsMatch(t, gotClass, wantClass)
-			continue
-		}
-		if _, ok := gotAttr[key]; !ok {
-			return fmt.Errorf("attr %v is not present in got", key)
-		}
-	}
-
-	return nil
 }
 
 func areNodesDeepEqual(node1, node2 *html.Node) error {
