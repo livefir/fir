@@ -123,6 +123,9 @@ func getEventNsList(input string) ([]string, bool) {
 		klog.Warningf("error parsing event filter: %v", err)
 		return []string{input}, false
 	}
+	if ef == nil {
+		return []string{input}, false
+	}
 	if len(ef.Values) == 0 {
 		return []string{input}, false
 	}
@@ -132,6 +135,8 @@ func getEventNsList(input string) ([]string, bool) {
 	}
 	return eventnsList, true
 }
+
+var ErrorEventFilterFormat = fmt.Errorf("error parsing event filter. must match ^[a-zA-Z0-9-]+:(ok|pending|error|done)$")
 
 type eventFilter struct {
 	BeforeBracket string
@@ -161,11 +166,7 @@ func getEventFilter(input string) (*eventFilter, error) {
 	re := regexp.MustCompile(`\[(.*?)\]`)
 	matches := re.FindStringSubmatch(input)
 	if len(matches) < 2 {
-		return &eventFilter{
-			BeforeBracket: beforeBracket,
-			Values:        []string{input},
-			AfterBracket:  afterBracket,
-		}, nil
+		return nil, nil
 	}
 
 	// Remove whitespace and split the contents by comma
@@ -176,7 +177,7 @@ func getEventFilter(input string) (*eventFilter, error) {
 	validValues := make([]string, 0)
 	for _, value := range values {
 		if !isValidValue(value) {
-			return nil, fmt.Errorf("invalid value: %s", value)
+			return nil, ErrorEventFilterFormat
 		}
 		validValues = append(validValues, formatValue(value))
 	}

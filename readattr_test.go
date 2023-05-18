@@ -2,12 +2,14 @@ package fir
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+	"unicode"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/net/html"
 )
 
 func Test_query(t *testing.T) {
@@ -169,68 +171,11 @@ func Test_query(t *testing.T) {
 			if !reflect.DeepEqual(got.eventTemplates, tt.want.eventTemplates) {
 				t.Errorf("eventTemplates = %v, want %v", got.eventTemplates, tt.want.eventTemplates)
 			}
-			if !areHTMLStringsEqual(t, got.content, tt.want.content) {
-				t.Errorf("html \n %v, \n want \n %v", string(got.content), string(tt.want.content))
+			if err := areHTMLStringsEqual(t, got.content, tt.want.content); err != nil {
+				t.Errorf("error: %v \n got \n %v, \n want \n %v", err, string(got.content), string(tt.want.content))
 			}
 		})
 	}
-}
-
-func areHTMLStringsEqual(t *testing.T, html1, html2 []byte) bool {
-	// Load the HTML strings into goquery documents
-	doc1, err := goquery.NewDocumentFromReader(bytes.NewReader(html1))
-	if err != nil {
-		return false
-	}
-
-	doc2, err := goquery.NewDocumentFromReader(bytes.NewReader(html2))
-	if err != nil {
-		return false
-	}
-
-	doc1Attr := make(map[string]string)
-	doc2Attr := make(map[string]string)
-
-	doc1.Find("*").Each(func(_ int, node *goquery.Selection) {
-		// fmt.Println("node attributes => ", node.Get(0).Attr)
-		for _, attr := range node.Get(0).Attr {
-			doc1Attr[attr.Key] = attr.Val
-		}
-	})
-
-	doc2.Find("*").Each(func(_ int, node *goquery.Selection) {
-		// fmt.Println("node attributes => ", node.Get(0).Attr)
-		for _, attr := range node.Get(0).Attr {
-			doc2Attr[attr.Key] = attr.Val
-		}
-	})
-
-	for key, val := range doc1Attr {
-		//fmt.Println("key => ", key)
-		if key == "class" {
-			var class1, class2 []string
-			// remove whitespace
-			for _, class := range strings.Split(val, " ") {
-				if class == "" {
-					continue
-				}
-				class1 = append(class1, strings.TrimSpace(class))
-			}
-			for _, class := range strings.Split(doc2Attr[key], " ") {
-				if class == "" {
-					continue
-				}
-				class2 = append(class2, strings.TrimSpace(class))
-			}
-			assert.ElementsMatch(t, class1, class2)
-			continue
-		}
-		if doc2Attr[key] != val {
-			return false
-		}
-	}
-
-	return true
 }
 
 func TestGetEventFilter(t *testing.T) {
@@ -239,77 +184,67 @@ func TestGetEventFilter(t *testing.T) {
 		expectedBefore string
 		expectedValues []string
 		expectedAfter  string
-		valid          bool
+		err            error
 	}{
 		{
 			input:          "SomeText[value1:ok,value2:pending,value3:error]moreText",
 			expectedBefore: "SomeText",
 			expectedValues: []string{"value1:ok", "value2:pending", "value3:error"},
 			expectedAfter:  "moreText",
-			valid:          true,
 		},
 		{
 			input:          "[value1:ok,value2:pending,value3:error]moreText",
 			expectedBefore: "",
 			expectedValues: []string{"value1:ok", "value2:pending", "value3:error"},
 			expectedAfter:  "moreText",
-			valid:          true,
 		},
 		{
 			input:          "[value1:ok,value1-update:ok,value-update:pending,value3:error]",
 			expectedBefore: "",
 			expectedValues: []string{"value1:ok", "value1-update:ok", "value-update:pending", "value3:error"},
 			expectedAfter:  "",
-			valid:          true,
 		},
 		{
 			input:          "SomeText:[value1:ok,value2:pending,value3:error]",
 			expectedBefore: "SomeText:",
 			expectedValues: []string{"value1:ok", "value2:pending", "value3:error"},
 			expectedAfter:  "",
-			valid:          true,
 		},
 		{
 			input:          "SomeText:[value:ok]::moreText",
 			expectedBefore: "SomeText:",
 			expectedValues: []string{"value:ok"},
 			expectedAfter:  "::moreText",
-			valid:          true,
 		},
 		{
 			input:          "SomeText[]moreText",
 			expectedBefore: "SomeText",
 			expectedValues: nil,
 			expectedAfter:  "moreText",
-			valid:          false,
+			err:            ErrorEventFilterFormat,
+		},
+		{
+			input:          "fir:event:ok::tmpl",
+			expectedBefore: "",
+			expectedValues: nil,
+			expectedAfter:  "",
 		},
 		{
 			input:          "SomeText[invalidFormat]moreText",
 			expectedBefore: "",
 			expectedValues: nil,
 			expectedAfter:  "",
-			valid:          false,
-		},
-		{
-			input:          "fir:event:ok::tmpl",
-			expectedBefore: "",
-			expectedValues: []string{"fir:event:ok::tmpl"},
-			expectedAfter:  "",
-			valid:          true,
+			err:            ErrorEventFilterFormat,
 		},
 	}
 
 	for _, test := range tests {
 		ef, err := getEventFilter(test.input)
-		if err != nil && test.valid {
+		if err != test.err {
 			t.Fatalf("Failed to parse event filter for input: %s, error: = %v", test.input, err)
 		}
 
-		if err == nil && !test.valid {
-			t.Fatalf("Expected error for input: %s, but got none", test.input)
-		}
-
-		if ef == nil && err != nil {
+		if ef == nil && test.expectedValues == nil {
 			continue
 		}
 
@@ -326,4 +261,177 @@ func TestGetEventFilter(t *testing.T) {
 		}
 
 	}
+}
+
+// Recursive function to collect attributes
+func collectAttributes(n *html.Node, attributes map[string]string) {
+	if n.Type == html.ElementNode {
+		for _, attr := range n.Attr {
+			attributes[attr.Key] = attr.Val
+		}
+	}
+
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		collectAttributes(c, attributes)
+	}
+}
+
+func removeSpace(s string) string {
+	rr := make([]rune, 0, len(s))
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			rr = append(rr, r)
+		}
+	}
+	return string(rr)
+}
+
+func areHTMLStringsEqual(t *testing.T, got, want []byte) error {
+	// Load the HTML strings into goquery documents
+	gotDoc, err := html.Parse(bytes.NewReader(got))
+	if err != nil {
+		return err
+	}
+
+	wantDoc, err := html.Parse(bytes.NewReader(want))
+	if err != nil {
+		return err
+	}
+
+	gotAttr := make(map[string]string)
+	collectAttributes(gotDoc, gotAttr)
+
+	wantAttr := make(map[string]string)
+	collectAttributes(wantDoc, wantAttr)
+
+	if len(gotAttr) != len(wantAttr) {
+		return fmt.Errorf("len of attrs in got and wat are not equal")
+	}
+
+	for key, val := range wantAttr {
+		// fmt.Printf("attr => key: %s, val: %s\n", key, val)
+		if key == "class" {
+			var gotClass, wantClass []string
+			// remove whitespace
+			for _, class := range strings.Fields(val) {
+				if class == "" {
+					continue
+				}
+				wantClass = append(wantClass, strings.TrimSpace(class))
+			}
+			for _, class := range strings.Fields(gotAttr[key]) {
+				if class == "" {
+					continue
+				}
+				gotClass = append(gotClass, strings.TrimSpace(class))
+			}
+			assert.ElementsMatch(t, gotClass, wantClass)
+			continue
+		}
+		if _, ok := gotAttr[key]; !ok {
+			return fmt.Errorf("attr %v is not present in got", key)
+		}
+	}
+
+	return nil
+}
+
+func areNodesDeepEqual(node1, node2 *html.Node) error {
+	if node1 == nil && node2 == nil {
+		return fmt.Errorf("both nodes are nil")
+	}
+
+	if node1 == nil || node2 == nil {
+		return fmt.Errorf("one of the nodes is nil")
+	}
+
+	if node1.Type != node2.Type {
+		return fmt.Errorf("node types are not equal")
+	}
+
+	if removeSpace(node1.Data) != removeSpace(node2.Data) {
+		return fmt.Errorf("node data is not equal (%s != %s)", node1.Data, node2.Data)
+	}
+
+	if err := areAttributesEqual(node1.Attr, node2.Attr); err != nil {
+		return err
+	}
+
+	c1 := node1.FirstChild
+	c2 := node2.FirstChild
+
+	for c1 != nil && c2 != nil {
+		if err := areNodesDeepEqual(c1, c2); err != nil {
+			return err
+		}
+
+		c1 = c1.NextSibling
+		c2 = c2.NextSibling
+
+	}
+
+	if c1 != nil && c1.DataAtom.String() != "" {
+		return fmt.Errorf("node1 has extra child: atom: %v, val: %v\n", c1.DataAtom, string(htmlNodeToBytes(c1)))
+	}
+	if c2 != nil && c2.DataAtom.String() != "" {
+		return fmt.Errorf("node2 has extra child: atom: %v, val: %v\n", c2.DataAtom, string(htmlNodeToBytes(c2)))
+	}
+
+	return nil
+}
+
+func areAttributesEqual(attr1, attr2 []html.Attribute) error {
+
+	attr1Map := make(map[string]string)
+	for _, a := range attr1 {
+		attr1Map[a.Key] = a.Val
+	}
+
+	attr2Map := make(map[string]string)
+	for _, a := range attr2 {
+		attr2Map[a.Key] = a.Val
+	}
+
+	for k, v := range attr1Map {
+		if k == "class" {
+			if err := areClassesEqual(v, attr2Map["class"]); err != nil {
+				return err
+			}
+		} else {
+			val, ok := attr2Map[k]
+			if !ok {
+				return fmt.Errorf("attr %v is not present in attr2Map %+v", k, attr2Map)
+			}
+			if val != v {
+				return fmt.Errorf("attr %v has different values: %v != %v", k, val, v)
+			}
+		}
+
+		delete(attr2Map, k)
+	}
+
+	if len(attr2Map) > 0 {
+		return fmt.Errorf("attr2Map has extra attributes: %v", attr2Map)
+	}
+
+	return nil
+}
+
+func areClassesEqual(class1, class2 string) error {
+	classSet1 := strings.Fields(class1)
+	classSet2 := strings.Fields(class2)
+
+	classMap := make(map[string]bool)
+	for _, class := range classSet1 {
+		classMap[class] = true
+	}
+
+	for _, class := range classSet2 {
+		_, ok := classMap[class]
+		if !ok {
+			return fmt.Errorf("class %v is not present in classSet1", class)
+		}
+	}
+
+	return nil
 }

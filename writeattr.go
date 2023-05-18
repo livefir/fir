@@ -1,6 +1,7 @@
 package fir
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -10,103 +11,94 @@ import (
 )
 
 func htmlNodeToBytes(n *html.Node) []byte {
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
-	html.Render(buf, n)
-	return buf.Bytes()
+	return []byte(htmlNodetoString(n))
 }
 
-func setKeyAttr(n *html.Node, key string) {
-	if n.Type == html.ElementNode {
-		if !hasAlpineAttr(n) {
-			return
-		}
-
-		n.Attr = append(n.Attr, html.Attribute{Key: "key", Val: key})
+func htmlNodetoString(n *html.Node) string {
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+	err := html.Render(buf, n)
+	if err != nil {
+		panic(fmt.Sprintf("failed to render HTML: %v", err))
 	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		setKeyAttr(c, key)
+	return html.UnescapeString(buf.String())
+}
+
+// Recursive function to set the "key" attribute to all nested children
+func setKeyToChildren(node *html.Node, key string) {
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		// Only modify element nodes
+		if child.Type == html.ElementNode {
+			// Check if the child already has a "key" attribute
+			hasKeyAttribute := false
+			for _, attr := range child.Attr {
+				if attr.Key == "key" {
+					hasKeyAttribute = true
+					break
+				}
+			}
+
+			// Check if the child doesn't have a "key" attribute and has an attribute with prefix "@" or "x-on"
+			if !hasKeyAttribute {
+				hasPrefixAttribute := false
+				for _, attr := range child.Attr {
+					if strings.HasPrefix(attr.Key, "@") || strings.HasPrefix(attr.Key, "x-on") {
+						hasPrefixAttribute = true
+						break
+					}
+				}
+
+				// Set the "key" attribute if the child has a matching attribute
+				if hasPrefixAttribute {
+					child.Attr = append(child.Attr, html.Attribute{Key: "key", Val: key})
+				}
+			}
+
+			// Recurse through the child nodes
+			setKeyToChildren(child, key)
+		}
 	}
 }
 
 func removeAttr(n *html.Node, attr string) {
-	if n.Type == html.ElementNode {
-		for i, a := range n.Attr {
-			if a.Key == attr {
-				n.Attr = append(n.Attr[:i], n.Attr[i+1:]...)
-				break
-			}
+	for i, a := range n.Attr {
+		if a.Key == attr {
+			n.Attr = append(n.Attr[:i], n.Attr[i+1:]...)
+			break
 		}
 	}
-}
 
-func hasAlpineAttr(n *html.Node) bool {
-	if n.Type == html.ElementNode {
-		for _, a := range n.Attr {
-			if strings.HasPrefix(a.Key, "@") || strings.HasPrefix(a.Key, "x-on") {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func hasAttr(n *html.Node, attr string) bool {
-	if n.Type == html.ElementNode {
-		for _, a := range n.Attr {
-			if a.Key == attr {
-				return true
-			}
+	for _, a := range n.Attr {
+		if a.Key == attr {
+			return true
 		}
 	}
+
 	return false
 }
 
 func setAttr(n *html.Node, key, val string) {
-	if n.Type == html.ElementNode {
-		for i, a := range n.Attr {
-			if a.Key == key {
-				n.Attr[i].Val = val
-				break
-			}
-		}
-	}
+	n.Attr = append(n.Attr, html.Attribute{Key: key, Val: val})
 }
 
 func getAttr(n *html.Node, key string) string {
-	if n.Type == html.ElementNode {
-		for _, a := range n.Attr {
-			if a.Key == key {
-				return a.Val
-			}
+
+	for _, a := range n.Attr {
+		if a.Key == key {
+			return a.Val
 		}
 	}
+
 	return ""
 }
 
-func addClass(node *html.Node, class string) {
-	if node.Type == html.ElementNode {
-		for i, attr := range node.Attr {
-			if attr.Key == "class" {
-				classes := strings.Fields(attr.Val)
-				if !slices.Contains(classes, class) {
-					classes = append(classes, class)
-					node.Attr[i].Val = strings.Join(classes, " ")
-				}
-				break
-			}
-		}
-	}
-
-	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		addClass(child, class)
-	}
-}
-
 func addAttributes(content []byte) []byte {
-	doc, err := html.Parse(strings.NewReader(string(content)))
+	doc, err := html.Parse(bytes.NewReader(content))
 	if err != nil {
-		return content
+		panic(err)
 	}
 	writeAttributes(doc)
 	return htmlNodeToBytes(doc)
@@ -114,12 +106,21 @@ func addAttributes(content []byte) []byte {
 
 func writeAttributes(node *html.Node) {
 	if node.Type == html.ElementNode {
+		if hasAttr(node, "key") {
+			setKeyToChildren(node, getAttr(node, "key"))
+		}
+
+		attrMap := make(map[string]string)
 		for _, attr := range node.Attr {
-			if !strings.HasPrefix(attr.Key, "@fir:") && !strings.HasPrefix(attr.Key, "x-on:fir:") {
+			attrMap[attr.Key] = attr.Val
+		}
+
+		for attrKey, attrVal := range attrMap {
+			if !strings.HasPrefix(attrKey, "@fir:") && !strings.HasPrefix(attrKey, "x-on:fir:") {
 				continue
 			}
 
-			eventns := strings.TrimPrefix(attr.Key, "@fir:")
+			eventns := strings.TrimPrefix(attrKey, "@fir:")
 			eventns = strings.TrimPrefix(eventns, "x-on:fir:")
 			// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
 			eventnsParts := strings.SplitN(eventns, ".", -1)
@@ -135,7 +136,7 @@ func writeAttributes(node *html.Node) {
 			eventnsList, filterExists := getEventNsList(eventns)
 			// if filter exists remove the current attribute from the node
 			if filterExists {
-				removeAttr(node, attr.Key)
+				removeAttr(node, attrKey)
 			}
 
 			for _, eventns := range eventnsList {
@@ -149,17 +150,18 @@ func writeAttributes(node *html.Node) {
 				xOnFirOk := hasAttr(node, fmt.Sprintf("x-on:fir:%s", eventnsWithModifiers))
 				// if the node already has @fir:x attribute, then skip
 				if !atFirOk && !xOnFirOk {
-					setAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers), attr.Val)
+					setAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers), attrVal)
 				}
 
 				// fir-myevent-ok--myblock
 				key := getAttr(node, "key")
-				classname := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
-				addClass(node, classname)
-				if key == "" {
-					continue
+				targetClass := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
+				classes := strings.Fields(getAttr(node, "class"))
+				if !slices.Contains(classes, targetClass) {
+					classes = append(classes, targetClass)
+					removeAttr(node, "class")
+					node.Attr = append(node.Attr, html.Attribute{Key: "class", Val: strings.Join(classes, " ")})
 				}
-				setKeyAttr(node, key)
 			}
 
 		}
