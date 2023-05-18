@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script
+            defer=""
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        <script
+            defer=""
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        <div
+            x-data=""
+            id="content">
+            <p></p>
+            <p
+                @fir:create:error::create-err="$fir.replace()"
+                class="fir-create-error--create-err"></p>
+
+            <div
+                @fir:create:pending="console.log('create todo start')"
+                @fir:create:ok="console.log('create todo done')"
+                class="fir-create-pending fir-create-ok"></div>
+
+            <form
+                id="create"
+                x-ref="create"
+                method="post"
+                action="/?event=create"
+                @submit.prevent="$fir.submit()"
+                @fir:create:ok="$refs.create.reset()"
+                style="margin-top:1rem;margin-bottom:1rem;"
+                class="fir-create-ok">
+                <input
+                    type="text"
+                    name="body"
+                    placeholder="a new todo" />
+                <p
+                    @fir:create:error::body-err="$fir.replace()"
+                    class="fir-create-error--body-err"></p>
+
+                <button type="submit">new</button>
+            </form>
+            <div
+                @fir:create:ok::todo="$fir.appendEl()"
+                class="fir-create-ok--todo"></div>
+        </div>
+    </body>
+</html>

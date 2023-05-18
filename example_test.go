@@ -43,7 +43,7 @@ func TestSanity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantPage, err := ioutil.ReadFile("example.html")
+	wantPage, err := ioutil.ReadFile("example_golden.html")
 	if err != nil {
 		t.Fatal(err)
 	}
