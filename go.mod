@@ -32,6 +32,7 @@ require (
 	golang.org/x/exp v0.0.0-20221204150635-6dcec336b2bb
 	golang.org/x/net v0.2.0
 	k8s.io/klog/v2 v2.100.1
+	nhooyr.io/websocket v1.8.7
 )
 
 require (
@@ -59,6 +60,7 @@ require (
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/compress v1.10.3 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect

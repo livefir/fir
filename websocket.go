@@ -1,29 +1,34 @@
 package fir
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
 	"k8s.io/klog/v2"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
-	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
+
+	wsConn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		CompressionMode: websocket.CompressionNoContextTakeover,
+	})
 	if err != nil {
+		klog.Errorf("[onWebsocket] error: %v, close status", err, websocket.CloseStatus(err))
 		return
 	}
-	defer conn.Close()
-	wsConn := &websocketConn{conn: conn}
-	ctx := context.Background()
+	wsConn.SetReadLimit(1024) // 1kb
+	defer wsConn.Close(websocket.StatusNormalClosure, "")
+
+	ctx, cancel := context.WithTimeout(r.Context(), time.Minute*10)
+	defer cancel()
+
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(len(cntrl.routes))
@@ -96,20 +101,18 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 			<-done
 		}(rt)
 	}
-
 loop:
 	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("[onWebsocket] c.readMessage error: ", err)
-			break loop
-		}
-
 		var event Event
-		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
+		err = wsjson.Read(ctx, wsConn, &event)
 		if err != nil {
-			klog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
-			continue
+			closeStatus := websocket.CloseStatus(err)
+			klog.Errorf("[onWebsocket] err: %v", closeStatus)
+			if closeStatus == websocket.StatusInvalidFramePayloadData {
+				continue
+			} else {
+				break loop
+			}
 		}
 
 		if event.ID == "" {
@@ -144,55 +147,32 @@ loop:
 			continue
 		}
 
-		handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 	}
 	close(done)
 	wg.Wait()
+
 }
 
-type websocketConn struct {
-	conn *websocket.Conn
-	sync.Mutex
-}
-
-func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
-	ws.Lock()
-	defer ws.Unlock()
+func renderAndWriteEvent(ws *websocket.Conn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
 	events := renderDOMEvents(ctx, pubsubEvent)
-	eventsData, err := json.Marshal(events)
-	if err != nil {
-		klog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
-		return err
-	}
-	if len(eventsData) == 0 {
-		err := fmt.Errorf("[writeDOMevents] error: message is empty, channel %s, events %+v", channel, pubsubEvent)
-		log.Println(err)
-		return err
-	}
-	klog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
-	err = ws.conn.WriteMessage(websocket.TextMessage, eventsData)
+	klog.Errorf("[writeDOMevents] sending patch op %+v\n", events)
+	err := wsjson.Write(ctx.request.Context(), ws, events)
 	if err != nil {
 		klog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
-		ws.conn.Close()
+		ws.Close(websocket.StatusInternalError, "closed")
 	}
 	return err
 }
 
-func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
-	ws.Lock()
-	defer ws.Unlock()
+func writeEvent(ws *websocket.Conn, pubsubEvent pubsub.Event) error {
 	reload := dom.Event{
 		Type: pubsubEvent.ID,
 	}
-	reloadData, err := json.Marshal([]dom.Event{reload})
-	if err != nil {
-		klog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
-		return err
-	}
-	err = ws.conn.WriteMessage(websocket.TextMessage, reloadData)
+	err := wsjson.Write(context.Background(), ws, reload)
 	if err != nil {
 		klog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
-		ws.conn.Close()
+		ws.Close(websocket.StatusInternalError, "closed")
 	}
 	return err
 }
