@@ -169,7 +169,8 @@ func writeEvent(ws *websocket.Conn, pubsubEvent pubsub.Event) error {
 	reload := dom.Event{
 		Type: pubsubEvent.ID,
 	}
-	err := wsjson.Write(context.Background(), ws, reload)
+
+	err := wsjson.Write(context.Background(), ws, []dom.Event{reload})
 	if err != nil {
 		klog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
 		ws.Close(websocket.StatusInternalError, "closed")
