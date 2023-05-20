@@ -320,8 +320,20 @@ const Plugin = (Alpine) => {
                                     url.searchParams.delete(key)
                                 }
                             })
+
+                            Object.keys(params).forEach((key) => {
+                                if (params[key]) {
+                                    url.searchParams.set(key, params[key])
+                                } else {
+                                    url.searchParams.delete(key)
+                                }
+                            })
+
                             url.searchParams.forEach((value, key) => {
-                                if (!formData.has(key)) {
+                                if (
+                                    !formData.has(key) &&
+                                    !params.hasOwnProperty(key)
+                                ) {
                                     url.searchParams.delete(key)
                                 }
                             })
