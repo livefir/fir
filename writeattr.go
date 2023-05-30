@@ -155,6 +155,10 @@ func writeAttributes(node *html.Node) {
 
 				// fir-myevent-ok--myblock
 				key := getAttr(node, "key")
+				firKey := getAttr(node, "fir-key")
+				if len(firKey) != 0 {
+					key = firKey
+				}
 				targetClass := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
 				classes := strings.Fields(getAttr(node, "class"))
 				if !slices.Contains(classes, targetClass) {
