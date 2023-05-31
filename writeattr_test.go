@@ -19,7 +19,7 @@ func Test_addAttributes(t *testing.T) {
 		{
 			name: "key is present but no @ or x-on is present",
 			input: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 							<p>Hello, World!</p>
 							<div>
 								<span>Inner element</span>
@@ -27,7 +27,7 @@ func Test_addAttributes(t *testing.T) {
 					</div>
 				`,
 			want: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 							<p>Hello, World!</p>
 							<div>
 								<span>Inner element</span>
@@ -38,18 +38,18 @@ func Test_addAttributes(t *testing.T) {
 		{
 			name: "key is present and @ is present but child already has key",
 			input: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 						<p>Hello, World!</p>
 						<div>
-							<span key="" @click="console.log()">Inner element</span>
+							<span fir-key="" @click="console.log()">Inner element</span>
 						</div>
 					</div>
 				`,
 			want: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 						<p>Hello, World!</p>
 						<div>
-							<span key="" @click="console.log()">Inner element</span>
+							<span fir-key="" @click="console.log()">Inner element</span>
 						</div>
 					</div>
 				`,
@@ -57,7 +57,7 @@ func Test_addAttributes(t *testing.T) {
 		{
 			name: "key is present and @ is present and child does not have key",
 			input: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 						<p>Hello, World!</p>
 						<div x-on:click="doSomething()">
 							<span>Inner element</span>
@@ -65,9 +65,9 @@ func Test_addAttributes(t *testing.T) {
 					</div>
 		 `,
 			want: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 						<p>Hello, World!</p>
-						<div x-on:click="doSomething()" key="parent-key">
+						<div x-on:click="doSomething()" fir-key="parent-key">
 							<span>Inner element</span>
 						</div>
 					</div>
@@ -76,13 +76,13 @@ func Test_addAttributes(t *testing.T) {
 		{
 			name: "two elements: key is present and @ is present and child does not have key",
 			input: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 						<p>Hello, World!</p>
 						<div x-on:click="doSomething()">
 							<span>Inner element</span>
 						</div>
 					</div>
-					<div key="parent-key-2">
+					<div fir-key="parent-key-2">
 						<p>Hello, World!</p>
 						<div x-on:click="doSomething()">
 							<span>Inner element</span>
@@ -90,15 +90,15 @@ func Test_addAttributes(t *testing.T) {
 					</div>
 				`,
 			want: `
-					<div key="parent-key">
+					<div fir-key="parent-key">
 						<p>Hello, World!</p>
-						<div x-on:click="doSomething()" key="parent-key">
+						<div x-on:click="doSomething()" fir-key="parent-key">
 							<span >Inner element</span>
 						</div>
 					</div>
-					<div key="parent-key-2">
+					<div fir-key="parent-key-2">
 						<p>Hello, World!</p>
-						<div x-on:click="doSomething()" key="parent-key-2">
+						<div x-on:click="doSomething()" fir-key="parent-key-2">
 							<span >Inner element</span>
 						</div>
 					</div>
@@ -107,7 +107,7 @@ func Test_addAttributes(t *testing.T) {
 		{
 			name: "add key attribute to nested children",
 			input: `
-					<div key="1"> 
+					<div fir-key="1"> 
 						<div @fir:event:ok="" > </div>
 						<div> <button @click="">  </button></div>
 						<div> <div> <div> <input @change="" > </div> </div> </div>
@@ -116,11 +116,31 @@ func Test_addAttributes(t *testing.T) {
 					`,
 
 			want: `
-					<div key="1"> 
-						<div key="1" @fir:event:ok="" class="fir-event-ok--1"> </div>
-						<div> <button @click="" key="1">  </button> </div>
-						<div> <div> <div> <input @change="" key="1"> </div> </div> </div>
-						<form @submit="" key="1"> </form>
+					<div fir-key="1"> 
+						<div fir-key="1" @fir:event:ok="" class="fir-event-ok--1"> </div>
+						<div> <button @click="" fir-key="1">  </button> </div>
+						<div> <div> <div> <input @change="" fir-key="1"> </div> </div> </div>
+						<form @submit="" fir-key="1"> </form>
+					</div>
+					`,
+		},
+		{
+			name: "add key attribute to nested children and ignore child node already with key",
+			input: `
+					<div fir-key="1"> 
+						<div @fir:event:ok="" > </div>
+						<div fir-key="2"> <button @click="">  </button></div>
+						<div> <div> <div> <input @change="" > </div> </div> </div>
+						<form @submit=""> </form>
+					</div>
+					`,
+
+			want: `
+					<div fir-key="1"> 
+						<div fir-key="1" @fir:event:ok="" class="fir-event-ok--1"> </div>
+						<div fir-key="2"> <button @click="" fir-key="2">  </button> </div>
+						<div> <div> <div> <input @change="" fir-key="1"> </div> </div> </div>
+						<form @submit="" fir-key="1"> </form>
 					</div>
 					`,
 		},
@@ -192,7 +212,7 @@ func Test_addAttributes(t *testing.T) {
 		{
 			name: "filters in event string and key is present",
 			input: `
-					<div key="1"
+					<div fir-key="1"
 						 @fir:event:ok::tmpl1=""
 						 @fir:event:ok::tmpl2=""
 						 @fir:event:ok::tmpl2=""
@@ -203,7 +223,7 @@ func Test_addAttributes(t *testing.T) {
 					`,
 
 			want: `
-					<div key="1"
+					<div fir-key="1"
 						 class="fir-event-ok--tmpl1--1 fir-event-ok--tmpl2--1 fir-event-ok--1 fir-event1-ok--tmpl3--1 fir-event2-ok--tmpl3--1 fir-event2-ok--1"
 						 @fir:event:ok::tmpl1=""
 						 @fir:event:ok::tmpl2=""

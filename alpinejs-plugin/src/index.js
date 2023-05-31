@@ -182,9 +182,7 @@ const Plugin = (Alpine) => {
                         event_id: id,
                         params: params,
                         target: target,
-                        element_key:
-                            el.getAttribute('key') ||
-                            el.getAttribute('fir-key'),
+                        element_key: el.getAttribute('fir-key'),
                         session_id: getSessionIDFromCookie(),
                     })
                 }
@@ -309,9 +307,7 @@ const Plugin = (Alpine) => {
                             params: params,
                             is_form: true,
                             target: target,
-                            element_key:
-                                el.getAttribute('key') ||
-                                el.getAttribute('fir-key'),
+                            element_key: el.getAttribute('fir-key'),
                             session_id: getSessionIDFromCookie(),
                         })
 

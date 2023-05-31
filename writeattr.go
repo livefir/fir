@@ -24,38 +24,61 @@ func htmlNodetoString(n *html.Node) string {
 	return html.UnescapeString(buf.String())
 }
 
-// Recursive function to set the "key" attribute to all nested children
+// Recursive function to set the "fir-key" attribute to all nested children
 func setKeyToChildren(node *html.Node, key string) {
+	if node == nil || node.Type != html.ElementNode {
+		return
+	}
+
+	if key == "" {
+		for _, attr := range node.Attr {
+			if attr.Key == "fir-key" {
+				key = attr.Val
+				break
+			}
+		}
+	} else {
+		for _, attr := range node.Attr {
+			if attr.Key == "fir-key" {
+				if key != attr.Val {
+					setKeyToChildren(node, attr.Val)
+				}
+				break
+			}
+		}
+	}
+
+	if key == "" {
+		return
+	}
+
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		// Only modify element nodes
+		setKeyToChildren(child, key)
+
 		if child.Type == html.ElementNode {
-			// Check if the child already has a "key" attribute
+			hasPrefixAttribute := false
+			for _, attr := range child.Attr {
+				if strings.HasPrefix(attr.Key, "@") || strings.HasPrefix(attr.Key, "x-on") {
+					hasPrefixAttribute = true
+					break
+				}
+			}
+
+			if !hasPrefixAttribute {
+				continue
+			}
+
 			hasKeyAttribute := false
 			for _, attr := range child.Attr {
-				if attr.Key == "key" {
+				if attr.Key == "fir-key" {
 					hasKeyAttribute = true
 					break
 				}
 			}
 
-			// Check if the child doesn't have a "key" attribute and has an attribute with prefix "@" or "x-on"
 			if !hasKeyAttribute {
-				hasPrefixAttribute := false
-				for _, attr := range child.Attr {
-					if strings.HasPrefix(attr.Key, "@") || strings.HasPrefix(attr.Key, "x-on") {
-						hasPrefixAttribute = true
-						break
-					}
-				}
-
-				// Set the "key" attribute if the child has a matching attribute
-				if hasPrefixAttribute {
-					child.Attr = append(child.Attr, html.Attribute{Key: "key", Val: key})
-				}
+				child.Attr = append(child.Attr, html.Attribute{Key: "fir-key", Val: key})
 			}
-
-			// Recurse through the child nodes
-			setKeyToChildren(child, key)
 		}
 	}
 }
@@ -106,9 +129,7 @@ func addAttributes(content []byte) []byte {
 
 func writeAttributes(node *html.Node) {
 	if node.Type == html.ElementNode {
-		if hasAttr(node, "key") {
-			setKeyToChildren(node, getAttr(node, "key"))
-		}
+		setKeyToChildren(node, "")
 
 		attrMap := make(map[string]string)
 		for _, attr := range node.Attr {
@@ -154,11 +175,7 @@ func writeAttributes(node *html.Node) {
 				}
 
 				// fir-myevent-ok--myblock
-				key := getAttr(node, "key")
-				firKey := getAttr(node, "fir-key")
-				if len(firKey) != 0 {
-					key = firKey
-				}
+				key := getAttr(node, "fir-key")
 				targetClass := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
 				classes := strings.Fields(getAttr(node, "class"))
 				if !slices.Contains(classes, targetClass) {

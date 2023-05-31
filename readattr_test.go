@@ -131,7 +131,7 @@ func Test_query(t *testing.T) {
 				fi: fileInfo{
 					name: "test.html",
 					content: []byte(`<!DOCTYPE html> 
-					<div key="1"
+					<div fir-key="1"
 						 @fir:event:ok::tmpl1=""
 						 @fir:event:ok::tmpl2=""  
 						 @fir:event:ok::tmpl2="" 
@@ -143,7 +143,7 @@ func Test_query(t *testing.T) {
 			want: fileInfo{
 				name: "test.html",
 				content: []byte(`<!DOCTYPE html> 
-					<div key="1"
+					<div fir-key="1"
 						 @fir:event:ok::tmpl1=""
 						 @fir:event:ok::tmpl2=""  
 						 @fir:event:ok::tmpl2="" 

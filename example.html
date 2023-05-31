@@ -49,7 +49,7 @@
                 {{ range .todos }}
                     {{ block "todo" . }}
                         <div
-                            key="{{ .ID }}"
+                            fir-key="{{ .ID }}"
                             @fir:delete:ok="$fir.removeEl()"
                             style="display: flex;margin-top:1rem;margin-bottom:1rem;">
                             <div
