@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -174,13 +175,18 @@ func NewController(name string, options ...ControllerOption) Controller {
 	})
 
 	o := &opt{
-		channelFunc:       defaultChannelFunc,
-		websocketUpgrader: websocket.Upgrader{EnableCompression: true},
-		watchExts:         defaultWatchExtensions,
-		pubsub:            pubsub.NewInmem(),
-		appName:           name,
-		formDecoder:       formDecoder,
-		cookieName:        "_fir_session_",
+		channelFunc: defaultChannelFunc,
+		websocketUpgrader: websocket.Upgrader{
+			EnableCompression: true,
+			ReadBufferSize:    256,
+			WriteBufferSize:   256,
+			WriteBufferPool:   &sync.Pool{},
+		},
+		watchExts:   defaultWatchExtensions,
+		pubsub:      pubsub.NewInmem(),
+		appName:     name,
+		formDecoder: formDecoder,
+		cookieName:  "_fir_session_",
 		secureCookie: securecookie.New(
 			securecookie.GenerateRandomKey(64),
 			securecookie.GenerateRandomKey(32),

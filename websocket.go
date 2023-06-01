@@ -1,34 +1,29 @@
 package fir
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
 	"k8s.io/klog/v2"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
 )
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
-
-	wsConn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		CompressionMode: websocket.CompressionNoContextTakeover,
-	})
+	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		klog.Errorf("[onWebsocket] error: %v, close status", err, websocket.CloseStatus(err))
 		return
 	}
-	wsConn.SetReadLimit(1024) // 1kb
-	defer wsConn.Close(websocket.StatusNormalClosure, "")
-
-	ctx, cancel := context.WithTimeout(r.Context(), time.Minute*10)
-	defer cancel()
-
+	defer conn.Close()
+	wsConn := &websocketConn{conn: conn}
+	ctx := context.Background()
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(len(cntrl.routes))
@@ -101,18 +96,20 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 			<-done
 		}(rt)
 	}
+
 loop:
 	for {
-		var event Event
-		err = wsjson.Read(ctx, wsConn, &event)
+		_, message, err := conn.ReadMessage()
 		if err != nil {
-			closeStatus := websocket.CloseStatus(err)
-			klog.Errorf("[onWebsocket] err: %v", closeStatus)
-			if closeStatus == websocket.StatusInvalidFramePayloadData {
-				continue
-			} else {
-				break loop
-			}
+			log.Println("[onWebsocket] c.readMessage error: ", err)
+			break loop
+		}
+
+		var event Event
+		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
+		if err != nil {
+			klog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
+			continue
 		}
 
 		if event.ID == "" {
@@ -151,29 +148,51 @@ loop:
 	}
 	close(done)
 	wg.Wait()
-
 }
 
-func renderAndWriteEvent(ws *websocket.Conn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
+type websocketConn struct {
+	conn *websocket.Conn
+	sync.Mutex
+}
+
+func renderAndWriteEvent(ws *websocketConn, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
+	ws.Lock()
+	defer ws.Unlock()
 	events := renderDOMEvents(ctx, pubsubEvent)
-	klog.Errorf("[writeDOMevents] sending patch op %+v\n", events)
-	err := wsjson.Write(ctx.request.Context(), ws, events)
+	eventsData, err := json.Marshal(events)
+	if err != nil {
+		klog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
+		return err
+	}
+	if len(eventsData) == 0 {
+		err := fmt.Errorf("[writeDOMevents] error: message is empty, channel %s, events %+v", channel, pubsubEvent)
+		log.Println(err)
+		return err
+	}
+	klog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", ws.conn.RemoteAddr().String(), string(eventsData))
+	err = ws.conn.WriteMessage(websocket.TextMessage, eventsData)
 	if err != nil {
 		klog.Errorf("[writeDOMevents] error: writing message for channel:%v, closing conn with err %v", channel, err)
-		ws.Close(websocket.StatusInternalError, "closed")
+		ws.conn.Close()
 	}
 	return err
 }
 
-func writeEvent(ws *websocket.Conn, pubsubEvent pubsub.Event) error {
+func writeEvent(ws *websocketConn, pubsubEvent pubsub.Event) error {
+	ws.Lock()
+	defer ws.Unlock()
 	reload := dom.Event{
 		Type: pubsubEvent.ID,
 	}
-
-	err := wsjson.Write(context.Background(), ws, []dom.Event{reload})
+	reloadData, err := json.Marshal([]dom.Event{reload})
+	if err != nil {
+		klog.Errorf("[writeReloadEvent] error: marshaling reload event %+v, err %v", reload, err)
+		return err
+	}
+	err = ws.conn.WriteMessage(websocket.TextMessage, reloadData)
 	if err != nil {
 		klog.Errorf("[writeReloadEvent] error: writing message for channel:%v, closing conn with err %v", devReloadChannel, err)
-		ws.Close(websocket.StatusInternalError, "closed")
+		ws.conn.Close()
 	}
 	return err
 }
