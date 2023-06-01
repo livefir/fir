@@ -2,6 +2,7 @@ package fir
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -26,7 +27,17 @@ func defaultFuncMap() template.FuncMap {
 	allFuncs["bytesToMap"] = bytesToMap
 	allFuncs["bytesToString"] = bytesToString
 	allFuncs["dump"] = dump
+	allFuncs["toJsonb64"] = toJsonb64
 	return allFuncs
+}
+
+func toJsonb64(data interface{}) (string, error) {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(jsonData), nil
 }
 
 func bytesToMap(data []byte) map[string]any {
