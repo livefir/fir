@@ -1,6 +1,6 @@
 {
   "name": "@livefir/fir",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "repository": {
     "type": "git",
     "url": "https://github.com/livefir/fir"
@@ -27,9 +27,7 @@
     "esbuild-serve": "^1.0.1"
   },
   "dependencies": {
-    "@alpinejs/replace": "^3.10.2",
-    "@alpinejs/persist": "^3.10.2",
-    "@kingshott/iodine": "^7.0.1",
-    "alpinejs": "^3.10.2"
+    "@alpinejs/morph": "^3.12.2",
+    "alpinejs": "^3.12.2"
   }
 }

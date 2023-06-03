@@ -1,9 +1,7 @@
-import { Iodine } from '@kingshott/iodine'
 import websocket from './websocket'
 import morph from '@alpinejs/morph'
 
 const Plugin = (Alpine) => {
-    const iodine = new Iodine()
     // init default store
     Alpine.store('fir', {})
     const updateStore = (storeName, data) => {
@@ -218,17 +216,6 @@ const Plugin = (Alpine) => {
                         return
                     }
 
-                    let inputs = [...form.querySelectorAll('input[data-rules]')]
-                    let formErrors = { errors: {} }
-                    inputs.map((input) => {
-                        const rules = JSON.parse(input.dataset.rules)
-                        const isValid = iodine.is(input.value, rules)
-                        if (isValid !== true) {
-                            formErrors.errors[input.getAttribute('name')] =
-                                iodine.getErrorMessage(isValid)
-                        }
-                    })
-
                     let formMethod = form.getAttribute('method')
                     if (!formMethod) {
                         formMethod = 'get'
@@ -239,108 +226,107 @@ const Plugin = (Alpine) => {
                         {},
                         Alpine.store(form.getAttribute('id'))
                     )
-                    const nextStore = { ...prevStore, ...formErrors }
+                    const nextStore = { ...prevStore }
                     Alpine.store(form.getAttribute('id'), nextStore)
-                    if (Object.keys(formErrors.errors).length == 0) {
-                        let formData = new FormData(form)
-                        let eventID
 
-                        if (form.getAttribute('id')) {
-                            eventID = form.getAttribute('id')
-                        }
-                        if (form.action) {
-                            const url = new URL(form.action)
-                            if (url.searchParams.get('event')) {
-                                eventID = url.searchParams.get('event')
-                            }
-                        }
-                        if (event.submitter && event.submitter.formAction) {
-                            const url = new URL(event.submitter.formAction)
-                            if (url.searchParams.get('event')) {
-                                eventID = url.searchParams.get('event')
-                            }
-                        }
+                    let formData = new FormData(form)
+                    let eventID
 
-                        if (event.submitter && event.submitter.name) {
-                            formData.append(
-                                event.submitter.name,
-                                event.submitter.value
-                            )
+                    if (form.getAttribute('id')) {
+                        eventID = form.getAttribute('id')
+                    }
+                    if (form.action) {
+                        const url = new URL(form.action)
+                        if (url.searchParams.get('event')) {
+                            eventID = url.searchParams.get('event')
                         }
-                        let params = {}
-                        formData.forEach(
-                            (value, key) => (params[key] = new Array(value))
+                    }
+                    if (event.submitter && event.submitter.formAction) {
+                        const url = new URL(event.submitter.formAction)
+                        if (url.searchParams.get('event')) {
+                            eventID = url.searchParams.get('event')
+                        }
+                    }
+
+                    if (event.submitter && event.submitter.name) {
+                        formData.append(
+                            event.submitter.name,
+                            event.submitter.value
                         )
-                        let target = ''
+                    }
+                    let params = {}
+                    formData.forEach(
+                        (value, key) => (params[key] = new Array(value))
+                    )
+                    let target = ''
 
-                        if (opts) {
-                            if (opts.event) {
-                                eventID = opts.event
-                            }
-                            if (opts.params) {
-                                params = opts.params
-                            }
-                            if (opts.target) {
-                                target = opts.target
-                            }
+                    if (opts) {
+                        if (opts.event) {
+                            eventID = opts.event
                         }
-
-                        if (
-                            target &&
-                            !target.startsWith('#') &&
-                            !target.startsWith('.')
-                        ) {
-                            console.error('target must start with # or .')
-                            return
+                        if (opts.params) {
+                            params = opts.params
                         }
-
-                        if (!eventID) {
-                            console.error(
-                                `event id is empty and element id is not set. can't emit event`
-                            )
-                            return
+                        if (opts.target) {
+                            target = opts.target
                         }
+                    }
 
-                        // post event to server
-                        post(el, {
-                            event_id: eventID,
-                            params: params,
-                            is_form: true,
-                            target: target,
-                            element_key: el.getAttribute('fir-key'),
-                            session_id: getSessionIDFromCookie(),
-                        })
-
-                        if (formMethod.toLowerCase() === 'get') {
-                            const url = new URL(window.location)
-                            formData.forEach((value, key) => {
-                                if (value) {
-                                    url.searchParams.set(key, value)
-                                } else {
-                                    url.searchParams.delete(key)
-                                }
-                            })
-
-                            Object.keys(params).forEach((key) => {
-                                if (params[key]) {
-                                    url.searchParams.set(key, params[key])
-                                } else {
-                                    url.searchParams.delete(key)
-                                }
-                            })
-
-                            url.searchParams.forEach((value, key) => {
-                                if (
-                                    !formData.has(key) &&
-                                    !params.hasOwnProperty(key)
-                                ) {
-                                    url.searchParams.delete(key)
-                                }
-                            })
-                            window.history.pushState({}, '', url)
-                        }
+                    if (
+                        target &&
+                        !target.startsWith('#') &&
+                        !target.startsWith('.')
+                    ) {
+                        console.error('target must start with # or .')
                         return
                     }
+
+                    if (!eventID) {
+                        console.error(
+                            `event id is empty and element id is not set. can't emit event`
+                        )
+                        return
+                    }
+
+                    // post event to server
+                    post(el, {
+                        event_id: eventID,
+                        params: params,
+                        is_form: true,
+                        target: target,
+                        element_key: el.getAttribute('fir-key'),
+                        session_id: getSessionIDFromCookie(),
+                    })
+
+                    if (formMethod.toLowerCase() === 'get') {
+                        const url = new URL(window.location)
+                        formData.forEach((value, key) => {
+                            if (value) {
+                                url.searchParams.set(key, value)
+                            } else {
+                                url.searchParams.delete(key)
+                            }
+                        })
+
+                        Object.keys(params).forEach((key) => {
+                            if (params[key]) {
+                                url.searchParams.set(key, params[key])
+                            } else {
+                                url.searchParams.delete(key)
+                            }
+                        })
+
+                        url.searchParams.forEach((value, key) => {
+                            if (
+                                !formData.has(key) &&
+                                !params.hasOwnProperty(key)
+                            ) {
+                                url.searchParams.delete(key)
+                            }
+                        })
+                        window.history.pushState({}, '', url)
+                    }
+                    return
                 }
             },
         }
