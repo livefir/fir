@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/livefir/fir/pubsub"
+	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -262,7 +263,7 @@ func (c *controller) Route(route Route) http.HandlerFunc {
 	r := newRoute(c, defaultRouteOpt)
 	// register route in the controller
 	c.routes[r.id] = r
-	return r.ServeHTTP
+	return servertiming.Middleware(r, nil).ServeHTTP
 }
 
 // RouteFunc returns an http.HandlerFunc that renders the route
@@ -274,5 +275,6 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 	r := newRoute(c, defaultRouteOpt)
 	// register route in the controller
 	c.routes[r.id] = r
-	return r.ServeHTTP
+
+	return servertiming.Middleware(r, nil).ServeHTTP
 }

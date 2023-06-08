@@ -12,6 +12,7 @@ import (
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
+	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/valyala/bytebufferpool"
 	"k8s.io/klog/v2"
 )
@@ -266,6 +267,8 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	timing := servertiming.FromContext(r.Context())
+	defer timing.NewMetric("route").Start().Stop()
 	if r.URL.Path == "/favicon.ico" {
 		http.NotFound(w, r)
 		return

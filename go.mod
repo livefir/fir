@@ -19,6 +19,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/mitchellh/go-server-timing v1.0.1
 	github.com/ory/client-go v1.0.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
@@ -45,6 +46,7 @@ require (
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
+	github.com/felixge/httpsnoop v1.0.0 // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -52,6 +54,7 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.1.0 // indirect
+	github.com/golang/gddo v0.0.0-20180823221919-9d8ff1c67be5 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/hashicorp/hcl/v2 v2.13.0 // indirect
