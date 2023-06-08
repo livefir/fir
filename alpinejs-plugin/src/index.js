@@ -532,31 +532,34 @@ const Plugin = (Alpine) => {
             )
         }
 
-        const body = JSON.stringify(firEvent)
-        fetch(window.location.pathname, {
-            method: 'POST',
+        if (socket && socket.emit(firEvent)) {
+        } else {
+            const body = JSON.stringify(firEvent)
+            fetch(window.location.pathname, {
+                method: 'POST',
 
-            headers: {
-                'Content-Type': 'application/json',
-                'X-FIR-MODE': 'event',
-            },
-            body: body,
-        })
-            .then((response) => {
-                if (response.redirected) {
-                    window.location.href = response.url
-                }
-                return response.json()
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-FIR-MODE': 'event',
+                },
+                body: body,
             })
-            .then((serverEvents) => {
-                dispatchServerEvents(serverEvents)
-            })
-            .catch((error) => {
-                console.error(
-                    `${eventIdLower} error: ${error}, request body: ${body}`,
-                    error
-                )
-            })
+                .then((response) => {
+                    if (response.redirected) {
+                        window.location.href = response.url
+                    }
+                    return response.json()
+                })
+                .then((serverEvents) => {
+                    dispatchServerEvents(serverEvents)
+                })
+                .catch((error) => {
+                    console.error(
+                        `${eventIdLower} error: ${error}, request body: ${body}`,
+                        error
+                    )
+                })
+        }
     }
 
     Alpine.plugin(morph)
