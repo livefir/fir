@@ -57,7 +57,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 			Type:   eventType,
 			Key:    pubsubEvent.ElementKey,
 			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-			Detail: pubsubEvent.Detail,
+			Detail: pubsubEvent.StateDetail,
 		}
 	}
 	eventType := fir(eventIDWithState, templateName)

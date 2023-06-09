@@ -152,13 +152,6 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 	}
 }
 
-type routeData map[string]any
-
-func (r *routeData) Error() string {
-	b, _ := json.Marshal(r)
-	return string(b)
-}
-
 type routeRenderer func(data routeData) error
 type eventPublisher func(event pubsub.Event) error
 type routeOpt struct {
@@ -442,14 +435,35 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 		})
 		return
 	case *routeData:
-		data := *errVal
 		publish(pubsub.Event{
 			ID:         &ctx.event.ID,
 			State:      eventstate.OK,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
-			Detail:     data,
+			Detail:     *errVal,
 			SessionID:  ctx.event.SessionID,
+		})
+		return
+
+	case *routeDataWithState:
+		publish(pubsub.Event{
+			ID:          &ctx.event.ID,
+			State:       eventstate.OK,
+			Target:      &target,
+			ElementKey:  ctx.event.ElementKey,
+			Detail:      *errVal.routeData,
+			StateDetail: *errVal.stateData,
+			SessionID:   ctx.event.SessionID,
+		})
+		return
+	case *stateData:
+		publish(pubsub.Event{
+			ID:          &ctx.event.ID,
+			State:       eventstate.OK,
+			Target:      &target,
+			ElementKey:  ctx.event.ElementKey,
+			StateDetail: *errVal,
+			SessionID:   ctx.event.SessionID,
 		})
 		return
 	default:
@@ -476,7 +490,7 @@ func handlePostFormResult(err error, ctx RouteContext) {
 	}
 
 	switch err.(type) {
-	case *routeData:
+	case *routeData, *stateData, *routeDataWithState:
 		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
 	default:
 		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
@@ -506,6 +520,24 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 	switch errVal := err.(type) {
 	case *routeData:
 		onLoadData := *errVal
+		errs := make(map[string]any)
+		if onFormErr != nil {
+			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)
+			if !ok {
+				errs = map[string]any{
+					ctx.event.ID: onFormErr.Error(),
+				}
+			} else {
+				errs = map[string]any{
+					ctx.event.ID: fieldErrorsVal.Map(),
+				}
+			}
+		}
+		onLoadData["fir"] = newRouteDOMContext(ctx, errs)
+		renderRoute(ctx, false)(onLoadData)
+
+	case *routeDataWithState:
+		onLoadData := *errVal.routeData
 		errs := make(map[string]any)
 		if onFormErr != nil {
 			fieldErrorsVal, ok := onFormErr.(*firErrors.Fields)

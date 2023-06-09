@@ -158,7 +158,19 @@ func (c RouteContext) Redirect(url string, status int) error {
 
 // KV is a wrapper for ctx.Data(map[string]any{key: data})
 func (c RouteContext) KV(key string, data any) error {
-	return c.Data(map[string]any{key: data})
+	return buildData(false, map[string]any{key: data})
+}
+
+// KV is a wrapper for ctx.State(map[string]any{key: data})
+func (c RouteContext) StateKV(key string, data any) error {
+	return buildData(true, map[string]any{key: data})
+}
+
+// State data is only passed to event receiver without a bound template
+// it can be acccessed in the event receiver via $event.detail
+// e.g. @fir:myevent:ok="console.log('$event.detail.mykey')"
+func (c RouteContext) State(dataset ...any) error {
+	return buildData(true, dataset...)
 }
 
 // Data sets the data to be hydrated into the route's template or an event's associated template/block action
@@ -170,38 +182,7 @@ func (c RouteContext) KV(key string, data any) error {
 // The function will return nil if no data is passed
 // The function accepts variadic arguments so that you can pass multiple structs or maps which will be merged
 func (c RouteContext) Data(dataset ...any) error {
-	if len(dataset) == 0 {
-		return nil
-	}
-	m := routeData{}
-	for _, data := range dataset {
-		val := reflect.ValueOf(data)
-		if val.Kind() == reflect.Ptr {
-			el := val.Elem() // dereference the pointer
-			if el.Kind() == reflect.Struct {
-				for k, v := range structs.Map(data) {
-					m[k] = v
-				}
-			}
-		} else if val.Kind() == reflect.Struct {
-			for k, v := range structs.Map(data) {
-				m[k] = v
-			}
-		} else if val.Kind() == reflect.Map {
-			ms, ok := data.(map[string]any)
-			if !ok {
-				return errors.New("data must be a map[string]any , struct or pointer to a struct")
-			}
-
-			for k, v := range ms {
-				m[k] = v
-			}
-		} else {
-			return errors.New("data must be a map[string]any , struct or pointer to a struct")
-		}
-	}
-
-	return &m
+	return buildData(false, dataset...)
 }
 
 // FieldError sets the error message for the given field and can be looked up by {{.fir.Error "myevent.field"}}
