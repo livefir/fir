@@ -3,6 +3,7 @@ package fir
 import (
 	"embed"
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"reflect"
@@ -48,10 +49,24 @@ type opt struct {
 	cookieName           string
 	secureCookie         *securecookie.SecureCookie
 	cache                *cache.Cache
+	funcMap              template.FuncMap
 }
 
 // ControllerOption is an option for the controller.
 type ControllerOption func(*opt)
+
+func WithFuncMap(funcMap template.FuncMap) ControllerOption {
+	return func(opt *opt) {
+		mergedFuncMap := make(template.FuncMap)
+		for k, v := range opt.funcMap {
+			mergedFuncMap[k] = v
+		}
+		for k, v := range funcMap {
+			mergedFuncMap[k] = v
+		}
+		opt.funcMap = mergedFuncMap
+	}
+}
 
 func WithSecureCookie(s *securecookie.SecureCookie) ControllerOption {
 	return func(o *opt) {
@@ -192,7 +207,8 @@ func NewController(name string, options ...ControllerOption) Controller {
 			securecookie.GenerateRandomKey(64),
 			securecookie.GenerateRandomKey(32),
 		),
-		cache: cache.New(5*time.Minute, 10*time.Minute),
+		cache:   cache.New(5*time.Minute, 10*time.Minute),
+		funcMap: defaultFuncMap(),
 	}
 
 	for _, option := range options {
@@ -240,21 +256,25 @@ type controller struct {
 	opt
 }
 
-var defaultRouteOpt = &routeOpt{
-	id:                shortuuid.New(),
-	content:           "Hello Fir App!",
-	layoutContentName: "content",
-	partials:          []string{"./routes/partials"},
-	funcMap:           defaultFuncMap(),
-	extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
-	eventSender:       make(chan Event),
-	onLoad: func(ctx RouteContext) error {
-		return nil
-	},
+func (c *controller) defaults() *routeOpt {
+	defaultRouteOpt := &routeOpt{
+		id:                shortuuid.New(),
+		content:           "Hello Fir App!",
+		layoutContentName: "content",
+		partials:          []string{"./routes/partials"},
+		funcMap:           c.opt.funcMap,
+		extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
+		eventSender:       make(chan Event),
+		onLoad: func(ctx RouteContext) error {
+			return nil
+		},
+	}
+	return defaultRouteOpt
 }
 
 // Route returns an http.HandlerFunc that renders the route
 func (c *controller) Route(route Route) http.HandlerFunc {
+	defaultRouteOpt := c.defaults()
 	for _, option := range route.Options() {
 		option(defaultRouteOpt)
 	}
@@ -268,6 +288,7 @@ func (c *controller) Route(route Route) http.HandlerFunc {
 
 // RouteFunc returns an http.HandlerFunc that renders the route
 func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
+	defaultRouteOpt := c.defaults()
 	for _, option := range opts() {
 		option(defaultRouteOpt)
 	}

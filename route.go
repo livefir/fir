@@ -118,7 +118,7 @@ func FuncMap(funcMap template.FuncMap) RouteOption {
 		for k, v := range opt.funcMap {
 			mergedFuncMap[k] = v
 		}
-		for k, v := range defaultFuncMap() {
+		for k, v := range funcMap {
 			mergedFuncMap[k] = v
 		}
 		opt.funcMap = mergedFuncMap
