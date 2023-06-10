@@ -420,9 +420,10 @@ const Plugin = (Alpine) => {
                 return
             }
             doneEvents.add(eventName)
+            let eventType = `fir:${eventName}:done`
             serverEvents.push({
-                type: `fir:${eventName}:done`,
-                target: serverEvent.target,
+                type: eventType,
+                target: `.${eventType.replaceAll(':', '-')}`,
                 detail: serverEvent.detail,
             })
         })
@@ -522,14 +523,18 @@ const Plugin = (Alpine) => {
             .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
             .toLowerCase()
 
-        el.dispatchEvent(
-            new CustomEvent(`fir:${eventIdLower}:pending`, options)
-        )
+        eventTypeLower = `fir:${eventIdLower}:pending`
+        dispatchServerEvent({
+            type: eventTypeLower,
+            target: `.${eventTypeLower.replaceAll(':', '-')}`,
+        })
 
         if (eventIdLower !== eventIdKebab) {
-            el.dispatchEvent(
-                new CustomEvent(`fir:${eventIdKebab}:pending`, options)
-            )
+            eventTypeKebab = `fir:${eventIdKebab}:pending`
+            dispatchServerEvent({
+                type: eventTypeKebab,
+                target: `.${eventTypeKebab.replaceAll(':', '-')}`,
+            })
         }
 
         if (socket && socket.emit(firEvent)) {
