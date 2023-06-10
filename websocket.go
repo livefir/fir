@@ -22,6 +22,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 	conn.SetReadLimit(1024)
+	conn.EnableWriteCompression(true)
+	conn.SetCompressionLevel(5)
 	defer conn.Close()
 	wsConn := &websocketConn{conn: conn}
 	ctx := context.Background()
