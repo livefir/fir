@@ -2,18 +2,6 @@ import websocket from './websocket'
 import morph from '@alpinejs/morph'
 
 const Plugin = (Alpine) => {
-    // init default store
-    Alpine.store('fir', {})
-    const updateStore = (storeName, data) => {
-        if (!isObject(data)) {
-            Alpine.store(storeName, data)
-            return
-        }
-        const prevStore = Object.assign({}, Alpine.store(storeName))
-        const nextStore = { ...prevStore, ...data }
-        Alpine.store(storeName, nextStore)
-    }
-
     const getSessionIDFromCookie = () => {
         return document.cookie
             .split('; ')
@@ -29,11 +17,8 @@ const Plugin = (Alpine) => {
 
     let socket
     if (getSessionIDFromCookie()) {
-        socket = websocket(
-            connectURL,
-            [],
-            (events) => dispatchServerEvents(events),
-            updateStore
+        socket = websocket(connectURL, [], (events) =>
+            dispatchServerEvents(events)
         )
     } else {
         console.error('no route id found in cookie. websocket disabled')
@@ -41,11 +26,6 @@ const Plugin = (Alpine) => {
 
     window.addEventListener('fir:reload', () => {
         window.location.reload()
-    })
-
-    Alpine.directive('fir-store', (el, { expression }, { evaluate }) => {
-        const val = evaluate(expression)
-        Alpine.store('fir', val)
     })
 
     // source from https://dev.to/iamcherta/hotwire-empty-states-with-alpinejs-4gpo
@@ -176,7 +156,7 @@ const Plugin = (Alpine) => {
                         console.error('target must start with # or .')
                         return
                     }
-                    post(el, {
+                    post({
                         event_id: id,
                         params: params,
                         target: target,
@@ -220,14 +200,6 @@ const Plugin = (Alpine) => {
                     if (!formMethod) {
                         formMethod = 'get'
                     }
-
-                    // update form errors store
-                    const prevStore = Object.assign(
-                        {},
-                        Alpine.store(form.getAttribute('id'))
-                    )
-                    const nextStore = { ...prevStore }
-                    Alpine.store(form.getAttribute('id'), nextStore)
 
                     let formData = new FormData(form)
                     let eventID
@@ -289,7 +261,7 @@ const Plugin = (Alpine) => {
                     }
 
                     // post event to server
-                    post(el, {
+                    post({
                         event_id: eventID,
                         params: params,
                         is_form: true,
@@ -365,11 +337,15 @@ const Plugin = (Alpine) => {
     }
 
     const appendElement = (el, value) => {
-        el.append(...toElements(value))
+        let clonedEl = el.cloneNode(true)
+        clonedEl.append(...toElements(value))
+        morphElement(el, clonedEl)
     }
 
     const prependElement = (el, value) => {
-        el.prepend(...toElements(value))
+        let clonedEl = el.cloneNode(true)
+        clonedEl.prepend(...toElements(value))
+        morphElement(el, clonedEl)
     }
 
     const removeElement = (el) => {
@@ -499,7 +475,7 @@ const Plugin = (Alpine) => {
         }
     }
 
-    const post = (el, firEvent) => {
+    const post = (firEvent) => {
         if (!firEvent.event_id) {
             throw new Error('event id is required.')
         }
