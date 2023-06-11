@@ -351,7 +351,7 @@ const Plugin = (Alpine) => {
         }
         Alpine.morph(el, value, {
             key(el) {
-                return el.id
+                return el.getAttribute('fir-key')
             },
         })
     }
