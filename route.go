@@ -175,7 +175,6 @@ type route struct {
 	cntrl          *controller
 	template       *template.Template
 	errorTemplate  *template.Template
-	allTemplates   []string
 	eventTemplates eventTemplates
 
 	routeOpt
@@ -640,17 +639,6 @@ func (rt *route) parseTemplates() {
 			}
 			fmt.Println("eventID: ", eventID, " templates: ", templatesStr)
 		}
-
-		rt.findAllTemplates()
-
-	}
-}
-
-func (rt *route) findAllTemplates() {
-	rt.allTemplates = []string{}
-	for _, t := range rt.template.Templates() {
-		tName := t.Name()
-		rt.allTemplates = append(rt.allTemplates, tName)
 
 	}
 }
