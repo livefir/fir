@@ -36,14 +36,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	if err != nil {
 		return
 	}
+
 	conn.SetReadLimit(maxMessageSize)
 	conn.EnableWriteCompression(true)
 	conn.SetCompressionLevel(5)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		klog.Errorf("[onWebsocket] pong from %v\n", conn.RemoteAddr())
-		conn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
+		return conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 	defer conn.Close()
 	ctx := context.Background()
