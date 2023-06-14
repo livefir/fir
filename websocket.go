@@ -145,8 +145,8 @@ loop:
 		}
 
 		if event.SessionID == nil {
-			klog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required\n", event)
-			continue
+			klog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required, closing connection\n", event)
+			break loop
 		}
 
 		// var routeID string
