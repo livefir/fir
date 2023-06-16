@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gorilla/websocket"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
@@ -154,6 +155,20 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 
 type routeRenderer func(data routeData) error
 type eventPublisher func(event pubsub.Event) error
+
+type routeTemplateConfig struct {
+	Layout                 string   `json:"layout"`
+	Content                string   `json:"content"`
+	LayoutContentName      string   `json:"layoutContentName"`
+	ErrorLayout            string   `json:"errorLayout"`
+	ErrorContent           string   `json:"errorContent"`
+	ErrorLayoutContentName string   `json:"errorLayoutContentName"`
+	Extensions             []string `json:"extensions"`
+	Partials               []string `json:"partials"`
+	// file:///path/tofiles, embed:///path/tofiles, http://example.com/path/tofiles, s3://bucket/path/tofiles
+	Dir string `json:"dir"`
+}
+
 type routeOpt struct {
 	id                     string
 	layout                 string
@@ -172,11 +187,11 @@ type routeOpt struct {
 }
 
 type route struct {
-	cntrl          *controller
 	template       *template.Template
 	errorTemplate  *template.Template
 	eventTemplates eventTemplates
 
+	cntrl *controller
 	routeOpt
 	sync.RWMutex
 }
@@ -266,8 +281,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Connection") == "Upgrade" &&
-		r.Header.Get("Upgrade") == "websocket" {
+	if websocket.IsWebSocketUpgrade(r) {
 		// onWebsocket: upgrade to websocket
 		if rt.disableWebsocket {
 			http.Error(w, "websocket is disabled", http.StatusForbidden)
@@ -279,8 +293,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if r.Header.Get("Connection") == "Upgrade" &&
-		r.Header.Get("Upgrade") == "websocket" {
+	if websocket.IsWebSocketUpgrade(r) {
 		onWebsocket(w, r, rt.cntrl)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents

@@ -31,6 +31,36 @@ const (
 	maxMessageSize = 1024
 )
 
+// RedirectUnauthorisedWebScoket sends a 4001 close message to the client
+// It sends the redirect url in the close message payload
+// If the request is not a websocket request or has error upgrading and writing the close message, it returns false
+// redirect url must be less than 123 bytes
+func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redirect string) bool {
+	if len(redirect) > 123 {
+		panic("redirect url is too long: max size 123 bytes")
+	}
+	if !websocket.IsWebSocketUpgrade(r) {
+		return false
+	}
+
+	upgrader := websocket.Upgrader{}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		klog.Errorf("[UnauthorisedWebScoket] upgrade err: %v\n", err)
+		return false
+	}
+	err = conn.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(4001, redirect), time.Now().Add(writeWait))
+	if err != nil {
+		klog.Errorf("[UnauthorisedWebScoket] write control err: %v\n", err)
+		return false
+	}
+	defer conn.Close()
+
+	return true
+}
+
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {

@@ -56,7 +56,16 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
             // console.log("socket disconnected")
         }
 
-        socket.onclose = (event) => reOpenSocket()
+        socket.onclose = (event) => {
+            if (event.code == 4001) {
+                console.log(`socket closed by server: unauthorized`)
+                if (event.reason) {
+                    window.location.href = '/login'
+                }
+                return
+            }
+            return reOpenSocket()
+        }
         socket.onmessage = (event) => {
             try {
                 const serverEvents = JSON.parse(event.data)

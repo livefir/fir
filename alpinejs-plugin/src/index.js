@@ -528,6 +528,7 @@ const Plugin = (Alpine) => {
                 .then((response) => {
                     if (response.redirected) {
                         window.location.href = response.url
+                        return
                     }
                     return response.json()
                 })
