@@ -60,7 +60,7 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
             if (event.code == 4001) {
                 console.log(`socket closed by server: unauthorized`)
                 if (event.reason) {
-                    window.location.href = '/login'
+                    window.location.href = event.reason
                 }
                 return
             }
