@@ -156,19 +156,6 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 type routeRenderer func(data routeData) error
 type eventPublisher func(event pubsub.Event) error
 
-type routeTemplateConfig struct {
-	Layout                 string   `json:"layout"`
-	Content                string   `json:"content"`
-	LayoutContentName      string   `json:"layoutContentName"`
-	ErrorLayout            string   `json:"errorLayout"`
-	ErrorContent           string   `json:"errorContent"`
-	ErrorLayoutContentName string   `json:"errorLayoutContentName"`
-	Extensions             []string `json:"extensions"`
-	Partials               []string `json:"partials"`
-	// file:///path/tofiles, embed:///path/tofiles, http://example.com/path/tofiles, s3://bucket/path/tofiles
-	Dir string `json:"dir"`
-}
-
 type routeOpt struct {
 	id                     string
 	layout                 string
