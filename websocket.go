@@ -34,6 +34,7 @@ const (
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
+		klog.Errorf("[onWebsocket] upgrade err: %v\n", err)
 		return
 	}
 
@@ -145,7 +146,7 @@ loop:
 		}
 
 		if event.SessionID == nil {
-			klog.Errorf("[onWebsocket] err: event %v, field event.sessionID is required, closing connection\n", event)
+			klog.Errorf("[onWebsocket] err: event %v, field event.	ID is required, closing connection\n", event)
 			break loop
 		}
 
