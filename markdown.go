@@ -2,9 +2,13 @@ package fir
 
 import (
 	"bytes"
-	"html/template"
+	"crypto/md5"
+	"encoding/hex"
+	"strings"
+	"sync"
 
 	embed "github.com/13rac1/goldmark-embed"
+	"github.com/valyala/bytebufferpool"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -15,9 +19,41 @@ import (
 
 var mdparser = markdownParser()
 
-func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, linenum ...int) template.HTML {
-	return func(in string, linenum ...int) template.HTML {
+type cachemd struct {
+	values map[string]string
+	sync.RWMutex
+}
+
+func (c *cachemd) get(key string) (string, bool) {
+	c.RLock()
+	defer c.RUnlock()
+	value, ok := c.values[key]
+	return value, ok
+}
+
+func (c *cachemd) set(key string, value string) {
+	c.Lock()
+	defer c.Unlock()
+	c.values[key] = value
+}
+
+func hashKey(in string, markers []string) string {
+	hash := md5.Sum([]byte(in))
+	checksum := hex.EncodeToString(hash[:])
+	if len(markers) == 0 {
+		return checksum
+	}
+	return checksum + "-" + strings.Join(markers, "-")
+}
+
+func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) string {
+	cache := &cachemd{
+		values: make(map[string]string),
+	}
+
+	return func(in string, markers ...string) string {
 		var indata []byte
+		var isFile bool
 		if existFile(in) {
 			_, data, err := readFile(in)
 			if err != nil {
@@ -28,30 +64,93 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, li
 		} else {
 			indata = []byte(in)
 		}
-
-		if len(linenum) > 0 {
-			min := linenum[0]
-			var max int
-			if len(linenum) > 1 {
-				max = linenum[1]
-			}
-
-			parts := bytes.SplitN(indata, []byte("\n"), -1)
-			if max > len(parts) || max == 0 {
-				max = len(parts)
-			}
-
-			chunk := parts[min:max]
-			indata = bytes.Join(chunk, []byte("\n"))
+		// check if snippet is already in cache
+		key := hashKey(in, markers)
+		if value, ok := cache.get(key); ok {
+			return value
 		}
 
-		var buf bytes.Buffer
-		if err := mdparser.Convert(indata, &buf); err != nil {
+		indata = snippets(indata, markers)
+
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+		if err := mdparser.Convert(indata, buf); err != nil {
 			klog.Errorln(err)
 			return ""
 		}
-		return template.HTML(buf.String())
+		result := buf.String()
+		if isFile {
+			cache.set(key, result)
+		}
+		return result
 	}
+}
+
+func snippets(in []byte, markers []string) []byte {
+	if len(markers) == 0 {
+		return in
+	}
+	var out []byte
+	atleastOneMarker := false
+	for _, marker := range markers {
+		content, valid := snippet(in, marker)
+		if len(content) == 0 && !valid {
+			continue
+		}
+		if valid {
+			atleastOneMarker = true
+		}
+		// Add a newline before the snippet if there is already content
+		if len(out) > 0 {
+			out = append(out, []byte("\n")...)
+		}
+		out = append(out, content...)
+	}
+
+	if len(out) == 0 && !atleastOneMarker {
+		return in
+	}
+
+	return out
+}
+
+func snippet(in []byte, marker string) ([]byte, bool) {
+	startMarker := "// start " + marker
+	endMarker := "// end " + marker
+
+	lines := bytes.Split(in, []byte("\n"))
+	start := -1
+	end := -1
+	for i, line := range lines {
+		if bytes.Equal(line, []byte(startMarker)) {
+			start = i + 1
+		}
+		if bytes.Equal(line, []byte(endMarker)) {
+			end = i
+		}
+	}
+
+	if start == -1 && end == -1 {
+		return []byte{}, false
+	}
+
+	if start > -1 && end == -1 {
+		return bytes.Join(lines[start:], []byte("\n")), true
+	}
+
+	if start == -1 && end > -1 {
+		return []byte{}, false
+	}
+
+	if end < start {
+		return []byte{}, false
+	}
+
+	if start == end {
+		return []byte{}, false
+	}
+
+	return bytes.Join(lines[start:end], []byte("\n")), true
 }
 
 func markdownParser() goldmark.Markdown {
