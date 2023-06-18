@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"strings"
 
 	"github.com/alecthomas/chroma/formatters/html"
 
@@ -28,7 +29,19 @@ func defaultFuncMap() template.FuncMap {
 	allFuncs["bytesToString"] = bytesToString
 	allFuncs["dump"] = dump
 	allFuncs["toJsonb64"] = toJsonb64
+	allFuncs["textAreaRows"] = textAreaRows
 	return allFuncs
+}
+
+func textAreaRows(s string) int {
+	l := len(strings.Split(s, "\n")) + 1
+	if l < 2 {
+		return 2
+	}
+	if l > 15 {
+		return 15
+	}
+	return l
 }
 
 func toJsonb64(data interface{}) (string, error) {

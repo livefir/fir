@@ -3,11 +3,15 @@ package fir
 import (
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 
 	"golang.org/x/exp/slices"
 	"k8s.io/klog/v2"
 )
+
+type readFileFunc func(string) (string, []byte, error)
+type existFileFunc func(string) bool
 
 func find(opt routeOpt, path string, extensions []string) []string {
 	var files []string
@@ -90,15 +94,32 @@ func isDir(path string, opt routeOpt) bool {
 	return fileInfo.IsDir()
 }
 
-func isFileOrString(path string, opt routeOpt) bool {
-	if opt.hasEmbedFS {
-		if _, err := fs.Stat(opt.embedFS, path); err != nil {
-			return true
-		}
+func readFileOS(file string) (name string, b []byte, err error) {
+	name = filepath.Base(file)
+	b, err = os.ReadFile(file)
+	return
+}
+
+func readFileFS(fsys fs.FS) func(string) (string, []byte, error) {
+	return func(file string) (name string, b []byte, err error) {
+		name = path.Base(file)
+		b, err = fs.ReadFile(fsys, file)
+		return
+	}
+}
+
+func existFileOS(path string) bool {
+	if _, err := os.Stat(path); err != nil {
 		return false
 	}
-	if _, err := os.Stat(path); err != nil {
+	return true
+}
+
+func existFileFS(fsys fs.FS) func(string) bool {
+	return func(path string) bool {
+		if _, err := fs.Stat(fsys, path); err != nil {
+			return false
+		}
 		return true
 	}
-	return false
 }

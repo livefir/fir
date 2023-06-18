@@ -3,9 +3,6 @@ package fir
 import (
 	"fmt"
 	"html/template"
-	"io/fs"
-	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 
@@ -14,12 +11,11 @@ import (
 
 type eventTemplate map[string]struct{}
 type eventTemplates map[string]eventTemplate
-type readFileFunc func(string) (string, []byte, error)
 
 func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*template.Template, eventTemplates, error) {
 	// is content html content or a file/directory
 	pageContentPath := filepath.Join(opt.publicDir, content)
-	if isFileOrString(pageContentPath, opt) {
+	if !opt.existFile(pageContentPath) {
 		return parseString(
 			template.New(
 				layoutContentName).
@@ -37,7 +33,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	pageLayoutPath := filepath.Join(opt.publicDir, layout)
 	evt := make(eventTemplates)
 	// is layout html content or a file/directory
-	if isFileOrString(pageLayoutPath, opt) {
+	if !opt.existFile(pageLayoutPath) {
 		return parseString(template.New("").Funcs(opt.funcMap), layout)
 	}
 
@@ -68,7 +64,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 	// check if content is a not a file or directory
 
 	pageContentPath := filepath.Join(opt.publicDir, content)
-	if isFileOrString(pageContentPath, opt) {
+	if !opt.existFile(pageContentPath) {
 		pageTemplate, currEvt, err := parseString(layoutTemplate, content)
 		if err != nil {
 			panic(err)
@@ -218,20 +214,6 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 	}
 
 	return t, evt, nil
-}
-
-func readFileOS(file string) (name string, b []byte, err error) {
-	name = filepath.Base(file)
-	b, err = os.ReadFile(file)
-	return
-}
-
-func readFileFS(fsys fs.FS) func(string) (string, []byte, error) {
-	return func(file string) (name string, b []byte, err error) {
-		name = path.Base(file)
-		b, err = fs.ReadFile(fsys, file)
-		return
-	}
 }
 
 func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
