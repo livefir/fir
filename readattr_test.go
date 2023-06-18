@@ -293,7 +293,7 @@ func areNodesDeepEqual(node1, node2 *html.Node) error {
 	}
 
 	if node1.Type != node2.Type {
-		return fmt.Errorf("node types are not equal")
+		return fmt.Errorf("node types are not equal (%v != %v)", node1.Type, node2.Type)
 	}
 
 	if removeSpace(node1.Data) != removeSpace(node2.Data) {

@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"html/template"
 	"strings"
 	"sync"
 
@@ -47,19 +48,19 @@ func hashKey(in string, markers []string) string {
 	return checksum + "-" + strings.Join(markers, "-")
 }
 
-func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) string {
+func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) template.HTML {
 	cache := &cachemd{
 		values: make(map[string]string),
 	}
 
-	return func(in string, markers ...string) string {
+	return func(in string, markers ...string) template.HTML {
 		var indata []byte
 		var isFile bool
 		if existFile(in) {
 			_, data, err := readFile(in)
 			if err != nil {
 				klog.Errorln(err)
-				return ""
+				return template.HTML("error reading file")
 			}
 			indata = data
 		} else {
@@ -68,7 +69,7 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 		// check if snippet is already in cache
 		key := hashKey(in, markers)
 		if value, ok := cache.get(key); ok {
-			return value
+			return template.HTML(value)
 		}
 
 		indata = snippets(indata, markers)
@@ -77,13 +78,14 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 		defer bytebufferpool.Put(buf)
 		if err := mdparser.Convert(indata, buf); err != nil {
 			klog.Errorln(err)
-			return ""
+			return template.HTML("error converting to markdown")
 		}
 		result := buf.String()
 		if isFile {
 			cache.set(key, result)
 		}
-		return result
+
+		return template.HTML(result)
 	}
 }
 
@@ -123,10 +125,10 @@ func snippet(in []byte, marker string) ([]byte, bool) {
 	start := -1
 	end := -1
 	for i, line := range lines {
-		if bytes.Equal(line, []byte(startMarker)) {
+		if bytes.Equal(bytes.TrimSpace(line), []byte(startMarker)) {
 			start = i + 1
 		}
-		if bytes.Equal(line, []byte(endMarker)) {
+		if bytes.Equal(bytes.TrimSpace(line), []byte(endMarker)) {
 			end = i
 		}
 	}

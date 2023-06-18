@@ -2,11 +2,34 @@ package fir
 
 import (
 	"bytes"
+	"html/template"
 	"strings"
 	"testing"
 
 	"golang.org/x/net/html"
 )
+
+func TestMarkdownTemplate(t *testing.T) {
+	tmpl := `{{ markdown "./testdata/snippet_input.md" "marker" }}`
+	expected := `<p>Snippet Content</p>`
+	md := markdown(readFileOS, existFileOS)
+	var buf bytes.Buffer
+	template.Must(template.New("test").Funcs(template.FuncMap{
+		"markdown": md,
+	}).Parse(tmpl)).Execute(&buf, nil)
+	actual := buf.String()
+	actualNode, err := html.Parse(strings.NewReader(actual))
+	if err != nil {
+		t.Fatalf("failed to parse actual HTML: %v", err)
+	}
+	expectedNode, err := html.Parse(strings.NewReader(expected))
+	if err != nil {
+		t.Fatalf("failed to parse expected HTML: %v", err)
+	}
+	if err := areNodesDeepEqual(actualNode, expectedNode); err != nil {
+		t.Errorf("Expected:\n%s\n\nGot:\n%s\n, err: %v \n", expected, actual, err)
+	}
+}
 
 func TestMarkdown(t *testing.T) {
 	type markdownTestCase struct {
@@ -54,11 +77,18 @@ func TestMarkdown(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:    "Test snippet with multiple markers",
+			name:    "Test snippet with multiple markers, both",
 			input:   "./testdata/snippet_input.md",
 			markers: []string{"marker1", "marker2"},
 			expected: `<p>Snippet Content 1<br />
             Snippet Content 2</p>`,
+			expectError: false,
+		},
+		{
+			name:        "Test snippet with multiple markers, single",
+			input:       "./testdata/snippet_input.md",
+			markers:     []string{"marker"},
+			expected:    `<p>Snippet Content</p>`,
 			expectError: false,
 		},
 		// Add more test cases as needed
@@ -85,7 +115,7 @@ func TestMarkdown(t *testing.T) {
 					t.Errorf("%v: \n  Expected an error, but got a result: %s", tc.name, actual)
 				}
 			} else {
-				actualNode, err := html.Parse(strings.NewReader(actual))
+				actualNode, err := html.Parse(strings.NewReader(string(actual)))
 				if err != nil {
 					t.Fatalf("%v: \n failed to parse actual HTML: %v", tc.name, err)
 				}
@@ -94,7 +124,7 @@ func TestMarkdown(t *testing.T) {
 					t.Fatalf("%v: \n failed to parse expected HTML: %v", tc.name, err)
 				}
 				if err := areNodesDeepEqual(actualNode, expectedNode); err != nil {
-					t.Errorf("%v: \nExpected:\n%s\n\nGot:\n%s\n", tc.name, tc.expected, actual)
+					t.Errorf("%v: \nExpected:\n%s\n\nGot:\n%s\n, err: %v \n", tc.name, tc.expected, actual, err)
 				}
 			}
 		})
