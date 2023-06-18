@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -115,8 +116,8 @@ func snippets(in []byte, markers []string) []byte {
 }
 
 func snippet(in []byte, marker string) ([]byte, bool) {
-	startMarker := "// start " + marker
-	endMarker := "// end " + marker
+	startMarker := fmt.Sprintf("<!-- start %s -->", marker)
+	endMarker := fmt.Sprintf("<!-- end %s -->", marker)
 
 	lines := bytes.Split(in, []byte("\n"))
 	start := -1

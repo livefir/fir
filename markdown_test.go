@@ -30,13 +30,13 @@ func TestMarkdown(t *testing.T) {
 		},
 		{
 			name:     "Test snippet with single marker",
-			input:    "// start marker\nSnippet Content\n// end marker",
+			input:    "<!-- start marker -->\nSnippet Content\n<!-- end marker -->",
 			markers:  []string{"marker"},
 			expected: "<p>Snippet Content</p>",
 		},
 		{
 			name:     "Test snippet with multiple markers",
-			input:    "// start marker1\nSnippet Content 1\n// end marker1\nSome Content\n// start marker2\nSnippet Content 2\n// end marker2",
+			input:    "<!-- start marker1 -->\nSnippet Content 1\n<!-- end marker1 -->\nSome Content\n<!-- start marker2 -->\nSnippet Content 2\n<!-- end marker2 -->",
 			markers:  []string{"marker1", "marker2"},
 			expected: `<p>Snippet Content 1<br />Snippet Content 2</p>`,
 		},
@@ -111,7 +111,7 @@ func TestSnippets(t *testing.T) {
 		// Test case 1: Single marker with snippet content
 		{
 			description: "Single marker with snippet content",
-			in:          []byte("Line 1\n// start marker\nSnippet content\n// end marker\nLine 4"),
+			in:          []byte("Line 1\n<!-- start marker -->\nSnippet content\n<!-- end marker -->\nLine 4"),
 			markers:     []string{"marker"},
 			expected:    []byte("Snippet content"),
 		},
@@ -119,7 +119,7 @@ func TestSnippets(t *testing.T) {
 		// Test case 2: Multiple markers with snippets
 		{
 			description: "Multiple markers with snippets",
-			in:          []byte("Line 1\n// start marker1\nSnippet 1\n// end marker1\nLine 4\n// start marker2\nSnippet 2\n// end marker2\nLine 7"),
+			in:          []byte("Line 1\n<!-- start marker1 -->\nSnippet 1\n<!-- end marker1 -->\nLine 4\n<!-- start marker2 -->\nSnippet 2\n<!-- end marker2 -->\nLine 7"),
 			markers:     []string{"marker1", "marker2"},
 			expected:    []byte("Snippet 1\nSnippet 2"),
 		},
@@ -135,7 +135,7 @@ func TestSnippets(t *testing.T) {
 		// Test case 4: Empty snippet content between markers, return empty byte slice
 		{
 			description: "Empty snippet content between markers, return empty byte slice",
-			in:          []byte("Line 1\n// start marker\n\n// end marker\nLine 4"),
+			in:          []byte("Line 1\n<!-- start marker -->\n\n<!-- end marker -->\nLine 4"),
 			markers:     []string{"marker"},
 			expected:    []byte{},
 		},
@@ -143,7 +143,7 @@ func TestSnippets(t *testing.T) {
 		// Test case 5: Start marker with no end marker, return until end of input
 		{
 			description: "Start marker with no end marker, return until end of input",
-			in:          []byte("Line 1\n// start marker\nSnippet\nLine 4"),
+			in:          []byte("Line 1\n<!-- start marker -->\nSnippet\nLine 4"),
 			markers:     []string{"marker"},
 			expected:    []byte("Snippet\nLine 4"),
 		},
@@ -159,25 +159,25 @@ func TestSnippets(t *testing.T) {
 		// Test case 7: Invalid input - empty markers slice, return original input
 		{
 			description: "Invalid input - empty markers slice, return original input",
-			in:          []byte("Line 1\n// start marker\nSnippet\n"),
+			in:          []byte("Line 1\n<!-- start marker -->\nSnippet\n"),
 			markers:     []string{},
-			expected:    []byte("Line 1\n// start marker\nSnippet\n"),
+			expected:    []byte("Line 1\n<!-- start marker -->\nSnippet\n"),
 		},
 
 		// Test case 8: Invalid input - no start marker, return original input
 		{
 			description: "Invalid input - no start marker, return original input",
-			in:          []byte("Line 1\nSnippet\n// end marker\nLine 4"),
+			in:          []byte("Line 1\nSnippet\n<!-- end marker -->\nLine 4"),
 			markers:     []string{"marker"},
-			expected:    []byte("Line 1\nSnippet\n// end marker\nLine 4"),
+			expected:    []byte("Line 1\nSnippet\n<!-- end marker -->\nLine 4"),
 		},
 
 		// Test case 9: Invalid input - start and end markers swapped, return original input
 		{
 			description: "Invalid input - start and end markers swapped, return original input",
-			in:          []byte("Line 1\n// end marker\nSnippet\n// start marker\nLine 4"),
+			in:          []byte("Line 1\n<!-- end marker -->\nSnippet\n<!-- start marker -->\nLine 4"),
 			markers:     []string{"marker"},
-			expected:    []byte("Line 1\n// end marker\nSnippet\n// start marker\nLine 4"),
+			expected:    []byte("Line 1\n<!-- end marker -->\nSnippet\n<!-- start marker -->\nLine 4"),
 		},
 	}
 
