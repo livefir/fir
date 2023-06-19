@@ -17,7 +17,7 @@ func TestMarkdownTemplate(t *testing.T) {
 	template.Must(template.New("test").Funcs(template.FuncMap{
 		"markdown": md,
 	}).Parse(tmpl)).Execute(&buf, nil)
-	actual := buf.String()
+	actual := html.UnescapeString(buf.String())
 	actualNode, err := html.Parse(strings.NewReader(actual))
 	if err != nil {
 		t.Fatalf("failed to parse actual HTML: %v", err)

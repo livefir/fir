@@ -7,6 +7,7 @@ require (
 	github.com/13rac1/goldmark-embed v0.0.0-20201220231550-e6806f2de66a
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alecthomas/chroma v0.10.0
+	github.com/alecthomas/chroma/v2 v2.2.0
 	github.com/chromedp/chromedp v0.9.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/structs v1.1.0
@@ -31,7 +32,8 @@ require (
 	github.com/timshannon/bolthold v0.0.0-20210913165410-232392fc8a6a
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
-	github.com/yuin/goldmark v1.4.13
+	github.com/yuin/goldmark v1.4.15
+	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20220924101305-151362477c87
 	golang.org/x/exp v0.0.0-20221204150635-6dcec336b2bb
 	golang.org/x/net v0.10.0
 	k8s.io/klog/v2 v2.100.1

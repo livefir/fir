@@ -5,21 +5,20 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"html/template"
 	"strings"
 	"sync"
 
 	embed "github.com/13rac1/goldmark-embed"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/valyala/bytebufferpool"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"k8s.io/klog/v2"
 )
-
-var mdparser = markdownParser()
 
 type cachemd struct {
 	values map[string]string
@@ -48,19 +47,21 @@ func hashKey(in string, markers []string) string {
 	return checksum + "-" + strings.Join(markers, "-")
 }
 
-func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) template.HTML {
+func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) string {
 	cache := &cachemd{
 		values: make(map[string]string),
 	}
 
-	return func(in string, markers ...string) template.HTML {
+	mdparser := markdownParser()
+
+	return func(in string, markers ...string) string {
 		var indata []byte
 		var isFile bool
 		if existFile(in) {
 			_, data, err := readFile(in)
 			if err != nil {
 				klog.Errorln(err)
-				return template.HTML("error reading file")
+				return string("error reading file")
 			}
 			indata = data
 		} else {
@@ -69,7 +70,7 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 		// check if snippet is already in cache
 		key := hashKey(in, markers)
 		if value, ok := cache.get(key); ok {
-			return template.HTML(value)
+			return string(value)
 		}
 
 		indata = snippets(indata, markers)
@@ -78,14 +79,14 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 		defer bytebufferpool.Put(buf)
 		if err := mdparser.Convert(indata, buf); err != nil {
 			klog.Errorln(err)
-			return template.HTML("error converting to markdown")
+			return string("error converting to markdown")
 		}
 		result := buf.String()
 		if isFile {
 			cache.set(key, result)
 		}
 
-		return template.HTML(result)
+		return string(result)
 	}
 }
 
@@ -177,6 +178,13 @@ func markdownParser() goldmark.Markdown {
 	extensions = append(extensions, extension.GFM)
 	extensions = append(extensions, extension.CJK)
 	extensions = append(extensions, embed.New())
+	extensions = append(extensions, extension.Footnote)
+	extensions = append(extensions, highlighting.NewHighlighting(
+		highlighting.WithStyle("dracula"),
+		highlighting.WithFormatOptions(
+			chromahtml.WithLineNumbers(true),
+		),
+	))
 
 	parserOptions = append(parserOptions, parser.WithAutoHeadingID())
 	parserOptions = append(parserOptions, parser.WithAttribute())
