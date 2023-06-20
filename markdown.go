@@ -5,8 +5,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"sync"
+	"time"
 
 	embed "github.com/13rac1/goldmark-embed"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
@@ -20,25 +25,77 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type cachemd struct {
+type mdcache struct {
 	values map[string]string
 	sync.RWMutex
 }
 
-func (c *cachemd) get(key string) (string, bool) {
+func (c *mdcache) get(key string) (string, bool) {
 	c.RLock()
 	defer c.RUnlock()
 	value, ok := c.values[key]
 	return value, ok
 }
 
-func (c *cachemd) set(key string, value string) {
+func (c *mdcache) set(key string, value string) {
 	c.Lock()
 	defer c.Unlock()
 	c.values[key] = value
 }
 
-func hashKey(in string, markers []string) string {
+type filecache struct {
+	files       map[string][]byte
+	etags       map[string]string
+	lastChecked map[string]time.Time
+	sync.RWMutex
+}
+
+func (c *filecache) getFile(key string) ([]byte, bool) {
+	c.RLock()
+	defer c.RUnlock()
+	value, ok := c.files[key]
+	return value, ok
+}
+
+func (c *filecache) setFile(key string, value []byte) {
+	c.Lock()
+	defer c.Unlock()
+	c.files[key] = value
+}
+
+func (c *filecache) getEtag(key string) string {
+	c.RLock()
+	defer c.RUnlock()
+	value, ok := c.etags[key]
+	if ok {
+		return value
+	}
+	return ""
+}
+
+func (c *filecache) setEtag(key string, val string) {
+	c.Lock()
+	defer c.Unlock()
+	c.etags[key] = val
+}
+
+func (c *filecache) getLastChecked(key string) time.Time {
+	c.RLock()
+	defer c.RUnlock()
+	value, ok := c.lastChecked[key]
+	if ok {
+		return value
+	}
+	return time.Time{}
+}
+
+func (c *filecache) setLastChecked(key string, value time.Time) {
+	c.Lock()
+	defer c.Unlock()
+	c.lastChecked[key] = value
+}
+
+func md5Key(in string, markers []string) string {
 	hash := md5.Sum([]byte(in))
 	checksum := hex.EncodeToString(hash[:])
 	if len(markers) == 0 {
@@ -47,9 +104,78 @@ func hashKey(in string, markers []string) string {
 	return checksum + "-" + strings.Join(markers, "-")
 }
 
+func fetchFileEtag(url string) string {
+	// make a head request to the url and  get the etag from header
+	// if etag is not present, return empty string
+	// if etag is present, return etag
+
+	// Create a new HEAD request
+	req, err := http.NewRequest("HEAD", url, nil)
+	if err != nil {
+		klog.Errorf("Error creating request: %v", err)
+		return ""
+	}
+
+	// Send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		klog.Errorf("Error sending request: %v", err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	// Check if the request was successful
+	if resp.StatusCode != http.StatusOK {
+		klog.Errorf("Request failed with status: %v", resp.Status)
+		return ""
+	}
+
+	return resp.Header.Get("ETag")
+
+}
+
+func fetchFile(url string) ([]byte, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		klog.Errorf("Failed to fetch the file: %v\n", err)
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	// Copy the content from the remote response to the local file
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		klog.Errorf("Failed to save the file: %v\n", err)
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func isValidURL(input string) bool {
+	_, err := url.ParseRequestURI(input)
+	if err != nil {
+		return false
+	}
+
+	u, err := url.Parse(input)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return false
+	}
+
+	return u.Scheme == "http" || u.Scheme == "https"
+}
+
 func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) string {
-	cache := &cachemd{
+	cachemd := &mdcache{
 		values: make(map[string]string),
+	}
+
+	cachefile := &filecache{
+		files:       make(map[string][]byte),
+		etags:       make(map[string]string),
+		lastChecked: make(map[string]time.Time),
 	}
 
 	mdparser := markdownParser()
@@ -57,19 +183,46 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 	return func(in string, markers ...string) string {
 		var indata []byte
 		var isFile bool
-		if existFile(in) {
-			_, data, err := readFile(in)
-			if err != nil {
-				klog.Errorln(err)
-				return string("error reading file")
+
+		if isValidURL(in) {
+			fkey := md5Key(in, nil)
+			var err error
+
+			f, ok := cachefile.getFile(fkey)
+			if !ok || time.Since(cachefile.getLastChecked(fkey)) > time.Minute*5 {
+				etag := fetchFileEtag(in)
+				cachefile.setLastChecked(fkey, time.Now())
+				if etag != cachefile.getEtag(fkey) || (etag == "" && cachefile.getEtag(fkey) == "") {
+					f, err = fetchFile(in)
+					if err != nil {
+						klog.Errorln(err)
+						return string("error fetching file")
+					}
+					cachefile.setEtag(fkey, etag)
+					cachefile.setFile(fkey, f)
+				}
 			}
-			indata = data
+			// enclose the file in a code block
+			ext := path.Ext(in)
+			indata = []byte("```" + ext + "\n" + string(f) + "```")
+			isFile = true
+
 		} else {
-			indata = []byte(in)
+			if existFile(in) {
+				_, data, err := readFile(in)
+				if err != nil {
+					klog.Errorln(err)
+					return string("error reading file")
+				}
+				indata = data
+				isFile = true
+			} else {
+				indata = []byte(in)
+			}
 		}
 		// check if snippet is already in cache
-		key := hashKey(in, markers)
-		if value, ok := cache.get(key); ok {
+		key := md5Key(in, markers)
+		if value, ok := cachemd.get(key); ok {
 			return string(value)
 		}
 
@@ -83,7 +236,7 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 		}
 		result := buf.String()
 		if isFile {
-			cache.set(key, result)
+			cachemd.set(key, result)
 		}
 
 		return string(result)
@@ -180,6 +333,7 @@ func markdownParser() goldmark.Markdown {
 	extensions = append(extensions, embed.New())
 	extensions = append(extensions, extension.Footnote)
 	extensions = append(extensions, highlighting.NewHighlighting(
+		highlighting.WithGuessLanguage(true),
 		highlighting.WithStyle("dracula"),
 		highlighting.WithFormatOptions(
 			chromahtml.WithLineNumbers(true),
