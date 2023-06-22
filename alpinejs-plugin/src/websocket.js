@@ -20,10 +20,24 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         }
 
         if (socket) {
-            socket.close()
-            socket = undefined
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.close()
+                socket = undefined
+            } else if (socket.readyState === WebSocket.CONNECTING) {
+                setTimeout(() => {
+                    closeSocket()
+                }, 100)
+            }
         }
     }
+
+    window.addEventListener('pagehide', () => {
+        closeSocket()
+    })
+
+    window.addEventListener('pageshow', () => {
+        reOpenSocket()
+    })
 
     function reOpenSocket() {
         closeSocket()
@@ -62,6 +76,7 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
                 if (event.reason) {
                     window.location.href = event.reason
                 }
+                closeSocket()
                 return
             }
             return reOpenSocket()

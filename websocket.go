@@ -204,9 +204,10 @@ loop:
 
 		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 	}
+
+	wg.Wait()
 	close(done)
 	close(send)
-	wg.Wait()
 }
 
 func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
