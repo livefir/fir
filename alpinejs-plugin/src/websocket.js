@@ -20,22 +20,18 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         }
 
         if (socket) {
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.close()
-                socket = undefined
-            } else if (socket.readyState === WebSocket.CONNECTING) {
-                setTimeout(() => {
-                    closeSocket()
-                }, 100)
-            }
+            socket.close()
+            socket = undefined
         }
     }
 
     window.addEventListener('pagehide', () => {
+        //console.log('pagehide')
         closeSocket()
     })
 
     window.addEventListener('pageshow', () => {
+        //console.log('pageshow')
         reOpenSocket()
     })
 
