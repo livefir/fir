@@ -23,7 +23,7 @@
             <div @fir:update:error::update-err="$fir.replace()">
                 {{ block "update-err" . }}
                     <p class="help is-danger">
-                        {{ .fir.Error "update" }}
+                        {{ fir.Error "update" }}
                     </p>
                 {{ end }}
             </div>
@@ -62,7 +62,7 @@
                                 @fir:update:error::title-err="$fir.replace()">
                                 {{ block "title-err" . }}
                                     <p class="help is-danger">
-                                        {{ .fir.Error "update.title" }}
+                                        {{ fir.Error "update.title" }}
                                     </p>
                                 {{ end }}
                             </div>
@@ -87,7 +87,7 @@
                                 @fir:update:error::description-err="$fir.replace()">
                                 {{ block "description-err" . }}
                                     <p class="help is-danger">
-                                        {{ .fir.Error "update.description" }}
+                                        {{ fir.Error "update.description" }}
                                     </p>
                                 {{ end }}
                             </div>

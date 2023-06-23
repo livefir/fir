@@ -174,7 +174,7 @@ func (c RouteContext) State(dataset ...any) error {
 }
 
 // Data sets the data to be hydrated into the route's template or an event's associated template/block action
-// It accepts either a map or struct type so that fir can inject utility functions: .fir.Error, .fir.ActiveRoute etc.
+// It accepts either a map or struct type so that fir can inject utility functions: fir.Error, fir.ActiveRoute etc.
 // If the data is a struct, it will be converted to a map using github.com/fatih/structs
 // If the data is a pointer to a struct, it will be dereferenced and converted to a map using github.com/fatih/structs
 // If the data is a map, it will be used as is
@@ -185,7 +185,7 @@ func (c RouteContext) Data(dataset ...any) error {
 	return buildData(false, dataset...)
 }
 
-// FieldError sets the error message for the given field and can be looked up by {{.fir.Error "myevent.field"}}
+// FieldError sets the error message for the given field and can be looked up by {{fir.Error "myevent.field"}}
 func (c RouteContext) FieldError(field string, err error) error {
 	if err == nil || field == "" {
 		return nil
@@ -193,7 +193,7 @@ func (c RouteContext) FieldError(field string, err error) error {
 	return &firErrors.Fields{field: firErrors.User(err)}
 }
 
-// FieldErrors sets the error messages for the given fields and can be looked up by {{.fir.Error "myevent.field"}}
+// FieldErrors sets the error messages for the given fields and can be looked up by {{fir.Error "myevent.field"}}
 func (c RouteContext) FieldErrors(fields map[string]error) error {
 	m := firErrors.Fields{}
 	for field, err := range fields {

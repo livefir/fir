@@ -26,7 +26,7 @@
                     @fir:create:error::title-err.window="$fir.replace()">
                     {{ block "title-err" . }}
                         <p class="help is-danger">
-                            {{ .fir.Error "create.title" }}
+                            {{ fir.Error "create.title" }}
                         </p>
                     {{ end }}
                 </div>
@@ -46,7 +46,7 @@
                     @fir:create:error::description-err.window="$fir.replace()">
                     {{ block "description-err" . }}
                         <p class="help is-danger">
-                            {{ .fir.Error "create.description" }}
+                            {{ fir.Error "create.description" }}
                         </p>
                     {{ end }}
                 </div>

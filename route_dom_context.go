@@ -3,14 +3,34 @@ package fir
 import (
 	"encoding/json"
 	"strings"
+	"text/template"
 
 	"github.com/tidwall/gjson"
 )
 
+func newFirFuncMap(ctx RouteContext, errs map[string]any) template.FuncMap {
+	return template.FuncMap{
+		"fir": func() *RouteDOMContext {
+			return newRouteDOMContext(ctx, errs)
+		},
+	}
+}
+
 func newRouteDOMContext(ctx RouteContext, errs map[string]any) *RouteDOMContext {
+	var urlPath string
+	var name string
+	if ctx.request != nil {
+		urlPath = ctx.request.URL.Path
+	}
+	if ctx.route != nil {
+		name = ctx.route.appName
+	}
+	if errs == nil {
+		errs = make(map[string]any)
+	}
 	return &RouteDOMContext{
-		URLPath: ctx.request.URL.Path,
-		Name:    ctx.route.appName,
+		URLPath: urlPath,
+		Name:    name,
 		errors:  errs,
 	}
 }
@@ -39,10 +59,13 @@ func (rc *RouteDOMContext) NotActiveRoute(path, class string) string {
 }
 
 // Error can be used to lookup an error by name
-// Example: {{.fir.Error "myevent.field"}} will return the error for the field myevent.field
-// Example: {{.fir.Error "myevent" "field"}} will return the error for the event myevent.field
+// Example: {{fir.Error "myevent.field"}} will return the error for the field myevent.field
+// Example: {{fir.Error "myevent" "field"}} will return the error for the event myevent.field
 // It can be used in conjunction with ctx.FieldError to get the error for a field
 func (rc *RouteDOMContext) Error(paths ...string) any {
+	if len(rc.errors) == 0 {
+		return nil
+	}
 	data, _ := json.Marshal(rc.errors)
 	val := gjson.GetBytes(data, getErrorLookupPath(paths...)).Value()
 	_, ok := val.(map[string]any)

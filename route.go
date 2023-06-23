@@ -14,7 +14,6 @@ import (
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
-	"github.com/valyala/bytebufferpool"
 	"k8s.io/klog/v2"
 )
 
@@ -192,41 +191,6 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 	}
 	rt.parseTemplates()
 	return rt
-}
-
-func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
-	return func(data routeData) error {
-		ctx.route.parseTemplates()
-		buf := bytebufferpool.Get()
-		defer bytebufferpool.Put(buf)
-
-		tmpl := ctx.route.template
-		if errorRouteTemplate {
-			tmpl = ctx.route.errorTemplate
-		}
-		tmpl.Option("missingkey=zero")
-		err := tmpl.Execute(buf, data)
-		if err != nil {
-			klog.Errorf("[renderRoute] error executing template: %v\n", err)
-			return err
-		}
-
-		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
-		// if err != nil {
-		// 	klog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
-		// 	return err
-		// }
-
-		http.SetCookie(ctx.response, &http.Cookie{
-			Name:   ctx.route.cookieName,
-			Value:  ctx.route.id,
-			MaxAge: 0,
-			Path:   "/",
-		})
-
-		ctx.response.Write(addAttributes(buf.Bytes()))
-		return nil
-	}
 }
 
 func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
@@ -512,7 +476,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx, false)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, false)(routeData{"errors": errs})
 		return
 	}
 
@@ -532,7 +496,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 				}
 			}
 		}
-		onLoadData["fir"] = newRouteDOMContext(ctx, errs)
+		onLoadData["errors"] = errs
 		renderRoute(ctx, false)(onLoadData)
 
 	case *routeDataWithState:
@@ -550,7 +514,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 				}
 			}
 		}
-		onLoadData["fir"] = newRouteDOMContext(ctx, errs)
+		onLoadData["errors"] = errs
 		renderRoute(ctx, false)(onLoadData)
 
 	case firErrors.Status:
@@ -569,7 +533,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx, true)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, true)(routeData{"errors": errs})
 	case firErrors.Fields:
 		errs := make(map[string]any)
 		if onFormErr != nil {
@@ -586,7 +550,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx, false)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, false)(routeData{"errors": errs})
 	default:
 		var errs map[string]any
 		if onFormErr != nil {
@@ -609,7 +573,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			errs = map[string]any{
 				"onload": err.Error()}
 		}
-		renderRoute(ctx, false)(routeData{"fir": newRouteDOMContext(ctx, errs)})
+		renderRoute(ctx, false)(routeData{"errors": errs})
 	}
 
 }

@@ -3,11 +3,11 @@
         x-data
         id="content">
         <p>
-            {{ .fir.Error "onload" }}
+            {{ fir.Error "onload" }}
         </p>
         <p @fir:create-tweet:error::create-err="$fir.replace()">
             {{ block "create-err" . }}
-                {{ .fir.Error "create-tweet" }}
+                {{ fir.Error "create-tweet" }}
             {{ end }}
         </p>
 
@@ -32,7 +32,7 @@
             <!-- $fir.replaceEl replaces the element on which it is invoked -->
             <p @fir:create-tweet:error::body-err="$fir.replace()">
                 {{ block "body-err" . }}
-                    {{ .fir.Error "create-tweet.body" }}
+                    {{ fir.Error "create-tweet.body" }}
                 {{ end }}
             </p>
 

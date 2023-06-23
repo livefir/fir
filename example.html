@@ -13,11 +13,11 @@
             x-data
             id="content">
             <p>
-                {{ .fir.Error "onload" }}
+                {{ fir.Error "onload" }}
             </p>
             <p @fir:create:error::create-err="$fir.replace()">
                 {{ block "create-err" . }}
-                    {{ .fir.Error "create" }}
+                    {{ fir.Error "create" }}
                 {{ end }}
             </p>
 
@@ -39,7 +39,7 @@
                     placeholder="a new todo" />
                 <p @fir:create:error::text-err="$fir.replace()">
                     {{ block "text-err" . }}
-                        {{ .fir.Error "create.text" }}
+                        {{ fir.Error "create.text" }}
                     {{ end }}
                 </p>
 

@@ -3,11 +3,11 @@
         x-data
         class="columns mt-5">
         {{ block "err" . }}
-            {{ .fir.Error "route" }}
+            {{ fir.Error "route" }}
         {{ end }}
         <p @fir:create:error::create-err="$fir.replace()">
             {{ block "create-err" . }}
-                {{ .fir.Error "create.route" }}
+                {{ fir.Error "create.route" }}
             {{ end }}
         </p>
         <div class="column is-4">

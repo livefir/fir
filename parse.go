@@ -106,6 +106,8 @@ func checkPageContent(tmpl *template.Template, layoutContentName string) error {
 
 // creates a html/template for the route
 func parseTemplate(opt routeOpt) (*template.Template, eventTemplates, error) {
+	opt.funcMap["fir"] = newFirFuncMap(RouteContext{}, nil)["fir"]
+
 	// if both layout and content is empty show a default page.
 	if opt.layout == "" && opt.content == "" {
 		return template.Must(template.New("").
@@ -128,6 +130,7 @@ func parseTemplate(opt routeOpt) (*template.Template, eventTemplates, error) {
 
 // creates a html/template for the route errors
 func parseErrorTemplate(opt routeOpt) (*template.Template, eventTemplates, error) {
+	opt.funcMap["fir"] = newFirFuncMap(RouteContext{}, nil)["fir"]
 	if opt.errorLayout == "" {
 		opt.errorLayout = opt.layout
 		opt.errorLayoutContentName = opt.layoutContentName

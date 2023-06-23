@@ -3,6 +3,7 @@ package fir
 import (
 	"fmt"
 	"html/template"
+	"net/http"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
@@ -14,6 +15,48 @@ import (
 	"github.com/valyala/bytebufferpool"
 	"k8s.io/klog/v2"
 )
+
+func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
+	return func(data routeData) error {
+		ctx.route.parseTemplates()
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
+		tmpl := ctx.route.template
+		if errorRouteTemplate {
+			tmpl = ctx.route.errorTemplate
+		}
+		var errs map[string]any
+		errMap, ok := data["errors"]
+		if ok {
+			errs = errMap.(map[string]any)
+		}
+
+		tmpl = tmpl.Funcs(newFirFuncMap(ctx, errs))
+		tmpl.Option("missingkey=zero")
+		err := tmpl.Execute(buf, data)
+		if err != nil {
+			klog.Errorf("[renderRoute] error executing template: %v\n", err)
+			return err
+		}
+
+		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
+		// if err != nil {
+		// 	klog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
+		// 	return err
+		// }
+
+		http.SetCookie(ctx.response, &http.Cookie{
+			Name:   ctx.route.cookieName,
+			Value:  ctx.route.id,
+			MaxAge: 0,
+			Path:   "/",
+		})
+
+		ctx.response.Write(addAttributes(buf.Bytes()))
+		return nil
+	}
+}
 
 // renderDOMEvents renders the DOM events for the given pubsub event.
 // the associated templates for the event are rendered and the dom events are returned.
@@ -62,15 +105,17 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 	eventType := fir(eventIDWithState, templateName)
 	templateData := pubsubEvent.Detail
+	routeTemplate := ctx.route.template.Funcs(newFirFuncMap(ctx, nil))
 	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
 		errs, ok := pubsubEvent.Detail.(map[string]any)
 		if !ok {
 			klog.Errorf("Bindings.Events error: %s", "pubsubEvent.Detail is not a map[string]any")
 			return nil
 		}
-		templateData = map[string]any{"fir": newRouteDOMContext(ctx, errs)}
+		templateData = nil
+		routeTemplate = routeTemplate.Funcs(newFirFuncMap(ctx, errs))
 	}
-	value, err := buildTemplateValue(ctx.route.template, templateName, templateData)
+	value, err := buildTemplateValue(routeTemplate, templateName, templateData)
 	if err != nil {
 		klog.Errorf("Bindings.Events buildTemplateValue error for eventType: %v, err: %v", *eventType, err)
 		return nil
