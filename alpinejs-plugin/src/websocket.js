@@ -19,23 +19,33 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
             clearTimeout(reopenTimeoutHandler)
         }
 
-        if (socket) {
+        if (socket && socket.readyState === WebSocket.CLOSED) {
+            socket = undefined
+        }
+
+        if (socket && socket.readyState == WebSocket.OPEN) {
             socket.close()
             socket = undefined
         }
     }
 
     window.addEventListener('pagehide', () => {
-        //console.log('pagehide')
-        closeSocket()
+        // console.log('pagehide')
+        if (socket) {
+            socket.close()
+            socket = undefined
+        }
     })
 
     window.addEventListener('pageshow', () => {
-        //console.log('pageshow')
+        // console.log('pageshow')
         reOpenSocket()
     })
 
     function reOpenSocket() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            return
+        }
         closeSocket()
         reopenTimeoutHandler = setTimeout(() => {
             openSocket()
