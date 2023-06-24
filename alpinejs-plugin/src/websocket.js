@@ -1,5 +1,7 @@
 const reopenTimeouts = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
 
+const firWindow = typeof window !== 'undefined' ? window : null
+
 export default websocket = (url, socketOptions, dispatchServerEvents) => {
     let socket, openPromise, reopenTimeoutHandler
     let reopenCount = 0
@@ -23,27 +25,46 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
             socket = undefined
         }
 
+        if (socket && socket.readyState == WebSocket.CONNECTING) {
+            setTimeout(() => {
+                socket.close()
+                socket = undefined
+            }, 1000)
+        }
+
         if (socket && socket.readyState == WebSocket.OPEN) {
             socket.close()
             socket = undefined
         }
     }
 
-    window.addEventListener('pagehide', () => {
-        // console.log('pagehide')
-        if (socket) {
-            socket.close()
-            socket = undefined
-        }
-    })
+    if (firWindow && firWindow.addEventListener) {
+        firWindow.addEventListener('pagehide', () => {
+            if (socket && socket.readyState == WebSocket.OPEN) {
+                socket.close()
+                socket = undefined
+            }
+            if (socket && socket.readyState == WebSocket.CONNECTING) {
+                setTimeout(() => {
+                    socket.close()
+                    socket = undefined
+                }, 1000)
+            }
+        })
+    }
 
-    window.addEventListener('pageshow', () => {
-        // console.log('pageshow')
-        reOpenSocket()
-    })
+    if (firWindow && firWindow.addEventListener) {
+        firWindow.addEventListener('pageshow', () => {
+            reOpenSocket()
+        })
+    }
 
     function reOpenSocket() {
-        if (socket && socket.readyState === WebSocket.OPEN) {
+        if (
+            socket &&
+            (socket.readyState === WebSocket.CONNECTING ||
+                socket.readyState === WebSocket.OPEN)
+        ) {
             return
         }
         closeSocket()
@@ -114,21 +135,11 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
 
     return {
         emit(value) {
-            const send = () => {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify(value))
-                    return true
-                } else {
-                    return false
-                }
-            }
-            if (socket && socket.readyState !== WebSocket.OPEN) {
-                openSocket()
-                    .then(() => {})
-                    .catch((e) => console.error(e))
-                return false
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(value))
+                return true
             } else {
-                return send()
+                return false
             }
         },
     }
