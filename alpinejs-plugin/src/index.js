@@ -17,9 +17,22 @@ const Plugin = (Alpine) => {
 
     let socket
     if (getSessionIDFromCookie()) {
-        socket = websocket(connectURL, [], (events) =>
-            dispatchServerEvents(events)
-        )
+        // fetch HEAD request to check if websocket is enabled
+        fetch(window.location.href, {
+            method: 'HEAD',
+        })
+            .then((response) => {
+                if (
+                    response.headers.get('X-FIR-WEBSOCKET-ENABLED') === 'true'
+                ) {
+                    socket = websocket(connectURL, [], (events) =>
+                        dispatchServerEvents(events)
+                    )
+                }
+            })
+            .catch((error) => {
+                console.error(error)
+            })
     } else {
         console.error('no route id found in cookie. websocket disabled')
     }

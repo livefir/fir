@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -229,6 +230,11 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer timing.NewMetric("route").Start().Stop()
 	if r.URL.Path == "/favicon.ico" {
 		http.NotFound(w, r)
+		return
+	}
+	if r.Method == http.MethodHead {
+		w.Header().Add("X-FIR-WEBSOCKET-ENABLED", strconv.FormatBool(!rt.disableWebsocket))
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
