@@ -3,6 +3,7 @@ package fir
 import (
 	"bytes"
 	"context"
+
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
+	"github.com/minio/sha256-simd"
 	"k8s.io/klog/v2"
 )
 
@@ -75,7 +77,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn.SetCompressionLevel(5)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
-		klog.Errorf("[onWebsocket] pong from %v\n", conn.RemoteAddr())
+		//klog.Errorf("[onWebsocket] pong from %v\n", conn.RemoteAddr())
 		return conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
@@ -154,8 +156,12 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 			<-done
 		}(rt)
 	}
-
+	sid := ""
+	lastEvent := Event{
+		SessionID: &sid,
+	}
 loop:
+
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -171,6 +177,19 @@ loop:
 			klog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
 			continue
 		}
+
+		if lastEvent.ID == event.ID && *lastEvent.SessionID == *event.SessionID && lastEvent.ElementKey == event.ElementKey {
+			lastEventTime := toUnixTime(lastEvent.Timestamp)
+			eventTime := toUnixTime(event.Timestamp)
+			if lastEventTime.Add(time.Millisecond * 250).After(eventTime) {
+				if eqBytesHash(lastEvent.Params, event.Params) {
+					klog.Errorf("[onWebsocket] err: dropped duplicate event in last 250ms\n, event %v \n", event)
+					continue
+				}
+			}
+		}
+
+		lastEvent = event
 
 		if event.ID == "" {
 			klog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
@@ -197,7 +216,7 @@ loop:
 			route:    eventRoute,
 		}
 
-		klog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event)
+		klog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event.String())
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			klog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
@@ -267,9 +286,7 @@ func writePump(conn *websocket.Conn, send chan []byte) {
 			if err != nil {
 				return
 			}
-			go func() {
-				klog.Errorf("[writeDOMevents] sending patch op to client:%v,  %+v\n", conn.RemoteAddr(), string(message))
-			}()
+
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
@@ -282,10 +299,20 @@ func writePump(conn *websocket.Conn, send chan []byte) {
 				return
 			}
 		case <-ticker.C:
-			klog.Errorf("ping to client: %v\n", conn.RemoteAddr())
+			//klog.Errorf("ping to client: %v\n", conn.RemoteAddr())
 			if err := writeConn(conn, websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
 		}
 	}
+}
+
+func eqBytesHash(a, b []byte) bool {
+	w := sha256.New()
+	w.Write(a)
+	aHash := w.Sum(nil)
+	w.Reset()
+	w.Write(b)
+	bHash := w.Sum(nil)
+	return bytes.Equal(aHash, bHash)
 }

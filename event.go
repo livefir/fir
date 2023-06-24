@@ -3,6 +3,8 @@ package fir
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
 
 	"k8s.io/klog/v2"
 )
@@ -22,6 +24,26 @@ func NewEvent(id string, params any) Event {
 	}
 }
 
+type JSTime struct {
+	time.Time
+}
+
+func (j *JSTime) UnmarshalJSON(b []byte) error {
+	fmt.Println(string(b))
+	i, err := strconv.ParseInt(string(b[1:len(b)-1]), 10, 64)
+	if err != nil {
+		return err
+	}
+	fmt.Println(i)
+	*j = JSTime{Time: time.Unix(i/1000, (i%1000)*1000*1000)}
+	return nil
+
+}
+
+func toUnixTime(ts int64) time.Time {
+	return time.Unix(ts/1000, (ts%1000)*1000*1000)
+}
+
 // Event is a struct that holds the data for an incoming user event
 type Event struct {
 	// ID is the event id
@@ -35,6 +57,7 @@ type Event struct {
 	// SessionID is the id of the session that the event was triggered for
 	SessionID  *string `json:"session_id,omitempty"`
 	ElementKey *string `json:"element_key,omitempty"`
+	Timestamp  int64   `json:"ts,omitempty"`
 }
 
 // String returns the string representation of the event

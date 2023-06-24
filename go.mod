@@ -21,6 +21,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/minio/sha256-simd v1.0.1
 	github.com/mitchellh/go-server-timing v1.0.1
 	github.com/ory/client-go v1.0.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -66,6 +67,7 @@ require (
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
