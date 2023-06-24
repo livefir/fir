@@ -480,18 +480,7 @@ const Plugin = (Alpine) => {
             throw new Error('event id is required.')
         }
 
-        let detail = {
-            eventId: firEvent.event_id,
-            params: firEvent.params,
-        }
-
-        const options = {
-            detail,
-            bubbles: true,
-            // Allows events to pass the shadow DOM barrier.
-            composed: true,
-            cancelable: true,
-        }
+        Object.assign(firEvent, { ts: Date.now() })
 
         const eventIdLower = firEvent.event_id.toLowerCase()
         // camel to kebab case
