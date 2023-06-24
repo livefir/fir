@@ -68,6 +68,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 
+	klog.Errorf("new conn: %v\n", conn.RemoteAddr())
+
 	conn.SetReadLimit(maxMessageSize)
 	conn.EnableWriteCompression(true)
 	conn.SetCompressionLevel(5)
@@ -76,7 +78,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		klog.Errorf("[onWebsocket] pong from %v\n", conn.RemoteAddr())
 		return conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
-	defer conn.Close()
+
 	ctx := context.Background()
 	done := make(chan struct{})
 	send := make(chan []byte)
@@ -204,10 +206,11 @@ loop:
 
 		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
 	}
-
-	wg.Wait()
+	// close writers to send
 	close(done)
+	wg.Wait()
 	close(send)
+	klog.Errorf("conn closed %v %v", conn.RemoteAddr(), conn.Close())
 }
 
 func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
