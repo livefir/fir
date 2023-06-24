@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"path/filepath"
 	"sync"
 
@@ -84,7 +83,6 @@ func (p *pubsubInmem) removeSubscription(subscription *subscriptionInmem) {
 		return
 	}
 	delete(subscriptions, subscription)
-	log.Printf("removed subscribtion for channel %s, count: %d", subscription.channel, len(subscriptions))
 	if len(subscriptions) == 0 {
 		delete(p.channelsSubscriptions, subscription.channel)
 	}
@@ -132,8 +130,6 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 	}
 
 	subs[sub] = struct{}{}
-
-	log.Printf("new subscribtion for channel %s, count: %d", channel, len(subs))
 
 	return sub, nil
 }
