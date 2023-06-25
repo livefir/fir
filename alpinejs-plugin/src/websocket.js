@@ -1,6 +1,4 @@
 const reopenTimeouts = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
-
-const firWindow = typeof window !== 'undefined' ? window : null
 const firDocument = typeof document !== 'undefined' ? document : null
 
 export default websocket = (url, socketOptions, dispatchServerEvents) => {
@@ -40,27 +38,6 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         }
     }
 
-    if (firWindow && firWindow.addEventListener) {
-        firWindow.addEventListener('pagehide', () => {
-            if (socket && socket.readyState == WebSocket.OPEN) {
-                socket.close()
-                socket = undefined
-            }
-            if (socket && socket.readyState == WebSocket.CONNECTING) {
-                setTimeout(() => {
-                    socket.close()
-                    socket = undefined
-                }, 1000)
-            }
-        })
-    }
-
-    if (firWindow && firWindow.addEventListener) {
-        firWindow.addEventListener('pageshow', () => {
-            reopenSocket()
-        })
-    }
-
     if (firDocument && firDocument.addEventListener) {
         firDocument.addEventListener('visibilitychange', () => {
             if (firDocument.visibilityState === 'visible') {
@@ -78,20 +55,19 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         setTimeout(() => {
             if (pendingHeartbeat) {
                 pendingHeartbeat = false
-                reopenSocket()
+                closeSocket()
             }
         }, 500)
     }
 
     function reopenSocket() {
-        if (
-            socket &&
-            (socket.readyState === WebSocket.CONNECTING ||
-                socket.readyState === WebSocket.OPEN)
-        ) {
+        if (socket && socket.readyState === WebSocket.CONNECTING) {
             return
         }
-        closeSocket()
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            closeSocket()
+        }
         reopenTimeoutHandler = setTimeout(() => {
             openSocket()
                 .then(() => {
@@ -127,9 +103,9 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
                 if (event.reason) {
                     window.location.href = event.reason
                 }
-                closeSocket()
                 return
             }
+
             return reopenSocket()
         }
         socket.onmessage = (event) => {
