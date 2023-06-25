@@ -1,12 +1,14 @@
 const reopenTimeouts = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
 
 const firWindow = typeof window !== 'undefined' ? window : null
+const firDocument = typeof document !== 'undefined' ? document : null
 
 export default websocket = (url, socketOptions, dispatchServerEvents) => {
     let socket, openPromise, reopenTimeoutHandler
     let reopenCount = 0
+    let pendingHeartbeat = false
 
-    // socket code copied from https://github.com/arlac77/svelte-websocket-store/blob/master/src/index.mjs
+    // modified from https://github.com/arlac77/svelte-websocket-store/blob/master/src/index.mjs
     // thank you https://github.com/arlac77 !!
     function reopenTimeout() {
         const n = reopenCount
@@ -55,11 +57,33 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
 
     if (firWindow && firWindow.addEventListener) {
         firWindow.addEventListener('pageshow', () => {
-            reOpenSocket()
+            reopenSocket()
         })
     }
 
-    function reOpenSocket() {
+    if (firDocument && firDocument.addEventListener) {
+        firDocument.addEventListener('visibilitychange', () => {
+            if (firDocument.visibilityState === 'visible') {
+                sendAndAckHeartbeat()
+            }
+        })
+    }
+
+    function sendAndAckHeartbeat() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            return
+        }
+        socket.send(JSON.stringify({ event_id: 'heartbeat' }))
+        pendingHeartbeat = true
+        setTimeout(() => {
+            if (pendingHeartbeat) {
+                pendingHeartbeat = false
+                reopenSocket()
+            }
+        }, 500)
+    }
+
+    function reopenSocket() {
         if (
             socket &&
             (socket.readyState === WebSocket.CONNECTING ||
@@ -70,7 +94,9 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         closeSocket()
         reopenTimeoutHandler = setTimeout(() => {
             openSocket()
-                .then(() => {})
+                .then(() => {
+                    pendingHeartbeat = false
+                })
                 .catch((e) => {
                     console.error(e)
                 })
@@ -104,18 +130,22 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
                 closeSocket()
                 return
             }
-            return reOpenSocket()
+            return reopenSocket()
         }
         socket.onmessage = (event) => {
             try {
                 const serverEvents = JSON.parse(event.data)
+                if (serverEvents.event_id === 'heartbeat_ack') {
+                    pendingHeartbeat = false
+                    return
+                }
                 dispatchServerEvents(serverEvents)
             } catch (e) {}
         }
 
         socket.onerror = (error) => {
             console.warn('socket error', error)
-            return reOpenSocket()
+            return reopenSocket()
         }
 
         openPromise = new Promise((resolve, reject) => {
@@ -134,7 +164,9 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
     }
 
     openSocket()
-        .then(() => {})
+        .then(() => {
+            pendingHeartbeat = false
+        })
         .catch((e) => console.error(e))
 
     return {
