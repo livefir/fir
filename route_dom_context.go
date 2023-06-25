@@ -29,17 +29,19 @@ func newRouteDOMContext(ctx RouteContext, errs map[string]any) *RouteDOMContext 
 		errs = make(map[string]any)
 	}
 	return &RouteDOMContext{
-		URLPath: urlPath,
-		Name:    name,
-		errors:  errs,
+		URLPath:     urlPath,
+		Name:        name,
+		Development: ctx.route.developmentMode,
+		errors:      errs,
 	}
 }
 
 // RouteDOMContext is a struct that holds route context data and is passed to the template
 type RouteDOMContext struct {
-	Name    string
-	URLPath string
-	errors  map[string]any
+	Name        string
+	Development bool
+	URLPath     string
+	errors      map[string]any
 }
 
 // ActiveRoute returns the class if the route is active
