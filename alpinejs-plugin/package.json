@@ -11,7 +11,7 @@
     "go",
     "alpinejs"
   ],
-  "description": "Alpinejs plugin for Fir: A reactive view library built in Go and Alpine.js",
+  "description": "Alpinejs plugin for Fir: Fir is a go toolkit to build reactive web interfaces using: Go, html/template and alpinejs.",
   "main": "dist/fir.cjs.js",
   "module": "dist/fir.esm.js",
   "unpkg": "dist/fir.min.js",
