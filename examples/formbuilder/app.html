@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script
-            defer
-            src="http://localhost:8000/cdn.js"></script>
+        <script defer src="http://localhost:8000/cdn.js"></script>
 
         {{/* <script
             defer
@@ -16,12 +14,8 @@
     <body>
         <div x-data>
             {{ define "input-text" }}
-                <div
-                    fir-key="{{ .key }}"
-                    @fir:remove:ok="$fir.removeEl()">
-                    <form
-                        method="post"
-                        @submit.prevent="$fir.submit()">
+                <div fir-key="{{ .key }}" @fir:remove:ok="$fir.removeEl()">
+                    <form method="post" @submit.prevent="$fir.submit()">
                         <input
                             type="text"
                             name="text"
@@ -37,9 +31,7 @@
             {{ end }}
 
 
-            <form
-                method="post"
-                @submit.prevent="$fir.submit()">
+            <form method="post" @submit.prevent="$fir.submit()">
                 <button
                     formaction="/?event=add"
                     name="element"
