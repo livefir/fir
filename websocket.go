@@ -178,6 +178,21 @@ loop:
 			continue
 		}
 
+		if event.ID == "" {
+			klog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
+			continue
+		}
+
+		if event.ID == "heartbeat" && conn != nil {
+			conn.WriteMessage(websocket.TextMessage, []byte(`{"event_id":"heartbeat_ack"}`))
+			continue
+		}
+
+		if event.SessionID == nil {
+			klog.Errorf("[onWebsocket] err: event %v, field session.ID is required, closing connection\n", event)
+			break loop
+		}
+
 		if lastEvent.ID == event.ID && *lastEvent.SessionID == *event.SessionID && lastEvent.ElementKey == event.ElementKey {
 			lastEventTime := toUnixTime(lastEvent.Timestamp)
 			eventTime := toUnixTime(event.Timestamp)
@@ -190,16 +205,6 @@ loop:
 		}
 
 		lastEvent = event
-
-		if event.ID == "" {
-			klog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
-			continue
-		}
-
-		if event.SessionID == nil {
-			klog.Errorf("[onWebsocket] err: event %v, field event.	ID is required, closing connection\n", event)
-			break loop
-		}
 
 		// var routeID string
 		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
