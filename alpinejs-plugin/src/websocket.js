@@ -70,10 +70,7 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         closeSocket()
         reopenTimeoutHandler = setTimeout(() => {
             openSocket()
-                .then(() => {
-                    //console.log("socket connected");
-                    // location.reload(true)
-                })
+                .then(() => {})
                 .catch((e) => {
                     console.error(e)
                 })
@@ -94,12 +91,13 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         try {
             socket = new WebSocket(url, socketOptions)
         } catch (e) {
-            // console.log("socket disconnected")
+            console.error("can't create socket", e)
         }
 
         socket.onclose = (event) => {
+            console.warn('socket closed', event)
             if (event.code == 4001) {
-                console.log(`socket closed by server: unauthorized`)
+                console.warn(`socket closed by server: unauthorized`)
                 if (event.reason) {
                     window.location.href = event.reason
                 }
@@ -115,8 +113,14 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
             } catch (e) {}
         }
 
+        socket.onerror = (error) => {
+            console.warn('socket error', error)
+            return reOpenSocket()
+        }
+
         openPromise = new Promise((resolve, reject) => {
             socket.onerror = (error) => {
+                console.error('socket error on connect', error)
                 reject(error)
                 openPromise = undefined
             }
