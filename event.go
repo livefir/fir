@@ -3,7 +3,6 @@ package fir
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -22,22 +21,6 @@ func NewEvent(id string, params any) Event {
 		ID:     id,
 		Params: data,
 	}
-}
-
-type JSTime struct {
-	time.Time
-}
-
-func (j *JSTime) UnmarshalJSON(b []byte) error {
-	fmt.Println(string(b))
-	i, err := strconv.ParseInt(string(b[1:len(b)-1]), 10, 64)
-	if err != nil {
-		return err
-	}
-	fmt.Println(i)
-	*j = JSTime{Time: time.Unix(i/1000, (i%1000)*1000*1000)}
-	return nil
-
 }
 
 func toUnixTime(ts int64) time.Time {
