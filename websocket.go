@@ -172,7 +172,7 @@ loop:
 			}
 			break loop
 		}
-		start := time.Now()
+		// start := time.Now()
 
 		var event Event
 		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
@@ -186,7 +186,7 @@ loop:
 			continue
 		}
 
-		klog.Errorf("[onWebsocket] received event: %+v took %v\n ", event, time.Since(start))
+		// klog.Errorf("[onWebsocket] received event: %+v took %v\n ", event, time.Since(start))
 
 		if event.ID == "heartbeat" && conn != nil {
 			// err := conn.WriteMessage(websocket.TextMessage, []byte(`{"event_id":"heartbeat_ack"}`))
@@ -197,7 +197,7 @@ loop:
 			go func() {
 				send <- []byte(`{"event_id":"heartbeat_ack"}`)
 			}()
-			klog.Errorf("[onWebsocket] wrote heartbeat: %+v took %v\n ", event, time.Since(start))
+			// klog.Errorf("[onWebsocket] wrote heartbeat: %+v took %v\n ", event, time.Since(start))
 			continue
 		}
 
