@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
@@ -78,7 +79,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		//klog.Errorf("[onWebsocket] pong from %v\n", conn.RemoteAddr())
-		return conn.SetReadDeadline(time.Now().Add(pongWait))
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
 	})
 
 	ctx := context.Background()
@@ -166,10 +168,11 @@ loop:
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				log.Printf("[onWebsocket] error: %v", err)
+				log.Printf("[onWebsocket] read error: %v", err)
 			}
 			break loop
 		}
+		start := time.Now()
 
 		var event Event
 		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
@@ -183,8 +186,18 @@ loop:
 			continue
 		}
 
+		klog.Errorf("[onWebsocket] received event: %+v took %v\n ", event, time.Since(start))
+
 		if event.ID == "heartbeat" && conn != nil {
-			conn.WriteMessage(websocket.TextMessage, []byte(`{"event_id":"heartbeat_ack"}`))
+			// err := conn.WriteMessage(websocket.TextMessage, []byte(`{"event_id":"heartbeat_ack"}`))
+			// if err != nil {
+			// 	klog.Errorf("[onWebsocket] write heartbeat err: %v, \n", err)
+			// 	break loop
+			// }
+			go func() {
+				send <- []byte(`{"event_id":"heartbeat_ack"}`)
+			}()
+			klog.Errorf("[onWebsocket] wrote heartbeat: %+v took %v\n ", event, time.Since(start))
 			continue
 		}
 
