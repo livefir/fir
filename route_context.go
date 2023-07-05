@@ -3,11 +3,12 @@ package fir
 import (
 	"bytes"
 	"encoding/gob"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
 	"reflect"
+
+	"github.com/goccy/go-json"
 
 	"github.com/fatih/structs"
 

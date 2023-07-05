@@ -2,13 +2,14 @@ package fir
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/goccy/go-json"
 
 	"github.com/gorilla/websocket"
 	firErrors "github.com/livefir/fir/internal/errors"

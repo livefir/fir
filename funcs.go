@@ -3,11 +3,12 @@ package fir
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
 	"strings"
+
+	"github.com/goccy/go-json"
 
 	"github.com/alecthomas/chroma/formatters/html"
 

@@ -1,10 +1,11 @@
 package fir
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/goccy/go-json"
 
 	"github.com/fatih/structs"
 )

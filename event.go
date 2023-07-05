@@ -1,9 +1,10 @@
 package fir
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/goccy/go-json"
 
 	"k8s.io/klog/v2"
 )

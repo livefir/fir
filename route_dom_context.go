@@ -1,9 +1,10 @@
 package fir
 
 import (
-	"encoding/json"
 	"strings"
 	"text/template"
+
+	"github.com/goccy/go-json"
 
 	"github.com/tidwall/gjson"
 )

@@ -2,10 +2,11 @@ package pubsub
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sync"
+
+	"github.com/goccy/go-json"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/livefir/fir/internal/eventstate"
