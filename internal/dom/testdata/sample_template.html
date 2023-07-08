@@ -1,0 +1,4 @@
+Hello, On {{ template "planet" . }} {{ .Name }}! You are {{ .Age }} years old.
+{{ block "city" . }}You live in city {{ .City }}{{ end }}
+{{ range .Friends }}{{ .Name }} is your friend{{ end }}
+{{ define "planet" }}Planet {{ .Planet }}{{ end }}
