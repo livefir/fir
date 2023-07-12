@@ -3,7 +3,7 @@ package dom
 import (
 	"bytes"
 	"html/template"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -42,8 +42,8 @@ func TestNodes(t *testing.T) {
 			expectedStatic:  nil,
 		},
 		{
-			description:     "Template from test file",
-			templateString:  readTestFile("testdata/sample_template.html"),
+			description:     "Template from todos file",
+			templateString:  readTestFile("testdata/todos.html"),
 			expectedDynamic: []string{`{{.Planet}}`, "{{.Name}}", "{{.Age}}", "{{.City}}"},
 			expectedStatic:  []string{"Hello, On ", "Planet ", " ", "! You are ", " years old.\n", "You live in city ", "\n", "\n"},
 		},
@@ -74,7 +74,7 @@ func TestNodes(t *testing.T) {
 }
 
 func readTestFile(filePath string) string {
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		panic(err)
 	}

@@ -1,0 +1,18 @@
+{
+    "type": "@fir:query:ok::todos",
+    "detail": {
+        "diff": {
+            "0": {
+                "d": [
+                    [
+                        "todo 1"
+                    ],
+                    [
+                        "todo 2"
+                    ]
+                ]
+            }
+        }
+    },
+    "target": "fir-query-ok--todos"
+}

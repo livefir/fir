@@ -1,0 +1,14 @@
+<div
+    @fir:create:ok::todo="$fir.appendEl()"
+    @fir:query:ok::todos="$fir.replace()">
+    {{ block "todos" }}
+        <div>List of todos</div>
+        <ul>
+            {{ range .todos }}
+                {{ block "todo" . }}
+                    <li>{{ .Text }}</li>
+                {{ end }}
+            {{ end }}
+        </ul>
+    {{ end }}
+</div>

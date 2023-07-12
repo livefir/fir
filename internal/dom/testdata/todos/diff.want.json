@@ -1,0 +1,20 @@
+{
+    "todos": {
+        "0": {
+            "s": "#todo"
+        },
+        "s": [
+            "<div>List of todos</div>\n<ul>",
+            "</ul>"
+        ]
+    },
+    "todo": {
+        "d": [
+            "{{.Text}}"
+        ],
+        "s": [
+            "<li>",
+            "</li>"
+        ]
+    }
+}

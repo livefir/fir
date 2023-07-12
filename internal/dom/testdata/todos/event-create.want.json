@@ -1,0 +1,9 @@
+{
+    "type": "@fir:create:ok::todo",
+    "detail": {
+        "diff": [
+            "todo 1"
+        ]
+    },
+    "target": ".fir-create-ok--todo"
+}
