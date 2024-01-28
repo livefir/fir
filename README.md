@@ -19,3 +19,9 @@ cd quickstart
 go run main.go
 open localhost:9867
 ```
+
+## Community
+
+- https://blog.logrocket.com/building-reactive-web-app-go-fir/
+
+- https://bsky.app/profile/hrbrmstr.dev/post/3kk2f5eqxyk22
