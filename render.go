@@ -7,13 +7,13 @@ import (
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 	"github.com/sourcegraph/conc/pool"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/html"
 	"github.com/valyala/bytebufferpool"
-	"k8s.io/klog/v2"
 )
 
 func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
@@ -36,13 +36,13 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 		tmpl.Option("missingkey=zero")
 		err := tmpl.Execute(buf, data)
 		if err != nil {
-			klog.Errorf("[renderRoute] error executing template: %v\n", err)
+			logger.Errorf("error executing template: %v", err)
 			return err
 		}
 
 		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
 		// if err != nil {
-		// 	klog.Errorf("[renderRoute] error encoding cookie: %v\n", err)
+		// 	logger.Errorf("error encoding cookie: %v", err)
 		// 	return err
 		// }
 
@@ -109,7 +109,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
 		errs, ok := pubsubEvent.Detail.(map[string]any)
 		if !ok {
-			klog.Errorf("Bindings.Events error: %s", "pubsubEvent.Detail is not a map[string]any")
+			logger.Errorf("error: %s", "pubsubEvent.Detail is not a map[string]any")
 			return nil
 		}
 		templateData = nil
@@ -117,7 +117,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 	value, err := buildTemplateValue(routeTemplate, templateName, templateData)
 	if err != nil {
-		klog.Errorf("Bindings.Events buildTemplateValue error for eventType: %v, err: %v", *eventType, err)
+		logger.Errorf("error for eventType: %v, err: %v", *eventType, err)
 		return nil
 	}
 	if pubsubEvent.State == eventstate.Error && value == "" {

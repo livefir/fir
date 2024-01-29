@@ -3,8 +3,8 @@ package fir
 import (
 	"embed"
 	"flag"
+	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -231,7 +232,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		routes: make(map[string]*route),
 	}
 	if c.developmentMode {
-		log.Println("controller starting in developer mode ...", c.developmentMode)
+		fmt.Printf("controller starting in developer mode ... %v", c.developmentMode)
 		c.debugLog = true
 		c.enableWatch = true
 		c.disableTemplateCache = true
@@ -244,11 +245,11 @@ func NewController(name string, options ...ControllerOption) Controller {
 	if c.hasEmbedFS {
 		c.readFile = readFileFS(c.embedFS)
 		c.existFile = existFileFS(c.embedFS)
-		log.Println("read template files embedded in the binary")
+		fmt.Printf("read template files embedded in the binary")
 	} else {
 		c.readFile = readFileOS
 		c.existFile = existFileOS
-		log.Println("read template files from disk")
+		logger.Infof("read template files from disk")
 	}
 
 	md := markdown(c.readFile, c.existFile)

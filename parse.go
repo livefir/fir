@@ -55,7 +55,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		return nil, evt, err
 	}
 
-	//log.Println("compiled layoutTemplate...")
+	//logger.Infof("compiled layoutTemplate...")
 	//for _, v := range layoutTemplate.Templates() {
 	//	fmt.Println("template => ", v.Name())
 	//}

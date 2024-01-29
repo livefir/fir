@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	"golang.org/x/exp/slices"
 )
@@ -45,7 +46,7 @@ func watchTemplates(wc *controller) {
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
+				logger.Errorf("error: %v", err)
 			}
 		}
 	}()
@@ -57,7 +58,7 @@ func watchTemplates(wc *controller) {
 				if strings.Contains(path, "node_modules") {
 					return nil
 				}
-				log.Println("watching =>", path)
+				fmt.Println("watching =>", path)
 				return watcher.Add(path)
 			}
 		}

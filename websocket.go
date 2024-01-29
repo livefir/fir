@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -15,9 +14,9 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	"github.com/minio/sha256-simd"
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -49,14 +48,14 @@ func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redir
 	upgrader := websocket.Upgrader{}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		klog.Errorf("[UnauthorisedWebScoket] upgrade err: %v\n", err)
+		logger.Errorf("upgrade err: %v", err)
 		return false
 	}
 	err = conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(4001, redirect), time.Now().Add(writeWait))
 	if err != nil {
-		klog.Errorf("[UnauthorisedWebScoket] write control err: %v\n", err)
+		logger.Errorf("write control err: %v", err)
 		return false
 	}
 	defer conn.Close()
@@ -67,18 +66,18 @@ func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redir
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		klog.Errorf("[onWebsocket] upgrade err: %v\n", err)
+		logger.Errorf("upgrade err: %v", err)
 		return
 	}
 
-	klog.Errorf("new conn: %v\n", conn.RemoteAddr())
+	logger.Infof("new conn: %v", conn.RemoteAddr())
 
 	conn.SetReadLimit(maxMessageSize)
 	conn.EnableWriteCompression(true)
 	conn.SetCompressionLevel(5)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
-		//klog.Errorf("[onWebsocket] pong from %v\n", conn.RemoteAddr())
+		//logger.Infof("pong from %v", conn.RemoteAddr())
 		conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
@@ -95,7 +94,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 			defer wg.Done()
 			routeChannel := route.channelFunc(r, route.id)
 			if routeChannel == nil {
-				klog.Errorf("[onWebsocket] error: channel is empty")
+				logger.Errorf("error: channel is empty")
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
@@ -128,10 +127,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					klog.Errorf("[onWebsocket] received server event: %+v\n", event)
+					logger.Errorf("received server event: %+v", event)
 					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 					if !ok {
-						klog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
+						logger.Errorf("err: event %v, event.id not found", event)
 						continue
 					}
 
@@ -168,7 +167,7 @@ loop:
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				log.Printf("[onWebsocket] read error: %v", err)
+				logger.Errorf("read error: %v", err)
 			}
 			break loop
 		}
@@ -177,32 +176,32 @@ loop:
 		var event Event
 		err = json.NewDecoder(bytes.NewReader(message)).Decode(&event)
 		if err != nil {
-			klog.Errorf("[onWebsocket] err: %v, \n parsing event, msg %s \n", err, string(message))
+			logger.Errorf("err: %v,  parsing event, msg %s ", err, string(message))
 			continue
 		}
 
 		if event.ID == "" {
-			klog.Errorf("[onWebsocket] err: event %v, field event.id is required\n", event)
+			logger.Errorf("err: event %v, field event.id is required", event)
 			continue
 		}
 
-		// klog.Errorf("[onWebsocket] received event: %+v took %v\n ", event, time.Since(start))
+		// logger.Infof("received event: %+v took %v ", event, time.Since(start))
 
 		if event.ID == "heartbeat" && conn != nil {
 			// err := conn.WriteMessage(websocket.TextMessage, []byte(`{"event_id":"heartbeat_ack"}`))
 			// if err != nil {
-			// 	klog.Errorf("[onWebsocket] write heartbeat err: %v, \n", err)
+			// 	logger.Errorf("write heartbeat err: %v, ", err)
 			// 	break loop
 			// }
 			go func() {
 				send <- []byte(`{"event_id":"heartbeat_ack"}`)
 			}()
-			// klog.Errorf("[onWebsocket] wrote heartbeat: %+v took %v\n ", event, time.Since(start))
+			// logger.Errorf("wrote heartbeat: %+v took %v ", event, time.Since(start))
 			continue
 		}
 
 		if event.SessionID == nil {
-			klog.Errorf("[onWebsocket] err: event %v, field session.ID is required, closing connection\n", event)
+			logger.Errorf("err: event %v, field session.ID is required, closing connection", event)
 			break loop
 		}
 
@@ -211,7 +210,7 @@ loop:
 			eventTime := toUnixTime(event.Timestamp)
 			if lastEventTime.Add(time.Millisecond * 250).After(eventTime) {
 				if eqBytesHash(lastEvent.Params, event.Params) {
-					klog.Errorf("[onWebsocket] err: dropped duplicate event in last 250ms\n, event %v \n", event)
+					logger.Errorf("err: dropped duplicate event in last 250ms, event %v ", event)
 					continue
 				}
 			}
@@ -221,7 +220,7 @@ loop:
 
 		// var routeID string
 		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
-		// 	klog.Errorf("[onWebsocket] err: event %v, cookie decode error: %v\n", event, err)
+		// 	logger.Errorf("err: event %v, cookie decode error: %v", event, err)
 		// 	continue
 		// }
 
@@ -234,10 +233,17 @@ loop:
 			route:    eventRoute,
 		}
 
-		klog.Errorf("[onWebsocket] route %v received event: %+v\n", eventRoute.id, event.String())
+		withEventLogger := logger.Logger().
+			With(
+				"route", eventRoute.id,
+				"event_id", event.ID,
+				"session_id", *event.SessionID,
+				"element_key", event.ElementKey,
+			)
+		withEventLogger.Info("received event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
-			klog.Errorf("[onWebsocket] err: event %v, event.id not found\n", event)
+			logger.Errorf("err: event %v, event.id not found", event)
 			continue
 		}
 
@@ -247,19 +253,19 @@ loop:
 	close(done)
 	wg.Wait()
 	close(send)
-	klog.Errorf("conn closed %v %v", conn.RemoteAddr(), conn.Close())
+	logger.Infof("conn closed %v %v", conn.RemoteAddr(), conn.Close())
 }
 
 func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
 	events := renderDOMEvents(ctx, pubsubEvent)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
-		klog.Errorf("[writeDOMevents] error: marshaling events %+v, err %v", events, err)
+		logger.Errorf("error: marshaling events %+v, err %v", events, err)
 		return err
 	}
 	if len(eventsData) == 0 {
-		err := fmt.Errorf("[writeDOMevents] error: message is empty, channel %s, events %+v", channel, pubsubEvent)
-		log.Println(err)
+		err := fmt.Errorf("error: message is empty, channel %s, events %+v", channel, pubsubEvent)
+		logger.Errorf("%v", err)
 		return err
 	}
 	send <- eventsData
@@ -272,7 +278,7 @@ func writeEvent(send chan []byte, pubsubEvent pubsub.Event) error {
 	}
 	eventsData, err := json.Marshal([]dom.Event{domEvent})
 	if err != nil {
-		klog.Errorf("[writeReloadEvent] error: marshaling dom event %+v, err %v", domEvent, err)
+		logger.Errorf("error: marshaling dom event %+v, err %v", domEvent, err)
 		return err
 	}
 	send <- eventsData
@@ -317,7 +323,7 @@ func writePump(conn *websocket.Conn, send chan []byte) {
 				return
 			}
 		case <-ticker.C:
-			//klog.Errorf("ping to client: %v\n", conn.RemoteAddr())
+			//logger.Infof("ping to client: %v", conn.RemoteAddr())
 			if err := writeConn(conn, websocket.PingMessage, []byte{}); err != nil {
 				return
 			}

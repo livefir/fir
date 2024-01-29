@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/pubsub"
-	"k8s.io/klog/v2"
 )
 
 type Counter struct {
@@ -61,7 +61,7 @@ func NewCounterIndex(pubsub pubsub.Adapter) *index {
 		for ; true; <-ticker.C {
 			if !c.pubsub.HasSubscribers(context.Background(), pattern) {
 				// if userID:viewID(*:viewID) channel pattern has no subscribers, skip costly operation
-				klog.Errorf("channel pattern %s has no subscribers", pattern)
+				log.Printf("channel pattern %s has no subscribers", pattern)
 				continue
 			}
 			c.eventSender <- fir.NewEvent("updated", countUpdate{CountUpdated: c.model.Updated()})

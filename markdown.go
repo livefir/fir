@@ -15,6 +15,7 @@ import (
 
 	embed "github.com/13rac1/goldmark-embed"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/valyala/bytebufferpool"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -22,7 +23,6 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
-	"k8s.io/klog/v2"
 )
 
 type mdcache struct {
@@ -112,7 +112,7 @@ func fetchFileEtag(url string) string {
 	// Create a new HEAD request
 	req, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
-		klog.Errorf("Error creating request: %v", err)
+		logger.Errorf("error creating request: %v", err)
 		return ""
 	}
 
@@ -120,14 +120,14 @@ func fetchFileEtag(url string) string {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		klog.Errorf("Error sending request: %v", err)
+		logger.Errorf("error sending request: %v", err)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	// Check if the request was successful
 	if resp.StatusCode != http.StatusOK {
-		klog.Errorf("Request failed with status: %v", resp.Status)
+		logger.Errorf("request failed with status: %v", resp.Status)
 		return ""
 	}
 
@@ -138,7 +138,7 @@ func fetchFileEtag(url string) string {
 func fetchFile(url string) ([]byte, error) {
 	response, err := http.Get(url)
 	if err != nil {
-		klog.Errorf("Failed to fetch the file: %v\n", err)
+		logger.Errorf("failed to fetch the file: %v\n", err)
 		return nil, err
 	}
 	defer response.Body.Close()
@@ -146,7 +146,7 @@ func fetchFile(url string) ([]byte, error) {
 	// Copy the content from the remote response to the local file
 	data, err := io.ReadAll(response.Body)
 	if err != nil {
-		klog.Errorf("Failed to save the file: %v\n", err)
+		logger.Errorf("failed to save the file: %v\n", err)
 		return nil, err
 	}
 
@@ -195,7 +195,7 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 				if etag != cachefile.getEtag(fkey) || (etag == "" && cachefile.getEtag(fkey) == "") {
 					f, err = fetchFile(in)
 					if err != nil {
-						klog.Errorln(err)
+						logger.Errorf("%v", err)
 						return string("error fetching file")
 					}
 					cachefile.setEtag(fkey, etag)
@@ -211,7 +211,7 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 			if existFile(in) {
 				_, data, err := readFile(in)
 				if err != nil {
-					klog.Errorln(err)
+					logger.Errorf("%v", err)
 					return string("error reading file")
 				}
 				indata = data
@@ -231,7 +231,7 @@ func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, ma
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 		if err := mdparser.Convert(indata, buf); err != nil {
-			klog.Errorln(err)
+			logger.Errorf("%v", err)
 			return string("error converting to markdown")
 		}
 		result := buf.String()
