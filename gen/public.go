@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/livefir/fir/internal/logger"
 	gitignore "github.com/sabhiram/go-gitignore"
 	"golang.org/x/exp/slices"
-	"k8s.io/klog/v2"
 )
 
 type publicOpt struct {
@@ -62,7 +62,7 @@ func GeneratePublicDir(options ...PublicDirOption) error {
 
 	ignore, err := gitignore.CompileIgnoreFile(filepath.Join(opt.inDir, ".gitignore"))
 	if err != nil {
-		klog.Errorf("[warning] failed to compile .gitignore: %v\n", err)
+		logger.Warnf("failed to compile .gitignore: %v\n", err)
 	}
 
 	err = filepath.WalkDir(opt.inDir, func(path string, d fs.DirEntry, err error) error {

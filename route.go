@@ -14,9 +14,9 @@ import (
 	"github.com/gorilla/websocket"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
-	"k8s.io/klog/v2"
 )
 
 // RouteOption is a function that sets route options
@@ -200,7 +200,7 @@ func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvent)
 		if err != nil {
-			klog.Errorf("[onWebsocket][getEventPatchset] error publishing patch: %v\n", err)
+			logger.Errorf("error publishing patch: %v", err)
 			return err
 		}
 		return nil
@@ -212,13 +212,13 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
-			klog.Warningf("[writeAndPublishEvents] error publishing patch: %v\n", err)
+			logger.Errorf("error publishing patch: %v", err)
 		}
 		events := renderDOMEvents(ctx, pubsubEvent)
 
 		eventsData, err := json.Marshal(events)
 		if err != nil {
-			klog.Errorf("[writeAndPublishEvents] error marshaling patch: %v\n", err)
+			logger.Errorf("error marshaling patch: %v", err)
 			return err
 		}
 		ctx.response.Write(eventsData)

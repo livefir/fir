@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"k8s.io/klog/v2"
+	"github.com/livefir/fir/internal/logger"
 )
 
 func defaultChannelFunc(r *http.Request, viewID string) *string {
@@ -18,7 +18,7 @@ func defaultChannelFunc(r *http.Request, viewID string) *string {
 
 	userID, ok := r.Context().Value(UserKey).(string)
 	if !ok || userID == "" {
-		klog.Warningf("warning: no user id in request context. user is anonymous, viewID: %s \n", viewID)
+		logger.Warnf("no user id in request context. user is anonymous, viewID: %s ", viewID)
 		userID = "anonymous"
 	}
 	channel := fmt.Sprintf("%s:%s", userID, viewID)

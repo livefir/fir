@@ -6,8 +6,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/livefir/fir/internal/logger"
 	"golang.org/x/exp/slices"
-	"k8s.io/klog/v2"
 )
 
 type readFileFunc func(string) (string, []byte, error)
@@ -80,14 +80,14 @@ func isDir(path string, opt routeOpt) bool {
 	if opt.hasEmbedFS {
 		fileInfo, err := fs.Stat(opt.embedFS, path)
 		if err != nil {
-			klog.Warningf("[warning]isDir warn: %v", err)
+			logger.Warnf("isDir: %v", err)
 			return false
 		}
 		return fileInfo.IsDir()
 	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		klog.Warningf("[warning]isDir error: %v", err)
+		logger.Warnf("isDir: %v", err)
 		return false
 	}
 

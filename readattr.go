@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/livefir/fir/internal/logger"
 	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
-	"k8s.io/klog/v2"
 )
 
 func readAttributes(fi fileInfo) fileInfo {
@@ -66,7 +66,7 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 
 		// [myevent:ok, myblock]
 		if len(eventnsParts) > 2 {
-			klog.Errorf(eventFormatError(eventns))
+			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
 
@@ -75,17 +75,17 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		// [myevent, ok]
 		eventIDParts := strings.SplitN(eventID, ":", -1)
 		if len(eventIDParts) != 2 {
-			klog.Errorf(eventFormatError(eventns))
+			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
 		// event name can only be followed by ok, error, pending, done
 		if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventIDParts[1]) {
-			klog.Errorf(eventFormatError(eventns))
+			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
 		// assert myevent:ok::myblock or myevent:error::myblock
 		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
-			klog.Errorf(eventFormatError(eventns))
+			logger.Errorf(eventFormatError(eventns))
 			continue
 
 		}
@@ -101,12 +101,12 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		}
 
 		if !templateNameRegex.MatchString(templateName) {
-			klog.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v\n", templateName)
+			logger.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v", templateName)
 			continue
 		}
 
 		templates[templateName] = struct{}{}
-		// fmt.Printf("eventID: %s, templateName: %s\n", eventID, templateName)
+		// fmt.Printf("eventID: %s, templateName: %s", eventID, templateName)
 
 		evt[eventID] = templates
 	}
@@ -120,7 +120,7 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 func getEventNsList(input string) ([]string, bool) {
 	ef, err := getEventFilter(input)
 	if err != nil {
-		klog.Warningf("error parsing event filter: %v", err)
+		logger.Errorf("error parsing event filter: %v", err)
 		return []string{input}, false
 	}
 	if ef == nil {

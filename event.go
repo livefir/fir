@@ -5,15 +5,14 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
-
-	"k8s.io/klog/v2"
+	"github.com/livefir/fir/internal/logger"
 )
 
 // NewEvent creates a new event
 func NewEvent(id string, params any) Event {
 	data, err := json.Marshal(params)
 	if err != nil {
-		klog.Errorf("error marshaling event params: %v, %v, %v \n,", id, params, err)
+		logger.Errorf("error marshaling event params: %v, %v, %v ,", id, params, err)
 		return Event{
 			ID: id,
 		}
