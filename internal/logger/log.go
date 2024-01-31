@@ -25,6 +25,11 @@ func replace(groups []string, a slog.Attr) slog.Attr {
 		source.File = filepath.Base(source.File)
 	}
 
+	// format time RFC3339 in utc
+	if a.Key == slog.TimeKey {
+		a.Value = slog.StringValue(a.Value.Time().UTC().Format(time.RFC3339))
+	}
+
 	return a
 }
 
