@@ -2,8 +2,17 @@ package fir
 
 import (
 	"html/template"
+	"reflect"
 	"testing"
+
+	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/internal/eventstate"
+	"github.com/patrickmn/go-cache"
 )
+
+func ptr(s string) *string {
+	return &s
+}
 
 func TestBuildTemplateValue(t *testing.T) {
 	// Test case 1: nil template
@@ -83,4 +92,86 @@ func TestTargetOrClassName(t *testing.T) {
 	if *result != expected {
 		t.Errorf("Expected result '%s', got: %s", expected, *result)
 	}
+}
+func TestGetUnsetErrorEvents(t *testing.T) {
+	// Test case 1: sessionID is nil
+	cch := cache.New(cache.NoExpiration, cache.NoExpiration)
+	sessionID := (*string)(nil)
+	events := []dom.Event{
+		{Type: ptr("error"), Target: ptr("target1"), State: eventstate.Error},
+		{Type: ptr("error"), Target: ptr("target2"), State: eventstate.Error},
+	}
+	result := getUnsetErrorEvents(cch, sessionID, events)
+	if result != nil {
+		t.Errorf("Expected nil result, got: %v", result)
+	}
+
+	// Test case 2: cch is nil
+	cch = nil
+	sessionID = ptr("session1")
+	events = []dom.Event{
+		{Type: ptr("error"), Target: ptr("target1"), State: eventstate.Error},
+		{Type: ptr("error"), Target: ptr("target2"), State: eventstate.Error},
+	}
+	result = getUnsetErrorEvents(cch, sessionID, events)
+	if result != nil {
+		t.Errorf("Expected nil result, got: %v", result)
+	}
+
+	// Test case 3: sessionID and cch are not nil
+	// Test case 3.1: no new errors, previous errors to unset
+	cch = cache.New(cache.NoExpiration, cache.NoExpiration)
+	sessionID = ptr("session1")
+	events = []dom.Event{}
+	cch.Set(*sessionID,
+		map[string]string{
+			"error": "target2",
+		}, cache.NoExpiration)
+
+	result = getUnsetErrorEvents(cch, sessionID, events)
+	expected := []dom.Event{
+		{Type: ptr("error"), Target: ptr("target2"), Detail: ""},
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected result %v, got: %v", expected, result)
+	}
+	// Test case 3.2: one new error, one previous error to unset
+	cch = cache.New(cache.NoExpiration, cache.NoExpiration)
+	sessionID = ptr("session1")
+	events = []dom.Event{
+		{Type: ptr("error"), Target: ptr("target1"), State: eventstate.Error},
+	}
+	cch.Set(*sessionID,
+		map[string]string{
+			"error2": "target2",
+		}, cache.NoExpiration)
+
+	result = getUnsetErrorEvents(cch, sessionID, events)
+
+	expected = []dom.Event{
+		{Type: ptr("error2"), Target: ptr("target2"), Detail: ""},
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected result %v, got: %v", expected, result)
+	}
+
+	// Test case 3.3: two new errors, nothing to unset
+	cch = cache.New(cache.NoExpiration, cache.NoExpiration)
+	sessionID = ptr("session1")
+	events = []dom.Event{
+		{Type: ptr("error"), Target: ptr("target1"), State: eventstate.Error},
+		{Type: ptr("error2"), Target: ptr("targe2"), State: eventstate.Error},
+	}
+	cch.Set(*sessionID,
+		map[string]string{
+			"error":  "target1",
+			"error2": "target2",
+		}, cache.NoExpiration)
+
+	result = getUnsetErrorEvents(cch, sessionID, events)
+
+	if len(result) != 0 {
+		t.Errorf("Expected empty result, got: %v", result)
+	}
+
 }

@@ -58,7 +58,7 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	}
 }
 
-// renderDOMEvents renders the DOM events for the given pubsub event.
+// renderDOMEvents renders the DOM events generated from incoming pubsub event.
 // the associated templates for the event are rendered and the dom events are returned.
 func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
@@ -78,9 +78,35 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 			return *ev
 		})
 	}
-	events := resultPool.Wait()
+	result := resultPool.Wait()
+	// filter out empty events
+	var events []dom.Event
+	for _, event := range result {
+		if event.Type == nil {
+			continue
+		}
+		events = append(events, event)
+	}
 
-	return trackErrors(ctx, pubsubEvent, events)
+	unsetErrorEvents := getUnsetErrorEvents(ctx.route.cache, pubsubEvent.SessionID, events)
+	events = append(events, unsetErrorEvents...)
+
+	if len(events) == 0 {
+		// if no events are generated, create a default event with the pubsub event data
+		// this is useful for events that don't have a template
+		eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
+		eventType := fir(eventIDWithState)
+		events = append(events, dom.Event{
+			ID:     *pubsubEvent.ID,
+			State:  pubsubEvent.State,
+			Type:   eventType,
+			Key:    pubsubEvent.ElementKey,
+			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
+			Detail: pubsubEvent.Detail,
+		})
+	}
+
+	return events
 }
 
 func targetOrClassName(target *string, className string) *string {
@@ -135,17 +161,15 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 
 }
 
-// trackErrors is a function that processes pubsub events and returns a list of DOM events.
-// It takes a RouteContext, a pubsub.Event, and a slice of dom.Event as input parameters.
-// It tracks errors by comparing the previous errors stored in the cache with the new errors received in the events.
-// The function updates the cache with the new errors and returns a list of new events.
-// If there are no new events, it creates a new event based on the pubsubEvent and adds it to the list.
-// The function returns the list of new events.
-func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event) []dom.Event {
+func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event) []dom.Event {
+	if sessionID == nil || cch == nil {
+		return nil
+	}
+
 	// get previously set errors from cache
 	prevErrors := make(map[string]string)
-	if pubsubEvent.SessionID != nil {
-		v, ok := ctx.route.cache.Get(*pubsubEvent.SessionID)
+	if sessionID != nil {
+		v, ok := cch.Get(*sessionID)
 		if ok {
 			prevErrors, ok = v.(map[string]string)
 			if !ok {
@@ -154,54 +178,42 @@ func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event)
 		}
 	}
 
-	// set new errors & add events to newEvents
-	newErrors := make(map[string]string)
-	var newEvents []dom.Event
-
+	// filter new errors
+	currErrors := make(map[string]string)
 	for _, event := range events {
 		if event.Type == nil {
 			continue
 		}
-		if event.State == eventstate.OK {
-			newEvents = append(newEvents, event)
+		if event.State != eventstate.Error {
 			continue
 		}
-		newErrors[*event.Type] = *event.Target
-		newEvents = append(newEvents, event)
+		currErrors[*event.Type] = *event.Target
 	}
-	// set new errors
-	if pubsubEvent.SessionID != nil {
-		ctx.route.cache.Set(*pubsubEvent.SessionID, newErrors, cache.DefaultExpiration)
+	// set new errors in cache
+	if sessionID != nil {
+		cch.Set(*sessionID, currErrors, cache.DefaultExpiration)
 	}
-	// unset previously set errors
+
+	// explicitly unset previously set errors that are not in new errors
+	// this means generating an event with empty detail
+	var newErrorEvents []dom.Event
 	for k, v := range prevErrors {
 		k := k
 		v := v
 		eventType := &k
 		target := v
-		if _, ok := newErrors[*eventType]; ok {
+		// if the error is not in curr errors, generate an event with empty detail
+		if _, ok := currErrors[*eventType]; ok {
 			continue
 		}
-		newEvents = append(newEvents, dom.Event{
+		newErrorEvents = append(newErrorEvents, dom.Event{
 			Type:   eventType,
 			Target: &target,
 			Detail: "",
 		})
 	}
 
-	if len(newEvents) == 0 {
-		eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
-		eventType := fir(eventIDWithState)
-		newEvents = append(newEvents, dom.Event{
-			ID:     *pubsubEvent.ID,
-			State:  pubsubEvent.State,
-			Type:   eventType,
-			Key:    pubsubEvent.ElementKey,
-			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-			Detail: pubsubEvent.Detail,
-		})
-	}
-	return newEvents
+	return newErrorEvents
 }
 
 func buildTemplateValue(t *template.Template, templateName string, data any) (string, error) {
