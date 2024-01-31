@@ -135,8 +135,15 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 
 }
 
+// trackErrors is a function that processes pubsub events and returns a list of DOM events.
+// It takes a RouteContext, a pubsub.Event, and a slice of dom.Event as input parameters.
+// It tracks errors by comparing the previous errors stored in the cache with the new errors received in the events.
+// The function updates the cache with the new errors and returns a list of new events.
+// If there are no new events, it creates a new event based on the pubsubEvent and adds it to the list.
+// The function returns the list of new events.
 func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event) []dom.Event {
-	var prevErrors map[string]string
+	// get previously set errors from cache
+	prevErrors := make(map[string]string)
 	if pubsubEvent.SessionID != nil {
 		v, ok := ctx.route.cache.Get(*pubsubEvent.SessionID)
 		if ok {
@@ -144,16 +151,13 @@ func trackErrors(ctx RouteContext, pubsubEvent pubsub.Event, events []dom.Event)
 			if !ok {
 				panic("fir: cache value is not a map[string]string")
 			}
-		} else {
-			prevErrors = make(map[string]string)
 		}
-	} else {
-		prevErrors = make(map[string]string)
 	}
 
+	// set new errors & add events to newEvents
 	newErrors := make(map[string]string)
 	var newEvents []dom.Event
-	// set new errors & add events to newEvents
+
 	for _, event := range events {
 		if event.Type == nil {
 			continue
