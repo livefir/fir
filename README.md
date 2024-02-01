@@ -24,4 +24,9 @@ open localhost:9867
 
 - https://blog.logrocket.com/building-reactive-web-app-go-fir/
 
+    - [Building a web application in Go with Fir | Part 1| youtube.com](https://www.youtube.com/watch?v=7hpXdG-Nw00)
+
 - https://bsky.app/profile/hrbrmstr.dev/post/3kk2f5eqxyk22
+
+    - https://dailydrop.hrbrmstr.dev/2024/01/29/drop-410-2024-01-29-your-real-time-app-stack/
+
