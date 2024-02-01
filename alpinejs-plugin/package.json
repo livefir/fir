@@ -23,11 +23,11 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.14.39",
+    "esbuild": "^0.14.54",
     "esbuild-serve": "^1.0.1"
   },
   "dependencies": {
-    "@alpinejs/morph": "^3.12.2",
-    "alpinejs": "^3.12.2"
+    "@alpinejs/morph": "^3.13.5",
+    "alpinejs": "^3.13.5"
   }
 }
