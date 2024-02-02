@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"slices"
+
 	"github.com/valyala/bytebufferpool"
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 

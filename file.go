@@ -6,8 +6,9 @@ import (
 	"path"
 	"path/filepath"
 
+	"slices"
+
 	"github.com/livefir/fir/internal/logger"
-	"golang.org/x/exp/slices"
 )
 
 type readFileFunc func(string) (string, []byte, error)

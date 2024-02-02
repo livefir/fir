@@ -5,9 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"slices"
+
 	"github.com/livefir/fir/internal/logger"
 	gitignore "github.com/sabhiram/go-gitignore"
-	"golang.org/x/exp/slices"
 )
 
 type publicOpt struct {
