@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
-	"golang.org/x/exp/slices"
 )
 
 // defaultWatchExtensions is an array of default extensions to watch for changes.

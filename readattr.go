@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	"slices"
+
 	"github.com/livefir/fir/internal/logger"
 	"github.com/sourcegraph/conc/pool"
-	"golang.org/x/exp/slices"
 	"golang.org/x/net/html"
 )
 

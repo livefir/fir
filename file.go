@@ -1,25 +1,27 @@
 package fir
 
 import (
+	"embed"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 
+	"slices"
+
 	"github.com/livefir/fir/internal/logger"
-	"golang.org/x/exp/slices"
 )
 
 type readFileFunc func(string) (string, []byte, error)
 type existFileFunc func(string) bool
 
-func find(opt routeOpt, path string, extensions []string) []string {
+func find(path string, extensions []string, embedfs *embed.FS) []string {
 	var files []string
 	var fi fs.FileInfo
 	var err error
 
-	if opt.hasEmbedFS {
-		fi, err = fs.Stat(opt.embedFS, path)
+	if embedfs != nil {
+		fi, err = fs.Stat(*embedfs, path)
 		if err != nil {
 			return files
 		}
@@ -38,8 +40,8 @@ func find(opt routeOpt, path string, extensions []string) []string {
 		return files
 	}
 
-	if opt.hasEmbedFS {
-		err = fs.WalkDir(opt.embedFS, path, func(path string, d fs.DirEntry, err error) error {
+	if embedfs != nil {
+		err = fs.WalkDir(*embedfs, path, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -76,9 +78,9 @@ func find(opt routeOpt, path string, extensions []string) []string {
 	return files
 }
 
-func isDir(path string, opt routeOpt) bool {
-	if opt.hasEmbedFS {
-		fileInfo, err := fs.Stat(opt.embedFS, path)
+func isDir(path string, embedfs *embed.FS) bool {
+	if embedfs != nil {
+		fileInfo, err := fs.Stat(*embedfs, path)
 		if err != nil {
 			logger.Warnf("isDir: %v", err)
 			return false
