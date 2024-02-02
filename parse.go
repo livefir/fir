@@ -23,7 +23,7 @@ func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*te
 			content)
 	}
 	// content must be  a file or directory
-	pageFiles := getPartials(opt, find(opt, pageContentPath, opt.extensions))
+	pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
 	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.funcMap)
 
 	return parseFiles(contentTemplate, opt.readFile, pageFiles...)
@@ -38,7 +38,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	}
 
 	// layout must be  a file
-	if isDir(pageLayoutPath, opt) {
+	if isDir(pageLayoutPath, opt.embedfs) {
 		return nil, evt, fmt.Errorf("layout %s is a directory but must be a file", pageLayoutPath)
 	}
 
@@ -91,7 +91,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 
 func getPartials(opt routeOpt, files []string) []string {
 	for _, partial := range opt.partials {
-		files = append(files, find(opt, filepath.Join(opt.publicDir, partial), opt.extensions)...)
+		files = append(files, find(filepath.Join(opt.publicDir, partial), opt.extensions, opt.embedfs)...)
 	}
 	return files
 }

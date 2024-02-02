@@ -41,8 +41,7 @@ type opt struct {
 	watchExts            []string
 	publicDir            string
 	developmentMode      bool
-	embedFS              embed.FS
-	hasEmbedFS           bool
+	embedfs              *embed.FS
 	readFile             readFileFunc
 	existFile            existFileFunc
 	pubsub               pubsub.Adapter
@@ -114,8 +113,7 @@ func WithWebsocketUpgrader(upgrader websocket.Upgrader) ControllerOption {
 // WithEmbedFS is an option to set the embed.FS for the controller.
 func WithEmbedFS(fs embed.FS) ControllerOption {
 	return func(o *opt) {
-		o.embedFS = fs
-		o.hasEmbedFS = true
+		o.embedfs = &fs
 	}
 }
 
@@ -242,9 +240,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 		go watchTemplates(c)
 	}
 
-	if c.hasEmbedFS {
-		c.readFile = readFileFS(c.embedFS)
-		c.existFile = existFileFS(c.embedFS)
+	if c.embedfs != nil {
+		c.readFile = readFileFS(*c.embedfs)
+		c.existFile = existFileFS(*c.embedfs)
 		fmt.Printf("read template files embedded in the binary")
 	} else {
 		c.readFile = readFileOS
