@@ -78,6 +78,12 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 
+	if sessionID == "" || routeID == "" {
+		logger.Errorf("err: sessionID: %v or routeID: %v is empty", sessionID, routeID)
+		RedirectUnauthorisedWebScoket(w, r, "/")
+		return
+	}
+
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.Errorf("upgrade err: %v", err)
@@ -104,6 +110,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	wg.Add(len(cntrl.routes))
 
 	for _, rt := range cntrl.routes {
+		rt := rt
 		go func(route *route) {
 			defer wg.Done()
 			routeChannel := route.channelFunc(r, route.id)
@@ -112,9 +119,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
+			route.channel = *routeChannel
 
-			// subscribers
-			subscription, err := route.pubsub.Subscribe(ctx, *routeChannel)
+			// subscribers: subscribe to pubsub events
+			subscription, err := route.pubsub.Subscribe(ctx, route.channel)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -128,11 +136,11 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					go renderAndWriteEvent(send, *routeChannel, routeCtx, pubsubEvent)
+					go renderAndWriteEvent(send, route.channel, routeCtx, pubsubEvent)
 				}
 			}()
 
-			// eventSender
+			// eventSenders: handle server events
 			go func() {
 				for event := range route.eventSender {
 					eventCtx := RouteContext{
@@ -156,7 +164,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					}
 
 					// ignore user store for server events
-					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, route.channel))
 				}
 			}()
 
@@ -242,13 +250,11 @@ loop:
 		eventSessionID, eventRouteID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, *event.SessionID)
 		if err != nil {
 			logger.Errorf("err: %v,  decoding session, closing connection", err)
-			RedirectUnauthorisedWebScoket(w, r, "/")
 			break loop
 		}
 
 		if eventSessionID != sessionID || eventRouteID != routeID {
 			logger.Errorf("err: event %v, unauthorised session", event)
-			RedirectUnauthorisedWebScoket(w, r, "/")
 			break loop
 		}
 
@@ -275,7 +281,8 @@ loop:
 			continue
 		}
 
-		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+		// handle user events
+		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, eventRoute.channel))
 	}
 	// close writers to send
 	close(done)

@@ -69,14 +69,16 @@ func WithFuncMap(funcMap template.FuncMap) ControllerOption {
 	}
 }
 
-func WithSecureCookie(s *securecookie.SecureCookie) ControllerOption {
+// WithSessionSecrets is an option to set the session secrets for the controller.
+// used to sign and encrypt the session cookie.
+func WithSessionSecrets(hashKey []byte, blockKey []byte) ControllerOption {
 	return func(o *opt) {
-		o.secureCookie = s
+		o.secureCookie = securecookie.New(hashKey, blockKey)
 	}
 }
 
-// WithCookieName is an option to set the cookie session name for the controller.
-func WithCookieName(name string) ControllerOption {
+// WithSessionName is an option to set the session name/cookie name for the controller.
+func WithSessionName(name string) ControllerOption {
 	return func(o *opt) {
 		o.cookieName = name
 	}

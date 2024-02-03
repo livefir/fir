@@ -6,7 +6,7 @@ const Plugin = (Alpine) => {
         return document.cookie
             .split('; ')
             .find((row) => row.startsWith('_fir_session_='))
-            ?.split('=')[1]
+            ?.substring(14)
     }
 
     // connect to websocket
