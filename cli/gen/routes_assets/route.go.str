@@ -1,0 +1,15 @@
+package routes
+
+import (
+	"github.com/livefir/fir"
+)
+
+func [[.route]]() fir.RouteOptions {
+	return fir.RouteOptions{
+		fir.Content("./routes/[[.routeLower]].html"),
+		fir.Layout("./routes/layout.html"),
+		fir.OnLoad(func(ctx fir.RouteContext) error {
+			return ctx.Data(map[string]any{"title": "[[.route]]"})
+		}),
+	}
+}

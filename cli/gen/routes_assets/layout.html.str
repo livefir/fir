@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>
+            {{ .app_name }}
+        </title>
+        <meta charset="UTF-8" />
+        <meta name="description" content=">{{ .app_name }}" />
+        <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        {{ template "content" . }}
+    </body>
+</html>

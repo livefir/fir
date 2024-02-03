@@ -11,14 +11,18 @@
 
 [How it works](https://adnaan.notion.site/Fir-2358531aced84bf1b0b1a687760fff3b)
 
-To generate a new simple project using the cli:
+You don't need this to get started but the the cli can be used to generate the boilerplate:
 
 ```go
-go run github.com/livefir/fir/cli new // generates a folder named quickstart
+go run github.com/livefir/fir/cli gen project -n quickstart // generates a folder named quickstart
 cd quickstart
 go run main.go
 open localhost:9867
+
+go run github.com/livefir/fir/cli gen route -n index // generates a new route
 ```
+
+
 
 ## Community
 

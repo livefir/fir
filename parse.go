@@ -75,7 +75,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		}
 		return pageTemplate, evt, nil
 	} else {
-		pageFiles := getPartials(opt, []string{pageContentPath})
+		pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
 		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.funcMap), opt.readFile, pageFiles...)
 		if err != nil {
 			panic(err)

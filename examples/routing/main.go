@@ -10,6 +10,9 @@ func home() fir.RouteOptions {
 	return fir.RouteOptions{
 		fir.Content("./routes/page.html"),
 		fir.Layout("./routes/layout.html"),
+		fir.OnLoad(func(ctx fir.RouteContext) error {
+			return ctx.Data(map[string]any{"title": "Home"})
+		}),
 	}
 }
 
