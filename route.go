@@ -198,6 +198,11 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
 		channel := eventCtx.route.channelFunc(eventCtx.request, eventCtx.route.id)
+		if channel == nil {
+			logger.Errorf("error: channel is empty")
+			http.Error(eventCtx.response, "channel is empty", http.StatusUnauthorized)
+			return nil
+		}
 		err := eventCtx.route.pubsub.Publish(ctx, *channel, pubsubEvent)
 		if err != nil {
 			logger.Errorf("error publishing patch: %v", err)
@@ -210,6 +215,11 @@ func publishEvents(ctx context.Context, eventCtx RouteContext) eventPublisher {
 func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
 		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
+		if channel == nil {
+			logger.Errorf("error: channel is empty")
+			http.Error(ctx.response, "channel is empty", http.StatusUnauthorized)
+			return nil
+		}
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
 			logger.Errorf("error publishing patch: %v", err)

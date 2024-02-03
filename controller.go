@@ -191,7 +191,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 	})
 
 	o := &opt{
-		channelFunc: defaultChannelFunc,
 		websocketUpgrader: websocket.Upgrader{
 			EnableCompression: true,
 			ReadBufferSize:    256,
@@ -253,6 +252,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 	md := markdown(c.readFile, c.existFile)
 	c.funcMap["markdown"] = md
 	c.funcMap["md"] = md
+	c.opt.channelFunc = c.defaultChannelFunc
 
 	return c
 }

@@ -64,6 +64,20 @@ func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redir
 }
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
+
+	cookie, err := r.Cookie(cntrl.cookieName)
+	if err != nil {
+		logger.Errorf("cookie err: %v", err)
+		RedirectUnauthorisedWebScoket(w, r, "/")
+		return
+	}
+	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
+	if err != nil {
+		logger.Errorf("decode session err: %v", err)
+		RedirectUnauthorisedWebScoket(w, r, "/")
+		return
+	}
+
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.Errorf("upgrade err: %v", err)
@@ -127,7 +141,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					logger.Errorf("received server event: %+v", event)
+
+					withEventLogger := logger.Logger().
+						With(
+							"route_id", route.id,
+							"event_id", event.ID,
+							"session_id", sessionID,
+						)
+					withEventLogger.Info("received server event")
 					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 					if !ok {
 						logger.Errorf("err: event %v, event.id not found", event)
@@ -218,13 +239,20 @@ loop:
 
 		lastEvent = event
 
-		// var routeID string
-		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
-		// 	logger.Errorf("err: event %v, cookie decode error: %v", event, err)
-		// 	continue
-		// }
+		eventSessionID, eventRouteID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, *event.SessionID)
+		if err != nil {
+			logger.Errorf("err: %v,  decoding session, closing connection", err)
+			RedirectUnauthorisedWebScoket(w, r, "/")
+			break loop
+		}
 
-		eventRoute := cntrl.routes[*event.SessionID]
+		if eventSessionID != sessionID || eventRouteID != routeID {
+			logger.Errorf("err: event %v, unauthorised session", event)
+			RedirectUnauthorisedWebScoket(w, r, "/")
+			break loop
+		}
+
+		eventRoute := cntrl.routes[eventRouteID]
 
 		eventCtx := RouteContext{
 			event:    event,
@@ -235,12 +263,12 @@ loop:
 
 		withEventLogger := logger.Logger().
 			With(
-				"route", eventRoute.id,
+				"route_id", eventRoute.id,
 				"event_id", event.ID,
-				"session_id", *event.SessionID,
+				"session_id", eventSessionID,
 				"element_key", event.ElementKey,
 			)
-		withEventLogger.Info("received event")
+		withEventLogger.Info("received user event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			logger.Errorf("err: event %v, event.id not found", event)

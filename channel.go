@@ -8,7 +8,7 @@ import (
 	"github.com/livefir/fir/internal/logger"
 )
 
-func defaultChannelFunc(r *http.Request, viewID string) *string {
+func (cntrl *controller) defaultChannelFunc(r *http.Request, viewID string) *string {
 	if viewID == "" {
 		viewID = "root"
 		if r.URL.Path != "/" {
@@ -16,10 +16,19 @@ func defaultChannelFunc(r *http.Request, viewID string) *string {
 		}
 	}
 
-	userID, ok := r.Context().Value(UserKey).(string)
-	if !ok || userID == "" {
-		logger.Warnf("no user id in request context. user is anonymous, viewID: %s ", viewID)
-		userID = "anonymous"
+	userID, _ := r.Context().Value(UserKey).(string)
+	if userID == "" {
+		cookie, err := r.Cookie(cntrl.opt.cookieName)
+		if err != nil {
+			logger.Errorf("decode session err: %v, can't join channel", err)
+			return nil
+		}
+		sessionID, _, err := decodeSession(*cntrl.opt.secureCookie, cntrl.opt.cookieName, cookie.Value)
+		if err != nil {
+			logger.Errorf("decode session err: %v, can't join channel", err)
+			return nil
+		}
+		userID = sessionID
 	}
 	channel := fmt.Sprintf("%s:%s", userID, viewID)
 	return &channel
