@@ -1,11 +1,10 @@
-package entgo
+package gen
 
 import (
 	"bytes"
 	"embed"
 	"go/format"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,7 +20,7 @@ var simpleAssetsPath = "simple_assets"
 //go:embed simple_assets/*
 var simpleAssets embed.FS
 
-func New(projectName string) {
+func NewQuickstart(projectName string) {
 	fs.WalkDir(simpleAssets, simpleAssetsPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			log.Fatal(err)
@@ -65,7 +64,7 @@ func execTextTemplate(inFile, outFile string, vars map[string]any) {
 		inFileData = buf.Bytes()
 	}
 
-	err = ioutil.WriteFile(outFile, inFileData, 0644)
+	err = os.WriteFile(outFile, inFileData, 0644)
 	checkerr(err)
 	buf.Reset()
 }
