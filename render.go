@@ -3,7 +3,6 @@ package fir
 import (
 	"fmt"
 	"html/template"
-	"net/http"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
@@ -40,20 +39,17 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			return err
 		}
 
-		// encodedRouteID, err := ctx.route.cntrl.secureCookie.Encode(ctx.route.cookieName, ctx.route.id)
-		// if err != nil {
-		// 	logger.Errorf("error encoding cookie: %v", err)
-		// 	return err
-		// }
+		err = encodeSession(ctx.route.routeOpt, ctx.response, ctx.request)
+		if err != nil {
+			logger.Errorf("error encoding session: %v", err)
+			return err
+		}
 
-		http.SetCookie(ctx.response, &http.Cookie{
-			Name:   ctx.route.cookieName,
-			Value:  ctx.route.id,
-			MaxAge: 0,
-			Path:   "/",
-		})
-
-		ctx.response.Write(addAttributes(buf.Bytes()))
+		_, err = ctx.response.Write(addAttributes(buf.Bytes()))
+		if err != nil {
+			logger.Errorf("error writing response: %v", err)
+			return err
+		}
 		return nil
 	}
 }

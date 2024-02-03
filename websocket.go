@@ -64,6 +64,26 @@ func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redir
 }
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
+
+	cookie, err := r.Cookie(cntrl.cookieName)
+	if err != nil {
+		logger.Errorf("cookie err: %v", err)
+		RedirectUnauthorisedWebScoket(w, r, "/")
+		return
+	}
+	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
+	if err != nil {
+		logger.Errorf("decode session err: %v", err)
+		RedirectUnauthorisedWebScoket(w, r, "/")
+		return
+	}
+
+	if sessionID == "" || routeID == "" {
+		logger.Errorf("err: sessionID: %v or routeID: %v is empty", sessionID, routeID)
+		RedirectUnauthorisedWebScoket(w, r, "/")
+		return
+	}
+
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.Errorf("upgrade err: %v", err)
@@ -90,6 +110,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	wg.Add(len(cntrl.routes))
 
 	for _, rt := range cntrl.routes {
+		rt := rt
 		go func(route *route) {
 			defer wg.Done()
 			routeChannel := route.channelFunc(r, route.id)
@@ -98,9 +119,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
+			route.channel = *routeChannel
 
-			// subscribers
-			subscription, err := route.pubsub.Subscribe(ctx, *routeChannel)
+			// subscribers: subscribe to pubsub events
+			subscription, err := route.pubsub.Subscribe(ctx, route.channel)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -114,11 +136,11 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					go renderAndWriteEvent(send, *routeChannel, routeCtx, pubsubEvent)
+					go renderAndWriteEvent(send, route.channel, routeCtx, pubsubEvent)
 				}
 			}()
 
-			// eventSender
+			// eventSenders: handle server events
 			go func() {
 				for event := range route.eventSender {
 					eventCtx := RouteContext{
@@ -127,7 +149,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					logger.Errorf("received server event: %+v", event)
+
+					withEventLogger := logger.Logger().
+						With(
+							"route_id", route.id,
+							"event_id", event.ID,
+							"session_id", sessionID,
+						)
+					withEventLogger.Info("received server event")
 					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 					if !ok {
 						logger.Errorf("err: event %v, event.id not found", event)
@@ -135,7 +164,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					}
 
 					// ignore user store for server events
-					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, route.channel))
 				}
 			}()
 
@@ -218,13 +247,18 @@ loop:
 
 		lastEvent = event
 
-		// var routeID string
-		// if err = cntrl.secureCookie.Decode(cntrl.cookieName, *event.SessionID, &routeID); err != nil {
-		// 	logger.Errorf("err: event %v, cookie decode error: %v", event, err)
-		// 	continue
-		// }
+		eventSessionID, eventRouteID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, *event.SessionID)
+		if err != nil {
+			logger.Errorf("err: %v,  decoding session, closing connection", err)
+			break loop
+		}
 
-		eventRoute := cntrl.routes[*event.SessionID]
+		if eventSessionID != sessionID || eventRouteID != routeID {
+			logger.Errorf("err: event %v, unauthorised session", event)
+			break loop
+		}
+
+		eventRoute := cntrl.routes[eventRouteID]
 
 		eventCtx := RouteContext{
 			event:    event,
@@ -235,19 +269,20 @@ loop:
 
 		withEventLogger := logger.Logger().
 			With(
-				"route", eventRoute.id,
+				"route_id", eventRoute.id,
 				"event_id", event.ID,
-				"session_id", *event.SessionID,
+				"session_id", eventSessionID,
 				"element_key", event.ElementKey,
 			)
-		withEventLogger.Info("received event")
+		withEventLogger.Info("received user event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			logger.Errorf("err: event %v, event.id not found", event)
 			continue
 		}
 
-		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx))
+		// handle user events
+		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, eventRoute.channel))
 	}
 	// close writers to send
 	close(done)
