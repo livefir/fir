@@ -29,13 +29,13 @@ func decodeSession(sc securecookie.SecureCookie, cookieName, cookieValue string)
 }
 
 func encodeSession(opt routeOpt, w http.ResponseWriter, r *http.Request) error {
+	var sessionID string
 	cookie, err := r.Cookie(opt.cookieName)
-	if err != nil {
-		return err
-	}
-	sessionID, _, _ := decodeSession(*opt.secureCookie, opt.cookieName, cookie.Value)
-	if sessionID == "" {
-		sessionID = uuid.New().String()
+	if err == nil && cookie != nil {
+		sessionID, _, _ = decodeSession(*opt.secureCookie, opt.cookieName, cookie.Value)
+		if sessionID == "" {
+			sessionID = uuid.New().String()
+		}
 	}
 
 	session := sessionID + ":" + opt.id
