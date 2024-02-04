@@ -210,9 +210,17 @@ func (c RouteContext) Status(code int, err error) error {
 }
 
 func (c RouteContext) GetUserFromContext() string {
-	user, ok := c.request.Context().Value(UserKey).(string)
-	if !ok {
+	user := getUserFromRequestContext(c.request)
+	if user == "" {
 		panic("user not found in context")
+	}
+	return user
+}
+
+func getUserFromRequestContext(r *http.Request) string {
+	user, ok := r.Context().Value(UserKey).(string)
+	if !ok {
+		return ""
 	}
 	return user
 }

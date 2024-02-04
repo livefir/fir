@@ -84,6 +84,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 
+	user := getUserFromRequestContext(r)
+
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.Errorf("upgrade err: %v", err)
@@ -164,6 +166,9 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					}
 
 					// ignore user store for server events
+					// update request context with user
+					eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, user))
+
 					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, route.channel))
 				}
 			}()
