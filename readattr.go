@@ -199,6 +199,9 @@ func isValidValue(value string) bool {
 
 func formatValue(value string) string {
 	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		return value
+	}
 	return fmt.Sprintf("%s:%s", parts[0], parts[1])
 }
 
