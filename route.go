@@ -198,6 +198,7 @@ type route struct {
 	errorTemplate  *template.Template
 	eventTemplates eventTemplates
 	channel        string
+	channelMutex   *sync.RWMutex
 
 	cntrl *controller
 	routeOpt
@@ -210,6 +211,7 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 		routeOpt:       *routeOpt,
 		cntrl:          cntrl,
 		eventTemplates: make(eventTemplates),
+		channelMutex:   &sync.RWMutex{},
 	}
 	rt.parseTemplates()
 	return rt
@@ -248,6 +250,20 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		ctx.response.Write(eventsData)
 		return nil
 	}
+}
+
+// set route channel concurrency safe
+func (rt *route) setChannel(channel string) {
+	rt.channelMutex.Lock()
+	defer rt.channelMutex.Unlock()
+	rt.channel = channel
+}
+
+// get route channel concurrency safe
+func (rt *route) getChannel() string {
+	rt.channelMutex.RLock()
+	defer rt.channelMutex.RUnlock()
+	return rt.channel
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
