@@ -21,9 +21,9 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
-		tmpl := ctx.route.template
+		tmpl := ctx.route.getTemplate()
 		if errorRouteTemplate {
-			tmpl = ctx.route.errorTemplate
+			tmpl = ctx.route.getErrorTemplate()
 		}
 		var errs map[string]any
 		errMap, ok := data["errors"]
@@ -59,7 +59,7 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
 	var templateNames []string
-	for k := range ctx.route.eventTemplates[eventIDWithState] {
+	for k := range ctx.route.getEventTemplates()[eventIDWithState] {
 		templateNames = append(templateNames, k)
 	}
 
@@ -127,7 +127,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 	eventType := fir(eventIDWithState, templateName)
 	templateData := pubsubEvent.Detail
-	routeTemplate := ctx.route.template.Funcs(newFirFuncMap(ctx, nil))
+	routeTemplate := ctx.route.getTemplate().Funcs(newFirFuncMap(ctx, nil))
 	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
 		errs, ok := pubsubEvent.Detail.(map[string]any)
 		if !ok {

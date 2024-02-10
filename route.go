@@ -198,7 +198,6 @@ type route struct {
 	errorTemplate  *template.Template
 	eventTemplates eventTemplates
 	channel        string
-	channelMutex   *sync.RWMutex
 
 	cntrl *controller
 	routeOpt
@@ -211,7 +210,6 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
 		routeOpt:       *routeOpt,
 		cntrl:          cntrl,
 		eventTemplates: make(eventTemplates),
-		channelMutex:   &sync.RWMutex{},
 	}
 	rt.parseTemplates()
 	return rt
@@ -254,16 +252,59 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 
 // set route channel concurrency safe
 func (rt *route) setChannel(channel string) {
-	rt.channelMutex.Lock()
-	defer rt.channelMutex.Unlock()
+	rt.Lock()
+	defer rt.Unlock()
 	rt.channel = channel
 }
 
 // get route channel concurrency safe
 func (rt *route) getChannel() string {
-	rt.channelMutex.RLock()
-	defer rt.channelMutex.RUnlock()
+	rt.RLock()
+	defer rt.RUnlock()
 	return rt.channel
+}
+
+// set route template concurrency safe
+func (rt *route) setTemplate(t *template.Template) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.template = t
+}
+
+// get route template concurrency safe
+
+func (rt *route) getTemplate() *template.Template {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.template
+}
+
+// set route error template concurrency safe
+func (rt *route) setErrorTemplate(t *template.Template) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.errorTemplate = t
+}
+
+// get route error template concurrency safe
+func (rt *route) getErrorTemplate() *template.Template {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.errorTemplate
+}
+
+// set event templates concurrency safe
+func (rt *route) setEventTemplates(templates eventTemplates) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.eventTemplates = templates
+}
+
+// get event templates concurrency safe
+func (rt *route) getEventTemplates() eventTemplates {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.eventTemplates
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -627,20 +668,25 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 
 func (rt *route) parseTemplates() {
 	var err error
-	if rt.template == nil || (rt.template != nil && rt.disableTemplateCache) {
+	if rt.getTemplate() == nil || (rt.getTemplate() != nil && rt.disableTemplateCache) {
 		var successEventTemplates eventTemplates
-		rt.template, successEventTemplates, err = parseTemplate(rt.routeOpt)
+		var rtTemplate *template.Template
+		rtTemplate, successEventTemplates, err = parseTemplate(rt.routeOpt)
 		if err != nil {
 			panic(err)
 		}
-		var errorEventTemplates eventTemplates
-		rt.errorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
-		if err != nil {
-			panic(err)
-		}
+		rt.setTemplate(rtTemplate)
 
-		rt.eventTemplates = deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
-		for eventID, templates := range rt.eventTemplates {
+		var errorEventTemplates eventTemplates
+		var rtErrorTemplate *template.Template
+		rtErrorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
+		if err != nil {
+			panic(err)
+		}
+		rt.setErrorTemplate(rtErrorTemplate)
+
+		rtEventTemplates := deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
+		for eventID, templates := range rt.getEventTemplates() {
 			var templatesStr string
 			for k := range templates {
 				if k == "-" {
@@ -650,6 +696,7 @@ func (rt *route) parseTemplates() {
 			}
 			fmt.Println("eventID: ", eventID, " templates: ", templatesStr)
 		}
+		rt.setEventTemplates(rtEventTemplates)
 
 	}
 }
