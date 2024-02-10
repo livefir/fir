@@ -116,14 +116,7 @@ func Extensions(extensions ...string) RouteOption {
 // FuncMap appends to the default template function map for the route's template engine
 func FuncMap(funcMap template.FuncMap) RouteOption {
 	return func(opt *routeOpt) {
-		mergedFuncMap := make(template.FuncMap)
-		for k, v := range opt.funcMap {
-			mergedFuncMap[k] = v
-		}
-		for k, v := range funcMap {
-			mergedFuncMap[k] = v
-		}
-		opt.funcMap = mergedFuncMap
+		opt.mergeFuncMap(funcMap)
 	}
 }
 
@@ -168,10 +161,36 @@ type routeOpt struct {
 	partials               []string
 	extensions             []string
 	funcMap                template.FuncMap
+	funcMapMutex           *sync.RWMutex
 	eventSender            chan Event
 	onLoad                 OnEventFunc
 	onEvents               map[string]OnEventFunc
 	opt
+}
+
+// add func to funcMap
+func (opt *routeOpt) addFunc(key string, f any) {
+	opt.funcMapMutex.Lock()
+	defer opt.funcMapMutex.Unlock()
+
+	opt.funcMap[key] = f
+}
+
+// mergeFuncMap merges a value to the funcMap in a concurrency safe way.
+func (opt *routeOpt) mergeFuncMap(funcMap template.FuncMap) {
+	opt.funcMapMutex.Lock()
+	defer opt.funcMapMutex.Unlock()
+	for k, v := range funcMap {
+		opt.funcMap[k] = v
+	}
+}
+
+// getFuncMap lists the funcMap in a concurrency safe way.
+func (opt *routeOpt) getFuncMap() template.FuncMap {
+	opt.funcMapMutex.Lock()
+	defer opt.funcMapMutex.Unlock()
+
+	return opt.funcMap
 }
 
 type route struct {
