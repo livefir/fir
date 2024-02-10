@@ -277,6 +277,7 @@ func (c *controller) defaults() *routeOpt {
 		onLoad: func(ctx RouteContext) error {
 			return nil
 		},
+		funcMapMutex: &sync.RWMutex{},
 	}
 	return defaultRouteOpt
 }

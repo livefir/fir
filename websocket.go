@@ -121,10 +121,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
-			route.channel = *routeChannel
+			route.setChannel(*routeChannel)
 
 			// subscribers: subscribe to pubsub events
-			subscription, err := route.pubsub.Subscribe(ctx, route.channel)
+			subscription, err := route.pubsub.Subscribe(ctx, route.getChannel())
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -138,7 +138,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 						response: w,
 						route:    route,
 					}
-					go renderAndWriteEvent(send, route.channel, routeCtx, pubsubEvent)
+					go renderAndWriteEvent(send, route.getChannel(), routeCtx, pubsubEvent)
 				}
 			}()
 
@@ -169,7 +169,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					// update request context with user
 					eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, user))
 
-					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, route.channel))
+					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, route.getChannel()))
 				}
 			}()
 
@@ -287,7 +287,7 @@ loop:
 		}
 
 		// handle user events
-		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, eventRoute.channel))
+		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, eventRoute.getChannel()))
 	}
 	// close writers to send
 	close(done)

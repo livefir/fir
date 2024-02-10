@@ -116,14 +116,7 @@ func Extensions(extensions ...string) RouteOption {
 // FuncMap appends to the default template function map for the route's template engine
 func FuncMap(funcMap template.FuncMap) RouteOption {
 	return func(opt *routeOpt) {
-		mergedFuncMap := make(template.FuncMap)
-		for k, v := range opt.funcMap {
-			mergedFuncMap[k] = v
-		}
-		for k, v := range funcMap {
-			mergedFuncMap[k] = v
-		}
-		opt.funcMap = mergedFuncMap
+		opt.mergeFuncMap(funcMap)
 	}
 }
 
@@ -168,10 +161,36 @@ type routeOpt struct {
 	partials               []string
 	extensions             []string
 	funcMap                template.FuncMap
+	funcMapMutex           *sync.RWMutex
 	eventSender            chan Event
 	onLoad                 OnEventFunc
 	onEvents               map[string]OnEventFunc
 	opt
+}
+
+// add func to funcMap
+func (opt *routeOpt) addFunc(key string, f any) {
+	opt.funcMapMutex.Lock()
+	defer opt.funcMapMutex.Unlock()
+
+	opt.funcMap[key] = f
+}
+
+// mergeFuncMap merges a value to the funcMap in a concurrency safe way.
+func (opt *routeOpt) mergeFuncMap(funcMap template.FuncMap) {
+	opt.funcMapMutex.Lock()
+	defer opt.funcMapMutex.Unlock()
+	for k, v := range funcMap {
+		opt.funcMap[k] = v
+	}
+}
+
+// getFuncMap lists the funcMap in a concurrency safe way.
+func (opt *routeOpt) getFuncMap() template.FuncMap {
+	opt.funcMapMutex.Lock()
+	defer opt.funcMapMutex.Unlock()
+
+	return opt.funcMap
 }
 
 type route struct {
@@ -229,6 +248,63 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		ctx.response.Write(eventsData)
 		return nil
 	}
+}
+
+// set route channel concurrency safe
+func (rt *route) setChannel(channel string) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.channel = channel
+}
+
+// get route channel concurrency safe
+func (rt *route) getChannel() string {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.channel
+}
+
+// set route template concurrency safe
+func (rt *route) setTemplate(t *template.Template) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.template = t
+}
+
+// get route template concurrency safe
+
+func (rt *route) getTemplate() *template.Template {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.template
+}
+
+// set route error template concurrency safe
+func (rt *route) setErrorTemplate(t *template.Template) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.errorTemplate = t
+}
+
+// get route error template concurrency safe
+func (rt *route) getErrorTemplate() *template.Template {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.errorTemplate
+}
+
+// set event templates concurrency safe
+func (rt *route) setEventTemplates(templates eventTemplates) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.eventTemplates = templates
+}
+
+// get event templates concurrency safe
+func (rt *route) getEventTemplates() eventTemplates {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.eventTemplates
 }
 
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -592,20 +668,25 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 
 func (rt *route) parseTemplates() {
 	var err error
-	if rt.template == nil || (rt.template != nil && rt.disableTemplateCache) {
+	if rt.getTemplate() == nil || (rt.getTemplate() != nil && rt.disableTemplateCache) {
 		var successEventTemplates eventTemplates
-		rt.template, successEventTemplates, err = parseTemplate(rt.routeOpt)
+		var rtTemplate *template.Template
+		rtTemplate, successEventTemplates, err = parseTemplate(rt.routeOpt)
 		if err != nil {
 			panic(err)
 		}
-		var errorEventTemplates eventTemplates
-		rt.errorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
-		if err != nil {
-			panic(err)
-		}
+		rt.setTemplate(rtTemplate)
 
-		rt.eventTemplates = deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
-		for eventID, templates := range rt.eventTemplates {
+		var errorEventTemplates eventTemplates
+		var rtErrorTemplate *template.Template
+		rtErrorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
+		if err != nil {
+			panic(err)
+		}
+		rt.setErrorTemplate(rtErrorTemplate)
+
+		rtEventTemplates := deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
+		for eventID, templates := range rt.getEventTemplates() {
 			var templatesStr string
 			for k := range templates {
 				if k == "-" {
@@ -615,6 +696,7 @@ func (rt *route) parseTemplates() {
 			}
 			fmt.Println("eventID: ", eventID, " templates: ", templatesStr)
 		}
+		rt.setEventTemplates(rtEventTemplates)
 
 	}
 }

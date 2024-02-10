@@ -19,12 +19,12 @@ func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*te
 		return parseString(
 			template.New(
 				layoutContentName).
-				Funcs(opt.funcMap),
+				Funcs(opt.getFuncMap()),
 			content)
 	}
 	// content must be  a file or directory
 	pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
-	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.funcMap)
+	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.getFuncMap())
 
 	return parseFiles(contentTemplate, opt.readFile, pageFiles...)
 }
@@ -34,7 +34,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	evt := make(eventTemplates)
 	// is layout html content or a file/directory
 	if !opt.existFile(pageLayoutPath) {
-		return parseString(template.New("").Funcs(opt.funcMap), layout)
+		return parseString(template.New("").Funcs(opt.getFuncMap()), layout)
 	}
 
 	// layout must be  a file
@@ -44,7 +44,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 
 	// compile layout
 	commonFiles := getPartials(opt, []string{pageLayoutPath})
-	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.funcMap)
+	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.getFuncMap())
 
 	return parseFiles(template.Must(layoutTemplate.Clone()), opt.readFile, commonFiles...)
 }
@@ -76,7 +76,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		return pageTemplate, evt, nil
 	} else {
 		pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
-		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.funcMap), opt.readFile, pageFiles...)
+		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.readFile, pageFiles...)
 		if err != nil {
 			panic(err)
 		}
@@ -106,7 +106,7 @@ func checkPageContent(tmpl *template.Template, layoutContentName string) error {
 
 // creates a html/template for the route
 func parseTemplate(opt routeOpt) (*template.Template, eventTemplates, error) {
-	opt.funcMap["fir"] = newFirFuncMap(RouteContext{}, nil)["fir"]
+	opt.addFunc("fir", newFirFuncMap(RouteContext{}, nil)["fir"])
 
 	// if both layout and content is empty show a default page.
 	if opt.layout == "" && opt.content == "" {
@@ -130,7 +130,7 @@ func parseTemplate(opt routeOpt) (*template.Template, eventTemplates, error) {
 
 // creates a html/template for the route errors
 func parseErrorTemplate(opt routeOpt) (*template.Template, eventTemplates, error) {
-	opt.funcMap["fir"] = newFirFuncMap(RouteContext{}, nil)["fir"]
+	opt.addFunc("fir", newFirFuncMap(RouteContext{}, nil)["fir"])
 	if opt.errorLayout == "" {
 		opt.errorLayout = opt.layout
 		opt.errorLayoutContentName = opt.layoutContentName
