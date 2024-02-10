@@ -224,7 +224,6 @@ func buildTemplateValue(t *template.Template, templateName string, data any) (st
 	if templateName == "_fir_html" {
 		dataBuf.WriteString(data.(string))
 	} else {
-		t.Option("missingkey=zero")
 		err := t.ExecuteTemplate(dataBuf, templateName, data)
 		if err != nil {
 			return "", err
