@@ -136,6 +136,15 @@ const Plugin = (Alpine) => {
                     removeElement(el, eventDetail)
                 }
             },
+            removeParentEl(detail) {
+                return function (event) {
+                    let eventDetail = event.detail
+                    if (detail) {
+                        eventDetail = detail
+                    }
+                    removeParentElement(el, eventDetail)
+                }
+            },
             emit(id, params, target) {
                 return function (event) {
                     if (id) {
@@ -363,6 +372,10 @@ const Plugin = (Alpine) => {
 
     const removeElement = (el) => {
         el.remove()
+    }
+
+    const removeParentElement = (el) => {
+        el.parentElement.remove()
     }
 
     const dispatchServerEvents = (serverEvents) => {
