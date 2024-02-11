@@ -3,7 +3,7 @@ module github.com/livefir/fir
 go 1.22
 
 require (
-	entgo.io/ent v0.12.3
+	entgo.io/ent v0.13.0
 	github.com/13rac1/goldmark-embed v0.0.0-20201220231550-e6806f2de66a
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alecthomas/chroma v0.10.0
@@ -12,16 +12,16 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/structs v1.1.0
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-chi/chi/v5 v5.0.8
+	github.com/go-chi/chi/v5 v5.0.11
 	github.com/go-playground/validator/v10 v10.17.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/schema v1.2.1
 	github.com/gorilla/securecookie v1.1.2
-	github.com/gorilla/websocket v1.5.1
+	github.com/gorilla/websocket v1.5.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/minio/sha256-simd v1.0.1
 	github.com/mitchellh/go-server-timing v1.0.1
 	github.com/ory/client-go v1.1.41
@@ -41,7 +41,7 @@ require (
 )
 
 require (
-	ariga.io/atlas v0.12.0 // indirect
+	ariga.io/atlas v0.19.1-0.20240203083654-5948b60a8e43 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
@@ -61,7 +61,7 @@ require (
 	github.com/gobwas/ws v1.2.1 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.17.0 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
