@@ -266,44 +266,32 @@ func (rt *route) getChannel() string {
 
 // set route template concurrency safe
 func (rt *route) setTemplate(t *template.Template) {
-	rt.Lock()
-	defer rt.Unlock()
 	rt.template = t
 }
 
 // get route template concurrency safe
 
 func (rt *route) getTemplate() *template.Template {
-	rt.RLock()
-	defer rt.RUnlock()
 	return rt.template
 }
 
 // set route error template concurrency safe
 func (rt *route) setErrorTemplate(t *template.Template) {
-	rt.Lock()
-	defer rt.Unlock()
 	rt.errorTemplate = t
 }
 
 // get route error template concurrency safe
 func (rt *route) getErrorTemplate() *template.Template {
-	rt.RLock()
-	defer rt.RUnlock()
 	return rt.errorTemplate
 }
 
 // set event templates concurrency safe
 func (rt *route) setEventTemplates(templates eventTemplates) {
-	rt.Lock()
-	defer rt.Unlock()
 	rt.eventTemplates = templates
 }
 
 // get event templates concurrency safe
 func (rt *route) getEventTemplates() eventTemplates {
-	rt.RLock()
-	defer rt.RUnlock()
 	return rt.eventTemplates
 }
 
@@ -667,6 +655,8 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 }
 
 func (rt *route) parseTemplates() {
+	rt.Lock()
+	defer rt.Unlock()
 	var err error
 	if rt.getTemplate() == nil || (rt.getTemplate() != nil && rt.disableTemplateCache) {
 		var successEventTemplates eventTemplates
