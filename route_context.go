@@ -210,11 +210,7 @@ func (c RouteContext) Status(code int, err error) error {
 }
 
 func (c RouteContext) GetUserFromContext() string {
-	user := getUserFromRequestContext(c.request)
-	if user == "" {
-		panic("user not found in context")
-	}
-	return user
+	return getUserFromRequestContext(c.request)
 }
 
 func getUserFromRequestContext(r *http.Request) string {
