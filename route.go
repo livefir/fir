@@ -12,6 +12,7 @@ import (
 	"github.com/goccy/go-json"
 
 	"github.com/gorilla/websocket"
+	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/logger"
@@ -453,7 +454,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			State:      eventstate.Error,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
-			Detail:     errs,
+			Detail:     &dom.Detail{Data: errs},
 			SessionID:  ctx.event.SessionID,
 		})
 		return
@@ -469,7 +470,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			State:      eventstate.Error,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
-			Detail:     errs,
+			Detail:     &dom.Detail{Data: errs},
 			SessionID:  ctx.event.SessionID,
 		})
 		return
@@ -479,30 +480,29 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			State:      eventstate.OK,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
-			Detail:     *errVal,
+			Detail:     &dom.Detail{Data: *errVal},
 			SessionID:  ctx.event.SessionID,
 		})
 		return
 
 	case *routeDataWithState:
 		publish(pubsub.Event{
-			ID:          &ctx.event.ID,
-			State:       eventstate.OK,
-			Target:      &target,
-			ElementKey:  ctx.event.ElementKey,
-			Detail:      *errVal.routeData,
-			StateDetail: *errVal.stateData,
-			SessionID:   ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     &dom.Detail{Data: *errVal.routeData, State: *errVal.stateData},
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	case *stateData:
 		publish(pubsub.Event{
-			ID:          &ctx.event.ID,
-			State:       eventstate.OK,
-			Target:      &target,
-			ElementKey:  ctx.event.ElementKey,
-			StateDetail: *errVal,
-			SessionID:   ctx.event.SessionID,
+			ID:         &ctx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: ctx.event.ElementKey,
+			Detail:     &dom.Detail{State: *errVal},
+			SessionID:  ctx.event.SessionID,
 		})
 		return
 	default:
@@ -515,7 +515,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			State:      eventstate.Error,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
-			Detail:     errs,
+			Detail:     &dom.Detail{Data: errs},
 			SessionID:  ctx.event.SessionID,
 		})
 		return

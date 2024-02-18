@@ -1,8 +1,6 @@
 {{ define "header" }}
     <meta charset="UTF-8" />
-    <meta
-        name="description"
-        content="" />
+    <meta name="description" content="" />
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
@@ -16,13 +14,14 @@
     <link
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-    {{/* <script
-        defer
-        src="http://localhost:8000/cdn.js"></script>
-    */}}
-    <script
-        defer
-        src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+    {{ if fir.Development }}
+        <script defer src="http://localhost:8000/cdn.js"></script>
+    {{ else }}
+        <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+    {{ end }}
+
 
     <script
         defer

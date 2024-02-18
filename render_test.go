@@ -130,7 +130,7 @@ func TestGetUnsetErrorEvents(t *testing.T) {
 
 	result = getUnsetErrorEvents(cch, sessionID, events)
 	expected := []dom.Event{
-		{Type: ptr("error"), Target: ptr("target2"), Detail: ""},
+		{Type: ptr("error"), Target: ptr("target2")},
 	}
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Expected result %v, got: %v", expected, result)
@@ -149,7 +149,7 @@ func TestGetUnsetErrorEvents(t *testing.T) {
 	result = getUnsetErrorEvents(cch, sessionID, events)
 
 	expected = []dom.Event{
-		{Type: ptr("error2"), Target: ptr("target2"), Detail: ""},
+		{Type: ptr("error2"), Target: ptr("target2")},
 	}
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Expected result %v, got: %v", expected, result)
