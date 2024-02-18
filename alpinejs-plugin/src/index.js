@@ -73,76 +73,76 @@ const Plugin = (Alpine) => {
                     //console.log(el)
                     //console.log(event)
                     //console.log(event.detail)
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
                     let toHTML = el.cloneNode(false)
-                    toHTML.innerHTML = eventDetail.trim()
+                    toHTML.innerHTML = html.trim()
                     morphElement(el, toHTML.outerHTML)
                 }
             },
             replaceEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    morphElement(el, eventDetail)
+                    morphElement(el, html)
                 }
             },
             appendEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    appendElement(el, eventDetail)
+                    appendElement(el, html)
                 }
             },
             prependEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    prependElement(el, eventDetail)
+                    prependElement(el, html)
                 }
             },
             afterEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    afterElement(el, eventDetail)
+                    afterElement(el, html)
                 }
             },
             beforeEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    beforeElement(el, eventDetail)
+                    beforeElement(el, html)
                 }
             },
             removeEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    removeElement(el, eventDetail)
+                    removeElement(el, html)
                 }
             },
             removeParentEl(detail) {
                 return function (event) {
-                    let eventDetail = event.detail
+                    let html = event.detail.html ? event.detail.html : ""
                     if (detail) {
-                        eventDetail = detail
+                        html = detail.html ? detail.html : ""
                     }
-                    removeParentElement(el, eventDetail)
+                    removeParentElement(el, html)
                 }
             },
             emit(id, params, target) {

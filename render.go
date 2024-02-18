@@ -122,14 +122,17 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 			Type:   eventType,
 			Key:    pubsubEvent.ElementKey,
 			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-			Detail: pubsubEvent.StateDetail,
+			Detail: &dom.Detail{State: pubsubEvent.Detail.State},
 		}
 	}
 	eventType := fir(eventIDWithState, templateName)
-	templateData := pubsubEvent.Detail
+	var templateData any
+	if pubsubEvent.Detail != nil {
+		templateData = pubsubEvent.Detail.Data
+	}
 	routeTemplate := ctx.route.getTemplate().Funcs(newFirFuncMap(ctx, nil))
 	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
-		errs, ok := pubsubEvent.Detail.(map[string]any)
+		errs, ok := pubsubEvent.Detail.Data.(map[string]any)
 		if !ok {
 			logger.Errorf("error: %s", "pubsubEvent.Detail is not a map[string]any")
 			return nil
@@ -152,7 +155,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		Type:   eventType,
 		Key:    pubsubEvent.ElementKey,
 		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-		Detail: value,
+		Detail: &dom.Detail{HTML: value, State: pubsubEvent.Detail.State},
 	}
 
 }
@@ -205,7 +208,6 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 		newErrorEvents = append(newErrorEvents, dom.Event{
 			Type:   eventType,
 			Target: &target,
-			Detail: "",
 		})
 	}
 
@@ -213,6 +215,7 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 }
 
 func buildTemplateValue(t *template.Template, templateName string, data any) (string, error) {
+	logger.Infof("template %v, templateName: %v, data: %v", t, templateName, data)
 	if t == nil {
 		return "", nil
 	}
