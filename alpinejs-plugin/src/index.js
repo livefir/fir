@@ -73,76 +73,44 @@ const Plugin = (Alpine) => {
                     //console.log(el)
                     //console.log(event)
                     //console.log(event.detail)
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
                     let toHTML = el.cloneNode(false)
-                    toHTML.innerHTML = html.trim()
+                    toHTML.innerHTML = eventHTML(event, detail).trim()
                     morphElement(el, toHTML.outerHTML)
                 }
             },
             replaceEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    morphElement(el, html)
+                    morphElement(el, eventHTML(event, detail))
                 }
             },
             appendEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    appendElement(el, html)
+                    appendElement(el, eventHTML(event, detail))
                 }
             },
             prependEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    prependElement(el, html)
+                    prependElement(el, eventHTML(event, detail))
                 }
             },
             afterEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    afterElement(el, html)
+                    afterElement(el, eventHTML(event, detail))
                 }
             },
             beforeEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    beforeElement(el, html)
+                    beforeElement(el, eventHTML(event, detail))
                 }
             },
             removeEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    removeElement(el, html)
+                    removeElement(el, eventHTML(event, detail))
                 }
             },
             removeParentEl(detail) {
                 return function (event) {
-                    let html = event.detail.html ? event.detail.html : ""
-                    if (detail) {
-                        html = detail.html ? detail.html : ""
-                    }
-                    removeParentElement(el, html)
+                    removeParentElement(el, eventHTML(event, detail))
                 }
             },
             emit(id, params, target) {
@@ -325,6 +293,14 @@ const Plugin = (Alpine) => {
             },
         }
     })
+
+    const eventHTML = (event, detail) => {
+        let html = event.detail.html ? event.detail.html : ''
+        if (detail) {
+            html = detail.html ? detail.html : ''
+        }
+        return html
+    }
 
     const toElements = (htmlString) => {
         var template = document.createElement('template')
