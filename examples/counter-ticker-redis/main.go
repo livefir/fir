@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -113,12 +112,10 @@ func (i *index) updated(ctx fir.RouteContext) error {
 	if err != nil {
 		return err
 	}
-	return ctx.Data(req)
+	return ctx.Data(map[string]any{"updated": req.CountUpdated})
 }
 
 func main() {
-	port := flag.String("port", "9867", "port to listen on")
-
 	pubsubAdapter := pubsub.NewRedis(
 		redis.NewClient(&redis.Options{
 			Addr:     "localhost:6379",
@@ -128,5 +125,5 @@ func main() {
 	)
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true), fir.WithPubsubAdapter(pubsubAdapter))
 	http.Handle("/", controller.Route(NewCounterIndex(pubsubAdapter)))
-	http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
+	log.Println(http.ListenAndServe(fmt.Sprintf(":%v", 9867), nil))
 }
