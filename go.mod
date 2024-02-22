@@ -8,6 +8,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/alecthomas/chroma v0.10.0
 	github.com/alecthomas/chroma/v2 v2.12.0
+	github.com/cespare/xxhash/v2 v2.2.0
 	github.com/chromedp/chromedp v0.9.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/structs v1.1.0
@@ -46,7 +47,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chromedp/cdproto v0.0.0-20230625224106-7fafe342e117 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect

@@ -37,6 +37,7 @@ func readAttributes(fi fileInfo) fileInfo {
 		name:           fi.name,
 		content:        fi.content,
 		err:            fi.err,
+		blocks:         fi.blocks,
 		eventTemplates: evt,
 	}
 }
@@ -177,7 +178,7 @@ func getEventFilter(input string) (*eventFilter, error) {
 	// Validate and format each value
 	validValues := make([]string, 0)
 	for _, value := range values {
-		if !isValidValue(value) {
+		if !isValidEventFilterFormat(value) {
 			return nil, ErrorEventFilterFormat
 		}
 		validValues = append(validValues, formatValue(value))
@@ -192,7 +193,7 @@ func getEventFilter(input string) (*eventFilter, error) {
 	return extractedValues, nil
 }
 
-func isValidValue(value string) bool {
+func isValidEventFilterFormat(value string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9-]+:(ok|pending|error|done)$`)
 	return re.MatchString(value)
 }

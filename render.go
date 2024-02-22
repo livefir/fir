@@ -215,7 +215,6 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 }
 
 func buildTemplateValue(t *template.Template, templateName string, data any) (string, error) {
-	logger.Infof("template %v, templateName: %v, data: %v", t, templateName, data)
 	if t == nil {
 		return "", nil
 	}

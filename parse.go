@@ -1,12 +1,16 @@
 package fir
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"path/filepath"
 	"regexp"
+	"strings"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/sourcegraph/conc/pool"
+	"golang.org/x/net/html"
 )
 
 type eventTemplate map[string]struct{}
@@ -159,6 +163,7 @@ type fileInfo struct {
 	name           string
 	content        []byte
 	eventTemplates eventTemplates
+	blocks         map[string]string
 	err            error
 }
 
@@ -180,8 +185,16 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 	for _, filename := range filenames {
 		filename := filename
 		resultPool.Go(func() fileInfo {
-			name, b, err := readFile(filename)
-			return readAttributes(fileInfo{name: name, content: b, err: err})
+			name, b, err1 := readFile(filename)
+			if err1 != nil {
+				return fileInfo{name: name, err: err1}
+			}
+			b, blocks, err2 := extractTemplates(b)
+			if err2 != nil {
+				return fileInfo{name: name, err: err2}
+			}
+
+			return readAttributes(fileInfo{name: name, content: b, blocks: blocks})
 		})
 	}
 
@@ -214,6 +227,16 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 		if err != nil {
 			return t, evt, err
 		}
+		for name, block := range fi.blocks {
+			bt, err := template.New(name).Parse(block)
+			if err != nil {
+				return t, evt, fmt.Errorf("parsing block template %s: %v", name, err)
+			}
+			tmpl, err = tmpl.AddParseTree(bt.Name(), bt.Tree)
+			if err != nil {
+				return t, evt, fmt.Errorf("adding block template %s: %v", name, err)
+			}
+		}
 	}
 
 	return t, evt, nil
@@ -235,4 +258,74 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 		}
 	}
 	return merged
+}
+
+// extractTemplates extracts innerHTML content from fir event namespace string and updates the namespace string with a template
+func extractTemplates(content []byte) ([]byte, map[string]string, error) {
+	blocks := make(map[string]string)
+	if len(content) == 0 {
+		return content, blocks, nil
+	}
+	doc, err := html.Parse(bytes.NewReader(content))
+	if err != nil {
+		return content, blocks, err
+	}
+
+	var findFirNode func(*html.Node)
+	var getInnerHtml func(*html.Node) string
+	findFirNode = func(node *html.Node) {
+		if node.Type == html.ElementNode {
+			for _, attr := range node.Attr {
+				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
+					// check if fir event namespace string already contains a template
+					if strings.Contains(attr.Key, "::") {
+						continue
+					}
+
+					block := getInnerHtml(node)
+					// check if innerHTML content is actually a html template
+					if !strings.Contains(block, "{{") && !strings.Contains(block, "}}") {
+						continue
+					}
+					// update fir event namespace string with a template
+					templateName := fmt.Sprintf("fir-%s", hashID(block))
+					blocks[templateName] = block
+					removeAttr(node, attr.Key)
+					node.Attr = append(node.Attr, html.Attribute{Key: attr.Key + "::" + templateName, Val: attr.Val})
+
+					break
+				}
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			findFirNode(child)
+		}
+	}
+
+	getInnerHtml = func(node *html.Node) string {
+		block := ""
+		for c := node.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.TextNode {
+				block += c.Data
+			} else {
+				block += "<" + c.Data + ">"
+				block += getInnerHtml(c)
+				block += "</" + c.Data + ">"
+			}
+		}
+		return block
+	}
+
+	findFirNode(doc)
+	content = htmlNodeToBytes(doc)
+	return content, blocks, nil
+}
+
+func hashID(content string) string {
+	xxhash := xxhash.New()
+	_, err := xxhash.WriteString(content)
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%x", xxhash.Sum(nil))
 }
