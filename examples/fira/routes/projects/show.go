@@ -59,7 +59,7 @@ func updateProject(db *ent.Client) fir.OnEventFunc {
 
 func deleteProject(db *ent.Client) fir.OnEventFunc {
 	type deleteReq struct {
-		ID string `json:"id"`
+		ID string `json:"projectID"`
 	}
 	return func(ctx fir.RouteContext) error {
 		var req deleteReq
