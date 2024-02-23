@@ -21,6 +21,7 @@ require (
 	github.com/gorilla/schema v1.2.1
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/websocket v1.5.0
+	github.com/icholy/replace v0.6.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/minio/sha256-simd v1.0.1
@@ -31,6 +32,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.7.0
 	github.com/tdewolff/minify/v2 v2.20.16
+	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
 	github.com/tidwall/gjson v1.17.0
 	github.com/timshannon/bolthold v0.0.0-20231129192944-dca5178aa629
 	github.com/valyala/bytebufferpool v1.0.0

@@ -85,12 +85,11 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
-		// assert myevent:ok::myblock or myevent:error::myblock
-		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
-			logger.Errorf(eventFormatError(eventns))
-			continue
-
-		}
+		// // assert myevent:ok::myblock or myevent:error::myblock
+		// if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
+		// 	logger.Errorf(eventFormatError(eventns))
+		// 	continue
+		// }
 		// template name is declared for event state i.e. myevent:ok::myblock
 		templateName := "-"
 		if len(eventnsParts) == 2 {

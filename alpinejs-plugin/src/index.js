@@ -295,7 +295,11 @@ const Plugin = (Alpine) => {
     })
 
     const eventHTML = (event, detail) => {
-        let html = event.detail.html ? event.detail.html : ''
+        let html = ''
+        if (event.detail) {
+            html = event.detail.html ? event.detail.html : ''
+        }
+
         if (detail) {
             html = detail.html ? detail.html : ''
         }

@@ -9,7 +9,9 @@ import (
 	"strings"
 
 	"github.com/cespare/xxhash/v2"
+	"github.com/icholy/replace"
 	"github.com/sourcegraph/conc/pool"
+	"github.com/teris-io/shortid"
 	"golang.org/x/net/html"
 )
 
@@ -30,7 +32,7 @@ func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*te
 	pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
 	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.getFuncMap())
 
-	return parseFiles(contentTemplate, opt.readFile, pageFiles...)
+	return parseFiles(contentTemplate, opt.getFuncMap(), opt.readFile, pageFiles...)
 }
 
 func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eventTemplates, error) {
@@ -50,7 +52,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	commonFiles := getPartials(opt, []string{pageLayoutPath})
 	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.getFuncMap())
 
-	return parseFiles(template.Must(layoutTemplate.Clone()), opt.readFile, commonFiles...)
+	return parseFiles(template.Must(layoutTemplate.Clone()), opt.getFuncMap(), opt.readFile, commonFiles...)
 }
 
 func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string) (*template.Template, eventTemplates, error) {
@@ -80,7 +82,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		return pageTemplate, evt, nil
 	} else {
 		pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
-		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.readFile, pageFiles...)
+		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.getFuncMap(), opt.readFile, pageFiles...)
 		if err != nil {
 			panic(err)
 		}
@@ -167,7 +169,7 @@ type fileInfo struct {
 	err            error
 }
 
-var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:]*$`)
+var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:_]*$`)
 
 func parseString(t *template.Template, content string) (*template.Template, eventTemplates, error) {
 	fi := readAttributes(fileInfo{content: []byte(content)})
@@ -175,7 +177,7 @@ func parseString(t *template.Template, content string) (*template.Template, even
 	return t, fi.eventTemplates, err
 }
 
-func parseFiles(t *template.Template, readFile func(string) (string, []byte, error), filenames ...string) (*template.Template, eventTemplates, error) {
+func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(string) (string, []byte, error), filenames ...string) (*template.Template, eventTemplates, error) {
 
 	if len(filenames) == 0 {
 		// Not really a problem, but be consistent.
@@ -223,18 +225,20 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 		} else {
 			tmpl = t.New(fi.name)
 		}
+
 		_, err := tmpl.Parse(s)
 		if err != nil {
-			return t, evt, err
+			fmt.Println(s)
+			return t, evt, fmt.Errorf("parsing %s: %v", fi.name, err)
 		}
 		for name, block := range fi.blocks {
-			bt, err := template.New(name).Parse(block)
+			bt, err := template.New(name).Funcs(funcs).Parse(block)
 			if err != nil {
-				return t, evt, fmt.Errorf("parsing block template %s: %v", name, err)
+				return t, evt, fmt.Errorf("file: %v, parsing  block template  %s: %v", fi.name, name, err)
 			}
 			tmpl, err = tmpl.AddParseTree(bt.Name(), bt.Tree)
 			if err != nil {
-				return t, evt, fmt.Errorf("adding block template %s: %v", name, err)
+				return t, evt, fmt.Errorf("file: %v, adding block template %s: %v", fi.name, name, err)
 			}
 		}
 	}
@@ -258,6 +262,7 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 		}
 	}
 	return merged
+
 }
 
 // extractTemplates extracts innerHTML content from fir event namespace string and updates the namespace string with a template
@@ -266,32 +271,57 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 	if len(content) == 0 {
 		return content, blocks, nil
 	}
+
+	reader := replace.Chain(bytes.NewReader(content),
+		// increment all numbers
+		replace.RegexpStringFunc(regexp.MustCompile(`:error=`), func(match string) string {
+			return fmt.Sprintf(":error::%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:error]=`), func(match string) string {
+			return fmt.Sprintf(":error]::%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:ok=`), func(match string) string {
+			return fmt.Sprintf(":ok::%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:ok]=`), func(match string) string {
+			return fmt.Sprintf(":ok]::%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+	)
+
+	buf := new(bytes.Buffer)
+	_, err := buf.ReadFrom(reader)
+	if err != nil {
+		return content, blocks, err
+	}
+
+	content = buf.Bytes()
+
 	doc, err := html.Parse(bytes.NewReader(content))
 	if err != nil {
 		return content, blocks, err
 	}
 
 	var findFirNode func(*html.Node)
-	var getInnerHtml func(*html.Node) string
+	var getHtml func(*html.Node) string
 	findFirNode = func(node *html.Node) {
 		if node.Type == html.ElementNode {
 			for _, attr := range node.Attr {
 				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
 					// check if fir event namespace string already contains a template
-					if strings.Contains(attr.Key, "::") {
+					if !strings.Contains(attr.Key, "::") {
 						continue
 					}
 
-					block := getInnerHtml(node)
+					block := getHtml(node)
 					// check if innerHTML content is actually a html template
-					if !strings.Contains(block, "{{") && !strings.Contains(block, "}}") {
-						continue
+					if strings.Contains(block, "{{") && strings.Contains(block, "}}") {
+						tempTemplateName := strings.Split(attr.Key, "::")[1]
+						templateName := fmt.Sprintf("fir-%s", hashID(block))
+						content = bytes.Replace(content, []byte(tempTemplateName), []byte(templateName), -1)
+						blocks[templateName] = block
 					}
+
 					// update fir event namespace string with a template
-					templateName := fmt.Sprintf("fir-%s", hashID(block))
-					blocks[templateName] = block
-					removeAttr(node, attr.Key)
-					node.Attr = append(node.Attr, html.Attribute{Key: attr.Key + "::" + templateName, Val: attr.Val})
 
 					break
 				}
@@ -302,14 +332,22 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 		}
 	}
 
-	getInnerHtml = func(node *html.Node) string {
+	getHtml = func(node *html.Node) string {
 		block := ""
 		for c := node.FirstChild; c != nil; c = c.NextSibling {
 			if c.Type == html.TextNode {
 				block += c.Data
 			} else {
-				block += "<" + c.Data + ">"
-				block += getInnerHtml(c)
+				//  append the attributes
+				var attributes string
+				for _, attr := range c.Attr {
+					attrstr := fmt.Sprintf(` %s="%s"`, attr.Key, attr.Val)
+					//fmt.Printf("attr key: %v, value: %v\n", attr.Key, attr.Val)
+					attributes += attrstr
+				}
+
+				block += "<" + c.Data + attributes + ">"
+				block += getHtml(c)
 				block += "</" + c.Data + ">"
 			}
 		}
@@ -317,7 +355,7 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 	}
 
 	findFirNode(doc)
-	content = htmlNodeToBytes(doc)
+
 	return content, blocks, nil
 }
 
