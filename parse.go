@@ -321,8 +321,6 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 						blocks[templateName] = block
 					}
 
-					// update fir event namespace string with a template
-
 					break
 				}
 			}

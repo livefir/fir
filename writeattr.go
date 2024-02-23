@@ -162,6 +162,13 @@ func writeAttributes(node *html.Node) {
 			}
 
 			for _, eventns := range eventnsList {
+				if strings.Contains(eventns, ":pending") || strings.Contains(eventns, ":done") {
+					// remove template from the eventns if it exists
+					parts := strings.Split(eventns, "::")
+					if len(parts) == 2 {
+						eventns = parts[0]
+					}
+				}
 				eventns = strings.TrimSpace(eventns)
 				// set @fir|x-on:fir:eventns attribute to the node
 				eventnsWithModifiers := fmt.Sprintf("%s.%s", eventns, modifiers)
@@ -175,7 +182,7 @@ func writeAttributes(node *html.Node) {
 					setAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers), attrVal)
 				}
 
-				// fir-myevent-ok--myblock
+				// set class fir-myevent-ok--myblock
 				key := getAttr(node, "fir-key")
 				targetClass := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
 				classes := strings.Fields(getAttr(node, "class"))
