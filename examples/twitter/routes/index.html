@@ -1,14 +1,7 @@
 {{ define "content" }}
-    <div
-        x-data
-        id="content">
+    <div x-data id="content">
         <p>
             {{ fir.Error "onload" }}
-        </p>
-        <p @fir:create-tweet:error::create-err="$fir.replace()">
-            {{ block "create-err" . }}
-                {{ fir.Error "create-tweet" }}
-            {{ end }}
         </p>
 
         <div
@@ -21,19 +14,10 @@
             method="post"
             action="/?event=create-tweet"
             @submit.prevent="$fir.submit()"
-            @fir:create-tweet:ok="$refs.createTweet.reset()"
-            style="margin-top:1rem;margin-bottom:1rem;">
-            <input
-                type="text"
-                name="body"
-                placeholder="a new tweet" />
-            <!-- validation error for the name=body set by ctx.FieldError(...) -->
-            <!-- $fir.replace replaces the content of the element on which it is invoked -->
-            <!-- $fir.replaceEl replaces the element on which it is invoked -->
-            <p @fir:create-tweet:error::body-err="$fir.replace()">
-                {{ block "body-err" . }}
-                    {{ fir.Error "create-tweet.body" }}
-                {{ end }}
+            @fir:create-tweet:ok="$refs.createTweet.reset()">
+            <input type="text" name="body" placeholder="a new tweet" />
+            <p @fir:create-tweet:error="$fir.replace()">
+                {{ fir.Error "create-tweet.body" }}
             </p>
 
             <button type="submit">Tweet it!</button>
@@ -43,26 +27,16 @@
                 {{ block "tweet" . }}
                     <div
                         fir-key="{{ .ID }}"
-                        @fir:delete-tweet:ok="$fir.removeEl()"
-                        style="display: flex;margin-top:1rem;margin-bottom:1rem;">
-                        <div style="margin-right:1rem">
+                        @fir:delete-tweet:ok="$fir.removeEl()">
+                        <p>
                             Tweet:
                             {{ .Body }}
-                        </div>
-                        <div
-                            @fir:like-tweet:ok::like-count="$fir.replace()"
-                            style="margin-right:1rem">
-                            {{ block "like-count" . }}
-                                <div>
-                                    Likes:
-                                    {{ .LikesCount }}
-                                </div>
-                            {{ end }}
-                        </div>
-                        <form
-                            method="post"
-                            @submit.prevent="$fir.submit()"
-                            style="margin-right:1rem">
+                        </p>
+                        <p @fir:like-tweet:ok="$fir.replace()">
+                            Likes:
+                            {{ .LikesCount }}
+                        </p>
+                        <form method="post" @submit.prevent="$fir.submit()">
                             <input
                                 type="hidden"
                                 name="tweetID"

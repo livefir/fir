@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script defer src="http://localhost:8000/cdn.js"></script>
-
-        {{/* <script
-            defer
-            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-        */}}
+        {{ if fir.Development }}
+            <script defer src="http://localhost:8000/cdn.js"></script>
+        {{ else }}
+            <script
+                defer
+                src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        {{ end }}
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>

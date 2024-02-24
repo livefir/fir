@@ -3,9 +3,6 @@
     <head>
         <script
             defer
-            {{/* src="http://localhost:8000/cdn.js"></script> */}}
-            <script
-            defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
 
         <script
@@ -15,24 +12,13 @@
 
     <body>
         <div x-data>
-            <div @fir:[inc:ok,dec:ok]::count="$fir.replace()">
-                {{ block "count" . }}
-                    <div>Count: {{ .count }}</div>
-                {{ end }}
+            <div @fir:[inc:ok,dec:ok]="$fir.replace()">
+                Count:
+                {{ .count }}
             </div>
-            <form
-                method="post"
-                @submit.prevent="$fir.submit()">
-                <button
-                    formaction="/?event=inc"
-                    type="submit">
-                    +
-                </button>
-                <button
-                    formaction="/?event=dec"
-                    type="submit">
-                    -
-                </button>
+            <form method="post" @submit.prevent="$fir.submit()">
+                <button formaction="/?event=inc" type="submit">+</button>
+                <button formaction="/?event=dec" type="submit">-</button>
             </form>
         </div>
     </body>

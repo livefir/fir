@@ -3,19 +3,13 @@
     <head>
         <title>{{ .app_name }}</title>
         <meta charset="UTF-8" />
-        <meta
-            name="description"
-            content="A fir search app" />
+        <meta name="description" content="A fir search app" />
         <meta
             name="viewport"
             content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
-        {{/* <script
-            defer
-            src="http://localhost:8000/cdn.js"></script>
-        */}}
         <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
@@ -26,12 +20,8 @@
     </head>
 
     <body>
-        <div
-            class="my-6"
-            style="height: 500px">
-            <div
-                x-data
-                class="columns is-mobile is-centered is-vcentered">
+        <div class="my-6" style="height: 500px">
+            <div x-data class="columns is-mobile is-centered is-vcentered">
                 <div
                     class="column is-one-third-desktop has-text-centered is-narrow">
                     <div class="py-5">
@@ -50,14 +40,10 @@
                                 @input="$dispatch('input-changed')" />
                         </form>
                     </div>
-                    <div @fir:query:ok::cities="$fir.replace()">
-                        {{ block "cities" . }}
-                            <div>
-                                {{- range $k,$v := .cities }}
-                                    <div id="{{ $k }}">{{ $v }}</div>
-                                {{- end }}
-                            </div>
-                        {{ end }}
+                    <div @fir:query:ok="$fir.replace()">
+                        {{- range $k,$v := .cities }}
+                            <div id="{{ $k }}">{{ $v }}</div>
+                        {{- end }}
                     </div>
                 </div>
             </div>
