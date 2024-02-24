@@ -42,17 +42,24 @@ func readAttributes(fi fileInfo) fileInfo {
 	}
 }
 
+// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
+func removeModifiers(eventns string) string {
+	if strings.Contains(eventns, ".nohtml") {
+		return eventns
+	}
+	eventnsParts := strings.SplitN(eventns, ".", -1)
+	if len(eventnsParts) > 0 {
+		return eventnsParts[0]
+	}
+	return eventns
+}
+
 func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 	evt := make(eventTemplates)
 	eventns := strings.TrimPrefix(attr.Key, "@fir:")
 	eventns = strings.TrimPrefix(eventns, "x-on:fir:")
-	// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
-	eventnsParts := strings.SplitN(eventns, ".", -1)
 
-	if len(eventnsParts) > 0 {
-		eventns = eventnsParts[0]
-	}
-
+	eventns = removeModifiers(eventns)
 	// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
 	eventnsList, _ := getEventNsList(eventns)
 
@@ -61,7 +68,7 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		// set @fir|x-on:fir:eventns attribute to the node
 
 		// myevent:ok::myblock
-		eventnsParts = strings.SplitN(eventns, "::", -1)
+		eventnsParts := strings.SplitN(eventns, "::", -1)
 		if len(eventnsParts) == 0 {
 			continue
 		}

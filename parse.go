@@ -170,7 +170,7 @@ type fileInfo struct {
 	err            error
 }
 
-var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:_]*$`)
+var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:_.]*$`)
 
 func parseString(t *template.Template, content string) (*template.Template, eventTemplates, error) {
 	fi := readAttributes(fileInfo{content: []byte(content)})

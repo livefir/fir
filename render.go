@@ -159,6 +159,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 
 	if strings.HasSuffix(*eventType, ".nohtml") {
+		*eventType = strings.TrimSuffix(*eventType, ".nohtml")
 		value = ""
 	}
 
