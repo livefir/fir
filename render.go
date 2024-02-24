@@ -116,13 +116,17 @@ func targetOrClassName(target *string, className string) *string {
 func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, eventIDWithState, templateName string) *dom.Event {
 	if templateName == "-" {
 		eventType := fir(eventIDWithState)
+		detail := &dom.Detail{}
+		if pubsubEvent.Detail != nil {
+			detail.State = pubsubEvent.Detail.State
+		}
 		return &dom.Event{
 			ID:     *pubsubEvent.ID,
 			State:  pubsubEvent.State,
 			Type:   eventType,
 			Key:    pubsubEvent.ElementKey,
 			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-			Detail: &dom.Detail{State: pubsubEvent.Detail.State},
+			Detail: detail,
 		}
 	}
 	eventType := fir(eventIDWithState, templateName)
@@ -149,13 +153,24 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		return nil
 	}
 
+	if pubsubEvent.State == eventstate.OK && templateData == nil {
+		value = ""
+	}
+
+	detail := &dom.Detail{
+		HTML: value,
+	}
+	if pubsubEvent.Detail != nil {
+		detail.State = pubsubEvent.Detail.State
+	}
+
 	return &dom.Event{
 		ID:     eventIDWithState,
 		State:  pubsubEvent.State,
 		Type:   eventType,
 		Key:    pubsubEvent.ElementKey,
 		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-		Detail: &dom.Detail{HTML: value, State: pubsubEvent.Detail.State},
+		Detail: detail,
 	}
 
 }
