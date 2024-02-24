@@ -275,16 +275,16 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 	reader := replace.Chain(bytes.NewReader(content),
 		// increment all numbers
 		replace.RegexpStringFunc(regexp.MustCompile(`:error=`), func(match string) string {
-			return fmt.Sprintf(":error::%s=", strings.ToLower(shortid.MustGenerate()))
+			return fmt.Sprintf(":error::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
 		replace.RegexpStringFunc(regexp.MustCompile(`:error]=`), func(match string) string {
-			return fmt.Sprintf(":error]::%s=", strings.ToLower(shortid.MustGenerate()))
+			return fmt.Sprintf(":error]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
 		replace.RegexpStringFunc(regexp.MustCompile(`:ok=`), func(match string) string {
-			return fmt.Sprintf(":ok::%s=", strings.ToLower(shortid.MustGenerate()))
+			return fmt.Sprintf(":ok::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
 		replace.RegexpStringFunc(regexp.MustCompile(`:ok]=`), func(match string) string {
-			return fmt.Sprintf(":ok]::%s=", strings.ToLower(shortid.MustGenerate()))
+			return fmt.Sprintf(":ok]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
 	)
 
@@ -308,17 +308,23 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 			for _, attr := range node.Attr {
 				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
 					// check if fir event namespace string already contains a template
-					if !strings.Contains(attr.Key, "::") {
+					if !strings.Contains(attr.Key, "::fir-gen-templ-") {
 						continue
 					}
 
 					block := getHtml(node)
+					tempTemplateName := strings.Split(attr.Key, "::")[1]
 					// check if innerHTML content is actually a html template
 					if strings.Contains(block, "{{") && strings.Contains(block, "}}") {
-						tempTemplateName := strings.Split(attr.Key, "::")[1]
 						templateName := fmt.Sprintf("fir-%s", hashID(block))
+						if !bytes.Contains(content, []byte(tempTemplateName)) {
+							continue
+						}
 						content = bytes.Replace(content, []byte(tempTemplateName), []byte(templateName), -1)
 						blocks[templateName] = block
+					} else {
+						// if innerHTML content is not a html template, remove the template namespace string
+						content = bytes.Replace(content, []byte(fmt.Sprintf("::%s", tempTemplateName)), []byte(""), -1)
 					}
 
 					break
