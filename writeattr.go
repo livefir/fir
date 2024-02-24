@@ -151,7 +151,11 @@ func writeAttributes(node *html.Node) {
 				eventns = eventnsParts[0]
 			}
 			if len(eventnsParts) > 1 {
-				modifiers = strings.Join(eventnsParts[1:], ".")
+				modifierParts := eventnsParts[1:]
+				modifierParts = slices.DeleteFunc(modifierParts, func(s string) bool {
+					return s == "nohtml"
+				})
+				modifiers = strings.Join(modifierParts, ".")
 			}
 
 			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
@@ -170,6 +174,7 @@ func writeAttributes(node *html.Node) {
 					}
 				}
 				eventns = strings.TrimSpace(eventns)
+
 				// set @fir|x-on:fir:eventns attribute to the node
 				eventnsWithModifiers := fmt.Sprintf("%s.%s", eventns, modifiers)
 				if len(modifiers) == 0 {

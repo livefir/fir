@@ -11,6 +11,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/icholy/replace"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/sourcegraph/conc/pool"
 	"github.com/teris-io/shortid"
 	"golang.org/x/net/html"
@@ -235,11 +236,12 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 		for name, block := range fi.blocks {
 			bt, err := template.New(name).Funcs(funcs).Parse(block)
 			if err != nil {
-				return t, evt, fmt.Errorf("file: %v, parsing  block template  %s: %v", fi.name, name, err)
+				logger.Warnf("file: %v, error parsing auto extracted template  %s: %v", fi.name, name, err)
+				bt = template.Must(template.New(name).Funcs(funcs).Parse("<!-- error parsing auto extracted template -->"))
 			}
 			tmpl, err = tmpl.AddParseTree(bt.Name(), bt.Tree)
 			if err != nil {
-				return t, evt, fmt.Errorf("file: %v, adding block template %s: %v", fi.name, name, err)
+				return t, evt, fmt.Errorf("file: %v, error adding block template %s: %v", fi.name, name, err)
 			}
 		}
 	}
@@ -278,26 +280,17 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 		replace.RegexpStringFunc(regexp.MustCompile(`:error=`), func(match string) string {
 			return fmt.Sprintf(":error::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
-		replace.RegexpStringFunc(regexp.MustCompile(`:error.nohtml=`), func(match string) string {
-			return fmt.Sprintf(":error::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
-		}),
+
 		replace.RegexpStringFunc(regexp.MustCompile(`:error]=`), func(match string) string {
 			return fmt.Sprintf(":error]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
-		replace.RegexpStringFunc(regexp.MustCompile(`:error].nohtml=`), func(match string) string {
-			return fmt.Sprintf(":error]::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
-		}),
+
 		replace.RegexpStringFunc(regexp.MustCompile(`:ok=`), func(match string) string {
 			return fmt.Sprintf(":ok::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
-		replace.RegexpStringFunc(regexp.MustCompile(`:ok.nohtml=`), func(match string) string {
-			return fmt.Sprintf(":ok::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
-		}),
+
 		replace.RegexpStringFunc(regexp.MustCompile(`:ok]=`), func(match string) string {
 			return fmt.Sprintf(":ok]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
-		}),
-		replace.RegexpStringFunc(regexp.MustCompile(`:ok].nohtml=`), func(match string) string {
-			return fmt.Sprintf(":ok]::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
 		}),
 	)
 
@@ -352,7 +345,6 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 						content = bytes.Replace(content, []byte(fmt.Sprintf("::%s", tempTemplateName)), []byte(""), -1)
 					}
 
-					break
 				}
 			}
 		}
@@ -377,7 +369,6 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 						blocks[templateName] = block
 					}
 
-					break
 				}
 			}
 		}

@@ -17,8 +17,6 @@
                 defer
                 src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
         {{ end }}
-
-
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -60,7 +58,7 @@
                         <section
                             {{/* fir-key identifies elements in a list */}}
                             fir-key="{{ .ID }}"
-                            @fir:delete-tweet:ok="$fir.removeEl()">
+                            @fir:delete-tweet:ok.nohtml="$fir.removeEl()">
                             <form method="post" @submit.prevent="$fir.submit()">
                                 <blockquote>
                                     {{ .Body }}

@@ -64,6 +64,12 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		templateNames = append(templateNames, k)
 	}
 
+	eventIDWithStateNoHTML := fmt.Sprintf("%s:%s.nohtml", *pubsubEvent.ID, pubsubEvent.State)
+
+	for k := range ctx.route.getEventTemplates()[eventIDWithStateNoHTML] {
+		templateNames = append(templateNames, k)
+	}
+
 	resultPool := pool.NewWithResults[dom.Event]()
 	for _, templateName := range templateNames {
 		templateName := templateName
@@ -103,7 +109,25 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		})
 	}
 
-	return events
+	return uniques(events)
+}
+
+func uniques(events []dom.Event) []dom.Event {
+	var uniques []dom.Event
+
+loop:
+	for _, event := range events {
+		for i, unique := range uniques {
+			if *event.Type == *unique.Type && *event.Target == *unique.Target && *event.Key == *unique.Key {
+				uniques[i] = event
+				continue loop
+			}
+		}
+		uniques = append(uniques, event)
+
+	}
+	return uniques
+
 }
 
 func targetOrClassName(target *string, className string) *string {

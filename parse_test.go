@@ -171,74 +171,7 @@ func TestExtractTemplates(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		{
-			name: "Content with @fir:event:ok.nohtml attribute and valid templates",
-			content: []byte(`
-				<div @fir:event:ok.nohtml="template1">
-					<h1>{{ .Title }}</h1>
-					<p>{{ .Content }}</p>
-				</div>
-				<div x-on:fir:event:ok="template2">
-					<h2>{{ .Subtitle }}</h2>
-					<p>{{ .Description }}</p>
-				</div>
-			`),
-			expectedResult: []byte(`
-				<div @fir:event:ok::fir-5885da529fe19205.nohtml="template1">
-					<h1>{{ .Title }}</h1>
-					<p>{{ .Content }}</p>
-				</div>
-				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
-					<h2>{{ .Subtitle }}</h2>
-					<p>{{ .Description }}</p>
-				</div>
-			`),
-			expectedBlocks: map[string]string{
-				"fir-5885da529fe19205.nohtml": `
-					<h1>{{ .Title }}</h1>
-					<p>{{ .Content }}</p>
-				`,
-				"fir-7e8373b562556ff8": `
-					<h2>{{ .Subtitle }}</h2>
-					<p>{{ .Description }}</p>
-				`,
-			},
-			expectedError: nil,
-		},
-		{
-			name: "Content with @fir:[event1:ok,event2:ok].nohtml attribute and valid templates",
-			content: []byte(`
-				<div @fir:[event1:ok,event2:ok].nohtml="template1">
-					<h1>{{ .Title }}</h1>
-					<p>{{ .Content }}</p>
-				</div>
-				<div x-on:fir:event:ok="template2">
-					<h2>{{ .Subtitle }}</h2>
-					<p>{{ .Description }}</p>
-				</div>
-			`),
-			expectedResult: []byte(`
-				<div @fir:[event1:ok,event2:ok]::fir-5885da529fe19205.nohtml="template1">
-					<h1>{{ .Title }}</h1>
-					<p>{{ .Content }}</p>
-				</div>
-				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
-					<h2>{{ .Subtitle }}</h2>
-					<p>{{ .Description }}</p>
-				</div>
-			`),
-			expectedBlocks: map[string]string{
-				"fir-5885da529fe19205.nohtml": `
-					<h1>{{ .Title }}</h1>
-					<p>{{ .Content }}</p>
-				`,
-				"fir-7e8373b562556ff8": `
-					<h2>{{ .Subtitle }}</h2>
-					<p>{{ .Description }}</p>
-				`,
-			},
-			expectedError: nil,
-		},
+
 		// Content with @fir attributes and invalid templates
 		{
 			name: "Content with @fir attributes and invalid templates",

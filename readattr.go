@@ -88,12 +88,12 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 			continue
 		}
 		// event name can only be followed by ok, error, pending, done
-		if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventIDParts[1]) {
+		if !slices.Contains([]string{"ok", "error", "pending", "done", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
 			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
 		// assert myevent:ok::myblock or myevent:error::myblock and skip if not
-		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
+		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
 			continue
 		}
 		// template name is declared for event state i.e. myevent:ok::myblock
@@ -108,12 +108,11 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		}
 
 		if !templateNameRegex.MatchString(templateName) {
-			logger.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v", templateName)
+			logger.Errorf("error: invalid template name in event binding: only hyphen(-), colon(:)  and period(.) are allowed: %v", templateName)
 			continue
 		}
 
 		templates[templateName] = struct{}{}
-		// fmt.Printf("eventID: %s, templateName: %s", eventID, templateName)
 
 		evt[eventID] = templates
 	}
