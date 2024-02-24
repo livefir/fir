@@ -3,6 +3,7 @@ package fir
 import (
 	"fmt"
 	"html/template"
+	"strings"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
@@ -154,6 +155,10 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 
 	if pubsubEvent.State == eventstate.OK && templateData == nil {
+		value = ""
+	}
+
+	if strings.HasSuffix(*eventType, ".nohtml") {
 		value = ""
 	}
 

@@ -14,7 +14,7 @@
             method="post"
             action="/?event=create-tweet"
             @submit.prevent="$fir.submit()"
-            @fir:create-tweet:ok="$refs.createTweet.reset()">
+            @fir:create-tweet:ok.nohtml="$refs.createTweet.reset()">
             <input type="text" name="body" placeholder="a new tweet" />
             <p @fir:create-tweet:error="$fir.replace()">
                 {{ fir.Error "create-tweet.body" }}

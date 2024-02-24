@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/icholy/replace"
@@ -277,14 +278,26 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 		replace.RegexpStringFunc(regexp.MustCompile(`:error=`), func(match string) string {
 			return fmt.Sprintf(":error::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:error.nohtml=`), func(match string) string {
+			return fmt.Sprintf(":error::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
+		}),
 		replace.RegexpStringFunc(regexp.MustCompile(`:error]=`), func(match string) string {
 			return fmt.Sprintf(":error]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:error].nohtml=`), func(match string) string {
+			return fmt.Sprintf(":error]::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
 		}),
 		replace.RegexpStringFunc(regexp.MustCompile(`:ok=`), func(match string) string {
 			return fmt.Sprintf(":ok::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
 		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:ok.nohtml=`), func(match string) string {
+			return fmt.Sprintf(":ok::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
+		}),
 		replace.RegexpStringFunc(regexp.MustCompile(`:ok]=`), func(match string) string {
 			return fmt.Sprintf(":ok]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+		replace.RegexpStringFunc(regexp.MustCompile(`:ok].nohtml=`), func(match string) string {
+			return fmt.Sprintf(":ok]::fir-gen-templ-%s.nohtml=", strings.ToLower(shortid.MustGenerate()))
 		}),
 	)
 
@@ -301,11 +314,13 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 		return content, blocks, err
 	}
 
-	var findFirNode func(*html.Node)
+	var replacer func(*html.Node)
+	var extractor func(*html.Node)
 	var getHtml func(*html.Node) string
-	findFirNode = func(node *html.Node) {
+	replacer = func(node *html.Node) {
 		if node.Type == html.ElementNode {
 			for _, attr := range node.Attr {
+
 				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
 					// check if fir event namespace string already contains a template
 					if !strings.Contains(attr.Key, "::fir-gen-templ-") {
@@ -314,15 +329,25 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 
 					block := getHtml(node)
 					tempTemplateName := strings.Split(attr.Key, "::")[1]
+					hasNoHtmlModifier := strings.Contains(tempTemplateName, ".nohtml")
+
 					// check if innerHTML content is actually a html template
 					if strings.Contains(block, "{{") && strings.Contains(block, "}}") {
-						templateName := fmt.Sprintf("fir-%s", hashID(block))
+
 						if !bytes.Contains(content, []byte(tempTemplateName)) {
 							continue
 						}
+
+						templateName := fmt.Sprintf("fir-%s", hashID(block))
+
+						if hasNoHtmlModifier {
+							templateName = fmt.Sprintf("%s.nohtml", templateName)
+						}
+
 						content = bytes.Replace(content, []byte(tempTemplateName), []byte(templateName), -1)
-						blocks[templateName] = block
+
 					} else {
+
 						// if innerHTML content is not a html template, remove the template namespace string
 						content = bytes.Replace(content, []byte(fmt.Sprintf("::%s", tempTemplateName)), []byte(""), -1)
 					}
@@ -332,7 +357,32 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 			}
 		}
 		for child := node.FirstChild; child != nil; child = child.NextSibling {
-			findFirNode(child)
+			replacer(child)
+		}
+	}
+
+	extractor = func(node *html.Node) {
+		if node.Type == html.ElementNode {
+			for _, attr := range node.Attr {
+				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
+					// check if fir event namespace string contains a template
+					if !strings.Contains(attr.Key, "::fir-") {
+						continue
+					}
+
+					block := getHtml(node)
+					templateName := strings.Split(attr.Key, "::")[1]
+					// check if innerHTML content is actually a html template
+					if strings.Contains(block, "{{") && strings.Contains(block, "}}") {
+						blocks[templateName] = block
+					}
+
+					break
+				}
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			extractor(child)
 		}
 	}
 
@@ -343,6 +393,7 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 				block += c.Data
 			} else {
 				//  append the attributes
+				//findFirNode(c)
 				var attributes string
 				for _, attr := range c.Attr {
 					attrstr := fmt.Sprintf(` %s="%s"`, attr.Key, attr.Val)
@@ -358,12 +409,30 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 		return block
 	}
 
-	findFirNode(doc)
+	replacer(doc)
+
+	doc, err = html.Parse(bytes.NewReader(content))
+	if err != nil {
+		return content, blocks, err
+	}
+
+	extractor(doc)
 
 	return content, blocks, nil
 }
 
+func removeSpace(s string) string {
+	rr := make([]rune, 0, len(s))
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			rr = append(rr, r)
+		}
+	}
+	return string(rr)
+}
+
 func hashID(content string) string {
+	content = removeSpace(content)
 	xxhash := xxhash.New()
 	_, err := xxhash.WriteString(content)
 	if err != nil {

@@ -86,7 +86,7 @@ func TestExtractTemplates(t *testing.T) {
 		expectedBlocks map[string]string
 		expectedError  error
 	}{
-		// Test case 1: Empty content
+		// Empty content
 		{
 			name:           "Empty content",
 			content:        []byte{},
@@ -94,7 +94,7 @@ func TestExtractTemplates(t *testing.T) {
 			expectedBlocks: map[string]string{},
 			expectedError:  nil,
 		},
-		// Test case 2: Content with no @fir attributes
+		// Content with no @fir attributes
 		{
 			name:           "Content with no @fir attributes",
 			content:        []byte("<html><head></head><body><div>Hello, World!</div></body></html>"),
@@ -102,82 +102,216 @@ func TestExtractTemplates(t *testing.T) {
 			expectedBlocks: map[string]string{},
 			expectedError:  nil,
 		},
-		// Test case 3: Content with @fir attributes and valid templates
+		// Content with @fir attributes and valid templates
 		{
-			name: "Content with @fir attributes and valid templates",
+			name: "Content with @fir:event:ok attributes and valid templates",
 			content: []byte(`
-				<div @fir="template1">
+				<div @fir:event:ok="template1">
 					<h1>{{ .Title }}</h1>
 					<p>{{ .Content }}</p>
 				</div>
-				<div x-on:fir="template2">
+				<div x-on:fir:event:ok="template2">
 					<h2>{{ .Subtitle }}</h2>
 					<p>{{ .Description }}</p>
 				</div>
 			`),
 			expectedResult: []byte(`
-			<html>
-			<head></head>
-			<body>
-				<div @fir::fir-14d56e2bc6965f27="template1">
+				<div @fir:event:ok::fir-5885da529fe19205="template1">
 					<h1>{{ .Title }}</h1>
 					<p>{{ .Content }}</p>
 				</div>
-				<div x-on:fir::fir-164238e8549033dd="template2">
+				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
 					<h2>{{ .Subtitle }}</h2>
 					<p>{{ .Description }}</p>
 				</div>
-			</body>
-			</html>
 			`),
 			expectedBlocks: map[string]string{
-				"fir-14d56e2bc6965f27": `
+				"fir-5885da529fe19205": `
 					<h1>{{ .Title }}</h1>
 					<p>{{ .Content }}</p>
 				`,
-				"fir-164238e8549033dd": `
+				"fir-7e8373b562556ff8": `
 					<h2>{{ .Subtitle }}</h2>
 					<p>{{ .Description }}</p>
 				`,
 			},
 			expectedError: nil,
 		},
-		// Test case 4: Content with @fir attributes and invalid templates
+		{
+			name: "Content with @fir:[event1:ok,event2:ok] attributes and valid templates",
+			content: []byte(`
+				<div @fir:[event1:ok,event2:ok]="template1">
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				</div>
+				<div x-on:fir:event:ok="template2">
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				</div>
+			`),
+			expectedResult: []byte(`
+				<div @fir:[event1:ok,event2:ok]::fir-5885da529fe19205="template1">
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				</div>
+				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				</div>
+			`),
+			expectedBlocks: map[string]string{
+				"fir-5885da529fe19205": `
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				`,
+				"fir-7e8373b562556ff8": `
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				`,
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Content with @fir:event:ok.nohtml attribute and valid templates",
+			content: []byte(`
+				<div @fir:event:ok.nohtml="template1">
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				</div>
+				<div x-on:fir:event:ok="template2">
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				</div>
+			`),
+			expectedResult: []byte(`
+				<div @fir:event:ok::fir-5885da529fe19205.nohtml="template1">
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				</div>
+				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				</div>
+			`),
+			expectedBlocks: map[string]string{
+				"fir-5885da529fe19205.nohtml": `
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				`,
+				"fir-7e8373b562556ff8": `
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				`,
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Content with @fir:[event1:ok,event2:ok].nohtml attribute and valid templates",
+			content: []byte(`
+				<div @fir:[event1:ok,event2:ok].nohtml="template1">
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				</div>
+				<div x-on:fir:event:ok="template2">
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				</div>
+			`),
+			expectedResult: []byte(`
+				<div @fir:[event1:ok,event2:ok]::fir-5885da529fe19205.nohtml="template1">
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				</div>
+				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				</div>
+			`),
+			expectedBlocks: map[string]string{
+				"fir-5885da529fe19205.nohtml": `
+					<h1>{{ .Title }}</h1>
+					<p>{{ .Content }}</p>
+				`,
+				"fir-7e8373b562556ff8": `
+					<h2>{{ .Subtitle }}</h2>
+					<p>{{ .Description }}</p>
+				`,
+			},
+			expectedError: nil,
+		},
+		// Content with @fir attributes and invalid templates
 		{
 			name: "Content with @fir attributes and invalid templates",
 			content: []byte(`
-				<div @fir="template1">
+				<div @fir:event:ok="template1">
 					<h1>Hello, World!</h1>
 					<p>This is not a template</p>
 				</div>
-				<div x-on:fir="template2">
+				<div x-on:fir:event:ok="template2">
 					<h2>{{ .Subtitle }}</h2>
 					<p>{{ .Description }}</p>
 				</div>
 			`),
 			expectedResult: []byte(`
-			<html>
-			<head></head>
-			<body>
-				<div @fir="template1">
+				<div @fir:event:ok="template1">
 					<h1>Hello, World!</h1>
 					<p>This is not a template</p>
 				</div>
-				<div x-on:fir::fir-164238e8549033dd="template2">
+				<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
 					<h2>{{ .Subtitle }}</h2>
 					<p>{{ .Description }}</p>
 				</div>
-			</body>
-			</html>
 			`),
 			expectedBlocks: map[string]string{
-				"fir-164238e8549033dd": `
+				"fir-7e8373b562556ff8": `
 					<h2>{{ .Subtitle }}</h2>
 					<p>{{ .Description }}</p>
 				`,
 			},
 			expectedError: nil,
 		},
+		// TODO: figure out how to test nested templates since hash is generated randomly
+
+		// // Content with @fir attributes and nested templates
+		// {
+		// 	name: "Content with @fir:event:ok attributes and nested templates",
+		// 	content: []byte(`
+		// 				<div @fir:event:ok="template1">
+		// 					<h1>{{ .Title }}</h1>
+		// 					<p>{{ .Content }}</p>
+		// 					<div x-on:fir:event:ok="template2">
+		// 						<h2>{{ .Subtitle }}</h2>
+		// 						<p>{{ .Description }}</p>
+		// 					</div>
+		// 				</div>
+
+		// 			`),
+		// 	expectedResult: []byte(`
+		// 				<div @fir:event:ok::fir-e864ccdcce27f3be="template1">
+		// 					<h1>{{ .Title }}</h1>
+		// 					<p>{{ .Content }}</p>
+		// 					<div x-on:fir:event:ok::fir-fir-7e8373b562556ff8="template2">
+		// 						<h2>{{ .Subtitle }}</h2>
+		// 						<p>{{ .Description }}</p>
+		// 					</div>
+		// 				</div>
+		// 			`),
+		// 	expectedBlocks: map[string]string{
+		// 		"fir-e864ccdcce27f3be": `
+		// 					<h1>{{ .Title }}</h1>
+		// 					<p>{{ .Content }}</p>
+		// 					<div x-on:fir:event:ok::fir-7e8373b562556ff8="template2">
+		// 						<h2>{{ .Subtitle }}</h2>
+		// 						<p>{{ .Description }}</p>
+		// 					</div>
+		// 				`,
+		// 		"fir-7e8373b562556ff8": `
+		// 					<h2>{{ .Subtitle }}</h2>
+		// 					<p>{{ .Description }}</p>
+		// 				`,
+		// 	},
+		// 	expectedError: nil,
+		// },
 	}
 
 	for _, tc := range testCases {
