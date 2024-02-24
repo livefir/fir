@@ -14,45 +14,47 @@
             method="post"
             action="/?event=create-tweet"
             @submit.prevent="$fir.submit()"
-            @fir:create-tweet:ok.nohtml="$refs.createTweet.reset()">
-            <input type="text" name="body" placeholder="a new tweet" />
+            @fir:create-tweet:ok="$refs.createTweet.reset()">
+            <!-- prettier-ignore -->
+            <textarea type="text" name="body" placeholder="a new tweet" rows="4" cols="100"></textarea>
             <p @fir:create-tweet:error="$fir.replace()">
                 {{ fir.Error "create-tweet.body" }}
             </p>
-
-            <button type="submit">Tweet it!</button>
+            <footer>
+                <button type="submit">Tweet it!</button>
+            </footer>
         </form>
+        <hr />
         <div @fir:create-tweet:ok::tweet="$fir.appendEl()">
             {{ range .tweets }}
                 {{ block "tweet" . }}
-                    <div
+                    <article
                         fir-key="{{ .ID }}"
                         @fir:delete-tweet:ok="$fir.removeEl()">
-                        <p>
-                            Tweet:
-                            {{ .Body }}
-                        </p>
-                        <p @fir:like-tweet:ok="$fir.replace()">
-                            Likes:
-                            {{ .LikesCount }}
-                        </p>
                         <form method="post" @submit.prevent="$fir.submit()">
+                            <blockquote>
+                                {{ .Body }}
+                            </blockquote>
                             <input
                                 type="hidden"
                                 name="tweetID"
                                 value="{{ .ID }}" />
-                            <button
-                                formaction="/?event=like-tweet"
-                                type="submit">
-                                Like
-                            </button>
-                            <button
-                                formaction="/?event=delete-tweet"
-                                type="submit">
-                                Delete
-                            </button>
+                            <footer>
+                                <button
+                                    @fir:like-tweet:ok="$fir.replace()"
+                                    formaction="/?event=like-tweet"
+                                    type="submit">
+                                    &#9829;
+                                    {{ .LikesCount }}
+                                </button>
+                                <button
+                                    formaction="/?event=delete-tweet"
+                                    type="submit">
+                                    &#10005;
+                                </button>
+                            </footer>
                         </form>
-                    </div>
+                    </article>
                 {{ end }}
             {{ end }}
         </div>
