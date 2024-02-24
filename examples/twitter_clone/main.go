@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/livefir/fir"
-	"github.com/livefir/fir/examples/twitter/routes"
 	"github.com/timshannon/bolthold"
 )
 
@@ -16,6 +15,6 @@ func main() {
 	}
 
 	controller := fir.NewController("app", fir.DevelopmentMode(true))
-	http.Handle("/", controller.RouteFunc(routes.Index(db)))
+	http.Handle("/", controller.RouteFunc(Index(db)))
 	http.ListenAndServe(":9867", nil)
 }
