@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <link
-            rel="stylesheet"
-            href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
         <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
@@ -11,38 +8,32 @@
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+        <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css" />
     </head>
 
     <body>
-        <div class="my-6" style="height: 500px">
-            <div class="columns is-mobile is-centered is-vcentered">
-                <div
-                    x-data="{count: 0}"
-                    class="column is-one-third-desktop has-text-centered is-narrow">
-                    <div>
-                        You have selected
-                        <span x-text="count || 0"></span> items
-                    </div>
-                    <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        name="count"
-                        x-model="count"
-                        value="0"
-                        @input="$fir.emit('update',{count: $event.target.value})" />
+        <div x-data="{count: 0}">
+            <div>
+                You have selected
+                <span x-text="count || 0"></span> items
+            </div>
+            <input
+                type="range"
+                min="1"
+                max="10"
+                name="count"
+                x-model="count"
+                value="0"
+                @input="$fir.emit('update',{count: $event.target.value})" />
 
-                    <div @fir:update:ok="$fir.replace()">
-                        Price:
-                        {{ .total }}
-                    </div>
-                </div>
+            <div @fir:update:ok="$fir.replace()">
+                Price:
+                {{ .total }}
             </div>
         </div>
-        <footer class="footer">
-            <div class="content has-text-centered">
-                <p>{{ .app_name }}, 2022</p>
-            </div>
-        </footer>
     </body>
 </html>

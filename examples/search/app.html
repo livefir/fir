@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>{{ .app_name }}</title>
+        <title>{{ fir.Name }}</title>
         <meta charset="UTF-8" />
         <meta name="description" content="A fir search app" />
         <meta
             name="viewport"
             content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
-        <link
-            rel="stylesheet"
-            href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" />
+
         <script
             defer
             src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
@@ -17,41 +15,34 @@
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css" />
     </head>
 
     <body>
-        <div class="my-6" style="height: 500px">
-            <div x-data class="columns is-mobile is-centered is-vcentered">
-                <div
-                    class="column is-one-third-desktop has-text-centered is-narrow">
-                    <div class="py-5">
-                        <form
-                            action="/?event=query"
-                            @input-changed="$fir.submit()"
-                            @submit.prevent="$fir.submit()">
-                            <input
-                                name="query"
-                                class="input"
-                                type="search"
-                                placeholder="Search Cities e.g. Paris"
-                                aria-label="Search Cities"
-                                autocomplete="off"
-                                value="{{ .query }}"
-                                @input="$dispatch('input-changed')" />
-                        </form>
-                    </div>
-                    <div @fir:query:ok="$fir.replace()">
-                        {{- range $k,$v := .cities }}
-                            <div id="{{ $k }}">{{ $v }}</div>
-                        {{- end }}
-                    </div>
-                </div>
+        <div x-data>
+            <form
+                action="/?event=query"
+                @input-changed="$fir.submit()"
+                @submit.prevent="$fir.submit()">
+                <input
+                    name="query"
+                    class="input"
+                    type="search"
+                    placeholder="Search Cities e.g. Paris"
+                    aria-label="Search Cities"
+                    autocomplete="off"
+                    value="{{ .query }}"
+                    @input="$dispatch('input-changed')" />
+            </form>
+
+            <div @fir:query:ok="$fir.replace()">
+                {{- range $k,$v := .cities }}
+                    <div id="{{ $k }}">{{ $v }}</div>
+                {{- end }}
             </div>
         </div>
-        <footer class="footer">
-            <div class="content has-text-centered">
-                <p>{{ .app_name }}, 2022</p>
-            </div>
-        </footer>
     </body>
 </html>
