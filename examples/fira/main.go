@@ -33,7 +33,7 @@ func main() {
 			}
 		})
 
-	controller := fir.NewController("app", fir.DevelopmentMode(true), pathParamsOpt)
+	controller := fir.NewController("fira", fir.DevelopmentMode(true), pathParamsOpt)
 	r := chi.NewRouter()
 	r.Handle("/", controller.RouteFunc(projects.Index(db)))
 	r.Handle("/{id}/show", controller.RouteFunc(projects.Show(db)))
