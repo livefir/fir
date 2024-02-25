@@ -105,12 +105,12 @@ const Plugin = (Alpine) => {
             },
             removeEl(detail) {
                 return function (event) {
-                    removeElement(el, eventHTML(event, detail))
+                    removeElement(el)
                 }
             },
             removeParentEl(detail) {
                 return function (event) {
-                    removeParentElement(el, eventHTML(event, detail))
+                    removeParentElement(el)
                 }
             },
             emit(id, params, target) {
@@ -462,13 +462,14 @@ const Plugin = (Alpine) => {
                     elems[i].dispatchEvent(renderEvent)
                 }
             }
-            // targed with key
+            // target with key
             if (serverEvent.key) {
                 const elems = Array.from(
                     document.getElementsByClassName(
                         serverEvent.target.substring(1) + '--' + serverEvent.key
                     )
                 )
+
                 for (let i = 0; i < elems.length; i++) {
                     if (
                         elems[i].hasAttribute(`@${serverEvent.type}`) ||
