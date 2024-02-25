@@ -118,10 +118,31 @@ func uniques(events []dom.Event) []dom.Event {
 loop:
 	for _, event := range events {
 		for i, unique := range uniques {
-			if *event.Type == *unique.Type && *event.Target == *unique.Target && *event.Key == *unique.Key {
+			// nil check
+			var eventType, uniqueEventType, eventTarget, uniqueEventTarget, eventKey, uniqueEventKey string
+			if event.Type != nil {
+				eventType = *event.Type
+			}
+			if unique.Type != nil {
+				uniqueEventType = *unique.Type
+			}
+			if event.Target != nil {
+				eventTarget = *event.Target
+			}
+			if unique.Target != nil {
+				uniqueEventTarget = *unique.Target
+			}
+			if event.Key != nil {
+				eventKey = *event.Key
+			}
+			if unique.Key != nil {
+				uniqueEventKey = *unique.Key
+			}
+			if eventType == uniqueEventType && eventTarget == uniqueEventTarget && eventKey == uniqueEventKey {
 				uniques[i] = event
 				continue loop
 			}
+
 		}
 		uniques = append(uniques, event)
 
