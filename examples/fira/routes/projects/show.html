@@ -27,7 +27,7 @@
                         method="post"
                         id="update"
                         action="/?event=update"
-                        @fir:[update:pending,update:ok,update:error]="toggle"
+                        @fir:[update:pending,update:ok,update:error].nohtml="toggle"
                         @submit.prevent="$fir.submit()">
                         <input
                             type="hidden"

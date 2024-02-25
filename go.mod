@@ -14,13 +14,13 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-chi/chi/v5 v5.0.11
-	github.com/go-playground/validator/v10 v10.17.0
+	github.com/go-playground/validator/v10 v10.18.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/schema v1.2.1
 	github.com/gorilla/securecookie v1.1.2
-	github.com/gorilla/websocket v1.5.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/icholy/replace v0.6.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mattn/go-sqlite3 v1.14.22
@@ -31,9 +31,9 @@ require (
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.7.0
-	github.com/tdewolff/minify/v2 v2.20.16
+	github.com/tdewolff/minify/v2 v2.20.18
 	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
-	github.com/tidwall/gjson v1.17.0
+	github.com/tidwall/gjson v1.17.1
 	github.com/timshannon/bolthold v0.0.0-20231129192944-dca5178aa629
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
@@ -78,7 +78,7 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tdewolff/parse/v2 v2.7.11 // indirect
+	github.com/tdewolff/parse/v2 v2.7.12 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/zclconf/go-cty v1.13.2 // indirect

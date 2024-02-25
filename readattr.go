@@ -88,7 +88,7 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 			continue
 		}
 		// event name can only be followed by ok, error, pending, done
-		if !slices.Contains([]string{"ok", "error", "pending", "done", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
+		if !slices.Contains([]string{"ok", "error", "pending", "done", "pending.nohtml", "done.nohtml", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
 			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
