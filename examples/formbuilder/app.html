@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script defer src="http://localhost:8000/cdn.js"></script>
-
-        {{/* <script
-            defer
-            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-        */}}
+        {{ if fir.Development }}
+            <script defer src="http://localhost:8000/cdn.js"></script>
+        {{ else }}
+            <script
+                defer
+                src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        {{ end }}
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css" />
     </head>
     <body>
         <div x-data>

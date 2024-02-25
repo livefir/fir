@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"unicode"
 
 	"github.com/yosssi/gohtml"
 	"golang.org/x/net/html"
@@ -271,16 +270,6 @@ func TestGetEventFilter(t *testing.T) {
 		}
 
 	}
-}
-
-func removeSpace(s string) string {
-	rr := make([]rune, 0, len(s))
-	for _, r := range s {
-		if !unicode.IsSpace(r) {
-			rr = append(rr, r)
-		}
-	}
-	return string(rr)
 }
 
 func areNodesDeepEqual(node1, node2 *html.Node) error {

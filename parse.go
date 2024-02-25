@@ -1,12 +1,20 @@
 package fir
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"unicode"
 
+	"github.com/cespare/xxhash/v2"
+	"github.com/icholy/replace"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/sourcegraph/conc/pool"
+	"github.com/teris-io/shortid"
+	"golang.org/x/net/html"
 )
 
 type eventTemplate map[string]struct{}
@@ -26,7 +34,7 @@ func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*te
 	pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
 	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.getFuncMap())
 
-	return parseFiles(contentTemplate, opt.readFile, pageFiles...)
+	return parseFiles(contentTemplate, opt.getFuncMap(), opt.readFile, pageFiles...)
 }
 
 func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eventTemplates, error) {
@@ -46,7 +54,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	commonFiles := getPartials(opt, []string{pageLayoutPath})
 	layoutTemplate := template.New(filepath.Base(pageLayoutPath)).Funcs(opt.getFuncMap())
 
-	return parseFiles(template.Must(layoutTemplate.Clone()), opt.readFile, commonFiles...)
+	return parseFiles(template.Must(layoutTemplate.Clone()), opt.getFuncMap(), opt.readFile, commonFiles...)
 }
 
 func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string) (*template.Template, eventTemplates, error) {
@@ -76,7 +84,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		return pageTemplate, evt, nil
 	} else {
 		pageFiles := getPartials(opt, find(pageContentPath, opt.extensions, opt.embedfs))
-		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.readFile, pageFiles...)
+		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.getFuncMap(), opt.readFile, pageFiles...)
 		if err != nil {
 			panic(err)
 		}
@@ -159,10 +167,11 @@ type fileInfo struct {
 	name           string
 	content        []byte
 	eventTemplates eventTemplates
+	blocks         map[string]string
 	err            error
 }
 
-var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:]*$`)
+var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:_.]*$`)
 
 func parseString(t *template.Template, content string) (*template.Template, eventTemplates, error) {
 	fi := readAttributes(fileInfo{content: []byte(content)})
@@ -170,7 +179,7 @@ func parseString(t *template.Template, content string) (*template.Template, even
 	return t, fi.eventTemplates, err
 }
 
-func parseFiles(t *template.Template, readFile func(string) (string, []byte, error), filenames ...string) (*template.Template, eventTemplates, error) {
+func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(string) (string, []byte, error), filenames ...string) (*template.Template, eventTemplates, error) {
 
 	if len(filenames) == 0 {
 		// Not really a problem, but be consistent.
@@ -180,8 +189,16 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 	for _, filename := range filenames {
 		filename := filename
 		resultPool.Go(func() fileInfo {
-			name, b, err := readFile(filename)
-			return readAttributes(fileInfo{name: name, content: b, err: err})
+			name, b, err1 := readFile(filename)
+			if err1 != nil {
+				return fileInfo{name: name, err: err1}
+			}
+			b, blocks, err2 := extractTemplates(b)
+			if err2 != nil {
+				return fileInfo{name: name, err: err2}
+			}
+
+			return readAttributes(fileInfo{name: name, content: b, blocks: blocks})
 		})
 	}
 
@@ -210,9 +227,22 @@ func parseFiles(t *template.Template, readFile func(string) (string, []byte, err
 		} else {
 			tmpl = t.New(fi.name)
 		}
+
 		_, err := tmpl.Parse(s)
 		if err != nil {
-			return t, evt, err
+			fmt.Println(s)
+			return t, evt, fmt.Errorf("parsing %s: %v", fi.name, err)
+		}
+		for name, block := range fi.blocks {
+			bt, err := template.New(name).Funcs(funcs).Parse(block)
+			if err != nil {
+				logger.Warnf("file: %v, error parsing auto extracted template  %s: %v", fi.name, name, err)
+				bt = template.Must(template.New(name).Funcs(funcs).Parse("<!-- error parsing auto extracted template -->"))
+			}
+			tmpl, err = tmpl.AddParseTree(bt.Name(), bt.Tree)
+			if err != nil {
+				return t, evt, fmt.Errorf("file: %v, error adding block template %s: %v", fi.name, name, err)
+			}
 		}
 	}
 
@@ -235,4 +265,169 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 		}
 	}
 	return merged
+
+}
+
+// extractTemplates extracts innerHTML content from fir event namespace string and updates the namespace string with a template
+func extractTemplates(content []byte) ([]byte, map[string]string, error) {
+	blocks := make(map[string]string)
+	if len(content) == 0 {
+		return content, blocks, nil
+	}
+
+	reader := replace.Chain(bytes.NewReader(content),
+		// increment all numbers
+		replace.RegexpStringFunc(regexp.MustCompile(`:error=`), func(match string) string {
+			return fmt.Sprintf(":error::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+
+		replace.RegexpStringFunc(regexp.MustCompile(`:error]=`), func(match string) string {
+			return fmt.Sprintf(":error]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+
+		replace.RegexpStringFunc(regexp.MustCompile(`:ok=`), func(match string) string {
+			return fmt.Sprintf(":ok::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+
+		replace.RegexpStringFunc(regexp.MustCompile(`:ok]=`), func(match string) string {
+			return fmt.Sprintf(":ok]::fir-gen-templ-%s=", strings.ToLower(shortid.MustGenerate()))
+		}),
+	)
+
+	buf := new(bytes.Buffer)
+	_, err := buf.ReadFrom(reader)
+	if err != nil {
+		return content, blocks, err
+	}
+
+	content = buf.Bytes()
+
+	doc, err := html.Parse(bytes.NewReader(content))
+	if err != nil {
+		return content, blocks, err
+	}
+
+	var replacer func(*html.Node)
+	var extractor func(*html.Node)
+	var getHtml func(*html.Node) string
+	replacer = func(node *html.Node) {
+		if node.Type == html.ElementNode {
+			for _, attr := range node.Attr {
+
+				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
+					// check if fir event namespace string already contains a template
+					if !strings.Contains(attr.Key, "::fir-gen-templ-") {
+						continue
+					}
+
+					block := getHtml(node)
+					tempTemplateName := strings.Split(attr.Key, "::")[1]
+					hasNoHtmlModifier := strings.Contains(tempTemplateName, ".nohtml")
+
+					// check if innerHTML content is actually a html template
+					if strings.Contains(block, "{{") && strings.Contains(block, "}}") {
+
+						if !bytes.Contains(content, []byte(tempTemplateName)) {
+							continue
+						}
+
+						templateName := fmt.Sprintf("fir-%s", hashID(block))
+
+						if hasNoHtmlModifier {
+							templateName = fmt.Sprintf("%s.nohtml", templateName)
+						}
+
+						content = bytes.Replace(content, []byte(tempTemplateName), []byte(templateName), -1)
+
+					} else {
+
+						// if innerHTML content is not a html template, remove the template namespace string
+						content = bytes.Replace(content, []byte(fmt.Sprintf("::%s", tempTemplateName)), []byte(""), -1)
+					}
+
+				}
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			replacer(child)
+		}
+	}
+
+	extractor = func(node *html.Node) {
+		if node.Type == html.ElementNode {
+			for _, attr := range node.Attr {
+				if strings.HasPrefix(attr.Key, "@fir") || strings.HasPrefix(attr.Key, "x-on:fir") {
+					// check if fir event namespace string contains a template
+					if !strings.Contains(attr.Key, "::fir-") {
+						continue
+					}
+
+					block := getHtml(node)
+					templateName := strings.Split(attr.Key, "::")[1]
+					// check if innerHTML content is actually a html template
+					if strings.Contains(block, "{{") && strings.Contains(block, "}}") {
+						blocks[templateName] = block
+					}
+
+				}
+			}
+		}
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			extractor(child)
+		}
+	}
+
+	getHtml = func(node *html.Node) string {
+		block := ""
+		for c := node.FirstChild; c != nil; c = c.NextSibling {
+			if c.Type == html.TextNode {
+				block += c.Data
+			} else {
+				//  append the attributes
+				//findFirNode(c)
+				var attributes string
+				for _, attr := range c.Attr {
+					attrstr := fmt.Sprintf(` %s="%s"`, attr.Key, attr.Val)
+					//fmt.Printf("attr key: %v, value: %v\n", attr.Key, attr.Val)
+					attributes += attrstr
+				}
+
+				block += "<" + c.Data + attributes + ">"
+				block += getHtml(c)
+				block += "</" + c.Data + ">"
+			}
+		}
+		return block
+	}
+
+	replacer(doc)
+
+	doc, err = html.Parse(bytes.NewReader(content))
+	if err != nil {
+		return content, blocks, err
+	}
+
+	extractor(doc)
+
+	return content, blocks, nil
+}
+
+func removeSpace(s string) string {
+	rr := make([]rune, 0, len(s))
+	for _, r := range s {
+		if !unicode.IsSpace(r) {
+			rr = append(rr, r)
+		}
+	}
+	return string(rr)
+}
+
+func hashID(content string) string {
+	content = removeSpace(content)
+	xxhash := xxhash.New()
+	_, err := xxhash.WriteString(content)
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%x", xxhash.Sum(nil))
 }

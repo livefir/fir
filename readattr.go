@@ -37,21 +37,29 @@ func readAttributes(fi fileInfo) fileInfo {
 		name:           fi.name,
 		content:        fi.content,
 		err:            fi.err,
+		blocks:         fi.blocks,
 		eventTemplates: evt,
 	}
+}
+
+// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
+func removeModifiers(eventns string) string {
+	if strings.Contains(eventns, ".nohtml") {
+		return eventns
+	}
+	eventnsParts := strings.SplitN(eventns, ".", -1)
+	if len(eventnsParts) > 0 {
+		return eventnsParts[0]
+	}
+	return eventns
 }
 
 func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 	evt := make(eventTemplates)
 	eventns := strings.TrimPrefix(attr.Key, "@fir:")
 	eventns = strings.TrimPrefix(eventns, "x-on:fir:")
-	// eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
-	eventnsParts := strings.SplitN(eventns, ".", -1)
 
-	if len(eventnsParts) > 0 {
-		eventns = eventnsParts[0]
-	}
-
+	eventns = removeModifiers(eventns)
 	// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
 	eventnsList, _ := getEventNsList(eventns)
 
@@ -60,7 +68,7 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		// set @fir|x-on:fir:eventns attribute to the node
 
 		// myevent:ok::myblock
-		eventnsParts = strings.SplitN(eventns, "::", -1)
+		eventnsParts := strings.SplitN(eventns, "::", -1)
 		if len(eventnsParts) == 0 {
 			continue
 		}
@@ -80,15 +88,13 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 			continue
 		}
 		// event name can only be followed by ok, error, pending, done
-		if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventIDParts[1]) {
+		if !slices.Contains([]string{"ok", "error", "pending", "done", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
 			logger.Errorf(eventFormatError(eventns))
 			continue
 		}
-		// assert myevent:ok::myblock or myevent:error::myblock
-		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
-			logger.Errorf(eventFormatError(eventns))
+		// assert myevent:ok::myblock or myevent:error::myblock and skip if not
+		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
 			continue
-
 		}
 		// template name is declared for event state i.e. myevent:ok::myblock
 		templateName := "-"
@@ -102,12 +108,11 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		}
 
 		if !templateNameRegex.MatchString(templateName) {
-			logger.Errorf("error: invalid template name in event binding: only hyphen(-) and colon(:) are allowed: %v", templateName)
+			logger.Errorf("error: invalid template name in event binding: only hyphen(-), colon(:)  and period(.) are allowed: %v", templateName)
 			continue
 		}
 
 		templates[templateName] = struct{}{}
-		// fmt.Printf("eventID: %s, templateName: %s", eventID, templateName)
 
 		evt[eventID] = templates
 	}
@@ -177,7 +182,7 @@ func getEventFilter(input string) (*eventFilter, error) {
 	// Validate and format each value
 	validValues := make([]string, 0)
 	for _, value := range values {
-		if !isValidValue(value) {
+		if !isValidEventFilterFormat(value) {
 			return nil, ErrorEventFilterFormat
 		}
 		validValues = append(validValues, formatValue(value))
@@ -192,7 +197,7 @@ func getEventFilter(input string) (*eventFilter, error) {
 	return extractedValues, nil
 }
 
-func isValidValue(value string) bool {
+func isValidEventFilterFormat(value string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9-]+:(ok|pending|error|done)$`)
 	return re.MatchString(value)
 }

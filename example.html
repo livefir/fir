@@ -13,10 +13,9 @@
             <p>
                 {{ fir.Error "onload" }}
             </p>
-            <p @fir:create:error::create-err="$fir.replace()">
-                {{ block "create-err" . }}
-                    {{ fir.Error "create" }}
-                {{ end }}
+            <p @fir:create:error="$fir.replace()">
+                {{ fir.Error "create" }}
+
             </p>
 
             <div
@@ -29,13 +28,11 @@
                 method="post"
                 action="/?event=create"
                 @submit.prevent="$fir.submit()"
-                @fir:create:ok="$refs.create.reset()"
+                @fir:create:ok.nohtml="$refs.create.reset()"
                 style="margin-top:1rem;margin-bottom:1rem;">
                 <input type="text" name="text" placeholder="a new todo" />
-                <p @fir:create:error::text-err="$fir.replace()">
-                    {{ block "text-err" . }}
-                        {{ fir.Error "create.text" }}
-                    {{ end }}
+                <p @fir:create:error="$fir.replace()">
+                    {{ fir.Error "create.text" }}
                 </p>
 
                 <button type="submit">new</button>
@@ -51,14 +48,11 @@
                                 {{ .Text }}
                             </div>
                             <div
-                                @fir:toggle-done:ok::done="$fir.replace()"
+                                @fir:toggle-done:ok="$fir.replace()"
                                 style="margin-right:1rem">
-                                {{ block "done" . }}
-                                    <div>
-                                        Done:
-                                        {{ .Done }}
-                                    </div>
-                                {{ end }}
+                                Done:
+                                {{ .Done }}
+
                             </div>
                             <form
                                 method="post"

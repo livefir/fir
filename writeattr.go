@@ -151,7 +151,11 @@ func writeAttributes(node *html.Node) {
 				eventns = eventnsParts[0]
 			}
 			if len(eventnsParts) > 1 {
-				modifiers = strings.Join(eventnsParts[1:], ".")
+				modifierParts := eventnsParts[1:]
+				modifierParts = slices.DeleteFunc(modifierParts, func(s string) bool {
+					return s == "nohtml"
+				})
+				modifiers = strings.Join(modifierParts, ".")
 			}
 
 			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
@@ -162,7 +166,15 @@ func writeAttributes(node *html.Node) {
 			}
 
 			for _, eventns := range eventnsList {
+				if strings.Contains(eventns, ":pending") || strings.Contains(eventns, ":done") {
+					// remove template from the eventns if it exists
+					parts := strings.Split(eventns, "::")
+					if len(parts) == 2 {
+						eventns = parts[0]
+					}
+				}
 				eventns = strings.TrimSpace(eventns)
+
 				// set @fir|x-on:fir:eventns attribute to the node
 				eventnsWithModifiers := fmt.Sprintf("%s.%s", eventns, modifiers)
 				if len(modifiers) == 0 {
@@ -175,7 +187,7 @@ func writeAttributes(node *html.Node) {
 					setAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers), attrVal)
 				}
 
-				// fir-myevent-ok--myblock
+				// set class fir-myevent-ok--myblock
 				key := getAttr(node, "fir-key")
 				targetClass := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
 				classes := strings.Fields(getAttr(node, "class"))

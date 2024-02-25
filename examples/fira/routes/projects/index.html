@@ -1,31 +1,24 @@
 {{ define "content" }}
-    <div
-        x-data
-        class="columns mt-5">
+    <div x-data class="columns mt-5">
         {{ block "err" . }}
             {{ fir.Error "route" }}
         {{ end }}
-        <p @fir:create:error::create-err="$fir.replace()">
-            {{ block "create-err" . }}
-                {{ fir.Error "create.route" }}
-            {{ end }}
+        <p @fir:create:error="$fir.replace()">
+            {{ fir.Error "create.route" }}
         </p>
         <div class="column is-4">
             {{ template "createproject" . }}
         </div>
         <div class="column is-8">
             {{ template "toolbar" . }}
-            <div @fir:query:ok::projects="$fir.replace()">
-                {{ block "projects" . }}
-                    <div
-                        id="projects"
-                        @fir:create:ok::projectitem="$fir.appendEl()">
-                        {{ range .projects }}
-                            {{ template "projectitem" . }}
-                        {{ else }}
-                            Nothing here
-                        {{ end }}
-                    </div>
+            <div
+                @fir:query:ok="$fir.replace()"
+                id="projects"
+                @fir:create:ok::projectitem="$fir.appendEl()">
+                {{ range .projects }}
+                    {{ template "projectitem" . }}
+                {{ else }}
+                    Nothing here
                 {{ end }}
             </div>
         </div>

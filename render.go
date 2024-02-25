@@ -3,6 +3,7 @@ package fir
 import (
 	"fmt"
 	"html/template"
+	"strings"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
@@ -63,6 +64,12 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		templateNames = append(templateNames, k)
 	}
 
+	eventIDWithStateNoHTML := fmt.Sprintf("%s:%s.nohtml", *pubsubEvent.ID, pubsubEvent.State)
+
+	for k := range ctx.route.getEventTemplates()[eventIDWithStateNoHTML] {
+		templateNames = append(templateNames, k)
+	}
+
 	resultPool := pool.NewWithResults[dom.Event]()
 	for _, templateName := range templateNames {
 		templateName := templateName
@@ -102,7 +109,46 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		})
 	}
 
-	return events
+	return uniques(events)
+}
+
+func uniques(events []dom.Event) []dom.Event {
+	var uniques []dom.Event
+
+loop:
+	for _, event := range events {
+		for i, unique := range uniques {
+			// nil check
+			var eventType, uniqueEventType, eventTarget, uniqueEventTarget, eventKey, uniqueEventKey string
+			if event.Type != nil {
+				eventType = *event.Type
+			}
+			if unique.Type != nil {
+				uniqueEventType = *unique.Type
+			}
+			if event.Target != nil {
+				eventTarget = *event.Target
+			}
+			if unique.Target != nil {
+				uniqueEventTarget = *unique.Target
+			}
+			if event.Key != nil {
+				eventKey = *event.Key
+			}
+			if unique.Key != nil {
+				uniqueEventKey = *unique.Key
+			}
+			if eventType == uniqueEventType && eventTarget == uniqueEventTarget && eventKey == uniqueEventKey {
+				uniques[i] = event
+				continue loop
+			}
+
+		}
+		uniques = append(uniques, event)
+
+	}
+	return uniques
+
 }
 
 func targetOrClassName(target *string, className string) *string {
@@ -116,13 +162,17 @@ func targetOrClassName(target *string, className string) *string {
 func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, eventIDWithState, templateName string) *dom.Event {
 	if templateName == "-" {
 		eventType := fir(eventIDWithState)
+		detail := &dom.Detail{}
+		if pubsubEvent.Detail != nil {
+			detail.State = pubsubEvent.Detail.State
+		}
 		return &dom.Event{
 			ID:     *pubsubEvent.ID,
 			State:  pubsubEvent.State,
 			Type:   eventType,
 			Key:    pubsubEvent.ElementKey,
 			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-			Detail: &dom.Detail{State: pubsubEvent.Detail.State},
+			Detail: detail,
 		}
 	}
 	eventType := fir(eventIDWithState, templateName)
@@ -149,13 +199,29 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		return nil
 	}
 
+	if pubsubEvent.State == eventstate.OK && templateData == nil {
+		value = ""
+	}
+
+	if strings.HasSuffix(*eventType, ".nohtml") {
+		*eventType = strings.TrimSuffix(*eventType, ".nohtml")
+		value = ""
+	}
+
+	detail := &dom.Detail{
+		HTML: value,
+	}
+	if pubsubEvent.Detail != nil {
+		detail.State = pubsubEvent.Detail.State
+	}
+
 	return &dom.Event{
 		ID:     eventIDWithState,
 		State:  pubsubEvent.State,
 		Type:   eventType,
 		Key:    pubsubEvent.ElementKey,
 		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
-		Detail: &dom.Detail{HTML: value, State: pubsubEvent.Detail.State},
+		Detail: detail,
 	}
 
 }
@@ -215,7 +281,6 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 }
 
 func buildTemplateValue(t *template.Template, templateName string, data any) (string, error) {
-	logger.Infof("template %v, templateName: %v, data: %v", t, templateName, data)
 	if t == nil {
 		return "", nil
 	}

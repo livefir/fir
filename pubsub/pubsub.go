@@ -17,12 +17,12 @@ import (
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go
 
 type Event struct {
-	ID         *string         `json:"id"`
-	State      eventstate.Type `json:"state"`
-	Target     *string         `json:"target"`
-	Detail     *dom.Detail     `json:"detail"`
-	SessionID  *string         `json:"session_id"`
-	ElementKey *string         `json:"element_key"`
+	ID         *string         `json:"id,omitempty"`
+	State      eventstate.Type `json:"state,omitempty"`
+	Target     *string         `json:"target,omitempty"`
+	Detail     *dom.Detail     `json:"detail,omitempty"`
+	SessionID  *string         `json:"session_id,omitempty"`
+	ElementKey *string         `json:"element_key,omitempty"`
 }
 
 // Subscription is a subscription to a channel.

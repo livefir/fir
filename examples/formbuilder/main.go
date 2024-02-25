@@ -18,7 +18,7 @@ func index() fir.RouteOptions {
 			return nil
 		}),
 		fir.OnEvent("add", func(ctx fir.RouteContext) error {
-			return ctx.KV("fir-key", rand.Intn(1000-1)+1)
+			return ctx.KV("key", rand.Intn(1000-1)+1)
 		}),
 		fir.OnEvent("remove", func(ctx fir.RouteContext) error {
 			return nil

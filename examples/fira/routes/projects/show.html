@@ -11,22 +11,15 @@
                         <a href="/"> Projects </a>
                     </li>
                     <li class="is-active">
-                        <a
-                            href="#"
-                            aria-current="page">
-                            Edit
-                        </a>
+                        <a href="#" aria-current="page"> Edit </a>
                     </li>
                 </ul>
             </nav>
             <hr />
-            <div @fir:update:error::update-err="$fir.replace()">
-                {{ block "update-err" . }}
-                    <p class="help is-danger">
-                        {{ fir.Error "update" }}
-                    </p>
-                {{ end }}
-            </div>
+
+            <p @fir:update:error="$fir.replace()" class="help is-danger">
+                {{ fir.Error "update" }}
+            </p>
 
             {{ block "project" . }}
                 <div id="project">
@@ -45,52 +38,41 @@
 
                             <div
                                 id="title"
-                                @fir:update:ok::title="$fir.replace()"
+                                @fir:update:ok="$fir.replace()"
                                 class="control">
-                                {{ block "title" . }}
-                                    <input
-                                        name="title"
-                                        class="input"
-                                        type="text"
-                                        value="{{ .Title }}"
-                                        placeholder="Title" />
-                                {{ end }}
+                                <input
+                                    name="title"
+                                    class="input"
+                                    type="text"
+                                    value="{{ .Title }}"
+                                    placeholder="Title" />
                             </div>
 
-                            <div
-                                id="title-err"
-                                @fir:update:error::title-err="$fir.replace()">
-                                {{ block "title-err" . }}
-                                    <p class="help is-danger">
-                                        {{ fir.Error "update.title" }}
-                                    </p>
-                                {{ end }}
-                            </div>
+                            <p
+                                @fir:update:error="$fir.replace()"
+                                class="help is-danger">
+                                {{ fir.Error "update.title" }}
+                            </p>
                         </div>
                         <div class="field">
                             <label class="label"> Description </label>
                             <div
                                 id="description"
-                                @fir:update:ok::description="$fir.replace()"
+                                @fir:update:ok="$fir.replace()"
                                 class="control">
-                                {{ block "description" . }}
-                                    <input
-                                        name="description"
-                                        class="input"
-                                        type="text"
-                                        value="{{ .Description }}"
-                                        placeholder="Description" />
-                                {{ end }}
+                                <input
+                                    name="description"
+                                    class="input"
+                                    type="text"
+                                    value="{{ .Description }}"
+                                    placeholder="Description" />
                             </div>
-                            <div
-                                id="description-err"
-                                @fir:update:error::description-err="$fir.replace()">
-                                {{ block "description-err" . }}
-                                    <p class="help is-danger">
-                                        {{ fir.Error "update.description" }}
-                                    </p>
-                                {{ end }}
-                            </div>
+
+                            <p
+                                @fir:update:error="$fir.replace()"
+                                class="help is-danger">
+                                {{ fir.Error "update.description" }}
+                            </p>
                         </div>
                         <div class="field">
                             <div class="control">
@@ -108,15 +90,14 @@
                         id="delete"
                         action="/?event=delete"
                         class="mt-2"
+                        @fir:delete:ok="window.location.href = '/'"
                         @submit.prevent="$fir.submit()">
                         <input
                             type="hidden"
                             name="projectID"
                             value="{{ .ID }}" />
                         <div class="control">
-                            <button
-                                type="submit"
-                                class="button is-danger">
+                            <button type="submit" class="button is-danger">
                                 Delete
                             </button>
                         </div>

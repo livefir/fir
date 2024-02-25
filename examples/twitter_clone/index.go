@@ -1,4 +1,4 @@
-package routes
+package main
 
 import (
 	"errors"
@@ -105,8 +105,7 @@ func Index(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
 		return fir.RouteOptions{
 			fir.ID("index"),
-			fir.Content("routes/index.html"),
-			fir.Layout("routes/layout.html"),
+			fir.Content("index.html"),
 			fir.OnLoad(loadTweets(db)),
 			fir.OnEvent("create-tweet", createTweet(db)),
 			fir.OnEvent("delete-tweet", deleteTweet(db)),

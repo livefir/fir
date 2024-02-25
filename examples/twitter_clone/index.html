@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <title>Twitter Clone</title>
+
+        <meta charset="UTF-8" />
+        <meta name="description" content="" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
+
+        {{ if fir.Development }}
+            <script defer src="http://localhost:8000/cdn.js"></script>
+        {{ else }}
+            <script
+                defer
+                src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        {{ end }}
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css" />
+    </head>
+
+    <body>
+        <div x-data>
+            <p>
+                {{ fir.Error "onload" }}
+            </p>
+
+            <form
+                x-ref="createTweet"
+                method="post"
+                action="/?event=create-tweet"
+                @submit.prevent="$fir.submit()"
+                {{/* .nohtml modifier tells the server to not output html in this event since we not using it */}}
+                @fir:create-tweet:ok.nohtml="$refs.createTweet.reset()">
+                <!-- prettier-ignore -->
+                <textarea type="text" name="body" placeholder="a new tweet" rows="4" cols="100"></textarea>
+                <div
+                    @fir:create-tweet:pending="console.log('create tweet start')"
+                    @fir:create-tweet:ok="console.log('create tweet done')"></div>
+                <p @fir:create-tweet:error="$fir.replace()">
+                    {{ fir.Error "create-tweet.body" }}
+                </p>
+                <footer>
+                    <button type="submit">Tweet it!</button>
+                </footer>
+            </form>
+            <hr />
+            <div @fir:create-tweet:ok::tweet="$fir.appendEl()">
+                {{ range .tweets }}
+                    {{ block "tweet" . }}
+                        <section
+                            {{/* fir-key identifies elements in a list */}}
+                            fir-key="{{ .ID }}"
+                            @fir:delete-tweet:ok.nohtml="$fir.removeEl()">
+                            <form method="post" @submit.prevent="$fir.submit()">
+                                <blockquote>
+                                    {{ .Body }}
+                                </blockquote>
+                                <input
+                                    type="hidden"
+                                    name="tweetID"
+                                    value="{{ .ID }}" />
+                                <footer>
+                                    <button
+                                        @fir:like-tweet:ok="$fir.replace()"
+                                        formaction="/?event=like-tweet"
+                                        type="submit">
+                                        &#9829;
+                                        {{ .LikesCount }}
+                                    </button>
+                                    <button
+                                        formaction="/?event=delete-tweet"
+                                        type="submit">
+                                        &#10005;
+                                    </button>
+                                </footer>
+                            </form>
+                        </section>
+                    {{ end }}
+                {{ end }}
+            </div>
+        </div>
+    </body>
+</html>
