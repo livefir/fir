@@ -2,7 +2,6 @@ package fir
 
 import (
 	"embed"
-	"flag"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -214,15 +213,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 
 	for _, option := range options {
 		option(o)
-	}
-
-	if o.publicDir == "" {
-		var publicDir string
-		publicDirUsage := "public directory that contains the html template files."
-		flag.StringVar(&publicDir, "public", ".", publicDirUsage)
-		flag.StringVar(&publicDir, "p", ".", publicDirUsage+" (shortand)")
-		flag.Parse()
-		o.publicDir = publicDir
 	}
 
 	c := &controller{
