@@ -237,7 +237,7 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		}
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
-			logger.Errorf("error publishing patch: %v", err)
+			logger.Debugf("error publishing patch: %v", err)
 		}
 		events := renderDOMEvents(ctx, pubsubEvent)
 
