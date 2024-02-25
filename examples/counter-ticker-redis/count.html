@@ -1,29 +1,15 @@
 {{ define "content" }}
-    <div class="my-6" style="height: 500px">
-        <div class="columns is-mobile is-centered is-vcentered">
-            <div
-                x-data
-                class="column is-one-third-desktop has-text-centered is-narrow">
-                <div @fir:updated:ok="$fir.replace()">
-                    Count updated: {{ .updated }} seconds ago
-                </div>
-
-                <hr />
-                <div id="count" @fir:[inc:ok,dec:ok]="$fir.replace()">
-                    Count:
-                    {{ .count }}
-                </div>
-                <button
-                    class="button has-background-primary"
-                    @click="$fir.emit('inc')">
-                    +
-                </button>
-                <button
-                    class="button has-background-primary"
-                    @click="$fir.emit('dec')">
-                    -
-                </button>
-            </div>
+    <div x-data>
+        <div @fir:updated:ok="$fir.replace()">
+            Count updated: {{ .updated }} seconds ago
         </div>
+
+        <hr />
+        <div id="count" @fir:[inc:ok,dec:ok]="$fir.replace()">
+            Count:
+            {{ .count }}
+        </div>
+        <button @click="$fir.emit('inc')">+</button>
+        <button @click="$fir.emit('dec')">-</button>
     </div>
 {{ end }}
