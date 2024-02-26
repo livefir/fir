@@ -21,6 +21,7 @@ require (
 	github.com/gorilla/schema v1.2.1
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/websocket v1.5.1
+	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/icholy/replace v0.6.0
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mattn/go-sqlite3 v1.14.22

@@ -33,7 +33,6 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 		}
 
 		tmpl = tmpl.Funcs(newFirFuncMap(ctx, errs))
-		tmpl.Option("missingkey=zero")
 		err := tmpl.Execute(buf, data)
 		if err != nil {
 			logger.Errorf("error executing template: %v", err)

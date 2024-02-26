@@ -136,8 +136,8 @@ func (p *pubsubInmem) Subscribe(ctx context.Context, channel string) (Subscripti
 }
 
 func (p *pubsubInmem) HasSubscribers(ctx context.Context, pattern string) bool {
-	p.Lock()
-	defer p.Unlock()
+	p.RLock()
+	defer p.RUnlock()
 	count := 0
 	for channel := range p.channelsSubscriptions {
 		matched, err := filepath.Match(pattern, channel)
