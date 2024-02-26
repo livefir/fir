@@ -33,11 +33,11 @@ const (
 	maxMessageSize = 1024
 )
 
-// RedirectUnauthorisedWebScoket sends a 4001 close message to the client
+// RedirectUnauthorisedWebSocket sends a 4001 close message to the client
 // It sends the redirect url in the close message payload
 // If the request is not a websocket request or has error upgrading and writing the close message, it returns false
 // redirect url must be less than 123 bytes
-func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redirect string) bool {
+func RedirectUnauthorisedWebSocket(w http.ResponseWriter, r *http.Request, redirect string) bool {
 	if len(redirect) > 123 {
 		panic("redirect url is too long: max size 123 bytes")
 	}
@@ -68,19 +68,30 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	cookie, err := r.Cookie(cntrl.cookieName)
 	if err != nil {
 		logger.Errorf("cookie err: %v", err)
-		RedirectUnauthorisedWebScoket(w, r, "/")
+		RedirectUnauthorisedWebSocket(w, r, "/")
+		return
+	}
+	if cookie.Value == "" {
+		logger.Errorf("cookie err: empty")
+		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
 	if err != nil {
 		logger.Errorf("decode session err: %v", err)
-		RedirectUnauthorisedWebScoket(w, r, "/")
+		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 
-	if sessionID == "" || routeID == "" {
-		logger.Errorf("err: sessionID: %v or routeID: %v is empty", sessionID, routeID)
-		RedirectUnauthorisedWebScoket(w, r, "/")
+	if sessionID == "" {
+		logger.Errorf("err: sessionID is empty, routeID is: %s", routeID)
+		RedirectUnauthorisedWebSocket(w, r, "/")
+		return
+	}
+
+	if routeID == "" {
+		logger.Errorf("routeID: is empty")
+		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 
@@ -92,11 +103,12 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 
-	logger.Infof("new conn: %v", conn.RemoteAddr())
+	//logger.Infof("new conn: %v", conn.RemoteAddr())
 
 	conn.SetReadLimit(maxMessageSize)
 	conn.EnableWriteCompression(true)
 	conn.SetCompressionLevel(5)
+
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		//logger.Infof("pong from %v", conn.RemoteAddr())
@@ -105,22 +117,26 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	})
 
 	ctx := context.Background()
-	done := make(chan struct{})
+	routeWorkersDone := make(chan struct{})
 	send := make(chan []byte)
-	go writePump(conn, send)
-	wg := &sync.WaitGroup{}
-	wg.Add(len(cntrl.routes))
+	writePumpDone := make(chan struct{})
+	go writePump(conn, writePumpDone, send)
+	routeWorkersWg := &sync.WaitGroup{}
+	routeWorkersWg.Add(len(cntrl.routes))
+	routeSetupWg := &sync.WaitGroup{}
+	routeSetupWg.Add(len(cntrl.routes))
 
 	for _, rt := range cntrl.routes {
 		rt := rt
 		go func(route *route) {
-			defer wg.Done()
+			defer routeWorkersWg.Done()
 			routeChannel := route.channelFunc(r, route.id)
 			if routeChannel == nil {
 				logger.Errorf("error: channel is empty")
 				http.Error(w, "channel is empty", http.StatusUnauthorized)
 				return
 			}
+
 			route.setChannel(*routeChannel)
 
 			// subscribers: subscribe to pubsub events
@@ -188,20 +204,24 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					}
 				}()
 			}
-			<-done
+			routeSetupWg.Done()
+			<-routeWorkersDone
 		}(rt)
 	}
 	sid := ""
 	lastEvent := Event{
 		SessionID: &sid,
 	}
+	routeSetupWg.Wait()
 loop:
 
 	for {
+
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				logger.Errorf("read error: %v", err)
+
+			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				logger.Errorf("read: %v", err)
 			}
 			break loop
 		}
@@ -272,14 +292,14 @@ loop:
 			route:    eventRoute,
 		}
 
-		withEventLogger := logger.Logger().
-			With(
-				"route_id", eventRoute.id,
-				"event_id", event.ID,
-				"session_id", eventSessionID,
-				"element_key", event.ElementKey,
-			)
-		withEventLogger.Info("received user event")
+		// withEventLogger := logger.Logger().
+		// 	With(
+		// 		"route_id", eventRoute.id,
+		// 		"event_id", event.ID,
+		// 		"session_id", eventSessionID,
+		// 		"element_key", event.ElementKey,
+		// 	)
+		// withEventLogger.Info("received user event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			logger.Errorf("err: event %v, event.id not found", event)
@@ -290,10 +310,13 @@ loop:
 		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, eventRoute.getChannel()))
 	}
 	// close writers to send
-	close(done)
-	wg.Wait()
-	close(send)
-	logger.Infof("conn closed %v %v", conn.RemoteAddr(), conn.Close())
+	close(routeWorkersDone)
+	routeWorkersWg.Wait()
+	close(writePumpDone)
+	err = conn.Close()
+	if err != nil {
+		logger.Errorf("conn close err: %v", err)
+	}
 }
 
 func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
@@ -330,12 +353,13 @@ func writeConn(conn *websocket.Conn, mt int, payload []byte) error {
 	return conn.WriteMessage(mt, payload)
 }
 
-func writePump(conn *websocket.Conn, send chan []byte) {
+func writePump(conn *websocket.Conn, closeWritePump chan struct{}, send chan []byte) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		conn.Close()
 	}()
+loop:
 	for {
 		select {
 		case message, ok := <-send:
@@ -362,6 +386,8 @@ func writePump(conn *websocket.Conn, send chan []byte) {
 			if err := w.Close(); err != nil {
 				return
 			}
+		case <-closeWritePump:
+			break loop
 		case <-ticker.C:
 			//logger.Infof("ping to client: %v", conn.RemoteAddr())
 			if err := writeConn(conn, websocket.PingMessage, []byte{}); err != nil {
