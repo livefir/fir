@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"slices"
-
-	"github.com/livefir/fir/internal/logger"
 )
 
 type readFileFunc func(string) (string, []byte, error)
@@ -82,14 +80,12 @@ func isDir(path string, embedfs *embed.FS) bool {
 	if embedfs != nil {
 		fileInfo, err := fs.Stat(*embedfs, path)
 		if err != nil {
-			logger.Warnf("isDir: %v", err)
 			return false
 		}
 		return fileInfo.IsDir()
 	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		logger.Warnf("isDir: %v", err)
 		return false
 	}
 
