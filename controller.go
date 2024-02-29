@@ -2,7 +2,6 @@ package fir
 
 import (
 	"embed"
-	"flag"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
-	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -195,9 +193,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 	o := &opt{
 		websocketUpgrader: websocket.Upgrader{
 			EnableCompression: true,
-			ReadBufferSize:    256,
-			WriteBufferSize:   256,
-			WriteBufferPool:   &sync.Pool{},
+			// ReadBufferSize:    256,
+			// WriteBufferSize:   256,
+			// WriteBufferPool: &sync.Pool{},
 		},
 		watchExts:   defaultWatchExtensions,
 		pubsub:      pubsub.NewInmem(),
@@ -214,15 +212,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 
 	for _, option := range options {
 		option(o)
-	}
-
-	if o.publicDir == "" {
-		var publicDir string
-		publicDirUsage := "public directory that contains the html template files."
-		flag.StringVar(&publicDir, "public", ".", publicDirUsage)
-		flag.StringVar(&publicDir, "p", ".", publicDirUsage+" (shortand)")
-		flag.Parse()
-		o.publicDir = publicDir
 	}
 
 	c := &controller{
@@ -244,11 +233,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 	if c.embedfs != nil {
 		c.readFile = readFileFS(*c.embedfs)
 		c.existFile = existFileFS(*c.embedfs)
-		fmt.Printf("read template files embedded in the binary")
 	} else {
 		c.readFile = readFileOS
 		c.existFile = existFileOS
-		logger.Infof("read template files from disk")
 	}
 
 	md := markdown(c.readFile, c.existFile)

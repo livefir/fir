@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/pubsub"
+	"github.com/redis/go-redis/v9"
 )
 
 type Counter struct {

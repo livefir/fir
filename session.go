@@ -14,9 +14,11 @@ var errEmptySession = errors.New("empty session")
 
 func decodeSession(sc securecookie.SecureCookie, cookieName, cookieValue string) (string, string, error) {
 	var session string
+
 	if err := sc.Decode(cookieName, cookieValue, &session); err != nil {
 		return "", "", err
 	}
+
 	if session == "" {
 		return "", "", errEmptySession
 	}
@@ -36,6 +38,9 @@ func encodeSession(opt routeOpt, w http.ResponseWriter, r *http.Request) error {
 		if sessionID == "" {
 			sessionID = uuid.New().String()
 		}
+	}
+	if sessionID == "" {
+		sessionID = uuid.New().String()
 	}
 
 	session := sessionID + ":" + opt.id

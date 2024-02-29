@@ -28,6 +28,7 @@ func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*te
 			template.New(
 				layoutContentName).
 				Funcs(opt.getFuncMap()),
+			opt.getFuncMap(),
 			content)
 	}
 	// content must be  a file or directory
@@ -42,7 +43,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	evt := make(eventTemplates)
 	// is layout html content or a file/directory
 	if !opt.existFile(pageLayoutPath) {
-		return parseString(template.New("").Funcs(opt.getFuncMap()), layout)
+		return parseString(template.New("").Funcs(opt.getFuncMap()), opt.getFuncMap(), layout)
 	}
 
 	// layout must be  a file
@@ -73,7 +74,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 
 	pageContentPath := filepath.Join(opt.publicDir, content)
 	if !opt.existFile(pageContentPath) {
-		pageTemplate, currEvt, err := parseString(layoutTemplate, content)
+		pageTemplate, currEvt, err := parseString(layoutTemplate, opt.getFuncMap(), content)
 		if err != nil {
 			panic(err)
 		}
@@ -173,9 +174,28 @@ type fileInfo struct {
 
 var templateNameRegex = regexp.MustCompile(`^[ A-Za-z0-9\-:_.]*$`)
 
-func parseString(t *template.Template, content string) (*template.Template, eventTemplates, error) {
-	fi := readAttributes(fileInfo{content: []byte(content)})
-	t, err := t.Parse(string(fi.content))
+func parseString(t *template.Template, funcs template.FuncMap, content string) (*template.Template, eventTemplates, error) {
+	b, blocks, err := extractTemplates([]byte(content))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fi := readAttributes(fileInfo{content: b, blocks: blocks})
+	t, err = t.Parse(string(fi.content))
+	if err != nil {
+		return t, fi.eventTemplates, fmt.Errorf("parsing %s: %v", fi.name, err)
+	}
+	for name, block := range fi.blocks {
+		bt, err := template.New(name).Funcs(funcs).Parse(block)
+		if err != nil {
+			logger.Warnf("file: %v, error parsing auto extracted template  %s: %v", fi.name, name, err)
+			bt = template.Must(template.New(name).Funcs(funcs).Parse("<!-- error parsing auto extracted template -->"))
+		}
+		t, err = t.AddParseTree(bt.Name(), bt.Tree)
+		if err != nil {
+			return t, fi.eventTemplates, fmt.Errorf("file: %v, error adding block template %s: %v", fi.name, name, err)
+		}
+	}
 	return t, fi.eventTemplates, err
 }
 
@@ -230,7 +250,6 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 
 		_, err := tmpl.Parse(s)
 		if err != nil {
-			fmt.Println(s)
 			return t, evt, fmt.Errorf("parsing %s: %v", fi.name, err)
 		}
 		for name, block := range fi.blocks {

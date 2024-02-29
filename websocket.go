@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -33,11 +32,11 @@ const (
 	maxMessageSize = 1024
 )
 
-// RedirectUnauthorisedWebScoket sends a 4001 close message to the client
+// RedirectUnauthorisedWebSocket sends a 4001 close message to the client
 // It sends the redirect url in the close message payload
 // If the request is not a websocket request or has error upgrading and writing the close message, it returns false
 // redirect url must be less than 123 bytes
-func RedirectUnauthorisedWebScoket(w http.ResponseWriter, r *http.Request, redirect string) bool {
+func RedirectUnauthorisedWebSocket(w http.ResponseWriter, r *http.Request, redirect string) bool {
 	if len(redirect) > 123 {
 		panic("redirect url is too long: max size 123 bytes")
 	}
@@ -68,23 +67,115 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	cookie, err := r.Cookie(cntrl.cookieName)
 	if err != nil {
 		logger.Errorf("cookie err: %v", err)
-		RedirectUnauthorisedWebScoket(w, r, "/")
+		RedirectUnauthorisedWebSocket(w, r, "/")
+		return
+	}
+	if cookie.Value == "" {
+		logger.Errorf("cookie err: empty")
+		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
 	if err != nil {
 		logger.Errorf("decode session err: %v", err)
-		RedirectUnauthorisedWebScoket(w, r, "/")
+		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 
-	if sessionID == "" || routeID == "" {
-		logger.Errorf("err: sessionID: %v or routeID: %v is empty", sessionID, routeID)
-		RedirectUnauthorisedWebScoket(w, r, "/")
+	if sessionID == "" {
+		logger.Errorf("err: sessionID is empty, routeID is: %s", routeID)
+		RedirectUnauthorisedWebSocket(w, r, "/")
+		return
+	}
+
+	if routeID == "" {
+		logger.Errorf("routeID: is empty")
+		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 
 	user := getUserFromRequestContext(r)
+
+	send := make(chan []byte, 100)
+
+	ctx := context.Background()
+
+	for _, route := range cntrl.routes {
+		routeChannel := route.channelFunc(r, route.id)
+		if routeChannel == nil {
+			logger.Errorf("error: channel is empty")
+			http.Error(w, "channel is empty", http.StatusUnauthorized)
+			return
+		}
+
+		// subscribers: subscribe to pubsub events
+		subscription, err := route.pubsub.Subscribe(ctx, *routeChannel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer subscription.Close()
+
+		go func() {
+			for pubsubEvent := range subscription.C() {
+				routeCtx := RouteContext{
+					request:  r,
+					response: w,
+					route:    route,
+				}
+
+				go renderAndWriteEvent(send, *routeChannel, routeCtx, pubsubEvent)
+			}
+		}()
+
+		// eventSenders: handle server events
+		go func() {
+			for event := range route.eventSender {
+				eventCtx := RouteContext{
+					event:    event,
+					request:  r,
+					response: w,
+					route:    route,
+				}
+
+				withEventLogger := logger.Logger().
+					With(
+						"route_id", route.id,
+						"event_id", event.ID,
+						"session_id", sessionID,
+					)
+				withEventLogger.Info("received server event")
+				onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
+				if !ok {
+					logger.Errorf("err: event %v, event.id not found", event)
+					continue
+				}
+
+				// ignore user store for server events
+				// update request context with user
+				eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, user))
+
+				handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, *route.channelFunc(eventCtx.request, route.id)))
+			}
+		}()
+
+		if route.developmentMode {
+			// subscriber for reload operations in development mode. see watch.go
+			reloadSubscriber, err := route.pubsub.Subscribe(ctx, devReloadChannel)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer reloadSubscriber.Close()
+
+			go func() {
+				for pubsubEvent := range reloadSubscriber.C() {
+					go writeEvent(send, pubsubEvent)
+				}
+			}()
+		}
+
+	}
 
 	conn, err := cntrl.websocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -92,11 +183,10 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 
-	logger.Infof("new conn: %v", conn.RemoteAddr())
-
 	conn.SetReadLimit(maxMessageSize)
 	conn.EnableWriteCompression(true)
-	conn.SetCompressionLevel(5)
+	conn.SetCompressionLevel(9)
+	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		//logger.Infof("pong from %v", conn.RemoteAddr())
@@ -104,104 +194,23 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return nil
 	})
 
-	ctx := context.Background()
-	done := make(chan struct{})
-	send := make(chan []byte)
-	go writePump(conn, send)
-	wg := &sync.WaitGroup{}
-	wg.Add(len(cntrl.routes))
+	writePumpDone := make(chan struct{})
+	go writePump(conn, writePumpDone, send)
 
-	for _, rt := range cntrl.routes {
-		rt := rt
-		go func(route *route) {
-			defer wg.Done()
-			routeChannel := route.channelFunc(r, route.id)
-			if routeChannel == nil {
-				logger.Errorf("error: channel is empty")
-				http.Error(w, "channel is empty", http.StatusUnauthorized)
-				return
-			}
-			route.setChannel(*routeChannel)
-
-			// subscribers: subscribe to pubsub events
-			subscription, err := route.pubsub.Subscribe(ctx, route.getChannel())
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer subscription.Close()
-
-			go func() {
-				for pubsubEvent := range subscription.C() {
-					routeCtx := RouteContext{
-						request:  r,
-						response: w,
-						route:    route,
-					}
-					go renderAndWriteEvent(send, route.getChannel(), routeCtx, pubsubEvent)
-				}
-			}()
-
-			// eventSenders: handle server events
-			go func() {
-				for event := range route.eventSender {
-					eventCtx := RouteContext{
-						event:    event,
-						request:  r,
-						response: w,
-						route:    route,
-					}
-
-					withEventLogger := logger.Logger().
-						With(
-							"route_id", route.id,
-							"event_id", event.ID,
-							"session_id", sessionID,
-						)
-					withEventLogger.Info("received server event")
-					onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
-					if !ok {
-						logger.Errorf("err: event %v, event.id not found", event)
-						continue
-					}
-
-					// ignore user store for server events
-					// update request context with user
-					eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, user))
-
-					handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, route.getChannel()))
-				}
-			}()
-
-			if route.developmentMode {
-				// subscriber for reload operations in development mode. see watch.go
-				reloadSubscriber, err := route.pubsub.Subscribe(ctx, devReloadChannel)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				defer reloadSubscriber.Close()
-
-				go func() {
-					for pubsubEvent := range reloadSubscriber.C() {
-						go writeEvent(send, pubsubEvent)
-					}
-				}()
-			}
-			<-done
-		}(rt)
-	}
 	sid := ""
 	lastEvent := Event{
 		SessionID: &sid,
 	}
+
 loop:
 
 	for {
+
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				logger.Errorf("read error: %v", err)
+
+			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				logger.Errorf("read: %v, %v", conn.RemoteAddr().String(), err)
 			}
 			break loop
 		}
@@ -272,14 +281,14 @@ loop:
 			route:    eventRoute,
 		}
 
-		withEventLogger := logger.Logger().
-			With(
-				"route_id", eventRoute.id,
-				"event_id", event.ID,
-				"session_id", eventSessionID,
-				"element_key", event.ElementKey,
-			)
-		withEventLogger.Info("received user event")
+		// withEventLogger := logger.Logger().
+		// 	With(
+		// 		"route_id", eventRoute.id,
+		// 		"event_id", event.ID,
+		// 		"session_id", eventSessionID,
+		// 		"element_key", event.ElementKey,
+		// 	)
+		// withEventLogger.Info("received user event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			logger.Errorf("err: event %v, event.id not found", event)
@@ -287,13 +296,11 @@ loop:
 		}
 
 		// handle user events
-		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, eventRoute.getChannel()))
+		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, *eventRoute.channelFunc(eventCtx.request, eventRoute.id)))
 	}
-	// close writers to send
-	close(done)
-	wg.Wait()
-	close(send)
-	logger.Infof("conn closed %v %v", conn.RemoteAddr(), conn.Close())
+
+	close(writePumpDone)
+	conn.Close()
 }
 
 func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
@@ -330,38 +337,42 @@ func writeConn(conn *websocket.Conn, mt int, payload []byte) error {
 	return conn.WriteMessage(mt, payload)
 }
 
-func writePump(conn *websocket.Conn, send chan []byte) {
+func writePump(conn *websocket.Conn, closeWritePump chan struct{}, send chan []byte) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		conn.Close()
 	}()
+loop:
 	for {
 		select {
 		case message, ok := <-send:
 			if !ok {
-				// The hub closed the channel.
-				writeConn(conn, websocket.CloseMessage, []byte{})
+				err := writeConn(conn, websocket.CloseMessage, []byte{})
+				if err != nil {
+					logger.Errorf("write close err: %v", err)
+				}
 				return
 			}
 
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
 			w, err := conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				logger.Errorf("next writer err: %v", err)
 				return
 			}
 
-			w.Write(message)
-
-			// Add queued chat messages to the current websocket message.
-			n := len(send)
-			for i := 0; i < n; i++ {
-				w.Write(<-send)
+			_, err = w.Write(message)
+			if err != nil {
+				logger.Errorf("write err: %v", err)
+				return
 			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
+
+		case <-closeWritePump:
+			break loop
 		case <-ticker.C:
 			//logger.Infof("ping to client: %v", conn.RemoteAddr())
 			if err := writeConn(conn, websocket.PingMessage, []byte{}); err != nil {

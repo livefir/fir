@@ -198,7 +198,6 @@ type route struct {
 	template       *template.Template
 	errorTemplate  *template.Template
 	eventTemplates eventTemplates
-	channel        string
 
 	cntrl *controller
 	routeOpt
@@ -237,7 +236,7 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		}
 		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
-			logger.Errorf("error publishing patch: %v", err)
+			logger.Debugf("error publishing patch: %v", err)
 		}
 		events := renderDOMEvents(ctx, pubsubEvent)
 
@@ -249,20 +248,6 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		ctx.response.Write(eventsData)
 		return nil
 	}
-}
-
-// set route channel concurrency safe
-func (rt *route) setChannel(channel string) {
-	rt.Lock()
-	defer rt.Unlock()
-	rt.channel = channel
-}
-
-// get route channel concurrency safe
-func (rt *route) getChannel() string {
-	rt.RLock()
-	defer rt.RUnlock()
-	return rt.channel
 }
 
 // set route template concurrency safe
@@ -665,6 +650,7 @@ func (rt *route) parseTemplates() {
 		if err != nil {
 			panic(err)
 		}
+		rtTemplate.Option("missingkey=zero")
 		rt.setTemplate(rtTemplate)
 
 		var errorEventTemplates eventTemplates
@@ -673,6 +659,7 @@ func (rt *route) parseTemplates() {
 		if err != nil {
 			panic(err)
 		}
+		rtTemplate.Option("missingkey=zero")
 		rt.setErrorTemplate(rtErrorTemplate)
 
 		rtEventTemplates := deepMergeEventTemplates(errorEventTemplates, successEventTemplates)

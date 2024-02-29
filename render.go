@@ -11,8 +11,8 @@ import (
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 	"github.com/sourcegraph/conc/pool"
-	"github.com/tdewolff/minify/v2"
-	"github.com/tdewolff/minify/v2/html"
+	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/html"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -33,7 +33,6 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 		}
 
 		tmpl = tmpl.Funcs(newFirFuncMap(ctx, errs))
-		tmpl.Option("missingkey=zero")
 		err := tmpl.Execute(buf, data)
 		if err != nil {
 			logger.Errorf("error executing template: %v", err)
