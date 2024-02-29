@@ -8,10 +8,10 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 // code modeled after https://github.com/purposeinplay/go-commons/blob/v0.6.2/pubsub/inmem/pubsub.go

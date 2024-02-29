@@ -2,11 +2,13 @@ package fir
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -15,6 +17,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/pubsub"
+	"github.com/redis/go-redis/v9"
+	"github.com/testcontainers/testcontainers-go"
+	redisContainer "github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
 type doubleRequest struct {
@@ -290,6 +296,81 @@ func BenchmarkControllerWebsocktEnabled(b *testing.B) {
 
 func TestControllerWebsocketEnabled(t *testing.T) {
 	for _, tc := range testCases {
+		controller := NewController(tc.name, tc.options...)
+		// Create a test HTTP server
+		server := httptest.NewServer(controller.RouteFunc(tc.routeFunc))
+		defer server.Close()
+		ti := &testInput{serverURL: server.URL, num: 10}
+		t.Parallel()
+		t.Run(tc.name, func(t *testing.T) {
+			runWebsocketEventTest(t, ti)
+		})
+	}
+}
+
+func BenchmarkControllerWebsocktEnabledRedis(b *testing.B) {
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	pubsubAdapter := pubsub.NewRedis(client)
+
+	for _, tc := range testCases {
+		tc.options = append(tc.options, WithPubsubAdapter(pubsubAdapter))
+		controller := NewController(tc.name, tc.options...)
+		// Create a test HTTP server
+		server := httptest.NewServer(controller.RouteFunc(tc.routeFunc))
+		defer server.Close()
+
+		ti := &testInput{serverURL: server.URL, num: 10}
+		b.Cleanup(func() {
+			fmt.Printf("ws send: %d, ws recv: %d\n", ti.getWssend(), ti.getWsrecv())
+		})
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				runWebsocketEventTest(b, ti)
+			}
+		})
+		b.ReportMetric(float64(ti.getWssend()), "total_sends")
+		b.ReportMetric(float64(ti.getWsrecv()), "total_receives")
+		b.ReportAllocs()
+	}
+
+}
+
+func TestControllerWebsocketEnabledRedis(t *testing.T) {
+
+	if os.Getenv("DOCKER") != "1" {
+		t.Skip("Skipping testing since docker is not present")
+	}
+
+	ctx := context.Background()
+	redisContainer, err := redisContainer.RunContainer(ctx,
+		testcontainers.WithImage("docker.io/redis:7"),
+	)
+	if err != nil {
+		t.Fatalf("failed to start container: %s", err)
+	}
+
+	// Clean up the container
+	defer func() {
+		if err := redisContainer.Terminate(ctx); err != nil {
+			t.Fatalf("failed to terminate container: %s", err)
+		}
+	}()
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	pubsubAdapter := pubsub.NewRedis(client)
+	for _, tc := range testCases {
+		tc.options = append(tc.options, WithPubsubAdapter(pubsubAdapter))
 		controller := NewController(tc.name, tc.options...)
 		// Create a test HTTP server
 		server := httptest.NewServer(controller.RouteFunc(tc.routeFunc))

@@ -11,8 +11,8 @@ import (
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 	"github.com/sourcegraph/conc/pool"
-	"github.com/tdewolff/minify/v2"
-	"github.com/tdewolff/minify/v2/html"
+	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/html"
 	"github.com/valyala/bytebufferpool"
 )
 

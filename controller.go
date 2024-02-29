@@ -193,9 +193,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 	o := &opt{
 		websocketUpgrader: websocket.Upgrader{
 			EnableCompression: true,
-			ReadBufferSize:    256,
-			WriteBufferSize:   256,
-			WriteBufferPool:   &sync.Pool{},
+			// ReadBufferSize:    256,
+			// WriteBufferSize:   256,
+			// WriteBufferPool: &sync.Pool{},
 		},
 		watchExts:   defaultWatchExtensions,
 		pubsub:      pubsub.NewInmem(),

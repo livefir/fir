@@ -185,7 +185,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 
 	conn.SetReadLimit(maxMessageSize)
 	conn.EnableWriteCompression(true)
-	conn.SetCompressionLevel(5)
+	conn.SetCompressionLevel(9)
 	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
@@ -368,7 +368,6 @@ loop:
 			}
 
 			if err := w.Close(); err != nil {
-				logger.Errorf("close err: %v", err)
 				return
 			}
 
