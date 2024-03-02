@@ -192,9 +192,10 @@ func NewController(name string, options ...ControllerOption) Controller {
 
 	o := &opt{
 		websocketUpgrader: websocket.Upgrader{
-			EnableCompression: true,
-			// ReadBufferSize:    256,
-			// WriteBufferSize:   256,
+			// disabled compression since its too noisy: https://github.com/gorilla/websocket/issues/859
+			// EnableCompression: true,
+			// ReadBufferSize:  4096,
+			// WriteBufferSize: 4096,
 			// WriteBufferPool: &sync.Pool{},
 		},
 		watchExts:   defaultWatchExtensions,
