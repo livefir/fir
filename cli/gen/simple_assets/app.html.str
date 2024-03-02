@@ -14,8 +14,7 @@
     </head>
     <body>
         <div x-data>
-            <div
-                @fir:[inc:ok,dec:ok]::count.window="$fir.replace()">
+            <div @fir:[inc:ok,dec:ok]::count="$fir.replace()">
                 {{ block "count" . }}
                     <div>
                         Count:
