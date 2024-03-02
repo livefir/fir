@@ -232,13 +232,12 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 
 	// get previously set errors from cache
 	prevErrors := make(map[string]string)
-	if sessionID != nil {
-		v, ok := cch.Get(*sessionID)
-		if ok {
-			prevErrors, ok = v.(map[string]string)
-			if !ok {
-				panic("fir: cache value is not a map[string]string")
-			}
+
+	v, ok := cch.Get(*sessionID)
+	if ok {
+		prevErrors, ok = v.(map[string]string)
+		if !ok {
+			panic("fir: cache value is not a map[string]string")
 		}
 	}
 
@@ -254,9 +253,8 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 		currErrors[*event.Type] = *event.Target
 	}
 	// set new errors in cache
-	if sessionID != nil {
-		cch.Set(*sessionID, currErrors, cache.DefaultExpiration)
-	}
+
+	cch.Set(*sessionID, currErrors, cache.DefaultExpiration)
 
 	// explicitly unset previously set errors that are not in new errors
 	// this means generating an event with empty detail
