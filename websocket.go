@@ -20,7 +20,7 @@ import (
 
 const (
 	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
+	writeWait = 20 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 55 * time.Second
@@ -184,13 +184,21 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	}
 
 	conn.SetReadLimit(maxMessageSize)
-	conn.EnableWriteCompression(true)
-	conn.SetCompressionLevel(9)
-	conn.SetWriteDeadline(time.Now().Add(writeWait))
+	// disabled compression since its too noisy: https://github.com/gorilla/websocket/issues/859
+	//conn.EnableWriteCompression(true)
+	//conn.SetCompressionLevel(4)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
 		//logger.Infof("pong from %v", conn.RemoteAddr())
 		conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	// workaround for noisy logs due to close handler printing a useless error
+	//  https://github.com/gorilla/websocket/issues/880
+	conn.SetCloseHandler(func(code int, text string) error {
+		message := websocket.FormatCloseMessage(code, "")
+		conn.WriteControl(websocket.CloseMessage, message, time.Now().Add(writeWait))
 		return nil
 	})
 
@@ -208,10 +216,10 @@ loop:
 
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-
 			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) && websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				logger.Errorf("read: %v, %v", conn.RemoteAddr().String(), err)
 			}
+
 			break loop
 		}
 		// start := time.Now()
@@ -333,7 +341,6 @@ func writeEvent(send chan []byte, pubsubEvent pubsub.Event) error {
 }
 
 func writeConn(conn *websocket.Conn, mt int, payload []byte) error {
-	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	return conn.WriteMessage(mt, payload)
 }
 
@@ -347,6 +354,7 @@ loop:
 	for {
 		select {
 		case message, ok := <-send:
+			conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				err := writeConn(conn, websocket.CloseMessage, []byte{})
 				if err != nil {
@@ -368,6 +376,7 @@ loop:
 			}
 
 			if err := w.Close(); err != nil {
+				logger.Errorf("close err: %v", err)
 				return
 			}
 
@@ -375,7 +384,9 @@ loop:
 			break loop
 		case <-ticker.C:
 			//logger.Infof("ping to client: %v", conn.RemoteAddr())
+			conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := writeConn(conn, websocket.PingMessage, []byte{}); err != nil {
+				logger.Errorf("ping err: %v", err)
 				return
 			}
 		}
