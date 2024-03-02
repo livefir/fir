@@ -63,6 +63,9 @@ type testInput struct {
 	num       int
 	wssend    int
 	wsrecv    int
+	event     Event
+	conn      *websocket.Conn
+	closeWs   bool
 	sync.RWMutex
 }
 
@@ -121,7 +124,7 @@ func eventPayload(tb testing.TB, ti *testInput) Event {
 		IsForm:    false,
 		Params:    data,
 		SessionID: &firSession,
-		Timestamp: time.Now().UnixNano(),
+		Timestamp: time.Now().UTC().UnixMilli(),
 	}
 
 	return event
@@ -180,16 +183,13 @@ func runPostEventTest(tb testing.TB, ti *testInput) {
 
 }
 
-func runWebsocketEventTest(tb testing.TB, ti *testInput) {
-
-	event := eventPayload(tb, ti)
-
-	// same as above but with websocket
+func dialWebSocket(tb testing.TB, ti *testInput, event Event) *websocket.Conn {
 	wsURLString := strings.Replace(ti.serverURL, "http", "ws", 1)
 	wsDialer := websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 45 * time.Second,
-		// Jar:              jar,
+		// EnableCompression: true,
+		// Jar:              jar, // jar doesnät work but adding a Cookie header does
 	}
 	header := http.Header{}
 	header.Set("Cookie", fmt.Sprintf("_fir_session_=%s", *event.SessionID))
@@ -197,18 +197,35 @@ func runWebsocketEventTest(tb testing.TB, ti *testInput) {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	defer ws.Close()
+
+	return ws
+}
+
+func runWebsocketEventTest(tb testing.TB, ti *testInput) {
+
+	event := ti.event
+	if event.SessionID == nil {
+		event = eventPayload(tb, ti)
+	}
+
+	ws := ti.conn
+	if ws == nil {
+		ws = dialWebSocket(tb, ti, event)
+	}
+
+	if ti.closeWs {
+		defer ws.Close()
+	}
 
 	ti.incWssend()
 
-	err = ws.WriteJSON(event)
+	err := ws.WriteJSON(event)
 	if err != nil {
 		tb.Fatal(err)
 	}
 
-	ws.SetReadDeadline(time.Now().Add(10000 * time.Millisecond))
+	ws.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 	var message []byte
-
 	_, message, err = ws.ReadMessage()
 	if err != nil {
 		tb.Fatal(err)
@@ -228,6 +245,10 @@ func runWebsocketEventTest(tb testing.TB, ti *testInput) {
 	expectedHTML := fmt.Sprintf("%d", ti.num*2)
 	if removeSpace(domEvents[0].Detail.HTML) != expectedHTML {
 		tb.Fatalf("expected: %s, got: %s", expectedHTML, domEvents[0].Detail.HTML)
+	}
+
+	if !ti.closeWs {
+		return
 	}
 
 	err = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
@@ -278,7 +299,7 @@ func BenchmarkControllerWebsocktEnabled(b *testing.B) {
 		server := httptest.NewServer(controller.RouteFunc(tc.routeFunc))
 		defer server.Close()
 
-		ti := &testInput{serverURL: server.URL, num: 10}
+		ti := &testInput{serverURL: server.URL, num: 10, closeWs: true}
 		b.Cleanup(func() {
 			fmt.Printf("ws send: %d, ws recv: %d\n", ti.getWssend(), ti.getWsrecv())
 		})
@@ -291,7 +312,40 @@ func BenchmarkControllerWebsocktEnabled(b *testing.B) {
 		b.ReportMetric(float64(ti.getWsrecv()), "total_receives")
 		b.ReportAllocs()
 	}
+}
 
+func TestControllerWebsocktEnabledMultiEvent(t *testing.T) {
+	for _, tc := range testCases {
+		controller := NewController(tc.name, tc.options...)
+		// Create a test HTTP server
+		server := httptest.NewServer(controller.RouteFunc(tc.routeFunc))
+		defer server.Close()
+
+		ti := &testInput{serverURL: server.URL, num: 10}
+		ti.event = eventPayload(t, ti)
+		ti.conn = dialWebSocket(t, ti, ti.event)
+
+		t.Cleanup(func() {
+			err := ti.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(500 * time.Millisecond)
+			ti.conn.Close()
+
+		})
+
+		for i := 0; i < 1000; i++ {
+			time.Sleep(251 * time.Millisecond)
+			ti.event.Timestamp = time.Now().UTC().UnixMilli()
+			runWebsocketEventTest(t, ti)
+		}
+
+		if ti.getWssend() != ti.getWsrecv() {
+			t.Fatalf("expected ws send: %d, ws recv: %d", ti.getWssend(), ti.getWsrecv())
+		}
+
+	}
 }
 
 func TestControllerWebsocketEnabled(t *testing.T) {
