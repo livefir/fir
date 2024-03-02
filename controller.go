@@ -32,23 +32,24 @@ type opt struct {
 	pathParamsFunc    func(r *http.Request) PathParams
 	websocketUpgrader websocket.Upgrader
 
-	disableTemplateCache bool
-	disableWebsocket     bool
-	debugLog             bool
-	enableWatch          bool
-	watchExts            []string
-	publicDir            string
-	developmentMode      bool
-	embedfs              *embed.FS
-	readFile             readFileFunc
-	existFile            existFileFunc
-	pubsub               pubsub.Adapter
-	appName              string
-	formDecoder          *schema.Decoder
-	cookieName           string
-	secureCookie         *securecookie.SecureCookie
-	cache                *cache.Cache
-	funcMap              template.FuncMap
+	disableTemplateCache  bool
+	disableWebsocket      bool
+	debugLog              bool
+	enableWatch           bool
+	watchExts             []string
+	publicDir             string
+	developmentMode       bool
+	embedfs               *embed.FS
+	readFile              readFileFunc
+	existFile             existFileFunc
+	pubsub                pubsub.Adapter
+	appName               string
+	formDecoder           *schema.Decoder
+	cookieName            string
+	secureCookie          *securecookie.SecureCookie
+	cache                 *cache.Cache
+	funcMap               template.FuncMap
+	dropDuplicateInterval time.Duration
 }
 
 // ControllerOption is an option for the controller.
@@ -138,6 +139,13 @@ func WithDisableWebsocket() ControllerOption {
 	}
 }
 
+// WithDropDuplicateInterval is an option to set the interval to drop duplicate events received by the websocket.
+func WithDropDuplicateInterval(interval time.Duration) ControllerOption {
+	return func(o *opt) {
+		o.dropDuplicateInterval = interval
+	}
+}
+
 // DisableTemplateCache is an option to disable template caching. This is useful for development.
 func DisableTemplateCache() ControllerOption {
 	return func(o *opt) {
@@ -207,8 +215,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 			securecookie.GenerateRandomKey(64),
 			securecookie.GenerateRandomKey(32),
 		),
-		cache:   cache.New(5*time.Minute, 10*time.Minute),
-		funcMap: defaultFuncMap(),
+		cache:                 cache.New(5*time.Minute, 10*time.Minute),
+		funcMap:               defaultFuncMap(),
+		dropDuplicateInterval: 250 * time.Millisecond,
 	}
 
 	for _, option := range options {

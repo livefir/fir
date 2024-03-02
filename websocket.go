@@ -259,7 +259,7 @@ loop:
 		if lastEvent.ID == event.ID && *lastEvent.SessionID == *event.SessionID && lastEvent.ElementKey == event.ElementKey {
 			lastEventTime := toUnixTime(lastEvent.Timestamp)
 			eventTime := toUnixTime(event.Timestamp)
-			if lastEventTime.Add(time.Millisecond * 250).After(eventTime) {
+			if lastEventTime.Add(cntrl.dropDuplicateInterval).After(eventTime) {
 				if eqBytesHash(lastEvent.Params, event.Params) {
 					logger.Errorf("err: dropped duplicate event in last 250ms, event %v ", event)
 					continue
