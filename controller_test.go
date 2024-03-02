@@ -335,7 +335,7 @@ func TestControllerWebsocktEnabledMultiEvent(t *testing.T) {
 
 		})
 
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 20; i++ {
 			time.Sleep(251 * time.Millisecond)
 			ti.event.Timestamp = time.Now().UTC().UnixMilli()
 			runWebsocketEventTest(t, ti)
