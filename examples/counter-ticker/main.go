@@ -116,7 +116,17 @@ func (i *index) updated(ctx fir.RouteContext) error {
 
 func main() {
 	pubsubAdapter := pubsub.NewInmem()
-	controller := fir.NewController("counter_app", fir.DevelopmentMode(true), fir.WithPubsubAdapter(pubsubAdapter))
+	controller := fir.NewController("counter_app",
+		fir.DevelopmentMode(true),
+		fir.WithPubsubAdapter(pubsubAdapter),
+		fir.WithOnSocketConnect(func(userOrSessionID string) error {
+			fmt.Printf("socket connected for user %s\n", userOrSessionID)
+			return nil
+		}),
+		fir.WithOnSocketDisconnect(func(userOrSessionID string) {
+			fmt.Printf("socket disconnected for user %s\n", userOrSessionID)
+		}),
+	)
 	http.Handle("/", controller.Route(NewCounterIndex(pubsubAdapter)))
 	http.ListenAndServe(":9867", nil)
 }

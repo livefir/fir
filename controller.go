@@ -28,9 +28,11 @@ type Controller interface {
 }
 
 type opt struct {
-	channelFunc       func(r *http.Request, viewID string) *string
-	pathParamsFunc    func(r *http.Request) PathParams
-	websocketUpgrader websocket.Upgrader
+	onSocketConnect    func(userOrSessionID string) error
+	onSocketDisconnect func(userOrSessionID string)
+	channelFunc        func(r *http.Request, viewID string) *string
+	pathParamsFunc     func(r *http.Request) PathParams
+	websocketUpgrader  websocket.Upgrader
 
 	disableTemplateCache  bool
 	disableWebsocket      bool
@@ -144,6 +146,27 @@ func WithDropDuplicateInterval(interval time.Duration) ControllerOption {
 	return func(o *opt) {
 		o.dropDuplicateInterval = interval
 	}
+}
+
+// WithOnSocketConnect takes a function that is called when a new websocket connection is established.
+// The function should return an error if the connection should be rejected.
+// The user or fir's browser session id is passed to the function.
+// user must be set in request.Context with the key UserKey by a developer supplied authentication mechanism.
+// It can be used to track user connections and disconnections.
+// It can be be used to reject connections based on user or session id.
+// It can be used to refresh the page data when a user re-connects.
+func WithOnSocketConnect(f func(userOrSessionID string) error) ControllerOption {
+	return func(o *opt) {
+		o.onSocketConnect = f
+	}
+}
+
+// WithOnSocketDisconnect takes a function that is called when a websocket connection is disconnected.
+func WithOnSocketDisconnect(f func(userOrSessionID string)) ControllerOption {
+	return func(o *opt) {
+		o.onSocketDisconnect = f
+	}
+
 }
 
 // DisableTemplateCache is an option to disable template caching. This is useful for development.
