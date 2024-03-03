@@ -30,7 +30,15 @@ const (
 
 	// Maximum message size allowed from peer.
 	maxMessageSize = 1024
+
+	EventSocketConnected    = "fir_socket_connected"
+	EventSocketDisconnected = "fir_socket_disconnected"
 )
+
+type SocketStatus struct {
+	Connected bool
+	User      string
+}
 
 // RedirectUnauthorisedWebSocket sends a 4001 close message to the client
 // It sends the redirect url in the close message payload
@@ -216,6 +224,41 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return nil
 	})
 
+	for _, route := range cntrl.routes {
+		if route.onEvents[EventSocketConnected] == nil {
+			continue
+		}
+
+		connectedParams := SocketStatus{
+			Connected: true,
+			User:      connectedUser,
+		}
+		paramBytes, err := json.Marshal(connectedParams)
+		if err != nil {
+			logger.Errorf("error: marshaling connectedParams %+v, err %v", connectedParams, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		connectedEvent := Event{
+			ID:        EventSocketConnected,
+			SessionID: &sessionID,
+			Params:    paramBytes,
+			Timestamp: time.Now().UTC().UnixMilli(),
+		}
+
+		go func(ev Event) {
+			for {
+				select {
+				case route.eventSender <- ev:
+					return
+				default:
+					time.Sleep(10 * time.Millisecond)
+				}
+			}
+		}(connectedEvent)
+	}
+
 	writePumpDone := make(chan struct{})
 	go writePump(conn, writePumpDone, send)
 
@@ -323,6 +366,30 @@ loop:
 
 	close(writePumpDone)
 	conn.Close()
+	for _, route := range cntrl.routes {
+
+		if route.onEvents[EventSocketDisconnected] == nil {
+			continue
+		}
+		connectedParams := SocketStatus{
+			Connected: false,
+			User:      connectedUser,
+		}
+		paramBytes, err := json.Marshal(connectedParams)
+		if err != nil {
+			logger.Errorf("error: marshaling connectedParams %+v, err %v", connectedParams, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		route.eventSender <- Event{
+			ID:        EventSocketDisconnected,
+			SessionID: &sessionID,
+			Params:    paramBytes,
+			Timestamp: time.Now().UTC().UnixMilli(),
+		}
+	}
+
 }
 
 func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
