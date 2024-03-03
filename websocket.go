@@ -96,6 +96,20 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 
 	user := getUserFromRequestContext(r)
 
+	connectedUser := user
+	if user == "" {
+		connectedUser = sessionID
+	}
+	if cntrl.onSocketConnect != nil {
+		err := cntrl.onSocketConnect(connectedUser)
+		if err != nil {
+			return
+		}
+	}
+	if cntrl.onSocketDisconnect != nil {
+		defer cntrl.onSocketDisconnect(connectedUser)
+	}
+
 	send := make(chan []byte, 100)
 
 	ctx := context.Background()
