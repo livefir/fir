@@ -173,7 +173,6 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					continue
 				}
 
-				// ignore user store for server events
 				// update request context with user
 				eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, user))
 
