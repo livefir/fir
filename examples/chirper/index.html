@@ -2,7 +2,7 @@
 
 <html lang="en">
     <head>
-        <title>Twitter Clone</title>
+        <title>Chirper</title>
 
         <meta charset="UTF-8" />
         <meta name="description" content="" />
@@ -28,55 +28,55 @@
 
     <body>
         <div x-data>
+            <h1>Chirper</h1>
+            <hr />
             <p>
                 {{ fir.Error "onload" }}
             </p>
 
             <form
-                x-ref="createTweet"
+                x-ref="createChirp"
                 method="post"
-                action="/?event=create-tweet"
+                action="/?event=create-chirp"
                 @submit.prevent="$fir.submit()"
-                {{/* .nohtml modifier tells the server to not output html in this event since we not using it */}}
-                @fir:create-tweet:ok.nohtml="$refs.createTweet.reset()">
+                @fir:create-chirp:ok.nohtml="$refs.createChirp.reset()">
                 <!-- prettier-ignore -->
-                <textarea type="text" name="body" placeholder="a new tweet" rows="4" cols="100"></textarea>
+                <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
                 <div
-                    @fir:create-tweet:pending="console.log('create tweet start')"
-                    @fir:create-tweet:ok="console.log('create tweet done')"></div>
-                <p @fir:create-tweet:error="$fir.replace()">
-                    {{ fir.Error "create-tweet.body" }}
+                    @fir:create-chirp:pending="console.log('create chirp start')"
+                    @fir:create-chirp:ok="console.log('create chirp done')"></div>
+                <p @fir:create-chirp:error="$fir.replace()">
+                    {{ fir.Error "create-chirp.body" }}
                 </p>
                 <footer>
-                    <button type="submit">Tweet it!</button>
+                    <button type="submit">Chirp</button>
                 </footer>
             </form>
             <hr />
-            <div @fir:create-tweet:ok::tweet="$fir.appendEl()">
-                {{ range .tweets }}
-                    {{ block "tweet" . }}
+            <div @fir:create-chirp:ok::chirp="$fir.prependEl()">
+                {{ range .chirps }}
+                    {{ block "chirp" . }}
                         <section
-                            {{/* fir-key identifies elements in a list */}}
                             fir-key="{{ .ID }}"
-                            @fir:delete-tweet:ok.nohtml="$fir.removeEl()">
+                            @fir:delete-chirp:ok.nohtml="$fir.removeEl()">
                             <form method="post" @submit.prevent="$fir.submit()">
                                 <blockquote>
                                     {{ .Body }}
                                 </blockquote>
                                 <input
                                     type="hidden"
-                                    name="tweetID"
+                                    name="chirpID"
                                     value="{{ .ID }}" />
                                 <footer>
                                     <button
-                                        @fir:like-tweet:ok="$fir.replace()"
-                                        formaction="/?event=like-tweet"
+                                        @fir:like-chirp:ok="$fir.replace()"
+                                        formaction="/?event=like-chirp"
                                         type="submit">
                                         &#9829;
                                         {{ .LikesCount }}
                                     </button>
                                     <button
-                                        formaction="/?event=delete-tweet"
+                                        formaction="/?event=delete-chirp"
                                         type="submit">
                                         &#10005;
                                     </button>

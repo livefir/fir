@@ -241,6 +241,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		cache:                 cache.New(5*time.Minute, 10*time.Minute),
 		funcMap:               defaultFuncMap(),
 		dropDuplicateInterval: 250 * time.Millisecond,
+		publicDir:             ".",
 	}
 
 	for _, option := range options {
@@ -253,7 +254,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		routes: make(map[string]*route),
 	}
 	if c.developmentMode {
-		fmt.Printf("controller starting in developer mode ... %v", c.developmentMode)
+		fmt.Println("controller starting in developer mode")
 		c.debugLog = true
 		c.enableWatch = true
 		c.disableTemplateCache = true

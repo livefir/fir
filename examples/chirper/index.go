@@ -8,7 +8,7 @@ import (
 	"github.com/timshannon/bolthold"
 )
 
-type Tweet struct {
+type Chirp struct {
 	ID          uint64    `json:"id" boltholdKey:"ID"`
 	Username    string    `json:"username"`
 	Body        string    `json:"body"`
@@ -17,19 +17,19 @@ type Tweet struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-func insertTweet(ctx fir.RouteContext, db *bolthold.Store) (*Tweet, error) {
-	tweet := new(Tweet)
-	if err := ctx.Bind(tweet); err != nil {
+func insertChirp(ctx fir.RouteContext, db *bolthold.Store) (*Chirp, error) {
+	chirp := new(Chirp)
+	if err := ctx.Bind(chirp); err != nil {
 		return nil, err
 	}
-	if len(tweet.Body) < 3 {
-		return nil, ctx.FieldError("body", errors.New("tweet is too short"))
+	if len(chirp.Body) < 3 {
+		return nil, ctx.FieldError("body", errors.New("chirp is too short"))
 	}
-	tweet.CreatedAt = time.Now()
-	if err := db.Insert(bolthold.NextSequence(), tweet); err != nil {
+	chirp.CreatedAt = time.Now()
+	if err := db.Insert(bolthold.NextSequence(), chirp); err != nil {
 		return nil, err
 	}
-	return tweet, nil
+	return chirp, nil
 }
 
 type queryReq struct {
@@ -39,54 +39,54 @@ type queryReq struct {
 	Limit  int    `json:"limit" schema:"limit"`
 }
 
-func loadTweets(db *bolthold.Store) fir.OnEventFunc {
+func loadChirps(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
 		var req queryReq
 		if err := ctx.Bind(&req); err != nil {
 			return err
 		}
-		var tweets []Tweet
-		if err := db.Find(&tweets, &bolthold.Query{}); err != nil {
+		var chirps []Chirp
+		if err := db.Find(&chirps, &bolthold.Query{}); err != nil {
 			return err
 		}
-		return ctx.Data(map[string]any{"tweets": tweets})
+		return ctx.Data(map[string]any{"chirps": chirps})
 	}
 }
 
-func createTweet(db *bolthold.Store) fir.OnEventFunc {
+func createChirp(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
-		tweet, err := insertTweet(ctx, db)
+		chirp, err := insertChirp(ctx, db)
 		if err != nil {
 			return err
 		}
-		return ctx.Data(tweet)
+		return ctx.Data(chirp)
 	}
 }
 
-func likeTweet(db *bolthold.Store) fir.OnEventFunc {
+func likeChirp(db *bolthold.Store) fir.OnEventFunc {
 	type likeReq struct {
-		TweetID uint64 `json:"tweetID"`
+		ChirpID uint64 `json:"chirpID"`
 	}
 	return func(ctx fir.RouteContext) error {
 		req := new(likeReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
 		}
-		var tweet Tweet
-		if err := db.Get(req.TweetID, &tweet); err != nil {
+		var chirp Chirp
+		if err := db.Get(req.ChirpID, &chirp); err != nil {
 			return err
 		}
-		tweet.LikesCount++
-		if err := db.Update(req.TweetID, &tweet); err != nil {
+		chirp.LikesCount++
+		if err := db.Update(req.ChirpID, &chirp); err != nil {
 			return err
 		}
-		return ctx.Data(tweet)
+		return ctx.Data(chirp)
 	}
 }
 
-func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
+func deleteChirp(db *bolthold.Store) fir.OnEventFunc {
 	type deleteReq struct {
-		TweetID uint64 `json:"tweetID"`
+		ChirpID uint64 `json:"chirpID"`
 	}
 	return func(ctx fir.RouteContext) error {
 		req := new(deleteReq)
@@ -94,7 +94,7 @@ func deleteTweet(db *bolthold.Store) fir.OnEventFunc {
 			return err
 		}
 
-		if err := db.Delete(req.TweetID, &Tweet{}); err != nil {
+		if err := db.Delete(req.ChirpID, &Chirp{}); err != nil {
 			return err
 		}
 		return nil
@@ -106,10 +106,10 @@ func Index(db *bolthold.Store) fir.RouteFunc {
 		return fir.RouteOptions{
 			fir.ID("index"),
 			fir.Content("index.html"),
-			fir.OnLoad(loadTweets(db)),
-			fir.OnEvent("create-tweet", createTweet(db)),
-			fir.OnEvent("delete-tweet", deleteTweet(db)),
-			fir.OnEvent("like-tweet", likeTweet(db)),
+			fir.OnLoad(loadChirps(db)),
+			fir.OnEvent("create-chirp", createChirp(db)),
+			fir.OnEvent("delete-chirp", deleteChirp(db)),
+			fir.OnEvent("like-chirp", likeChirp(db)),
 		}
 	}
 }
