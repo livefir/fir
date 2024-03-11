@@ -1,33 +1,25 @@
 <!DOCTYPE html>
-
 <html lang="en">
     <head>
         <title>Chirper</title>
-
         <meta charset="UTF-8" />
-        <meta name="description" content="" />
         <meta
             name="viewport"
             content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
+        <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
 
-        {{ if fir.Development }}
-            <script defer src="http://localhost:8000/cdn.js"></script>
-        {{ else }}
-            <script
-                defer
-                src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-        {{ end }}
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-        <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css" />
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css" />
     </head>
 
     <body>
-        <div x-data>
+        <div x-data="{ disable: false }">
             <h1>Chirper</h1>
             <hr />
             <p>
@@ -35,21 +27,19 @@
             </p>
 
             <form
-                x-ref="createChirp"
                 method="post"
                 action="/?event=create-chirp"
                 @submit.prevent="$fir.submit()"
-                @fir:create-chirp:ok.nohtml="$refs.createChirp.reset()">
+                @fir:create-chirp:ok.nohtml="$el.reset()"
+                @fir:create-chirp:pending="disable = true"
+                @fir:create-chirp:done="disable = false">
                 <!-- prettier-ignore -->
                 <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
-                <div
-                    @fir:create-chirp:pending="console.log('create chirp start')"
-                    @fir:create-chirp:ok="console.log('create chirp done')"></div>
                 <p @fir:create-chirp:error="$fir.replace()">
                     {{ fir.Error "create-chirp.body" }}
                 </p>
                 <footer>
-                    <button type="submit">Chirp</button>
+                    <button :disabled="disable" type="submit">Chirp</button>
                 </footer>
             </form>
             <hr />

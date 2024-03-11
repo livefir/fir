@@ -59,6 +59,8 @@ func createChirp(db *bolthold.Store) fir.OnEventFunc {
 		if err != nil {
 			return err
 		}
+		// simulate a delay
+		time.Sleep(500 * time.Millisecond)
 		return ctx.Data(chirp)
 	}
 }
