@@ -238,16 +238,20 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 		if err != nil {
 			logger.Debugf("error publishing patch: %v", err)
 		}
-		events := renderDOMEvents(ctx, pubsubEvent)
 
-		eventsData, err := json.Marshal(events)
-		if err != nil {
-			logger.Errorf("error marshaling patch: %v", err)
-			return err
-		}
-		ctx.response.Write(eventsData)
-		return nil
+		return writeEventHTTP(ctx, pubsubEvent)
 	}
+}
+
+func writeEventHTTP(ctx RouteContext, event pubsub.Event) error {
+	events := renderDOMEvents(ctx, event)
+	eventsData, err := json.Marshal(events)
+	if err != nil {
+		logger.Errorf("error marshaling patch: %v", err)
+		return err
+	}
+	ctx.response.Write(eventsData)
+	return nil
 }
 
 // set route template concurrency safe
@@ -340,7 +344,11 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handleOnEventResult(onEventFunc(eventCtx), eventCtx, writeAndPublishEvents(eventCtx))
+		// error event is not published
+		errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, writeAndPublishEvents(eventCtx))
+		if errorEvent != nil {
+			writeEventHTTP(eventCtx, *errorEvent)
+		}
 
 	} else {
 		// postForm
@@ -412,7 +420,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
+func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) *pubsub.Event {
 	target := ""
 	if ctx.event.Target != nil {
 		target = *ctx.event.Target
@@ -425,7 +433,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			ElementKey: ctx.event.ElementKey,
 			SessionID:  ctx.event.SessionID,
 		})
-		return
+		return nil
 	}
 
 	switch errVal := err.(type) {
@@ -434,15 +442,14 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			ctx.event.ID: firErrors.User(errVal.Err).Error(),
 			"onevent":    firErrors.User(errVal.Err).Error(),
 		}
-		publish(pubsub.Event{
+		return &pubsub.Event{
 			ID:         &ctx.event.ID,
 			State:      eventstate.Error,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
 			Detail:     &dom.Detail{Data: errs},
 			SessionID:  ctx.event.SessionID,
-		})
-		return
+		}
 	case *firErrors.Fields:
 		fieldErrorsData := *errVal
 		fieldErrors := make(map[string]any)
@@ -450,15 +457,14 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			fieldErrors[field] = err.Error()
 		}
 		errs := map[string]any{ctx.event.ID: fieldErrors}
-		publish(pubsub.Event{
+		return &pubsub.Event{
 			ID:         &ctx.event.ID,
 			State:      eventstate.Error,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
 			Detail:     &dom.Detail{Data: errs},
 			SessionID:  ctx.event.SessionID,
-		})
-		return
+		}
 	case *routeData:
 		publish(pubsub.Event{
 			ID:         &ctx.event.ID,
@@ -468,7 +474,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			Detail:     &dom.Detail{Data: *errVal},
 			SessionID:  ctx.event.SessionID,
 		})
-		return
+		return nil
 
 	case *routeDataWithState:
 		publish(pubsub.Event{
@@ -479,7 +485,7 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			Detail:     &dom.Detail{Data: *errVal.routeData, State: *errVal.stateData},
 			SessionID:  ctx.event.SessionID,
 		})
-		return
+		return nil
 	case *stateData:
 		publish(pubsub.Event{
 			ID:         &ctx.event.ID,
@@ -489,21 +495,21 @@ func handleOnEventResult(err error, ctx RouteContext, publish eventPublisher) {
 			Detail:     &dom.Detail{State: *errVal},
 			SessionID:  ctx.event.SessionID,
 		})
-		return
+		return nil
 	default:
 		errs := map[string]any{
 			ctx.event.ID: firErrors.User(err).Error(),
 			"onevent":    firErrors.User(err).Error(),
 		}
-		publish(pubsub.Event{
+
+		return &pubsub.Event{
 			ID:         &ctx.event.ID,
 			State:      eventstate.Error,
 			Target:     &target,
 			ElementKey: ctx.event.ElementKey,
 			Detail:     &dom.Detail{Data: errs},
 			SessionID:  ctx.event.SessionID,
-		})
-		return
+		}
 	}
 }
 
