@@ -146,7 +146,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 					route:    route,
 				}
 
-				go renderAndWriteEvent(send, *routeChannel, routeCtx, pubsubEvent)
+				go renderAndWriteEventWS(send, *routeChannel, routeCtx, pubsubEvent)
 			}
 		}()
 
@@ -175,8 +175,11 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 
 				// update request context with user
 				eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, user))
-
-				handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, *route.channelFunc(eventCtx.request, route.id)))
+				channel := *route.channelFunc(eventCtx.request, route.id)
+				errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, channel))
+				if errorEvent != nil {
+					renderAndWriteEventWS(send, channel, eventCtx, *errorEvent)
+				}
 			}
 		}()
 
@@ -345,22 +348,29 @@ loop:
 			route:    eventRoute,
 		}
 
-		// withEventLogger := logger.Logger().
-		// 	With(
-		// 		"route_id", eventRoute.id,
-		// 		"event_id", event.ID,
-		// 		"session_id", eventSessionID,
-		// 		"element_key", event.ElementKey,
-		// 	)
-		// withEventLogger.Info("received user event")
+		withEventLogger := logger.Logger().
+			With(
+				"route_id", eventRoute.id,
+				"event_id", event.ID,
+				"session_id", eventSessionID,
+				"element_key", event.ElementKey,
+			)
+		withEventLogger.Debug("received user event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
 			logger.Errorf("err: event %v, event.id not found", event)
 			continue
 		}
 
-		// handle user events
-		go handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, *eventRoute.channelFunc(eventCtx.request, eventRoute.id)))
+		go func() {
+			channel := *eventRoute.channelFunc(eventCtx.request, eventRoute.id)
+			// errors are only sent to current local connection and not published
+			errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, channel))
+			if errorEvent != nil {
+				renderAndWriteEventWS(send, channel, eventCtx, *errorEvent)
+			}
+		}()
+
 	}
 
 	close(writePumpDone)
@@ -391,7 +401,7 @@ loop:
 
 }
 
-func renderAndWriteEvent(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
+func renderAndWriteEventWS(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
 	events := renderDOMEvents(ctx, pubsubEvent)
 	eventsData, err := json.Marshal(events)
 	if err != nil {

@@ -33,10 +33,10 @@ func insertChirp(ctx fir.RouteContext, db *bolthold.Store) (*Chirp, error) {
 }
 
 type queryReq struct {
-	Order  string `json:"order" schema:"order"`
-	Search string `json:"search" schema:"search"`
-	Offset int    `json:"offset" schema:"offset"`
-	Limit  int    `json:"limit" schema:"limit"`
+	Order  string `json:"order"`
+	Search string `json:"search"`
+	Offset int    `json:"offset"`
+	Limit  int    `json:"limit"`
 }
 
 func loadChirps(db *bolthold.Store) fir.OnEventFunc {
@@ -46,7 +46,9 @@ func loadChirps(db *bolthold.Store) fir.OnEventFunc {
 			return err
 		}
 		var chirps []Chirp
-		if err := db.Find(&chirps, &bolthold.Query{}); err != nil {
+		q := &bolthold.Query{}
+		q = q.SortBy("CreatedAt").Reverse()
+		if err := db.Find(&chirps, q); err != nil {
 			return err
 		}
 		return ctx.Data(map[string]any{"chirps": chirps})
