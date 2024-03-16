@@ -15,6 +15,8 @@ Fir has a simple and predictable server and client API with only one new (*and* 
   </div>
 ```
 
+[snippet from chirper example](./examples/chirper/index.html#L45)
+
 Fir’s magic event handling expression `fir:event-name:event-state::template-name` piggybacks on [alpinejs event binding syntax](https://alpinejs.dev/directives/on#custom-events) to declare [html/templates](https://pkg.go.dev/html/template) to be re-rendered on the server. Once accustomed to this weirdness, Fir unlocks a great deal of productivity while adhering to web standards to enable rich and interactive apps
 
 Fir sits somewhere between [phoenix liveview](https://github.com/phoenixframework/phoenix_live_view) and [htmx](https://htmx.org/) in terms of capabilities. It's event-driven like liveview but, instead of providing atomic UI diffs, it returns html fragments like htmx. 
