@@ -5,11 +5,36 @@
 
 **A Go toolkit to build reactive web interfaces using: [Go](https://go.dev/), [html/template](https://pkg.go.dev/html/template) and [alpinejs](https://alpinejs.dev/).**
 
+The **Fir** toolkit is designed for Go developers with moderate html/css & js skills who want to progressively build reactive web apps without mastering complex web frameworks. It includes a Go library and an Alpine.js plugin. Fir can be used for building passable UIs with low effort and is a good fit for internal tools, interactive forms and real-time feeds.
+
+Fir has a simple and predictable server and client API with only one new (*and* *weird*) expression:
+
+```jsx
+  <div @fir:create-chirp:ok::chirp="$fir.prependEl()">
+  ...
+  </div>
+```
+
+Fir’s magic event handling expression `fir:event-name:event-state::template-name` piggybacks on [alpinejs event binding syntax](https://alpinejs.dev/directives/on#custom-events) to declare [html/templates](https://pkg.go.dev/html/template) to be re-rendered on the server. Once accustomed to this weirdness, Fir unlocks a great deal of productivity while adhering to web standards to enable rich and interactive apps
+
+Fir sits somewhere between [phoenix liveview](https://github.com/phoenixframework/phoenix_live_view) and [htmx](https://htmx.org/) in terms of capabilities. It's event-driven like liveview but, instead of providing atomic UI diffs, it returns html fragments like htmx. 
+
+**Feature Highlights:**
+
+- **Server rendered**: Render HTML on the server using Go’s standard html templating library.
+- **DOM Patching:** React to user or server events to update only the changed parts of a web page.
+- **Publish over websocket**: Broadcast html fragments over websocket in response to both client and server events.
+- **Interactivity over standard HTTP**: Fir possesses a built-in pubsub over websocket capability to broadcast UI diff changes to connected clients. However, it doesn't solely rely on websockets. It's still possible to disable websockets and benefit from UI diffs sent over standard HTTP.
+
+## Usage
+
 [Demo & Quickstart](https://livefir.fly.dev/)
 
 [Examples](./examples/)
 
 [How it works](https://adnaan.notion.site/Fir-2358531aced84bf1b0b1a687760fff3b)
+
+## CLI
 
 You don't need this to get started but the the cli can be used to generate the boilerplate:
 
