@@ -31,8 +31,7 @@
                 action="/?event=create-chirp"
                 @submit.prevent="$fir.submit()"
                 @fir:create-chirp:ok.nohtml="$el.reset()"
-                @fir:create-chirp:pending="disable = true"
-                @fir:create-chirp:done="disable = false">
+                @fir:[create-chirp:pending,create-chirp:done]="disable = !disable">
                 <!-- prettier-ignore -->
                 <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
                 <p @fir:create-chirp:error="$fir.replace()">
