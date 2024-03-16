@@ -1,6 +1,6 @@
 {
   "name": "@livefir/fir",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/livefir/fir"
@@ -18,13 +18,15 @@
   "scripts": {
     "build": "node scripts/build.js",
     "watch": "node esbuild.config.mjs -w",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "docs": "jsdoc2md src/*.js > api.md"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "esbuild": "^0.14.54",
-    "esbuild-serve": "^1.0.1"
+    "esbuild-serve": "^1.0.1",
+    "jsdoc-to-markdown": "^8.0.1"
   },
   "dependencies": {
     "@alpinejs/morph": "^3.13.5",
