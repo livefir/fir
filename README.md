@@ -1,6 +1,7 @@
 # Fir
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/livefir/fir.svg)](https://pkg.go.dev/github.com/livefir/fir) 
+[![Go API Reference](https://pkg.go.dev/badge/github.com/livefir/fir.svg)](https://pkg.go.dev/github.com/livefir/fir)
+[![Alpine API Reference](https://img.shields.io/badge/alpine_plugin-reference-blue)](./alpinejs-plugin/README.md) 
 [![npm version](https://badge.fury.io/js/@livefir%2Ffir.svg)](https://badge.fury.io/js/@livefir%2Ffir)
 
 **A Go toolkit to build reactive web interfaces using: [Go](https://go.dev/), [html/template](https://pkg.go.dev/html/template) and [alpinejs](https://alpinejs.dev/).**
