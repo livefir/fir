@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Chirper</title>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css" />
+    </head>
+
+    <body>
+        <div>
+            <h1>Chirper</h1>
+            <hr />
+            <p>
+                {{ fir.Error "onload" }}
+            </p>
+            <form method="post" action="/?event=create-chirp">
+                <!-- prettier-ignore -->
+                <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
+                <p>
+                    {{ fir.Error "create-chirp.body" }}
+                </p>
+                <footer>
+                    <button type="submit">Chirp</button>
+                </footer>
+            </form>
+            <hr />
+            <div>
+                {{ range .chirps }}
+                    {{ block "chirp" . }}
+                        <section>
+                            <form method="post">
+                                <blockquote>
+                                    {{ .Body }}
+                                </blockquote>
+                                <input
+                                    type="hidden"
+                                    name="chirpID"
+                                    value="{{ .ID }}" />
+                                <footer>
+                                    <button
+                                        formaction="/?event=like-chirp"
+                                        type="submit">
+                                        &#9829;
+                                        {{ .LikesCount }}
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        formaction="/?event=delete-chirp">
+                                        &#10005;
+                                    </button>
+                                </footer>
+                            </form>
+                        </section>
+                    {{ end }}
+                {{ end }}
+            </div>
+        </div>
+    </body>
+</html>

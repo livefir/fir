@@ -117,3 +117,16 @@ func Index(db *bolthold.Store) fir.RouteFunc {
 		}
 	}
 }
+
+func NoJSIndex(db *bolthold.Store) fir.RouteFunc {
+	return func() fir.RouteOptions {
+		return fir.RouteOptions{
+			fir.ID("index-no-js"),
+			fir.Content("index_no_js.html"),
+			fir.OnLoad(loadChirps(db)),
+			fir.OnEvent("create-chirp", createChirp(db)),
+			fir.OnEvent("delete-chirp", deleteChirp(db)),
+			fir.OnEvent("like-chirp", likeChirp(db)),
+		}
+	}
+}
