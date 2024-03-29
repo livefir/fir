@@ -31,6 +31,7 @@ Fir sits somewhere between [Phoenix Liveview](https://github.com/phoenixframewo
 - **Interactivity over standard HTTP**: Fir possesses a built-in pubsub over websocket capability to broadcast UI diff changes to connected clients. However, it doesn't solely rely on websockets. It's still possible to disable websockets and benefit from UI diffs sent over standard HTTP.
 - **Broadcast from server**: Broadcast page changes to specific connected clients.
 - **Error tracking**: Show and hide user specific errors on the page by simply returning an error or nil.
+- **Development live reload**: HTML pages reload automatically on edits if development mode is enabled
 
 
 ## Usage
