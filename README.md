@@ -44,15 +44,15 @@ Fir sits somewhere between [Phoenix Liveview](https://github.com/phoenixframewo
 
 ## CLI
 
-You don't need this to get started but the the cli can be used to generate the boilerplate:
+You don't need this to get started but the the cli can be used to generate a simple quickstart boilerplate:
 
 ```go
-go run github.com/livefir/fir/cli gen project -n quickstart // generates a folder named quickstart
+go run github.com/livefir/cli gen project -n quickstart // generates a folder named quickstart
 cd quickstart
 go run main.go
 open localhost:9867
 
-go run github.com/livefir/fir/cli gen route -n index // generates a new route
+go run github.com/livefir/cli gen route -n index // generates a new route
 ```
 
 

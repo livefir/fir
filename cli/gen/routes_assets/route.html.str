@@ -1,8 +1,0 @@
-{{ define "content" }}
-    <div x-data id="content">
-        <p>
-            {{ fir.Error "onload" }}
-        </p>
-        <h1>{{ .title }} page</h1>
-    </div>
-{{ end }}
