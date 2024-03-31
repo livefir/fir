@@ -22,10 +22,6 @@
         <div x-data="{ disable: false }">
             <h1>Chirper</h1>
             <hr />
-            <p>
-                {{ fir.Error "onload" }}
-            </p>
-
             <form
                 method="post"
                 action="/?event=create-chirp"
@@ -42,6 +38,9 @@
                 </footer>
             </form>
             <hr />
+            <p>
+                {{ fir.Error "onload" }}
+            </p>
             <div @fir:create-chirp:ok::chirp="$fir.prependEl()">
                 {{ range .chirps }}
                     {{ block "chirp" . }}

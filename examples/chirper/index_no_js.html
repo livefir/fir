@@ -15,9 +15,6 @@
         <div>
             <h1>Chirper</h1>
             <hr />
-            <p>
-                {{ fir.Error "onload" }}
-            </p>
             <form method="post" action="/?event=create-chirp">
                 <!-- prettier-ignore -->
                 <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
@@ -29,6 +26,9 @@
                 </footer>
             </form>
             <hr />
+            <p>
+                {{ fir.Error "onload" }}
+            </p>
             <div>
                 {{ range .chirps }}
                     {{ block "chirp" . }}
