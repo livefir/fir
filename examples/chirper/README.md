@@ -3,7 +3,28 @@
 The example demonstrates: progressive enhancement, form validation and real-time changes.
 
 ## Start without javascript
-[index_no_js.html](./index_no_js.html) is a plain html file which is handled by the route function [NoJSIndex](index.go#NoJSIndex). See it in action:
+[index_no_js.html](./index_no_js.html) is a plain html file which is handled by the route function [NoJSIndex](index.go#NoJSIndex). 
+
+
+
+
+### Create chirp
+
+We will create a `chirp`by submitting a html form with an action of format `action="/?event=event-name"` to invoke the bound `onEvent`function on the server. The form method must use `POST` to invoke `onEvent`otherwise `onLoad` will be called with form data passed as query params.
+
+
+https://github.com/livefir/fir/blob/main/examples/chirper/index_no_js.html#L21-L30
+
+
+
+### List chirps
+
+### Like chirp
+
+### Delete chirp
+
+
+See it in action:
 
 ```
 go run .
