@@ -24,7 +24,7 @@
             <hr />
             <form
                 method="post"
-                action="/?event=create-chirp"
+                action="?event=create-chirp"
                 @submit.prevent="$fir.submit()"
                 @fir:create-chirp:ok.nohtml="$el.reset()"
                 @fir:[create-chirp:pending,create-chirp:done]="disable = !disable">
@@ -58,13 +58,13 @@
                                 <footer>
                                     <button
                                         @fir:like-chirp:ok="$fir.replace()"
-                                        formaction="/?event=like-chirp"
+                                        formaction="?event=like-chirp"
                                         type="submit">
                                         &#9829;
                                         {{ .LikesCount }}
                                     </button>
                                     <button
-                                        formaction="/?event=delete-chirp"
+                                        formaction="?event=delete-chirp"
                                         type="submit">
                                         &#10005;
                                     </button>
