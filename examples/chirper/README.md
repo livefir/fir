@@ -20,7 +20,7 @@ An error returned from the `loadChirps` can be rendered on the page using `fir.E
 
 https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L30
 
-Listing the chirps in html itself is just standard html/template.
+Listing the chirps itself is just standard html/template.
 
 https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L33-L60
 
@@ -30,23 +30,31 @@ https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/exa
 We will create a `chirp`by submitting a html form with an action of format `action="?event=event-name"` to invoke the bound `onEvent`function on the server. The form method must use `POST` to invoke `OnEvent`otherwise `OnLoad` will be called with form data passed as query params. Please note that there is no forward slash(/) in the form action to ensure that the form is submitted to the current path.
 
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L21-L30
+https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L18-L27
 
 
 The event `create-chirp` is bound to an event handler of type [func(ctx RouteContext) error](https://pkg.go.dev/github.com/livefir/fir#OnEventFunc).
+
+https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index.go#L101
 
 https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index.go#L34-L52
 
 
 Within the `createChirp` function, [RouteContext.Bind](https://pkg.go.dev/github.com/livefir/fir#RouteContext.Bind) is used to bind the form data to the request struct and return errors to render failures on the html page. In the html page, the returned error for an event can be rendered using the `fir.Errror` template function : `{{ fir.Error "create-chirp" }}`. `createChirp` also returns a [FieldError](https://pkg.go.dev/github.com/livefir/fir#RouteContext.FieldError) to indicate the specific field which failed validation. The field error can be referenced like so: `{{ fir.Error "create-chirp.body" }}` where `create-chirp`is the event id and `body`is the form field. 
 
+Since the current page involves no javascript, the page reloads which re-renders the whole page using the data from `loadChirps`as described in the section above.
 
+### Like and Delete chirp
 
+To increment the like count `like-count` and to delete the chirp itself `delete-chirp` events are submitted using an html form.
 
+https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index_no_js.html#L36-L57
 
-### Like chirp
+https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index.go#L102-L103
 
-### Delete chirp
+https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index.go#L54-L92
+
+Just like during `createChirp`, errors can be rendered using `fir.Error` while the page is re-rendered with data returned from `loadChirps`
 
 
 See it in action:
@@ -60,7 +68,14 @@ The above page works even if javascript is disabled in the browser.
 
 ## Enhance with the alpinejs client
 
-[index.html](./index.html) is an html file with javascript sprinkled using the alpinejs client. It is handled by the route function [Index](index.go#Index). See it in action:
+[index.html](./index.html) is an html file with javascript sprinkled using the alpinejs client. It is handled by the route function [Index](index.go#Index).
+
+We want to enhance the html page to avoid page reloads, re-render only parts of the html and
+
+
+
+
+See it in action:
 
 ```
 open http://localhost:9867
