@@ -8,6 +8,7 @@ import (
 	"github.com/timshannon/bolthold"
 )
 
+// Chirp represents a single chirp message.
 type Chirp struct {
 	ID          uint64    `json:"id" boltholdKey:"ID"`
 	Username    string    `json:"username"`
@@ -17,34 +18,9 @@ type Chirp struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-func insertChirp(ctx fir.RouteContext, db *bolthold.Store) (*Chirp, error) {
-	chirp := new(Chirp)
-	if err := ctx.Bind(chirp); err != nil {
-		return nil, err
-	}
-	if len(chirp.Body) < 3 {
-		return nil, ctx.FieldError("body", errors.New("chirp is too short"))
-	}
-	chirp.CreatedAt = time.Now()
-	if err := db.Insert(bolthold.NextSequence(), chirp); err != nil {
-		return nil, err
-	}
-	return chirp, nil
-}
-
-type queryReq struct {
-	Order  string `json:"order"`
-	Search string `json:"search"`
-	Offset int    `json:"offset"`
-	Limit  int    `json:"limit"`
-}
-
+// loadChirps loads the chirps from the database and returns an OnEventFunc
 func loadChirps(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
-		var req queryReq
-		if err := ctx.Bind(&req); err != nil {
-			return err
-		}
 		var chirps []Chirp
 		q := &bolthold.Query{}
 		q = q.SortBy("CreatedAt").Reverse()
@@ -55,10 +31,18 @@ func loadChirps(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+// createChirp is a function that returns an OnEventFunc for creating a new chirp.
 func createChirp(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
-		chirp, err := insertChirp(ctx, db)
-		if err != nil {
+		chirp := new(Chirp)
+		if err := ctx.Bind(chirp); err != nil {
+			return err
+		}
+		if len(chirp.Body) < 3 {
+			return ctx.FieldError("body", errors.New("chirp is too short"))
+		}
+		chirp.CreatedAt = time.Now()
+		if err := db.Insert(bolthold.NextSequence(), chirp); err != nil {
 			return err
 		}
 		// simulate a delay
@@ -67,6 +51,7 @@ func createChirp(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+// likeChirp increments the like count of a chirp and updates it in the database.
 func likeChirp(db *bolthold.Store) fir.OnEventFunc {
 	type likeReq struct {
 		ChirpID uint64 `json:"chirpID"`
@@ -88,6 +73,7 @@ func likeChirp(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+// deleteChirp is a function that returns an OnEventFunc for deleting a chirp from the database.
 func deleteChirp(db *bolthold.Store) fir.OnEventFunc {
 	type deleteReq struct {
 		ChirpID uint64 `json:"chirpID"`
@@ -105,6 +91,7 @@ func deleteChirp(db *bolthold.Store) fir.OnEventFunc {
 	}
 }
 
+// Index returns a RouteFunc that handles the index route.
 func Index(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
 		return fir.RouteOptions{
@@ -118,15 +105,13 @@ func Index(db *bolthold.Store) fir.RouteFunc {
 	}
 }
 
+// NoJSIndex returns a RouteFunc that generates route options for the "index-no-js" route.
 func NoJSIndex(db *bolthold.Store) fir.RouteFunc {
 	return func() fir.RouteOptions {
-		return fir.RouteOptions{
+		opts := Index(db)()
+		opts = append(opts,
 			fir.ID("index-no-js"),
-			fir.Content("index_no_js.html"),
-			fir.OnLoad(loadChirps(db)),
-			fir.OnEvent("create-chirp", createChirp(db)),
-			fir.OnEvent("delete-chirp", deleteChirp(db)),
-			fir.OnEvent("like-chirp", likeChirp(db)),
-		}
+			fir.Content("index_no_js.html"))
+		return opts
 	}
 }

@@ -15,7 +15,7 @@
         <div>
             <h1>Chirper</h1>
             <hr />
-            <form method="post" action="/?event=create-chirp">
+            <form method="post" action="?event=create-chirp">
                 <!-- prettier-ignore -->
                 <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
                 <p>
@@ -43,14 +43,14 @@
                                     value="{{ .ID }}" />
                                 <footer>
                                     <button
-                                        formaction="/?event=like-chirp"
+                                        formaction="?event=like-chirp"
                                         type="submit">
                                         &#9829;
                                         {{ .LikesCount }}
                                     </button>
                                     <button
                                         type="submit"
-                                        formaction="/?event=delete-chirp">
+                                        formaction="?event=delete-chirp">
                                         &#10005;
                                     </button>
                                 </footer>
