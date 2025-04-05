@@ -6,7 +6,6 @@ The example demonstrates: progressive enhancement, form validation and real-time
 [index_no_js.html](./index_no_js.html) is a plain html file which is handled by the route function [NoJSIndex](index.go#NoJSIndex). 
 
 
-
 ### List chirps
 
 Whenever the page loads, the bound `OnLoad` function(`loadChirps`) is automatically invoked. The returned data(`ctx.Data`) on a successful loading of chirps from the database is used to re-render the entire page([index_no_js.html](./index_no_js.html)
@@ -70,9 +69,14 @@ The above page works even if javascript is disabled in the browser.
 
 [index.html](./index.html) is an html file with javascript sprinkled using the alpinejs client. It is handled by the route function [Index](index.go#Index).
 
-We want to enhance the html page to avoid page reloads, re-render only parts of the html and
+We want to enhance the html page to avoid reloads and re-render only the changed parts of the DOM.
 
 
+### Enhance create chirp
+
+To stop the page from reloading, we will prevent the form submission and submit the event over the wire. Depending on whether websocket is enabled on the server, the alpinejs plugin will send the event as a websocket message or as a POST request. We use alpinejs [x-on](https://alpinejs.dev/directives/on) directive to bind the form's submit event to Fir's [custom magic function](https://alpinejs.dev/advanced/extending#magic-functions) `$fir.submit`
+
+https://github.com/livefir/fir/blob/e38ea115dfcecbb4b890d94acd49e9565bdf2146/examples/chirper/index.html#L28
 
 
 See it in action:

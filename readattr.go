@@ -75,7 +75,7 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 
 		// [myevent:ok, myblock]
 		if len(eventnsParts) > 2 {
-			logger.Errorf(eventFormatError(eventns))
+			logger.Errorf("%s", eventFormatError(eventns))
 			continue
 		}
 
@@ -84,12 +84,12 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 		// [myevent, ok]
 		eventIDParts := strings.SplitN(eventID, ":", -1)
 		if len(eventIDParts) != 2 {
-			logger.Errorf(eventFormatError(eventns))
+			logger.Errorf("%s", eventFormatError(eventns))
 			continue
 		}
 		// event name can only be followed by ok, error, pending, done
 		if !slices.Contains([]string{"ok", "error", "pending", "done", "pending.nohtml", "done.nohtml", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
-			logger.Errorf(eventFormatError(eventns))
+			logger.Errorf("%s", eventFormatError(eventns))
 			continue
 		}
 		// assert myevent:ok::myblock or myevent:error::myblock and skip if not
