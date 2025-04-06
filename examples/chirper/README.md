@@ -1,88 +1,221 @@
-# Chirper: a simple real-time twitter clone
+# Chirper: A Simple Real-Time Twitter Clone
 
-The example demonstrates: progressive enhancement, form validation and real-time changes.
+The example demonstrates **progressive enhancement**, **form validation**, and **real-time changes**.
 
-## Start without javascript
-[index_no_js.html](./index_no_js.html) is a plain html file which is handled by the route function [NoJSIndex](index.go#NoJSIndex). 
+---
 
+## Table of Contents
+- [Prerequisites](#prerequisites)
+- [Step 1: Setting Up the Project](#step-1-setting-up-the-project)
+- [Step 2: Features Overview](#step-2-features-overview)
+  - [Progressive Enhancement](#1-progressive-enhancement)
+  - [Listing Chirps](#2-listing-chirps)
+  - [Creating Chirps](#3-creating-chirps)
+  - [Liking and Deleting Chirps](#4-liking-and-deleting-chirps)
+  - [Error Handling](#5-error-handling)
+  - [Real-Time Updates with WebSocket](#6-real-time-updates-with-websocket)
+- [Step 3: Testing the Application](#step-3-testing-the-application)
+- [Conclusion](#conclusion)
+- [Refrences](#references)
 
-### List chirps
+## Prerequisites
 
-Whenever the page loads, the bound `OnLoad` function(`loadChirps`) is automatically invoked. The returned data(`ctx.Data`) on a successful loading of chirps from the database is used to re-render the entire page([index_no_js.html](./index_no_js.html)
-). 
+Before starting, ensure you have the following installed:
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index.go#L100
+- [Go](https://go.dev/) (1.18 or later)
+- [Bolthold](https://github.com/timshannon/bolthold) (used for database storage)
+- Basic knowledge of Go, HTML, and JavaScript
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index.go#L21-L32
+---
 
-An error returned from the `loadChirps` can be rendered on the page using `fir.Errror` template function : `{{ fir.Error "onload" }}`.
+## Step 1: Setting Up the Project
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L30
+1. Clone the Fir repository:
 
-Listing the chirps itself is just standard html/template.
+   ```bash
+   git clone https://github.com/livefir/fir.git
+   ```
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L33-L60
+2. Navigate to the Chirper example directory:
 
+   ```bash
+   cd fir/examples/chirper
+   ```
 
-### Create chirp
+3. Ensure you have the required dependencies installed:
+   - Install [Bolthold](https://github.com/timshannon/bolthold) for database storage.
+   - Install Go (1.18 or later).
 
-We will create a `chirp`by submitting a html form with an action of format `action="?event=event-name"` to invoke the bound `onEvent`function on the server. The form method must use `POST` to invoke `OnEvent`otherwise `OnLoad` will be called with form data passed as query params. Please note that there is no forward slash(/) in the form action to ensure that the form is submitted to the current path.
+4. Run the application:
 
+   ```bash
+   go run .
+   ```
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index_no_js.html#L18-L27
+5. Open your browser and navigate to:
+   - [http://localhost:9867/nojs](http://localhost:9867/nojs) for the plain HTML version.
+   - [http://localhost:9867](http://localhost:9867) for the enhanced JavaScript version.
 
+---
 
-The event `create-chirp` is bound to an event handler of type [func(ctx RouteContext) error](https://pkg.go.dev/github.com/livefir/fir#OnEventFunc).
+## Step 2: Features Overview
 
-https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index.go#L101
+### 1. Progressive Enhancement
 
-https://github.com/livefir/fir/blob/919cb9ae8dc0cac66ba2d07b15d09cad4e92f76a/examples/chirper/index.go#L34-L52
+Chirper supports both a plain HTML version (for browsers without JavaScript) and an enhanced version with JavaScript for real-time updates.
 
+#### Plain HTML Version (`index_no_js.html`)
 
-Within the `createChirp` function, [RouteContext.Bind](https://pkg.go.dev/github.com/livefir/fir#RouteContext.Bind) is used to bind the form data to the request struct and return errors to render failures on the html page. In the html page, the returned error for an event can be rendered using the `fir.Errror` template function : `{{ fir.Error "create-chirp" }}`. `createChirp` also returns a [FieldError](https://pkg.go.dev/github.com/livefir/fir#RouteContext.FieldError) to indicate the specific field which failed validation. The field error can be referenced like so: `{{ fir.Error "create-chirp.body" }}` where `create-chirp`is the event id and `body`is the form field. 
+- **Route**: Handled by the `NoJSIndex` function in `index.go`.
+- **How it works**:
+  - The `OnLoad` function (`loadChirps`) is invoked automatically when the page loads.
+  - Chirps are fetched from the database and rendered using the `chirps` data.
+  - Errors during loading are displayed using `{{ fir.Error "onload" }}`.
 
-Since the current page involves no javascript, the page reloads which re-renders the whole page using the data from `loadChirps`as described in the section above.
+#### Enhanced Version (`index.html`)
 
-### Like and Delete chirp
+- **Route**: Handled by the `Index` function in `index.go`.
+- **How it works**:
+  - Uses Alpine.js and Fir's JavaScript plugin to enable real-time updates.
+  - Events like creating, liking, and deleting chirps are handled without reloading the page.
 
-To increment the like count `like-count` and to delete the chirp itself `delete-chirp` events are submitted using an html form.
+---
 
-https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index_no_js.html#L36-L57
+### 2. Listing Chirps
 
-https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index.go#L102-L103
+- Chirps are fetched from the database using the `loadChirps` function in `index.go`.
+- The returned data (`ctx.Data`) is used to render the page.
+- Errors during loading are displayed using `{{ fir.Error "onload" }}`.
 
-https://github.com/livefir/fir/blob/5040291ae4c2de65e379bb904ca64d7614b6e707/examples/chirper/index.go#L54-L92
+#### Plain HTML Example:
 
-Just like during `createChirp`, errors can be rendered using `fir.Error` while the page is re-rendered with data returned from `loadChirps`
-
-
-See it in action:
-
+```html
+<p>
+    {{ fir.Error "onload" }}
+</p>
+<div>
+    {{ range .chirps }}
+        <section>
+            <blockquote>{{ .Body }}</blockquote>
+            <footer>
+                <button formaction="?event=like-chirp" type="submit">&#9829; {{ .LikesCount }}</button>
+                <button formaction="?event=delete-chirp" type="submit">&#10005;</button>
+            </footer>
+        </section>
+    {{ end }}
+</div>
 ```
-go run .
-open http://localhost:9867/nojs
+
+---
+
+### 3. Creating Chirps
+
+#### Plain HTML Version
+
+- Chirps are created by submitting a form with the action `?event=create-chirp`.
+- The `createChirp` function in `index.go`:
+  - Validates the chirp body (minimum 3 characters).
+  - Uses `RouteContext.Bind` to bind form data and return errors.
+  - Errors are displayed using `{{ fir.Error "create-chirp.body" }}`.
+
+Example:
+
+```html
+<form method="post" action="?event=create-chirp">
+    <textarea name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
+    <p>{{ fir.Error "create-chirp.body" }}</p>
+    <button type="submit">Chirp</button>
+</form>
 ```
 
-The above page works even if javascript is disabled in the browser.
+#### Enhanced Version
 
-## Enhance with the alpinejs client
+- Prevents page reloads using Alpine.js and Fir's `$fir.submit()` magic function.
+- Resets the form on success using `@fir:create-chirp:ok.nohtml="$el.reset()"`.
+- Example:
 
-[index.html](./index.html) is an html file with javascript sprinkled using the alpinejs client. It is handled by the route function [Index](index.go#Index).
-
-We want to enhance the html page to avoid reloads and re-render only the changed parts of the DOM.
-
-
-### Enhance create chirp
-
-To stop the page from reloading, we will prevent the form submission and submit the event over the wire. Depending on whether websocket is enabled on the server, the alpinejs plugin will send the event as a websocket message or as a POST request. We use alpinejs [x-on](https://alpinejs.dev/directives/on) directive to bind the form's submit event to Fir's [custom magic function](https://alpinejs.dev/advanced/extending#magic-functions) `$fir.submit`
-
-https://github.com/livefir/fir/blob/e38ea115dfcecbb4b890d94acd49e9565bdf2146/examples/chirper/index.html#L28
-
-
-See it in action:
-
-```
-open http://localhost:9867
+```html
+<form
+    method="post"
+    action="?event=create-chirp"
+    @submit.prevent="$fir.submit()"
+    @fir:create-chirp:ok.nohtml="$el.reset()">
+    <textarea name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
+    <p @fir:create-chirp:error="$fir.replace()">{{ fir.Error "create-chirp.body" }}</p>
+    <button type="submit">Chirp</button>
+</form>
 ```
 
-Open two tabs at: http://localhost:9867. Add a chirp in one and see it broadcasted to the second tab instantly.
+---
+
+### 4. Liking and Deleting Chirps
+
+#### Plain HTML Version
+
+- Chirps can be liked or deleted using forms with actions `?event=like-chirp` and `?event=delete-chirp`.
+- Example:
+
+```html
+<form method="post">
+    <button formaction="?event=like-chirp" type="submit">&#9829; {{ .LikesCount }}</button>
+    <button formaction="?event=delete-chirp" type="submit">&#10005;</button>
+</form>
+```
+
+#### Enhanced Version
+
+- Real-time updates are enabled using Alpine.js and Fir's magic functions:
+  - `@fir:like-chirp:ok="$fir.replace()"` updates the like count.
+  - `@fir:delete-chirp:ok.nohtml="$fir.removeEl()"` removes the chirp.
+
+Example:
+
+```html
+<section fir-key="{{ .ID }}" @fir:delete-chirp:ok.nohtml="$fir.removeEl()">
+    <form method="post" @submit.prevent="$fir.submit()">
+        <blockquote>
+            {{ .Body }}
+        </blockquote>
+        <input type="hidden" name="chirpID" value="{{ .ID }}" />
+        <footer>
+            <button @fir:like-chirp:ok="$fir.replace()" formaction="?event=like-chirp" type="submit">&#9829; {{ .LikesCount }}</button>
+            <button formaction="?event=delete-chirp" type="submit">&#10005;</button>
+        </footer>
+    </form>
+</section>
+```
+
+---
+
+### 5. Error Handling
+
+- Errors are displayed using the `fir.Error` template function.
+- Examples:
+  - Global errors: `{{ fir.Error "onload" }}`
+  - Field-specific errors: `{{ fir.Error "create-chirp.body" }}`
+
+---
+
+### 6. Real-Time Updates with WebSocket
+
+- The enhanced version uses WebSocket for real-time updates.
+- If WebSocket is disabled, events are sent as HTTP POST requests.
+
+---
+
+## Step 3: Testing the Application
+
+1. Open two browser tabs at [http://localhost:9867](http://localhost:9867).
+2. Create a chirp in one tab and see it appear instantly in the other tab.
+3. Like or delete chirps and observe real-time updates.
+
+---
+
+## Conclusion
+
+Congratulations! You've built a simple real-time Twitter clone using Fir. This example demonstrates how Fir enables progressive enhancement, form validation, and real-time updates with minimal effort. Explore the code further to customize and extend Chirper!
+
+## References
+- [Fir Documentation](https://github.com/livefir/fir)
+- [Alpine.js Documentation](https://alpinejs.dev/)
+- [Bolthold Documentation](https://github.com/timshannon/bolthold)
