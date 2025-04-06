@@ -1,3 +1,4 @@
+
 # Chirper: A Simple Real-Time Twitter Clone
 
 The example demonstrates **progressive enhancement**, **form validation**, and **real-time changes**.
@@ -16,7 +17,9 @@ The example demonstrates **progressive enhancement**, **form validation**, and *
   - [Real-Time Updates with WebSocket](#6-real-time-updates-with-websocket)
 - [Step 3: Testing the Application](#step-3-testing-the-application)
 - [Conclusion](#conclusion)
-- [Refrences](#references)
+- [References](#references)
+
+---
 
 ## Prerequisites
 
@@ -64,17 +67,17 @@ Before starting, ensure you have the following installed:
 
 Chirper supports both a plain HTML version (for browsers without JavaScript) and an enhanced version with JavaScript for real-time updates.
 
-#### Plain HTML Version (`index_no_js.html`)
+#### Plain HTML Version ([`index_no_js.html`](./index_no_js.html))
 
-- **Route**: Handled by the `NoJSIndex` function in `index.go`.
+- **Route**: Handled by the [`NoJSIndex`](./index.go) function in [`index.go`](./index.go).
 - **How it works**:
   - The `OnLoad` function (`loadChirps`) is invoked automatically when the page loads.
   - Chirps are fetched from the database and rendered using the `chirps` data.
   - Errors during loading are displayed using `{{ fir.Error "onload" }}`.
 
-#### Enhanced Version (`index.html`)
+#### Enhanced Version ([`index.html`](./index.html))
 
-- **Route**: Handled by the `Index` function in `index.go`.
+- **Route**: Handled by the [`Index`](./index.go) function in [`index.go`](./index.go).
 - **How it works**:
   - Uses Alpine.js and Fir's JavaScript plugin to enable real-time updates.
   - Events like creating, liking, and deleting chirps are handled without reloading the page.
@@ -83,7 +86,7 @@ Chirper supports both a plain HTML version (for browsers without JavaScript) and
 
 ### 2. Listing Chirps
 
-- Chirps are fetched from the database using the `loadChirps` function in `index.go`.
+- Chirps are fetched from the database using the `loadChirps` function in [`index.go`](./index.go).
 - The returned data (`ctx.Data`) is used to render the page.
 - Errors during loading are displayed using `{{ fir.Error "onload" }}`.
 
@@ -113,7 +116,7 @@ Chirper supports both a plain HTML version (for browsers without JavaScript) and
 #### Plain HTML Version
 
 - Chirps are created by submitting a form with the action `?event=create-chirp`.
-- The `createChirp` function in `index.go`:
+- The `createChirp` function in [`index.go`](./index.go):
   - Validates the chirp body (minimum 3 characters).
   - Uses `RouteContext.Bind` to bind form data and return errors.
   - Errors are displayed using `{{ fir.Error "create-chirp.body" }}`.
