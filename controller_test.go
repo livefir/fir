@@ -19,7 +19,6 @@ import (
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
 	"github.com/redis/go-redis/v9"
-	"github.com/testcontainers/testcontainers-go"
 	redisContainer "github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
@@ -402,22 +401,37 @@ func TestControllerWebsocketEnabledRedis(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	redisContainer, err := redisContainer.RunContainer(ctx,
-		testcontainers.WithImage("docker.io/redis:7"),
-	)
+	rc, err := redisContainer.Run(ctx, "redis:7")
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)
 	}
 
 	// Clean up the container
 	defer func() {
-		if err := redisContainer.Terminate(ctx); err != nil {
+		if err := rc.Terminate(ctx); err != nil {
 			t.Fatalf("failed to terminate container: %s", err)
 		}
 	}()
 
+	host, err := rc.Host(ctx)
+	if err != nil {
+		t.Fatalf("failed to get host: %s", err)
+	}
+
+	port, err := rc.MappedPort(ctx, "6379")
+
+	if err != nil {
+		t.Fatalf("failed to get mapped port: %s", err)
+
+	}
+
+	addr := fmt.Sprintf("%s:%s", host, port.Port())
+	if addr == "" {
+		t.Fatalf("failed to get address: %s", err)
+	}
+
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     addr,
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
