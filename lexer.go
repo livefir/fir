@@ -1,6 +1,9 @@
 package fir
 
 import (
+	"fmt"
+
+	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 )
 
@@ -37,4 +40,25 @@ type EventExpression struct {
 type Target struct {
 	Template string `parser:"( \"->\" @Ident )?"` // Match template target for "->"
 	Action   string `parser:"( \"=>\" @Ident )?"` // Match action target for "=>"
+}
+
+// getRenderExpressionParser parser function to parse the input string
+func getRenderExpressionParser() (*participle.Parser[Expressions], error) {
+	parser, err := participle.Build[Expressions](
+		participle.Lexer(lexerRules),
+		participle.Elide("Whitespace"), // Globally ignore whitespace
+	)
+	return parser, err
+}
+
+// parseRenderExpression parses the input string using the provided parser
+func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) {
+	if input == "" {
+		return nil, fmt.Errorf("render expression cannot be empty")
+	}
+	parsed, err := parser.ParseString("", input)
+	if err != nil {
+		return nil, err
+	}
+	return parsed, nil
 }

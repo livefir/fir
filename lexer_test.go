@@ -36,16 +36,67 @@ func TestLexer(t *testing.T) {
 }
 
 func TestLexer_MultipleCases(t *testing.T) {
-	parser := participle.MustBuild[Expressions](
-		participle.Lexer(lexerRules),
-		participle.Elide("Whitespace"), // Globally ignore whitespace
-	)
-
+	parser, err := getRenderExpressionParser()
+	if err != nil {
+		t.Fatalf("Failed to create parser: %v", err)
+	}
 	tests := []struct {
-		name     string
-		input    string
-		expected []string
+		name      string
+		input     string
+		expected  []string
+		expectErr bool // New field to indicate if an error is expected
 	}{
+		{
+			name:  "Single Event without State, Template, or Action",
+			input: "create",
+			expected: []string{
+				"EventExpression: {Name:create State:}",
+			},
+		},
+		{
+			name:  "Single Event without State",
+			input: "create->todo",
+			expected: []string{
+				"EventExpression: {Name:create State:}",
+				"Template Target: todo",
+			},
+		},
+		{
+			name:  "Multiple Events without States",
+			input: "create,delete=>replace",
+			expected: []string{
+				"EventExpression: {Name:create State:}",
+				"EventExpression: {Name:delete State:}",
+				"Action Target: replace",
+			},
+		},
+		{
+			name:  "Event with State and Template",
+			input: "create:ok->todo",
+			expected: []string{
+				"EventExpression: {Name:create State::ok}",
+				"Template Target: todo",
+			},
+		},
+		{
+			name:      "Empty Input",
+			input:     "",
+			expected:  nil,  // No expected output
+			expectErr: true, // Expect an error
+		},
+		{
+			name:  "Complex Mixed Input",
+			input: "create:ok->todo,delete:error=>replace;update:pending->done=>archive",
+			expected: []string{
+				"EventExpression: {Name:create State::ok}",
+				"Template Target: todo",
+				"EventExpression: {Name:delete State::error}",
+				"Action Target: replace",
+				"EventExpression: {Name:update State::pending}",
+				"Template Target: done",
+				"Action Target: archive",
+			},
+		},
 		{
 			name:  "Single Event with State",
 			input: "create:ok->todo",
@@ -87,7 +138,13 @@ func TestLexer_MultipleCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := parser.ParseString("", tt.input)
+			parsed, err := parseRenderExpression(parser, tt.input)
+			if tt.expectErr {
+				if err == nil {
+					t.Fatalf("Expected an error but got none")
+				}
+				return // Test passes if an error is expected and received
+			}
 			if err != nil {
 				t.Fatalf("Failed to parse input: %v", err)
 			}
