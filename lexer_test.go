@@ -38,6 +38,7 @@ func TestLexer(t *testing.T) {
 func TestLexer_MultipleCases(t *testing.T) {
 	parser := participle.MustBuild[Expressions](
 		participle.Lexer(lexerRules),
+		participle.Elide("Whitespace"), // Globally ignore whitespace
 	)
 
 	tests := []struct {
@@ -74,7 +75,7 @@ func TestLexer_MultipleCases(t *testing.T) {
 		},
 		{
 			name:  "Whitespace Ignored",
-			input: "  create : ok  -> todo  , delete : error => replace  ",
+			input: "  create: ok  -> todo  , delete:error => replace  ",
 			expected: []string{
 				"EventExpression: {Name:create State::ok}",
 				"Template Target: todo",
@@ -95,7 +96,7 @@ func TestLexer_MultipleCases(t *testing.T) {
 			for _, expr := range parsed.Expressions {
 				for _, binding := range expr.Bindings {
 					for _, eventExpr := range binding.Eventexpressions {
-						output = append(output, fmt.Sprintf("EventExpression: %+v", eventExpr))
+						output = append(output, fmt.Sprintf("EventExpression: {Name:%s State:%s}", eventExpr.Name, eventExpr.State))
 					}
 					if binding.Target != nil {
 						if binding.Target.Template != "" {

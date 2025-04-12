@@ -6,13 +6,13 @@ import (
 
 // Define the lexer rules
 var lexerRules = lexer.MustSimple([]lexer.SimpleRule{
-	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},   // Matches event names like "create"
-	{Name: "State", Pattern: `:(ok|error|pending|done)`}, // Matches states like ":ok"
-	{Name: "Arrow", Pattern: `->`},                       // Matches "->"
-	{Name: "DoubleArrow", Pattern: `=>`},                 // Matches "=>"
-	{Name: "Comma", Pattern: `,`},                        // Matches ","
-	{Name: "Semicolon", Pattern: `;`},                    // Matches ";"
-	{Name: "Whitespace", Pattern: `\s+`},                 // Ignore whitespace
+	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},      // Matches event names like "create"
+	{Name: "State", Pattern: `:\s*(ok|error|pending|done)`}, // Matches states like ":ok" without capturing trailing whitespace
+	{Name: "Arrow", Pattern: `->`},                          // Matches "->" without trailing whitespace
+	{Name: "DoubleArrow", Pattern: `=>`},                    // Matches "=>" without trailing whitespace
+	{Name: "Comma", Pattern: `,`},                           // Matches ","
+	{Name: "Semicolon", Pattern: `;`},                       // Matches ";"
+	{Name: "Whitespace", Pattern: `\s+`},                    // Ignore standalone whitespace
 })
 
 // Define the grammar structure
@@ -36,5 +36,5 @@ type EventExpression struct {
 
 type Target struct {
 	Template string `parser:"( \"->\" @Ident )?"` // Match template target for "->"
-	Action   string `parser:"'=>' @Ident?"`       // Match action target for "=>"
+	Action   string `parser:"( \"=>\" @Ident )?"` // Match action target for "=>"
 }
