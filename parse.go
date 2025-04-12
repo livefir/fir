@@ -349,6 +349,14 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 	return content, blocks, nil
 }
 
+// event handler format for a single event is firPrefix:event:state::templateName.modifier="any string"
+// event handler format for multiple events is firPrefix:[event1:state,eventN:state]::templateName.modifier="any string"
+// where firPrefix is @fir or x-on:fir
+// where event is a an alphanumeric string
+// where state is a valid FirEventState. if state is not specified, it defaults to ok
+// where templateName is a valid go html template name
+// where modifier is a valid FirEventModifier, if modifier is not specified, it defaults to replace
+// where "any string" is a valid go html template string
 var (
 	stateErrorRegex1 = regexp.MustCompile(fmt.Sprintf(`:%s=`, StateError))
 	stateErrorRegex2 = regexp.MustCompile(fmt.Sprintf(`:%s]=`, StateError))
