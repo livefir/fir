@@ -75,7 +75,7 @@ func TestLexer_MultipleCases(t *testing.T) {
 		},
 		{
 			name:  "Whitespace Ignored",
-			input: "  create: ok  -> todo  , delete:error => replace  ",
+			input: "  create:ok  -> todo  , delete:error => replace  ",
 			expected: []string{
 				"EventExpression: {Name:create State::ok}",
 				"Template Target: todo",
