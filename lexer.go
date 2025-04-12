@@ -11,6 +11,7 @@ import (
 var lexerRules = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},   // Matches event names like "create"
 	{Name: "State", Pattern: `:(ok|error|pending|done)`}, // Matches states like ":ok" without capturing trailing whitespace
+	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},           // Matches modifiers like ".nohtml" (alphabetic only)
 	{Name: "Arrow", Pattern: `->`},                       // Matches "->" without trailing whitespace
 	{Name: "DoubleArrow", Pattern: `=>`},                 // Matches "=>" without trailing whitespace
 	{Name: "Comma", Pattern: `,`},                        // Matches ","
@@ -33,13 +34,14 @@ type Binding struct {
 }
 
 type EventExpression struct {
-	Name  string `parser:"@Ident"`
-	State string `parser:"(@State)?"`
+	Name     string `parser:"@Ident"`
+	State    string `parser:"(@State)?"`
+	Modifier string `parser:"(@Modifier)?"` // Optional modifier after event or state
 }
 
 type Target struct {
-	Template string `parser:"( \"->\" @Ident )?"` // Match template target for "->"
-	Action   string `parser:"( \"=>\" @Ident )?"` // Match action target for "=>"
+	Template string `parser:"( \"->\" @Ident )?"`             // Match template target for "->"
+	Action   string `parser:"( \"=>\" @Ident (@Modifier)?)?"` // Match action target with optional modifier
 }
 
 // removeAllWhitespace is helper function to remove all whitespace from a string
@@ -69,20 +71,9 @@ func parseRenderExpression(parser *participle.Parser[Expressions], input string)
 	input = removeAllWhitespace(input)
 	parsed, err := parser.ParseString("", input)
 	if err != nil {
-		// Check if the error is due to invalid whitespace
-		if containsWhitespaceError(err.Error()) {
-			return nil, fmt.Errorf("invalid whitespace between event and state")
-		}
+
 		return nil, err
 	}
 
 	return parsed, nil
-}
-
-// Helper function to check if the error message indicates invalid whitespace
-func containsWhitespaceError(errMsg string) bool {
-	fmt.Println("Error message:", errMsg)
-	// Look for specific patterns in the error message that indicate invalid whitespace
-	return errMsg == "1:9: lexer: invalid input" || // Example error message for invalid whitespace
-		errMsg == "unexpected token ':'" // Example error for misplaced colon
 }
