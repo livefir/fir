@@ -42,23 +42,47 @@ type Target struct {
 	Action   string `parser:"( \"=>\" @Ident )?"` // Match action target for "=>"
 }
 
+// removeAllWhitespace is helper function to remove all whitespace from a string
+func removeAllWhitespace(input string) string {
+	result := ""
+	for _, r := range input {
+		if r != ' ' && r != '\t' && r != '\n' && r != '\r' {
+			result += string(r)
+		}
+	}
+	return result
+}
+
 // getRenderExpressionParser parser function to parse the input string
 func getRenderExpressionParser() (*participle.Parser[Expressions], error) {
 	parser, err := participle.Build[Expressions](
 		participle.Lexer(lexerRules),
-		participle.Elide("Whitespace"), // Globally ignore whitespace
+		participle.Elide("Whitespace"), // Ignore standalone whitespace globally
 	)
 	return parser, err
 }
 
-// parseRenderExpression parses the input string using the provided parser
 func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) {
 	if input == "" {
 		return nil, fmt.Errorf("render expression cannot be empty")
 	}
+	input = removeAllWhitespace(input)
 	parsed, err := parser.ParseString("", input)
 	if err != nil {
+		// Check if the error is due to invalid whitespace
+		if containsWhitespaceError(err.Error()) {
+			return nil, fmt.Errorf("invalid whitespace between event and state")
+		}
 		return nil, err
 	}
+
 	return parsed, nil
+}
+
+// Helper function to check if the error message indicates invalid whitespace
+func containsWhitespaceError(errMsg string) bool {
+	fmt.Println("Error message:", errMsg)
+	// Look for specific patterns in the error message that indicate invalid whitespace
+	return errMsg == "1:9: lexer: invalid input" || // Example error message for invalid whitespace
+		errMsg == "unexpected token ':'" // Example error for misplaced colon
 }

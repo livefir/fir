@@ -7,34 +7,6 @@ import (
 	"github.com/alecthomas/participle/v2"
 )
 
-func TestLexer(t *testing.T) {
-	parser := participle.MustBuild[Expressions](
-		participle.Lexer(lexerRules),
-	)
-
-	example := "create:ok,delete:error=>replace;create:ok->todo=>append"
-	parsed, err := parser.ParseString("", example)
-	if err != nil {
-		t.Fatalf("Failed to parse input: %v", err)
-	}
-
-	for _, expr := range parsed.Expressions {
-		for _, binding := range expr.Bindings {
-			for _, eventExpr := range binding.Eventexpressions {
-				fmt.Printf("    EventExpression: %+v\n", eventExpr)
-			}
-			if binding.Target != nil {
-				if binding.Target.Template != "" {
-					fmt.Printf("    Template Target: %s\n", binding.Target.Template)
-				}
-				if binding.Target.Action != "" {
-					fmt.Printf("    Action Target: %s\n", binding.Target.Action)
-				}
-			}
-		}
-	}
-}
-
 func TestLexer_MultipleCases(t *testing.T) {
 	parser, err := getRenderExpressionParser()
 	if err != nil {
@@ -126,13 +98,22 @@ func TestLexer_MultipleCases(t *testing.T) {
 		},
 		{
 			name:  "Whitespace Ignored",
-			input: "  create:ok  -> todo  , delete:error => replace  ",
+			input: "  create: ok  -> todo  , delete: error => replace  ",
 			expected: []string{
 				"EventExpression: {Name:create State::ok}",
 				"Template Target: todo",
 				"EventExpression: {Name:delete State::error}",
 				"Action Target: replace",
 			},
+		},
+		{
+			name:  "Valid Input Without Whitespace Between Event and State",
+			input: "create:ok->todo",
+			expected: []string{
+				"EventExpression: {Name:create State::ok}",
+				"Template Target: todo",
+			},
+			expectErr: false, // No error expected
 		},
 	}
 
@@ -176,5 +157,33 @@ func TestLexer_MultipleCases(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestLexer(t *testing.T) {
+	parser := participle.MustBuild[Expressions](
+		participle.Lexer(lexerRules),
+	)
+
+	example := "create:ok,delete:error=>replace;create:ok->todo=>append"
+	parsed, err := parser.ParseString("", example)
+	if err != nil {
+		t.Fatalf("Failed to parse input: %v", err)
+	}
+
+	for _, expr := range parsed.Expressions {
+		for _, binding := range expr.Bindings {
+			for _, eventExpr := range binding.Eventexpressions {
+				fmt.Printf("    EventExpression: %+v\n", eventExpr)
+			}
+			if binding.Target != nil {
+				if binding.Target.Template != "" {
+					fmt.Printf("    Template Target: %s\n", binding.Target.Template)
+				}
+				if binding.Target.Action != "" {
+					fmt.Printf("    Action Target: %s\n", binding.Target.Action)
+				}
+			}
+		}
 	}
 }
