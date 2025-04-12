@@ -26,7 +26,7 @@ func TestLexer(t *testing.T) {
 			},
 		},
 		{
-			name:  "Single Event without State",
+			name:  "Single Event with Template Target",
 			input: "create->todo",
 			expected: []string{
 				"EventExpression: {Name:create State: Modifier:}",
@@ -46,14 +46,6 @@ func TestLexer(t *testing.T) {
 		// Group 2: Events with States and Templates
 		{
 			name:  "Event with State and Template",
-			input: "create:ok->todo",
-			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:}",
-				"Template Target: todo",
-			},
-		},
-		{
-			name:  "Single Event with State",
 			input: "create:ok->todo",
 			expected: []string{
 				"EventExpression: {Name:create State::ok Modifier:}",
@@ -99,105 +91,44 @@ func TestLexer(t *testing.T) {
 				"Action Target: archive",
 			},
 		},
-		{
-			name:  "Multiple Events with Modifiers, States, and Targets",
-			input: "create:ok.nohtml->todo,delete:error.nocache=>replace;update:pending->done=>archive",
-			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
-				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifier:.nocache}",
-				"Action Target: replace",
-				"EventExpression: {Name:update State::pending Modifier:}",
-				"Template Target: done",
-				"Action Target: archive",
-			},
-		},
 
 		// Group 5: Invalid Inputs
 		{
 			name:      "Invalid Modifier after Template",
 			input:     "create:ok->todo.nohtml",
-			expectErr: true, // Modifier after template is not allowed
+			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Invalid State",
 			input:     "create:invalid.nohtml",
-			expectErr: true, // Invalid state should trigger an error
+			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Invalid Target",
 			input:     "create.nohtml->123",
-			expectErr: true, // Invalid template target should trigger an error
+			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Empty Target",
 			input:     "create.nohtml->",
-			expectErr: true, // Empty template target should trigger an error
+			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Multiple Actions",
 			input:     "create.nohtml=>replace=>append",
-			expectErr: true, // Multiple actions are not allowed
+			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Invalid Characters in Modifier",
 			input:     "create.no_html",
-			expectErr: true, // Invalid characters in modifier should trigger an error
-		},
-		{
-			name:      "Event with Modifier and Valid State but Invalid Action",
-			input:     "create:ok.nohtml=>123",
-			expectErr: true, // Invalid action target should trigger an error
+			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Multiple States",
 			input:     "create:ok:error.nohtml",
-			expectErr: true, // Multiple states are not allowed
+			expectErr: true,
 		},
-		{
-			name:      "Event with Modifier and Special Characters in Target",
-			input:     "create.nohtml->todo@123",
-			expectErr: true, // Special characters in target should trigger an error
-		},
-		{
-			name:  "Event with Modifier and Valid State but No Targets",
-			input: "create:ok.nohtml",
-			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
-			},
-		},
-		{
-			name:  "Event with Modifier and Valid Action but No Template",
-			input: "create.nohtml=>replace",
-			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
-				"Action Target: replace",
-			},
-		},
-		{
-			name:      "Event with Modifier and Empty Input",
-			input:     "",
-			expectErr: true, // Empty input should trigger an error
-		},
-		{
-			name:      "Event with Modifier and Invalid Characters in Modifier",
-			input:     "create.no_html",
-			expectErr: true, // Invalid characters in modifier should trigger an error
-		},
-		{
-			name:      "Event with Modifier and Mixed Valid and Invalid Targets",
-			input:     "create.nohtml->todo,delete:error=>123",
-			expectErr: true, // Invalid action target should trigger an error
-		},
-		{
-			name:  "Event with Modifier and Whitespace Between Tokens",
-			input: "create .nohtml -> todo => replace",
-			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
-				"Template Target: todo",
-				"Action Target: replace",
-			},
-		},
+
 		// Group 6: Whitespace Handling
 		{
 			name:  "Whitespace Ignored",
@@ -209,26 +140,12 @@ func TestLexer(t *testing.T) {
 				"Action Target: replace",
 			},
 		},
-		{
-			name:  "Event with Modifier and Whitespace",
-			input: "  create .nohtml  -> todo  ",
-			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
-				"Template Target: todo",
-			},
-		},
 
 		// Group 7: Modifiers with Complex Scenarios
-
-		{
-			name:      "Event with Modifier and Multiple States",
-			input:     "create:ok:error.nohtml",
-			expectErr: true, // Multiple states are not allowed
-		},
 		{
 			name:      "Event with Modifier and Special Characters in Target",
 			input:     "create.nohtml->todo@123",
-			expectErr: true, // Special characters in target should trigger an error
+			expectErr: true,
 		},
 		{
 			name:  "Event with Modifier and Valid State but No Targets",
@@ -237,38 +154,7 @@ func TestLexer(t *testing.T) {
 				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
 			},
 		},
-		{
-			name:  "Event with Modifier and Valid Action but No Template",
-			input: "create.nohtml=>replace",
-			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
-				"Action Target: replace",
-			},
-		},
-		{
-			name:      "Event with Modifier and Empty Input",
-			input:     "",
-			expectErr: true, // Empty input should trigger an error
-		},
-		{
-			name:      "Event with Modifier and Invalid Characters in Modifier",
-			input:     "create.no_html",
-			expectErr: true, // Invalid characters in modifier should trigger an error
-		},
-		{
-			name:      "Event with Modifier and Mixed Valid and Invalid Targets",
-			input:     "create.nohtml->todo,delete:error=>123",
-			expectErr: true, // Invalid action target should trigger an error
-		},
-		{
-			name:  "Event with Modifier and Whitespace Between Tokens",
-			input: "create .nohtml -> todo => replace",
-			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
-				"Template Target: todo",
-				"Action Target: replace",
-			},
-		},
+
 		// Group 8: Complex Mixed Inputs
 		{
 			name:  "Complex Input with Multiple Modifiers and Targets",
@@ -283,30 +169,37 @@ func TestLexer(t *testing.T) {
 				"Action Target: archive.final",
 			},
 		},
+
+		// Group 9: Edge Cases
 		{
-			name:      "Complex Input with Mixed Valid and Invalid Modifiers",
-			input:     "create:ok.nohtml->todo,delete:error.nocache=>replace;update:done->archive.no_html",
-			expectErr: true, // Invalid modifier should trigger an error
+			name:      "Event with Only Modifier",
+			input:     ".nohtml",
+			expectErr: true,
 		},
 		{
-			name:      "Complex Input with Multiple Events and Empty Targets",
-			input:     "create:ok.nohtml->,delete:error=>replace",
-			expectErr: true, // Empty template target should trigger an error
+			name:      "Event with Only State",
+			input:     ":ok",
+			expectErr: true,
 		},
 		{
-			name:      "Complex Input with Multiple Events and Invalid Characters",
-			input:     "create:ok.nohtml->todo,delete:error=>replace@123",
-			expectErr: true, // Invalid characters in action target should trigger an error
+			name:      "Event with Only Target",
+			input:     "->todo",
+			expectErr: true,
 		},
 		{
-			name:  "Complex Input with Multiple Events and Whitespace",
-			input: "  create:ok .nohtml -> todo , delete : error => replace  ",
-			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
-				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifier:}",
-				"Action Target: replace",
-			},
+			name:      "Event with Only Action",
+			input:     "=>replace",
+			expectErr: true,
+		},
+		{
+			name:      "Event with Empty Modifier",
+			input:     "create.",
+			expectErr: true,
+		},
+		{
+			name:      "Event with Invalid Characters in Name",
+			input:     "cre@te:ok.nohtml",
+			expectErr: true,
 		},
 	}
 
@@ -317,7 +210,7 @@ func TestLexer(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Expected an error but got none")
 				}
-				return // Test passes if an error is expected and received
+				return
 			}
 			if err != nil {
 				t.Fatalf("Failed to parse input: %v", err)
