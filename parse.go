@@ -275,18 +275,16 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 		// as t, this file becomes the contents of t, so
 		//  t, err := New(name).Funcs(xxx).ParseFiles(name)
 		// works. Otherwise we create a new template associated with t.
-		var tmpl *template.Template
 		if t == nil {
 			t = template.New(fi.name)
 		}
-		if fi.name == t.Name() {
-			tmpl = t
-		} else {
+
+		tmpl := t
+		if fi.name != t.Name() {
 			tmpl = t.New(fi.name)
 		}
 
-		_, err := tmpl.Parse(s)
-		if err != nil {
+		if _, err := tmpl.Parse(s); err != nil {
 			return t, evt, fmt.Errorf("parsing %s: %v", fi.name, err)
 		}
 		for name, block := range fi.blocks {

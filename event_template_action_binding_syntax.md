@@ -44,7 +44,7 @@ The event template binding syntax in the provided code allows associating specif
    - Common modifiers include `.prevent`, `.stop`, `.self`, etc.
 
 
-## Declarative Syntax
+## Alternative Declarative Syntax
 
 The declarative syntax allows you to bind events to templates or actions in a more readable and maintainable way. This is particularly useful for managing dynamic updates in the frontend.
 
@@ -82,6 +82,10 @@ delete-task.nohtml=>fir.removeEl">
 delete-task.nohtml=>fir.removeEl">
 
 </div>
+
+
+
+```html
 
 
 ```string
