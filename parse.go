@@ -17,6 +17,9 @@ import (
 	"golang.org/x/net/html"
 )
 
+const FirGenTemplatePrefix = "::fir-gen-templ-"
+const FirDefaultTemplatePrefix = "fir-"
+
 type FirEventState string
 type FirEventModifier string
 
@@ -328,25 +331,34 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 		return content, blocks, nil
 	}
 
-	// Replace placeholders in the content
-	content, err := replacePlaceholders(content)
+	// Step 1: Generate default template names for event bindings
+	updatedContent, err := generateDefaultTemplateNames(content)
 	if err != nil {
-		return content, blocks, err
+		return content, blocks, fmt.Errorf("error generating default template names: %w", err)
 	}
 
-	// Parse the content into an HTML document
-	doc, err := html.Parse(bytes.NewReader(content))
+	// Step 2: Parse the content into an HTML document
+	doc, err := html.Parse(bytes.NewReader(updatedContent))
 	if err != nil {
-		return content, blocks, err
+		return content, blocks, fmt.Errorf("error parsing HTML content: %w", err)
 	}
 
-	// Replace and extract templates
-	content, err = processTemplates(doc, content, blocks)
+	// Step 3: Validate and update generated template names
+	updatedContent, err = validateGeneratedTemplateNames(doc, updatedContent)
 	if err != nil {
-		return content, blocks, err
+		return content, blocks, fmt.Errorf("error validating generated template names: %w", err)
 	}
 
-	return content, blocks, nil
+	// Step 4: Parse the updated content into a new HTML document
+	updatedDoc, err := html.Parse(bytes.NewReader(updatedContent))
+	if err != nil {
+		return content, blocks, fmt.Errorf("error reparsing updated HTML content: %w", err)
+	}
+
+	// Step 5: Extract template blocks
+	extractTemplateBlocks(updatedDoc, blocks)
+
+	return updatedContent, blocks, nil
 }
 
 // event handler format for a single event is firPrefix:event:state::templateName.modifier="any string"
@@ -364,23 +376,14 @@ var (
 	stateOKRegex2    = regexp.MustCompile(fmt.Sprintf(`:%s]=`, StateOK))
 )
 
-// replacePlaceholders replaces specific placeholders in the given content with generated template names.
-// The placeholders are identified using regular expressions, and their replacements are generated
-// dynamically based on the placeholder type.
-//
-// Parameters:
-//   - content: A byte slice containing the input content where placeholders need to be replaced.
-//
-// Returns:
-//   - A byte slice with the placeholders replaced by their corresponding template names.
-//   - An error if there is an issue during the replacement process.
-//
-// If the input content is empty, the function returns the content as is without any modifications.
-func replacePlaceholders(content []byte) ([]byte, error) {
+// generateDefaultTemplateNames adds default template names to the event bindings
+// default template is added if the event binding does not have a template
+// e.g. @fir:create="any string" will be converted to @fir:create::fir-gen-templ-<random string>="any string"
+func generateDefaultTemplateNames(content []byte) ([]byte, error) {
 	if len(content) == 0 {
 		return content, nil
 	}
-
+	// check if template is missing and add default template
 	reader := replace.Chain(bytes.NewReader(content),
 		replace.RegexpStringFunc(stateErrorRegex1, generateTemplateName(string(StateError))),
 		replace.RegexpStringFunc(stateErrorRegex2, generateTemplateName(string(StateError)+"]")),
@@ -409,54 +412,27 @@ func replacePlaceholders(content []byte) ([]byte, error) {
 //   - A function that takes a string (match) and returns a formatted template name.
 func generateTemplateName(prefix string) func(string) string {
 	return func(match string) string {
-		return fmt.Sprintf(":%s::fir-gen-templ-%s=", prefix, strings.ToLower(shortid.MustGenerate()))
+		return fmt.Sprintf(":%s%s%s=", prefix, FirGenTemplatePrefix, strings.ToLower(shortid.MustGenerate()))
 	}
 }
 
-// processTemplates processes an HTML document to extract and replace template blocks
-// based on specific attributes and conditions.
-//
-// Parameters:
-//   - doc: The root HTML node of the document to process.
-//   - content: The byte slice representing the content of the document.
-//   - blocks: A map to store extracted template blocks, where the key is the template name
-//     and the value is the corresponding HTML block.
-//
-// Returns:
-// - A modified byte slice of the content with replaced templates.
-// - An error if parsing the HTML content fails.
-//
-// The function performs the following operations:
-//  1. Replaces template names in the content with their corresponding HTML blocks
-//     if the block is identified as an HTML template.
-//  2. Removes template namespaces from the content if the block is not an HTML template.
-//  3. Extracts template blocks from the document and stores them in the provided `blocks` map.
-//
-// The function uses three nested helper functions:
-// - replacer: Recursively traverses the HTML nodes to replace template names or remove namespaces.
-// - extractor: Recursively traverses the HTML nodes to extract template blocks and store them in the map.
-// - getHtml: Recursively generates the HTML string representation of a node and its children.
-//
-// Note: The function assumes the presence of utility functions such as `isFirEvent`,
-// `extractTemplateName`, `isHtmlTemplate`, `replaceTemplateName`, `removeTemplateNamespace`,
-// and `formatHtmlNode` to perform specific operations.
-func processTemplates(doc *html.Node, content []byte, blocks map[string]string) ([]byte, error) {
+// validateGeneratedTemplateNames traverses the HTML document and replaces generated template names in the content
+// with a new template name(fir-<random-id>) if the content is a valid HTML template.
+func validateGeneratedTemplateNames(doc *html.Node, content []byte) ([]byte, error) {
 	var replacer func(*html.Node)
-	var extractor func(*html.Node)
-	var getHtml func(*html.Node) string
-
 	replacer = func(node *html.Node) {
 		if node.Type == html.ElementNode {
 			for _, attr := range node.Attr {
-				if isFirEvent(attr.Key) && strings.Contains(attr.Key, "::fir-gen-templ-") {
-					block := getHtml(node)
-					tempTemplateName := extractTemplateName(attr.Key)
-					hasNoHtmlModifier := strings.Contains(tempTemplateName, ".nohtml")
-
+				if isFirEvent(attr.Key) && strings.Contains(attr.Key, FirGenTemplatePrefix) {
+					block := getHtmlContent(node)
+					generatedTemplateName := extractTemplateName(attr.Key)
+					hasNoHtmlModifier := strings.Contains(generatedTemplateName, string(ModifierNoHTML))
+					// if the content is a valid HTML template, replace the template name with fir-<random string>
+					// if the content is not a valid HTML template, remove the generated template name
 					if isHtmlTemplate(block) {
-						content = replaceTemplateName(content, tempTemplateName, block, hasNoHtmlModifier)
+						content = replaceGeneratedTemplateName(content, generatedTemplateName, block, hasNoHtmlModifier)
 					} else {
-						content = removeTemplateNamespace(content, tempTemplateName)
+						content = removeTemplateNamespace(content, generatedTemplateName)
 					}
 				}
 			}
@@ -466,14 +442,20 @@ func processTemplates(doc *html.Node, content []byte, blocks map[string]string) 
 		}
 	}
 
+	replacer(doc)
+	return content, nil
+}
+
+// extractTemplateBlocks traverses the HTML document and extracts template blocks into the provided map.
+func extractTemplateBlocks(doc *html.Node, blocks map[string]string) {
+	var extractor func(*html.Node)
+
 	extractor = func(node *html.Node) {
 		if node.Type == html.ElementNode {
 			for _, attr := range node.Attr {
-				if isFirEvent(attr.Key) && strings.Contains(attr.Key, "::fir-") {
-					block := getHtml(node)
-					templateName := extractTemplateName(attr.Key)
-					if isHtmlTemplate(block) {
-						blocks[templateName] = block
+				if isFirEvent(attr.Key) && strings.Contains(attr.Key, "::"+FirDefaultTemplatePrefix) {
+					if block := getHtmlContent(node); isHtmlTemplate(block) {
+						blocks[extractTemplateName(attr.Key)] = block
 					}
 				}
 			}
@@ -483,28 +465,20 @@ func processTemplates(doc *html.Node, content []byte, blocks map[string]string) 
 		}
 	}
 
-	getHtml = func(node *html.Node) string {
-		var block strings.Builder
-		for c := node.FirstChild; c != nil; c = c.NextSibling {
-			if c.Type == html.TextNode {
-				block.WriteString(c.Data)
-			} else {
-				block.WriteString(formatHtmlNode(c, getHtml))
-			}
-		}
-		return block.String()
-	}
-
-	replacer(doc)
-
-	doc, err := html.Parse(bytes.NewReader(content))
-	if err != nil {
-		return content, err
-	}
-
 	extractor(doc)
+}
 
-	return content, nil
+// Helper function to extract inner HTML content of a node.
+func getHtmlContent(node *html.Node) string {
+	var block strings.Builder
+	for c := node.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.TextNode {
+			block.WriteString(c.Data)
+		} else {
+			block.WriteString(formatHtmlNode(c, getHtmlContent))
+		}
+	}
+	return block.String()
 }
 
 func isFirEvent(key string) bool {
@@ -519,21 +493,23 @@ func isHtmlTemplate(block string) bool {
 	return strings.Contains(block, "{{") && strings.Contains(block, "}}")
 }
 
-func replaceTemplateName(content []byte, tempTemplateName, block string, hasNoHtmlModifier bool) []byte {
-	if !bytes.Contains(content, []byte(tempTemplateName)) {
+// replaceGeneratedTemplateName replaces the template name in the content with a new template name
+// and adds a ".nohtml" modifier if specified.
+func replaceGeneratedTemplateName(content []byte, generatedTemplateName, block string, hasNoHtmlModifier bool) []byte {
+	if !bytes.Contains(content, []byte(generatedTemplateName)) {
 		return content
 	}
 
-	templateName := fmt.Sprintf("fir-%s", hashID(block))
+	templateName := fmt.Sprintf("%s%s", FirDefaultTemplatePrefix, hashID(block))
 	if hasNoHtmlModifier {
-		templateName = fmt.Sprintf("%s.nohtml", templateName)
+		templateName = fmt.Sprintf("%s.%s", templateName, ModifierNoHTML)
 	}
 
-	return bytes.Replace(content, []byte(tempTemplateName), []byte(templateName), -1)
+	return bytes.Replace(content, []byte(generatedTemplateName), []byte(templateName), -1)
 }
 
-func removeTemplateNamespace(content []byte, tempTemplateName string) []byte {
-	return bytes.Replace(content, []byte(fmt.Sprintf("::%s", tempTemplateName)), []byte(""), -1)
+func removeTemplateNamespace(content []byte, generatedTemplateName string) []byte {
+	return bytes.Replace(content, []byte(fmt.Sprintf("::%s", generatedTemplateName)), []byte(""), -1)
 }
 
 func formatHtmlNode(node *html.Node, getHtml func(*html.Node) string) string {
