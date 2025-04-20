@@ -64,56 +64,84 @@ func TestTranslateRenderExpression(t *testing.T) {
 		{
 			name:     "multiple events, no target",
 			input:    "create:ok,update:ok",
-			expected: `@fir:[create:ok,update:ok]`,
+			expected: `@fir:[create:ok,update:ok]`, // Brackets for multiple events
 			wantErr:  false,
 		},
-		// --- Inspired by lexer_test.go ---
+		// --- Modifiers ---
 		{
-			name:     "Event with Modifier (modifier ignored in output)",
+			name:     "Single Event with Modifier, No Target",
 			input:    "create.nohtml",
-			expected: "@fir:create",
+			expected: "@fir:create.nohtml", // No brackets for single event
 			wantErr:  false,
 		},
 		{
-			name:     "Event with State and Modifier (modifier ignored)",
+			name:     "Single Event with State and Modifier, No Target",
 			input:    "create:ok.nohtml",
-			expected: "@fir:create:ok",
+			expected: "@fir:create:ok.nohtml", // No brackets for single event
 			wantErr:  false,
 		},
 		{
-			name:     "Event with Modifier and Template Target (modifier ignored)",
+			name:     "Single Event with Modifier and Template Target",
 			input:    "create.nohtml->todo",
-			expected: "@fir:create::todo",
+			expected: "@fir:create::todo.nohtml", // No brackets for single event
 			wantErr:  false,
 		},
 		{
-			name:     "Event with Action Target with Modifier",
-			input:    "create=>doAction.mod", // Modifier on action is part of action name
-			expected: `@fir:create="doAction.mod"`,
+			name:     "Single Event with Modifier and Action Target",
+			input:    "create.mod=>doAction",
+			expected: `@fir:create.mod="doAction"`, // No brackets for single event
 			wantErr:  false,
 		},
 		{
-			name:     "Event with Template and Action Target with Modifier",
-			input:    "create->view=>doAction.mod",
-			expected: `@fir:create::view="doAction.mod"`,
+			name:     "Single Event with Modifier, Template, and Action Target",
+			input:    "create.mod->view=>doAction",
+			expected: `@fir:create::view.mod="doAction"`, // No brackets for single event
 			wantErr:  false,
 		},
 		{
-			name:     "Multiple Bindings (comma) - generates multiple lines",
-			input:    "create:ok->todo,delete:error=>replace",
-			expected: "@fir:create:ok::todo\n@fir:delete:error=\"replace\"",
+			name:     "Grouped Events with Different Modifiers, Template and Action Target", // User prompt example
+			input:    "create:ok.debounce,update:error.nohtml->template=>myaction",
+			expected: `@fir:[create:ok,update:error]::template.debounce.nohtml="myaction"`, // Brackets for grouped events
 			wantErr:  false,
 		},
 		{
-			name:     "Multiple Expressions (semicolon) - generates multiple lines",
-			input:    "create:ok->todo;delete:error=>replace",
-			expected: "@fir:create:ok::todo\n@fir:delete:error=\"replace\"",
+			name:     "Grouped Events with Different Modifiers, No Target",
+			input:    "create:ok.debounce,update:error.nohtml",
+			expected: `@fir:[create:ok,update:error].debounce.nohtml`, // Brackets for grouped events
 			wantErr:  false,
 		},
 		{
-			name:     "Complex Mix (comma and semicolon) - generates multiple lines",
-			input:    "create:ok.nohtml->todo,delete:error=>replace.mod;update:pending->done=>archive",
-			expected: "@fir:create:ok::todo\n@fir:delete:error=\"replace.mod\"\n@fir:update:pending::done=\"archive\"", // Note: .nohtml ignored, .mod included
+			name:     "Grouped Events with Different Modifiers, Template Target Only",
+			input:    "create:ok.debounce,update:error.nohtml->template",
+			expected: `@fir:[create:ok,update:error]::template.debounce.nohtml`, // Brackets for grouped events
+			wantErr:  false,
+		},
+		{
+			name:     "Grouped Events with Different Modifiers, Action Target Only",
+			input:    "create:ok.debounce,update:error.nohtml=>myaction",
+			expected: `@fir:[create:ok,update:error].debounce.nohtml="myaction"`, // Brackets for grouped events
+			wantErr:  false,
+		},
+		// --- Multiple Bindings (Separate Lines) ---
+		{
+			name:     "Multiple Bindings (comma) with Modifiers - generates multiple lines",
+			input:    "create:ok.debounce->todo,delete:error.nohtml=>replace",               // Note: comma separates BINDINGS here
+			expected: "@fir:create:ok::todo.debounce\n@fir:delete:error.nohtml=\"replace\"", // No brackets for single events in separate bindings
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple Expressions (semicolon) with Modifiers - generates multiple lines",
+			input:    "create:ok.debounce->todo;delete:error.nohtml=>replace",
+			expected: "@fir:create:ok::todo.debounce\n@fir:delete:error.nohtml=\"replace\"", // No brackets for single events in separate bindings
+			wantErr:  false,
+		},
+		{
+			name: "Complex Mix (comma and semicolon) with Modifiers - generates multiple lines",
+			// Binding 1: create:ok.nohtml->todo
+			// Binding 2: delete:error=>replace.mod (action name contains .mod)
+			// Binding 3: update:pending.debounce->done=>archive
+			input:    "create:ok.nohtml->todo,delete:error=>replace.mod;update:pending.debounce->done=>archive",
+			expected: "@fir:create:ok::todo.nohtml\n@fir:delete:error=\"replace.mod\"\n@fir:update:pending::done.debounce=\"archive\"", // No brackets for single events in separate bindings
 			wantErr:  false,
 		},
 		// --- Error Cases Inspired by lexer_test.go ---
