@@ -322,6 +322,112 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 
 }
 
+// processRenderAttributes parses x-fir-render attributes, collects associated x-fir-action-* attributes,
+// translates them into the canonical @fir:... syntax, and replaces the original attributes on the node.
+func processRenderAttributes(content []byte) ([]byte, error) {
+	if len(content) == 0 {
+		return content, nil
+	}
+
+	doc, err := html.Parse(bytes.NewReader(content))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing HTML content for render attributes: %w", err)
+	}
+
+	var traverseErr error
+	var traverse func(*html.Node)
+
+	traverse = func(n *html.Node) {
+		if traverseErr != nil {
+			return // Stop traversal if an error occurred
+		}
+
+		if n.Type == html.ElementNode {
+			actionsMap := make(map[string]string)
+			attrsToRemove := make(map[string]struct{})
+			var newAttrs []html.Attribute
+			var renderAttr *html.Attribute // Store the attribute itself to check presence
+
+			// First pass: identify attributes to process and remove
+			for i := range n.Attr {
+				attr := &n.Attr[i] // Use pointer
+				if attr.Key == "x-fir-render" {
+					renderAttr = attr // Found the attribute
+					attrsToRemove[attr.Key] = struct{}{}
+				} else if strings.HasPrefix(attr.Key, "x-fir-action-") {
+					actionKey := strings.TrimPrefix(attr.Key, "x-fir-action-")
+					if actionKey != "" {
+						actionsMap[actionKey] = attr.Val
+						attrsToRemove[attr.Key] = struct{}{} // Also remove action attributes
+					}
+				}
+			}
+
+			// Keep attributes that are not being removed
+			for _, attr := range n.Attr {
+				if _, found := attrsToRemove[attr.Key]; !found {
+					newAttrs = append(newAttrs, attr)
+				}
+			}
+
+			// If x-fir-render attribute was present (even if empty), translate and add new attributes
+			if renderAttr != nil { // Check for presence, not non-empty value
+				translated, err := TranslateRenderExpression(renderAttr.Val, actionsMap) // Pass actionsMap
+				if err != nil {
+					// Store the error and stop further processing
+					traverseErr = fmt.Errorf("error translating render expression for node %s, expr '%s': %w", n.Data, renderAttr.Val, err)
+					return
+				}
+
+				// Split translated output into individual attributes (lines)
+				translatedAttrs := strings.Split(translated, "\n")
+				for _, translatedAttr := range translatedAttrs {
+					if translatedAttr == "" {
+						continue
+					}
+					parts := strings.SplitN(translatedAttr, "=", 2)
+					if len(parts) == 2 {
+						key := parts[0]
+						// Remove surrounding quotes from the value
+						val := strings.Trim(parts[1], `"`)
+						newAttrs = append(newAttrs, html.Attribute{Key: key, Val: val})
+					} else {
+						// Log or handle malformed translation? For now, just skip.
+						logger.Warnf("Skipping malformed translated attribute: %s", translatedAttr)
+					}
+				}
+				// Replace the node's attributes
+				n.Attr = newAttrs
+			}
+		}
+
+		// Recursively traverse children
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			traverse(c)
+			if traverseErr != nil {
+				return // Propagate error up
+			}
+		}
+	}
+
+	traverse(doc)
+	if traverseErr != nil {
+		return nil, traverseErr
+	}
+
+	var buf bytes.Buffer
+	// Render only the body content if possible, or the whole doc
+	// html.Render adds <html>, <head>, <body> if they are missing.
+	// We render the whole doc for consistency in tests.
+	if err := html.Render(&buf, doc); err != nil {
+		return nil, fmt.Errorf("error rendering modified HTML: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// ... rest of parse.go ...
+
 // extractTemplates extracts innerHTML content from fir event namespace string and updates the namespace string with a template
 func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 	blocks := make(map[string]string)

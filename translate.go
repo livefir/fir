@@ -27,6 +27,15 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 		actionMap = actions[0] // Use the first map if provided
 	}
 
+	// lower all keys in the action map for case-insensitive matching
+	for key, value := range actionMap {
+		lowerKey := strings.ToLower(key)
+		actionMap[lowerKey] = value
+		if lowerKey != key {
+			delete(actionMap, key) // Remove the original key
+		}
+	}
+
 	parser, err := getRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("failed to create parser: %w", err)
@@ -101,7 +110,7 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 			if effectiveAction != "" {
 				// Check if the action exists in the provided map
 				if actionMap != nil {
-					if replacement, ok := actionMap[effectiveAction]; ok {
+					if replacement, ok := actionMap[strings.ToLower(effectiveAction)]; ok {
 						finalActionValue = replacement // Use replacement from map
 					} else {
 						finalActionValue = effectiveAction // Use original action name
