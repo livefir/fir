@@ -52,6 +52,20 @@ func TestLexer(t *testing.T) {
 				"Template Target: todo",
 			},
 		},
+		{
+			name:  "Event with State: pending", // New test
+			input: "create:pending",
+			expected: []string{
+				"EventExpression: {Name:create State::pending Modifier:}",
+			},
+		},
+		{
+			name:  "Event with State: done", // New test
+			input: "create:done",
+			expected: []string{
+				"EventExpression: {Name:create State::done Modifier:}",
+			},
+		},
 
 		// Group 3: Events with Modifiers
 		{
@@ -211,6 +225,56 @@ func TestLexer(t *testing.T) {
 			name:      "Event with Invalid Characters in Name",
 			input:     "cre@te:ok.nohtml",
 			expectErr: true,
+		},
+		{
+			name:  "Event with Modifier and Action Target Only", // New test
+			input: "create.mod=>doAction",
+			expected: []string{
+				"EventExpression: {Name:create State: Modifier:.mod}",
+				"Action Target: doAction",
+			},
+		},
+		{
+			name:  "Event with Modifier and Template Target",
+			input: "create.mod->doTemplate",
+			expected: []string{
+				"EventExpression: {Name:create State: Modifier:.mod}",
+				"Template Target: doTemplate",
+			},
+		},
+		{
+			name:  "Single Event with Action Target Only", // New test
+			input: "create=>doAction",
+			expected: []string{
+				"EventExpression: {Name:create State: Modifier:}",
+				"Action Target: doAction",
+			},
+		},
+		{
+			name:  "Multiple Events without States",
+			input: "create,delete=>replace",
+			expected: []string{
+				"EventExpression: {Name:create State: Modifier:}",
+				"EventExpression: {Name:delete State: Modifier:}",
+				"Action Target: replace",
+			},
+		},
+		{
+			name:  "Comma-Separated Bindings without Target", // New test
+			input: "event1:ok, event2.mod",
+			expected: []string{
+				"EventExpression: {Name:event1 State::ok Modifier:}",
+				"EventExpression: {Name:event2 State: Modifier:.mod}",
+			},
+		},
+		{
+			name:  "Identifiers with Numbers and Underscores", // New test
+			input: "event_1->templateA=>action123_B",
+			expected: []string{
+				"EventExpression: {Name:event_1 State: Modifier:}",
+				"Template Target: templateA",
+				"Action Target: action123_B",
+			},
 		},
 	}
 
