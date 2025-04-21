@@ -18,7 +18,15 @@ func getStateOrDefault(state string) string {
 	return state
 }
 
-func TranslateRenderExpression(input string) (string, error) {
+// TranslateRenderExpression translates a fir expression string into its canonical form.
+// It accepts an optional actions map. If provided, action targets (e.g., "myfunc" in "event=>myfunc")
+// found as keys in the map will be replaced by their corresponding map values in the output.
+func TranslateRenderExpression(input string, actions ...map[string]string) (string, error) {
+	var actionMap map[string]string
+	if len(actions) > 0 {
+		actionMap = actions[0] // Use the first map if provided
+	}
+
 	parser, err := getRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("failed to create parser: %w", err)
@@ -85,28 +93,51 @@ func TranslateRenderExpression(input string) (string, error) {
 		// Construct the translation string for the expression
 		translation := fmt.Sprintf("@fir:%s", eventsPart)
 
-		if !hasExplicitTarget { // Check if any target was specified in the group
-			// No target: append modifiers directly to events part
+		// Determine the final action string, considering the actions map
+		finalActionValue := ""
+		applyDefaultAction := false
+
+		if hasExplicitTarget {
+			if effectiveAction != "" {
+				// Check if the action exists in the provided map
+				if actionMap != nil {
+					if replacement, ok := actionMap[effectiveAction]; ok {
+						finalActionValue = replacement // Use replacement from map
+					} else {
+						finalActionValue = effectiveAction // Use original action name
+					}
+				} else {
+					finalActionValue = effectiveAction // Use original action name if no map provided
+				}
+			} else {
+				// Target exists, but action is missing -> apply default
+				applyDefaultAction = true
+			}
+		} else {
+			// No explicit target (-> or =>) was present in the expression group
+			// Apply default action "$fir.replace()"
+			applyDefaultAction = true
+		}
+
+		// Append template and modifiers
+		if effectiveTemplate != "" {
+			translation += fmt.Sprintf("::%s", effectiveTemplate)
+			// Template present: append modifiers after template
 			translation += modifierString
 		} else {
-			// Target was specified (-> or =>)
-			if effectiveTemplate != "" {
-				translation += fmt.Sprintf("::%s", effectiveTemplate)
-				// Template present: append modifiers after template
-				translation += modifierString
-			} else {
-				// No template, but action might be present or defaulted: append modifiers before action
-				translation += modifierString
-			}
-
-			// Append action: either the specified one or the default if target existed but action was missing
-			if effectiveAction != "" {
-				translation += fmt.Sprintf("=\"%s\"", effectiveAction)
-			} else {
-				// Apply default action only if a target arrow (-> or =>) was present
-				translation += `="$fir.replace()"` // Default action
-			}
+			// No template: append modifiers before action (or at the end if no action)
+			translation += modifierString
 		}
+
+		// Append the action part
+		if finalActionValue != "" {
+			// Use the determined action value (either original or from map)
+			translation += fmt.Sprintf("=\"%s\"", finalActionValue)
+		} else if applyDefaultAction {
+			// Apply the default action if needed
+			translation += `="$fir.replace()"`
+		}
+
 		expressionResults = append(expressionResults, translation)
 	}
 
@@ -116,9 +147,9 @@ func TranslateRenderExpression(input string) (string, error) {
 
 // Assume parseRenderExpression, struct definitions, and getRenderExpressionParser are correctly defined.
 // func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) { ... }
-// type Expressions struct { Expressions []*Expression `@(@@ (";" @@)*)?` }
+// type Expressions struct { Expressions []*Expression `@(@@ (";" @@)*)? ';' ?` } // Example grammar
 // type Expression struct { Bindings []*Binding `@@ ("," @@)*` }
-// type Binding struct { Eventexpressions []*Eventexpression `@@ ("," @@)*` Target *Target `@@?` }
-// type Eventexpression struct { Name string `@Ident`; State string `(":" @("ok" | "error" | "pending" | "done" | "cancel"))?`; Modifier string `("." @Ident)?` }
+// type Binding struct { Eventexpressions []*Eventexpression `@@+` Target *Target `@@?` }
+// type Eventexpression struct { Name string `@Ident`; State string `(":" @("ok" | "error" | "pending" | "done"))?`; Modifier string `("." @Ident)?` }
 // type Target struct { Template string `("->" @Ident)?`; Action string `("=>" @Ident)?` }
 // func getRenderExpressionParser() (*participle.Parser[Expressions], error) { ... }
