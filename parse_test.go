@@ -304,115 +304,113 @@ func TestProcessRenderAttributes(t *testing.T) {
 	tests := []struct {
 		name         string
 		inputHTML    string
-		expectedHTML string // Expected HTML *after* processing and normalization
+		expectedHTML string // Expected HTML *after* processing (before normalization)
 		wantErr      bool
 	}{
-		// Existing tests (Corrected expectedHTML based on failure analysis)
+		// Existing tests (Corrected expectedHTML based on function change)
 		{
 			name:         "No fir attributes",
 			inputHTML:    `<div id="test">Content</div>`,
-			expectedHTML: `<html><head></head><body><div id="test">Content</div></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<div id="test">Content</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Simple render, no action",
 			inputHTML:    `<div x-fir-render="click">Click Me</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:click:ok="$fir.replace()">Click Me</div></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click Me</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with state, no action",
 			inputHTML:    `<div x-fir-render="submit:pending">Submitting...</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:submit:pending="$fir.replace()">Submitting...</div></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<div @fir:submit:pending="$fir.replace()">Submitting...</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template target, no action",
 			inputHTML:    `<form x-fir-render="submit->myform">Form</form>`,
-			expectedHTML: `<html><head></head><body><form @fir:submit:ok::myform="$fir.replace()">Form</form></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<form @fir:submit:ok::myform="$fir.replace()">Form</form>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with action target, action defined",
 			inputHTML:    `<button x-fir-render="click=>doClick" x-fir-action-doClick="handleMyClick()">Click</button>`,
-			expectedHTML: `<html><head></head><body><button @fir:click:ok="handleMyClick()">Click</button></body></html>`, // Corrected: Added wrapper and action value
+			expectedHTML: `<button @fir:click:ok="handleMyClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with action target, action NOT defined",
 			inputHTML:    `<button x-fir-render="click=>doClick">Click</button>`,
-			expectedHTML: `<html><head></head><body><button @fir:click:ok="doClick">Click</button></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<button @fir:click:ok="doClick">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template and action target, action defined",
 			inputHTML:    `<form x-fir-render="submit->myForm=>doSubmit" x-fir-action-doSubmit="submitTheForm()">Submit</form>`,
-			expectedHTML: `<html><head></head><body><form @fir:submit:ok::myForm="submitTheForm()">Submit</form></body></html>`, // Corrected: Added wrapper and action value
+			expectedHTML: `<form @fir:submit:ok::myForm="submitTheForm()">Submit</form>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template and action target, action NOT defined",
 			inputHTML:    `<form x-fir-render="submit->myForm=>doSubmit">Submit</form>`,
-			expectedHTML: `<html><head></head><body><form @fir:submit:ok::myForm="doSubmit">Submit</form></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<form @fir:submit:ok::myForm="doSubmit">Submit</form>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple events, template and action target, action defined",
 			inputHTML:    `<div x-fir-render="create:ok,update:ok->item=>saveItem" x-fir-action-saveItem="save()">Save</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:[create:ok,update:ok]::item="save()">Save</div></body></html>`, // Corrected: Added wrapper and action value
+			expectedHTML: `<div @fir:[create:ok,update:ok]::item="save()">Save</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions, actions defined",
 			inputHTML:    `<div x-fir-render="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()" x-fir-action-loadData="doLoad()">Data</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div></body></html>`, // Corrected: Added wrapper and action values
+			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions, one action defined",
 			inputHTML:    `<div x-fir-render="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()">Data</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:save:ok="doSave()" @fir:load:ok="loadData">Data</div></body></html>`, // Corrected: Added wrapper and action value
+			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="loadData">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with modifier, no action",
 			inputHTML:    `<div x-fir-render="click.debounce">Debounced Click</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:click:ok.debounce="$fir.replace()">Debounced Click</div></body></html>`, // Corrected: Added wrapper
+			expectedHTML: `<div @fir:click:ok.debounce="$fir.replace()">Debounced Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with modifier and action, action defined",
 			inputHTML:    `<button x-fir-render="click.throttle=>handleClick" x-fir-action-handleClick="throttledClick()">Click</button>`,
-			expectedHTML: `<html><head></head><body><button @fir:click:ok.throttle="throttledClick()">Click</button></body></html>`, // Corrected: Added wrapper and action value
+			expectedHTML: `<button @fir:click:ok.throttle="throttledClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Complex mix with modifiers and actions",
 			inputHTML:    `<div x-fir-render="create:ok.nohtml,delete:error->todo=>replaceIt;update:pending.debounce->done=>archiveIt" x-fir-action-replaceIt="doReplace()" x-fir-action-archiveIt="doArchive()">Complex</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:[create:ok,delete:error]::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="doArchive()">Complex</div></body></html>`, // Corrected: Added wrapper and action values
+			expectedHTML: `<div @fir:[create:ok,delete:error]::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="doArchive()">Complex</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Retain other attributes",
 			inputHTML:    `<button id="myBtn" class="btn" x-fir-render="click=>doClick" x-fir-action-doClick="handleClick()">Click</button>`,
-			expectedHTML: `<html><head></head><body><button id="myBtn" class="btn" @fir:click:ok="handleClick()">Click</button></body></html>`, // Corrected: Added wrapper and action value
+			expectedHTML: `<button id="myBtn" class="btn" @fir:click:ok="handleClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Nested elements with render attributes",
 			inputHTML:    `<div><div x-fir-render="load=>loadOuter" x-fir-action-loadOuter="outer()"><button x-fir-render="click=>clickInner" x-fir-action-clickInner="inner()">Inner</button></div></div>`,
-			expectedHTML: `<html><head></head><body><div><div @fir:load:ok="outer()"><button @fir:click:ok="inner()">Inner</button></div></div></body></html>`, // Corrected: Added wrapper and action values
+			expectedHTML: `<div><div @fir:load:ok="outer()"><button @fir:click:ok="inner()">Inner</button></div></div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions on one node",
 			inputHTML:    `<div x-fir-render="save=>saveIt; load=>loadIt" x-fir-action-saveIt="doSave()" x-fir-action-loadIt="doLoad()">Data</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div></body></html>`, // Corrected: Added wrapper and action values
+			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
-			// This test expects an error because the parser likely doesn't handle hyphens in action keys yet.
-			// If the parser is fixed, the expectedHTML should be updated.
 			name:         "Action key with hyphen",
 			inputHTML:    `<button x-fir-render="click=>my-action" x-fir-action-my-action="handleIt()">Click</button>`,
 			expectedHTML: ``,   // Not checked on error
@@ -441,22 +439,19 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Empty input content",
 			inputHTML:    ``,
-			expectedHTML: ``, // Normalizer returns empty for empty input
+			expectedHTML: ``, // Function returns empty for empty input
 			wantErr:      false,
 		},
 		{
-			name:      "Void element",
-			inputHTML: `<input x-fir-render="change=>updateValue" x-fir-action-updateValue="val()">`,
-			// Note: Normalization might render <input> or <input />. Check normalizeHTML behavior.
-			// Assuming normalizeHTML outputs consistent void tags.
-			expectedHTML: `<html><head></head><body><input @fir:change:ok="val()"></body></html>`, // Corrected: Added wrapper and action value
+			name:         "Void element",
+			inputHTML:    `<input x-fir-render="change=>updateValue" x-fir-action-updateValue="val()">`,
+			expectedHTML: `<input @fir:change:ok="val()">`, // No wrapper
 			wantErr:      false,
 		},
 		{
-			name:      "HTML with comments",
-			inputHTML: `<!-- comment --><div x-fir-render="load=>init" x-fir-action-init="doInit()">Load</div><!-- another -->`,
-			// Corrected: Match html.Render behavior where leading comment is outside <html>
-			expectedHTML: `<!-- comment --><html><head></head><body><div @fir:load:ok="doInit()">Load</div><!-- another --></body></html>`,
+			name:         "HTML with comments",
+			inputHTML:    `<!-- comment --><div x-fir-render="load=>init" x-fir-action-init="doInit()">Load</div><!-- another -->`,
+			expectedHTML: `<!-- comment --><div @fir:load:ok="doInit()">Load</div><!-- another -->`, // No wrapper
 			wantErr:      false,
 		},
 
@@ -464,64 +459,62 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Whitespace variations in render attribute",
 			inputHTML:    `<button x-fir-render="  click => doClick  ;  submit -> myForm => doSubmit " x-fir-action-doClick="clickAction()" x-fir-action-doSubmit="submitAction()">WS</button>`,
-			expectedHTML: `<html><head></head><body><button @fir:click:ok="clickAction()" @fir:submit:ok::myForm="submitAction()">WS</button></body></html>`,
+			expectedHTML: `<button @fir:click:ok="clickAction()" @fir:submit:ok::myForm="submitAction()">WS</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action value with quotes",
 			inputHTML:    `<div x-fir-render="load=>loadData" x-fir-action-loadData="load('item')">Load</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:load:ok="load('item')">Load</div></body></html>`,
+			expectedHTML: `<div @fir:load:ok="load('item')">Load</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action value with escaped quotes",
 			inputHTML:    `<div x-fir-render="load=>loadData" x-fir-action-loadData="load(&#34;item&#34;)">Load</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:load:ok="load(&#34;item&#34;)">Load</div></body></html>`, // Assumes quotes are preserved
+			expectedHTML: `<div @fir:load:ok="load(&#34;item&#34;)">Load</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
-			name:      "Multiple states combined",
-			inputHTML: `<div x-fir-render="save:ok,delete:error=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
-			// Restored brackets in expectedHTML
-			expectedHTML: `<html><head></head><body><div @fir:[save:ok,delete:error]="process()">Handle</div></body></html>`,
+			name:         "Multiple states combined",
+			inputHTML:    `<div x-fir-render="save:ok,delete:error=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
+			expectedHTML: `<div @fir:[save:ok,delete:error]="process()">Handle</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
-			name:      "Multiple states with template",
-			inputHTML: `<div x-fir-render="save:ok,delete:error->result=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
-			// Restored brackets in expectedHTML
-			expectedHTML: `<html><head></head><body><div @fir:[save:ok,delete:error]::result="process()">Handle</div></body></html>`,
+			name:         "Multiple states with template",
+			inputHTML:    `<div x-fir-render="save:ok,delete:error->result=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
+			expectedHTML: `<div @fir:[save:ok,delete:error]::result="process()">Handle</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Unused x-fir-action attribute",
 			inputHTML:    `<div x-fir-render="click=>doClick" x-fir-action-doClick="clickAction()" x-fir-action-unused="unused()">Click</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:click:ok="clickAction()">Click</div></body></html>`, // unused action is ignored
+			expectedHTML: `<div @fir:click:ok="clickAction()">Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-action attribute without corresponding render action key",
 			inputHTML:    `<div x-fir-render="click" x-fir-action-doClick="clickAction()">Click</div>`,
-			expectedHTML: `<html><head></head><body><div @fir:click:ok="$fir.replace()">Click</div></body></html>`, // action attribute is ignored as render doesn't use '=>'
+			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render expression with only modifier",
 			inputHTML:    `<div x-fir-render=".debounce">Click</div>`,
-			expectedHTML: "",   // Invalid syntax? Or should default event/state? Assuming error for now.
-			wantErr:      true, // Modifier without event/state is likely invalid.
+			expectedHTML: "", // Invalid syntax
+			wantErr:      true,
 		},
 		{
 			name:         "Render expression with only target",
 			inputHTML:    `<div x-fir-render="->myTemplate">Click</div>`,
-			expectedHTML: "",   // Invalid syntax? Or should default event/state? Assuming error for now.
-			wantErr:      true, // Target without event/state is likely invalid.
+			expectedHTML: "", // Invalid syntax
+			wantErr:      true,
 		},
 		{
 			name:         "Render expression with only action key",
 			inputHTML:    `<div x-fir-render="=>myAction" x-fir-action-myAction="act()">Click</div>`,
-			expectedHTML: "",   // Invalid syntax? Or should default event/state? Assuming error for now.
-			wantErr:      true, // Action key without event/state is likely invalid.
+			expectedHTML: "", // Invalid syntax
+			wantErr:      true,
 		},
 	}
 
@@ -534,6 +527,8 @@ func TestProcessRenderAttributes(t *testing.T) {
 			} else {
 				require.NoError(t, err, "Got unexpected error")
 				// Normalize both expected and actual HTML before comparing
+				// Note: normalizeHTML handles the case where expectedHTML might have the wrapper
+				// but gotBytes (the actual output) does not.
 				normalizedGot := normalizeHTML(t, gotBytes)
 				normalizedExpected := normalizeHTML(t, []byte(tt.expectedHTML))
 				require.Equal(t, normalizedExpected, normalizedGot, "HTML output mismatch")

@@ -328,13 +328,23 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 	if len(content) == 0 {
 		return content, nil
 	}
+	// Optimization: Check if the relevant attributes likely exist before parsing
+	if !bytes.Contains(content, []byte("x-fir-render")) && !bytes.Contains(content, []byte("x-fir-action-")) {
+		return content, nil // Return original content if attributes are not present
+	}
 
 	doc, err := html.Parse(bytes.NewReader(content))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing HTML content for render attributes: %w", err)
+		// If parsing fails, it might be an invalid fragment. Return original content for now.
+		// Consider logging this error if it's unexpected.
+		// logger.Debugf("HTML parsing failed for render attributes, returning original: %v", err)
+		return content, nil
+		// Or return the error if strict parsing is required:
+		// return nil, fmt.Errorf("error parsing HTML content for render attributes: %w", err)
 	}
 
 	var traverseErr error
+	var modified bool // Flag to track if any changes were made
 	var traverse func(*html.Node)
 
 	traverse = func(n *html.Node) {
@@ -372,6 +382,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 			// If x-fir-render attribute was present (even if empty), translate and add new attributes
 			if renderAttr != nil { // Check for presence, not non-empty value
+				modified = true                                                          // Mark that we made changes
 				translated, err := TranslateRenderExpression(renderAttr.Val, actionsMap) // Pass actionsMap
 				if err != nil {
 					// Store the error and stop further processing
@@ -415,12 +426,43 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 		return nil, traverseErr
 	}
 
+	// Only render if modifications were actually made
+	if !modified {
+		return content, nil // Return original content if no changes
+	}
+
 	var buf bytes.Buffer
-	// Render only the body content if possible, or the whole doc
-	// html.Render adds <html>, <head>, <body> if they are missing.
-	// We render the whole doc for consistency in tests.
-	if err := html.Render(&buf, doc); err != nil {
-		return nil, fmt.Errorf("error rendering modified HTML: %w", err)
+	// Iterate through the direct children of the parsed document node.
+	// html.Parse typically creates a structure like:
+	// Document -> [comment] -> <html> -> <head> -> ...
+	//                                  -> <body> -> [div] -> ...
+	//                                           -> [comment] -> ...
+	// We want to render the nodes outside <html> (like leading comments)
+	// and the *children* of <head> and <body> inside <html>.
+	for node := doc.FirstChild; node != nil; node = node.NextSibling {
+		if node.Type == html.ElementNode && node.Data == "html" {
+			// If this node is the <html> element, iterate through its children (<head>, <body>)
+			for htmlChild := node.FirstChild; htmlChild != nil; htmlChild = htmlChild.NextSibling {
+				// htmlChild is either <head> or <body>
+				if htmlChild.Type == html.ElementNode && (htmlChild.Data == "head" || htmlChild.Data == "body") {
+					// Render the *children* of <head> and <body>
+					for contentChild := htmlChild.FirstChild; contentChild != nil; contentChild = contentChild.NextSibling {
+						if err := html.Render(&buf, contentChild); err != nil {
+							return nil, fmt.Errorf("error rendering modified HTML fragment node (%s child): %w", htmlChild.Data, err)
+						}
+					}
+				}
+				// Ignore other direct children of <html> if any (shouldn't be standard)
+			}
+		} else {
+			// If the node is not the <html> element (e.g., a comment or doctype before <html>),
+			// render it directly. This captures leading/trailing comments outside the main structure.
+			if err := html.Render(&buf, node); err != nil {
+				// Ignore doctype rendering errors if necessary, but generally render all top-level nodes.
+				// Example check: if node.Type == html.DoctypeNode { continue }
+				return nil, fmt.Errorf("error rendering modified HTML fragment node (non-html root child %v): %w", node.Type, err)
+			}
+		}
 	}
 
 	return buf.Bytes(), nil
@@ -430,9 +472,16 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 // extractTemplates extracts innerHTML content from fir event namespace string and updates the namespace string with a template
 func extractTemplates(content []byte) ([]byte, map[string]string, error) {
+	var err error
 	blocks := make(map[string]string)
 	if len(content) == 0 {
 		return content, blocks, nil
+	}
+
+	// Step 0: Process render attributes
+	content, err = processRenderAttributes(content)
+	if err != nil {
+		return content, blocks, fmt.Errorf("error processing render attributes: %w", err)
 	}
 
 	// Step 1: Generate default template names for event bindings
