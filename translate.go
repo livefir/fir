@@ -10,96 +10,115 @@ import (
 // matching the grammar, including Target using "=>" for Action.
 // Assume Eventexpression has a Modifier field, e.g., Modifier string `@("." @Ident)?`
 
+// Helper function to get state or default to ":ok"
+func getStateOrDefault(state string) string {
+	if state == "" {
+		return ":ok" // Default state
+	}
+	return state
+}
+
 func TranslateRenderExpression(input string) (string, error) {
 	parser, err := getRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("failed to create parser: %w", err)
 	}
-	// parseRenderExpression uses the parser which MUST have the updated grammar
 	parsed, err := parseRenderExpression(parser, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse input: %w", err)
 	}
 
-	var result []string
+	var expressionResults []string
+	// Process each Expression (group separated by ';')
 	for _, expr := range parsed.Expressions {
+		var allEventStrings []string
+		allModifierSet := make(map[string]struct{})
+		var effectiveTemplate string
+		var effectiveAction string
+		var hasExplicitTarget bool // Track if any binding in the group had a target
+
+		// Collect events, modifiers, and determine target from ALL bindings within the expression (group separated by ',')
 		for _, binding := range expr.Bindings {
-			var eventStrings []string
-			modifierSet := make(map[string]struct{}) // Use a map to collect unique modifiers
 			for _, eventExpr := range binding.Eventexpressions {
-				eventStrings = append(eventStrings, fmt.Sprintf("%s%s", eventExpr.Name, eventExpr.State))
-				// Assume Eventexpression struct has a Modifier field
+				// Use helper to apply default state ":ok" if missing
+				eventState := getStateOrDefault(eventExpr.State)
+				allEventStrings = append(allEventStrings, fmt.Sprintf("%s%s", eventExpr.Name, eventState))
 				if eventExpr.Modifier != "" {
-					// Remove leading dot if present from parsing, add to set
-					modifierSet[strings.TrimPrefix(eventExpr.Modifier, ".")] = struct{}{}
+					allModifierSet[strings.TrimPrefix(eventExpr.Modifier, ".")] = struct{}{}
 				}
 			}
-
-			// Sort modifiers alphabetically for consistent output
-			var modifiers []string
-			for mod := range modifierSet {
-				modifiers = append(modifiers, mod)
+			// "Last target wins" rule for comma-separated bindings within an expression
+			if binding.Target != nil {
+				hasExplicitTarget = true // Mark that a target was found in this group
+				if binding.Target.Template != "" {
+					effectiveTemplate = binding.Target.Template
+				}
+				if binding.Target.Action != "" {
+					effectiveAction = binding.Target.Action
+				}
 			}
-			sort.Strings(modifiers)
-			modifierString := ""
-			if len(modifiers) > 0 {
-				modifierString = "." + strings.Join(modifiers, ".")
-			}
+		}
 
-			var eventsPart string
-			if len(eventStrings) > 1 {
-				eventsPart = fmt.Sprintf("[%s]", strings.Join(eventStrings, ","))
-			} else if len(eventStrings) == 1 {
-				eventsPart = eventStrings[0]
-			} else {
-				continue // Should not happen with valid grammar
-			}
+		if len(allEventStrings) == 0 {
+			continue // Skip if an expression somehow has no events
+		}
 
-			translation := fmt.Sprintf("@fir:%s", eventsPart)
+		// Sort modifiers
+		var allModifiers []string
+		for mod := range allModifierSet {
+			allModifiers = append(allModifiers, mod)
+		}
+		sort.Strings(allModifiers)
+		modifierString := ""
+		if len(allModifiers) > 0 {
+			modifierString = "." + strings.Join(allModifiers, ".")
+		}
 
-			// Apply modifiers based on target presence
-			if binding.Target == nil {
-				// No target: append modifiers directly to events part
+		// Format events part (use brackets if multiple events collected OR if multiple bindings were grouped by comma)
+		var eventsPart string
+		if len(allEventStrings) > 1 || len(expr.Bindings) > 1 {
+			eventsPart = fmt.Sprintf("[%s]", strings.Join(allEventStrings, ","))
+		} else {
+			eventsPart = allEventStrings[0] // Single event overall in this expression from a single binding
+		}
+
+		// Construct the translation string for the expression
+		translation := fmt.Sprintf("@fir:%s", eventsPart)
+
+		if !hasExplicitTarget { // Check if any target was specified in the group
+			// No target: append modifiers directly to events part
+			translation += modifierString
+		} else {
+			// Target was specified (-> or =>)
+			if effectiveTemplate != "" {
+				translation += fmt.Sprintf("::%s", effectiveTemplate)
+				// Template present: append modifiers after template
 				translation += modifierString
 			} else {
-				if binding.Target.Template != "" {
-					translation += fmt.Sprintf("::%s", binding.Target.Template)
-					// Template present: append modifiers after template
-					translation += modifierString
-				} else {
-					// No template, but action might be present: append modifiers before action
-					translation += modifierString
-				}
-
-				if binding.Target.Action != "" {
-					// Action present: append action assignment
-					translation += fmt.Sprintf("=\"%s\"", binding.Target.Action)
-				}
+				// No template, but action might be present or defaulted: append modifiers before action
+				translation += modifierString
 			}
-			result = append(result, translation)
+
+			// Append action: either the specified one or the default if target existed but action was missing
+			if effectiveAction != "" {
+				translation += fmt.Sprintf("=\"%s\"", effectiveAction)
+			} else {
+				// Apply default action only if a target arrow (-> or =>) was present
+				translation += `="$fir.replace()"` // Default action
+			}
 		}
+		expressionResults = append(expressionResults, translation)
 	}
 
-	return strings.Join(result, "\n"), nil
+	// Join results from different expressions (separated by ';') with newline
+	return strings.Join(expressionResults, "\n"), nil
 }
 
-// Assume parseRenderExpression exists and uses a parser with the correct grammar
+// Assume parseRenderExpression, struct definitions, and getRenderExpressionParser are correctly defined.
 // func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) { ... }
-
-// Assume struct definitions match the required grammar (Target uses "=>")
-// type Expressions struct { ... }
-// type Expression struct { ... }
-// type Binding struct { ... }
-// type Eventexpression struct {
-// 	Name     string `@Ident`
-// 	State    string `[@(":" @("ok" | "error" | "pending" | "done" | "cancel"))]`
-// 	Modifier string `@("." @Ident)?` // Assumed field for modifier
-// }
-// type Target struct {
-// 	Template string `@("->" @Ident)?` // Adjusted template parsing
-// 	Action   string `[ "=>" @Ident ]` // Action parsing
-// }
-
-// Assume getRenderExpressionParser is defined and returns a parser configured
-// with the correct grammar including the Modifier field in Eventexpression.
+// type Expressions struct { Expressions []*Expression `@(@@ (";" @@)*)?` }
+// type Expression struct { Bindings []*Binding `@@ ("," @@)*` }
+// type Binding struct { Eventexpressions []*Eventexpression `@@ ("," @@)*` Target *Target `@@?` }
+// type Eventexpression struct { Name string `@Ident`; State string `(":" @("ok" | "error" | "pending" | "done" | "cancel"))?`; Modifier string `("." @Ident)?` }
+// type Target struct { Template string `("->" @Ident)?`; Action string `("=>" @Ident)?` }
 // func getRenderExpressionParser() (*participle.Parser[Expressions], error) { ... }
