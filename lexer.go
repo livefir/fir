@@ -21,7 +21,8 @@ var lexerRules = lexer.MustSimple([]lexer.SimpleRule{
 
 // Define the grammar structure
 type Expressions struct {
-	Expressions []*Expression `parser:"@@ ( ';' @@ )*"`
+	// Allow optional trailing semicolon by adding ';'? at the end
+	Expressions []*Expression `parser:"@@ ( ';' @@ )* ';'? "`
 }
 
 type Expression struct {

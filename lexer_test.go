@@ -176,6 +176,17 @@ func TestLexer(t *testing.T) {
 			input:     ".nohtml",
 			expectErr: true,
 		},
+		{ // New test case for trailing semicolon
+			name:  "Multiple Expressions with Trailing Semicolon",
+			input: "create:ok->todo;delete:error=>replace;",
+			expected: []string{
+				"EventExpression: {Name:create State::ok Modifier:}",
+				"Template Target: todo",
+				"EventExpression: {Name:delete State::error Modifier:}",
+				"Action Target: replace",
+			},
+			expectErr: false, // Should parse successfully now
+		},
 		{
 			name:      "Event with Only State",
 			input:     ":ok",

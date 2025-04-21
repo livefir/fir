@@ -134,6 +134,12 @@ func TestTranslateRenderExpression(t *testing.T) {
 			expected: `@fir:[create:ok,update:ok]::template.debounce.nohtml="$fir.replace()"`, // Default state :ok and action added
 			wantErr:  false,
 		},
+		{
+			name:     "Grouped Events with Various Valid States, Template Target Only (default action)", // Updated name
+			input:    "save:pending,load:done,check:error->form",                                        // Using pending, done, error
+			expected: `@fir:[save:pending,load:done,check:error]::form="$fir.replace()"`,                // Various valid states, default action
+			wantErr:  false,
+		},
 		// --- Grouped Bindings (Comma) / Separate Expressions (Semicolon) (Updated for Defaults) ---
 		{
 			name:     "Grouped Bindings (comma) with Modifiers and Targets - generates SINGLE line",
@@ -224,6 +230,24 @@ func TestTranslateRenderExpression(t *testing.T) {
 			name:    "Event with Empty Modifier",
 			input:   "create.",
 			wantErr: true,
+		},
+		{
+			name:     "Single Event with Modifier and Action Target Only (default state)", // New test
+			input:    "update.debounce=>doUpdate",
+			expected: `@fir:update:ok.debounce="doUpdate"`, // Modifier before action, default state
+			wantErr:  false,
+		},
+		{
+			name:     "Empty Input", // New test
+			input:    "",
+			expected: "",   // Expect empty output for empty input
+			wantErr:  true, // Or true if empty input should error
+		},
+		{
+			name:     "Multiple Expressions with Trailing Semicolon", // New test
+			input:    "event1->tmpl1;event2=>act2;",
+			expected: "@fir:event1:ok::tmpl1=\"$fir.replace()\"\n@fir:event2:ok=\"act2\"", // Expect trailing semicolon to be ignored, same output as without it
+			wantErr:  false,                                                               // Updated: Should no longer error with the new grammar
 		},
 	}
 
