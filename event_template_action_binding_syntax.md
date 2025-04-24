@@ -49,22 +49,22 @@ The event template binding syntax in the provided code allows associating specif
 The declarative syntax allows you to bind events to templates or actions in a more readable and maintainable way. This is particularly useful for managing dynamic updates in the frontend.
 
 ```html
-<div x-fir-render="inc,dec">
+<div x-fir-live="inc,dec">
 </div>
    
 ```html
 <div 
-   x-fir-render-task="[create:ok,update-later:ok]->task" 
+   x-fir-live-task="[create:ok,update-later:ok]->task" 
    x-fir-action-task="$fir.prependEl()" 
-   x-fir-render-later-task="update-now:ok->later-task" 
+   x-fir-live-later-task="update-now:ok->later-task" 
    x-fir-action-later-task="$fir.prependEl()" 
-   x-fir-render-query-more="query-more:ok" 
+   x-fir-live-query-more="query-more:ok" 
    x-fir-action-query-more="$fir.appendEl()" 
-   x-fir-render-query="query:ok" 
+   x-fir-live-query="query:ok" 
    x-fir-action-query="$fir.replace()">
 </div>
 
-<div x-fir-render="
+<div x-fir-live="
 create:ok,update-later->task=>fir.prependEl;
 update-now=>fir.prependEl; 
 query-more=>fir.appendEl;
@@ -75,10 +75,10 @@ delete-task.nohtml=>fir.removeEl">
 
     <!-- This will be replaced with the result of the `create` or `update-later` template -->
 
-<div x-fir-render="delete-task=>fir.removeEl">
+<div x-fir-live="delete-task=>fir.removeEl">
     <!-- This will be removed from the DOM when the `remove-task` event is triggered -->
 </div>
-<div x-fir-render="query=>replace;
+<div x-fir-live="query=>replace;
 delete-task.nohtml=>fir.removeEl">
 
 </div>

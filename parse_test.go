@@ -316,103 +316,103 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Simple render, no action",
-			inputHTML:    `<div x-fir-render="click">Click Me</div>`,
+			inputHTML:    `<div x-fir-live="click">Click Me</div>`,
 			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click Me</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with state, no action",
-			inputHTML:    `<div x-fir-render="submit:pending">Submitting...</div>`,
+			inputHTML:    `<div x-fir-live="submit:pending">Submitting...</div>`,
 			expectedHTML: `<div @fir:submit:pending="$fir.replace()">Submitting...</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template target, no action",
-			inputHTML:    `<form x-fir-render="submit->myform">Form</form>`,
+			inputHTML:    `<form x-fir-live="submit->myform">Form</form>`,
 			expectedHTML: `<form @fir:submit:ok::myform="$fir.replace()">Form</form>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with action target, action defined",
-			inputHTML:    `<button x-fir-render="click=>doClick" x-fir-action-doClick="handleMyClick()">Click</button>`,
+			inputHTML:    `<button x-fir-live="click=>doClick" x-fir-action-doClick="handleMyClick()">Click</button>`,
 			expectedHTML: `<button @fir:click:ok="handleMyClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with action target, action NOT defined",
-			inputHTML:    `<button x-fir-render="click=>doClick">Click</button>`,
+			inputHTML:    `<button x-fir-live="click=>doClick">Click</button>`,
 			expectedHTML: `<button @fir:click:ok="doClick">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template and action target, action defined",
-			inputHTML:    `<form x-fir-render="submit->myForm=>doSubmit" x-fir-action-doSubmit="submitTheForm()">Submit</form>`,
+			inputHTML:    `<form x-fir-live="submit->myForm=>doSubmit" x-fir-action-doSubmit="submitTheForm()">Submit</form>`,
 			expectedHTML: `<form @fir:submit:ok::myForm="submitTheForm()">Submit</form>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template and action target, action NOT defined",
-			inputHTML:    `<form x-fir-render="submit->myForm=>doSubmit">Submit</form>`,
+			inputHTML:    `<form x-fir-live="submit->myForm=>doSubmit">Submit</form>`,
 			expectedHTML: `<form @fir:submit:ok::myForm="doSubmit">Submit</form>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple events, template and action target, action defined",
-			inputHTML:    `<div x-fir-render="create:ok,update:ok->item=>saveItem" x-fir-action-saveItem="save()">Save</div>`,
+			inputHTML:    `<div x-fir-live="create:ok,update:ok->item=>saveItem" x-fir-action-saveItem="save()">Save</div>`,
 			expectedHTML: `<div @fir:[create:ok,update:ok]::item="save()">Save</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions, actions defined",
-			inputHTML:    `<div x-fir-render="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()" x-fir-action-loadData="doLoad()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()" x-fir-action-loadData="doLoad()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions, one action defined",
-			inputHTML:    `<div x-fir-render="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="loadData">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with modifier, no action",
-			inputHTML:    `<div x-fir-render="click.debounce">Debounced Click</div>`,
+			inputHTML:    `<div x-fir-live="click.debounce">Debounced Click</div>`,
 			expectedHTML: `<div @fir:click:ok.debounce="$fir.replace()">Debounced Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render with modifier and action, action defined",
-			inputHTML:    `<button x-fir-render="click.throttle=>handleClick" x-fir-action-handleClick="throttledClick()">Click</button>`,
+			inputHTML:    `<button x-fir-live="click.throttle=>handleClick" x-fir-action-handleClick="throttledClick()">Click</button>`,
 			expectedHTML: `<button @fir:click:ok.throttle="throttledClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Complex mix with modifiers and actions",
-			inputHTML:    `<div x-fir-render="create:ok.nohtml,delete:error->todo=>replaceIt;update:pending.debounce->done=>archiveIt" x-fir-action-replaceIt="doReplace()" x-fir-action-archiveIt="doArchive()">Complex</div>`,
+			inputHTML:    `<div x-fir-live="create:ok.nohtml,delete:error->todo=>replaceIt;update:pending.debounce->done=>archiveIt" x-fir-action-replaceIt="doReplace()" x-fir-action-archiveIt="doArchive()">Complex</div>`,
 			expectedHTML: `<div @fir:[create:ok,delete:error]::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="doArchive()">Complex</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Retain other attributes",
-			inputHTML:    `<button id="myBtn" class="btn" x-fir-render="click=>doClick" x-fir-action-doClick="handleClick()">Click</button>`,
+			inputHTML:    `<button id="myBtn" class="btn" x-fir-live="click=>doClick" x-fir-action-doClick="handleClick()">Click</button>`,
 			expectedHTML: `<button id="myBtn" class="btn" @fir:click:ok="handleClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Nested elements with render attributes",
-			inputHTML:    `<div><div x-fir-render="load=>loadOuter" x-fir-action-loadOuter="outer()"><button x-fir-render="click=>clickInner" x-fir-action-clickInner="inner()">Inner</button></div></div>`,
+			inputHTML:    `<div><div x-fir-live="load=>loadOuter" x-fir-action-loadOuter="outer()"><button x-fir-live="click=>clickInner" x-fir-action-clickInner="inner()">Inner</button></div></div>`,
 			expectedHTML: `<div><div @fir:load:ok="outer()"><button @fir:click:ok="inner()">Inner</button></div></div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions on one node",
-			inputHTML:    `<div x-fir-render="save=>saveIt; load=>loadIt" x-fir-action-saveIt="doSave()" x-fir-action-loadIt="doLoad()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>saveIt; load=>loadIt" x-fir-action-saveIt="doSave()" x-fir-action-loadIt="doLoad()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action key with hyphen",
-			inputHTML:    `<button x-fir-render="click=>my-action" x-fir-action-my-action="handleIt()">Click</button>`,
+			inputHTML:    `<button x-fir-live="click=>my-action" x-fir-action-my-action="handleIt()">Click</button>`,
 			expectedHTML: ``,   // Not checked on error
 			wantErr:      true, // Expecting parser error for "my-action"
 		},
@@ -420,19 +420,19 @@ func TestProcessRenderAttributes(t *testing.T) {
 		// --- Error Cases ---
 		{
 			name:         "Invalid render expression - bad state",
-			inputHTML:    `<div x-fir-render="click:badstate">Error</div>`,
+			inputHTML:    `<div x-fir-live="click:badstate">Error</div>`,
 			expectedHTML: "", // Not checked on error
 			wantErr:      true,
 		},
 		{
 			name:         "Invalid render expression - bad syntax",
-			inputHTML:    `<div x-fir-render="click->">Error</div>`,
+			inputHTML:    `<div x-fir-live="click->">Error</div>`,
 			expectedHTML: "", // Not checked on error
 			wantErr:      true,
 		},
 		{
 			name:         "Invalid render expression - empty",
-			inputHTML:    `<div x-fir-render="">Error</div>`,
+			inputHTML:    `<div x-fir-live="">Error</div>`,
 			expectedHTML: "", // Not checked on error
 			wantErr:      true,
 		},
@@ -444,13 +444,13 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Void element",
-			inputHTML:    `<input x-fir-render="change=>updateValue" x-fir-action-updateValue="val()">`,
+			inputHTML:    `<input x-fir-live="change=>updateValue" x-fir-action-updateValue="val()">`,
 			expectedHTML: `<input @fir:change:ok="val()">`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "HTML with comments",
-			inputHTML:    `<!-- comment --><div x-fir-render="load=>init" x-fir-action-init="doInit()">Load</div><!-- another -->`,
+			inputHTML:    `<!-- comment --><div x-fir-live="load=>init" x-fir-action-init="doInit()">Load</div><!-- another -->`,
 			expectedHTML: `<!-- comment --><div @fir:load:ok="doInit()">Load</div><!-- another -->`, // No wrapper
 			wantErr:      false,
 		},
@@ -458,61 +458,61 @@ func TestProcessRenderAttributes(t *testing.T) {
 		// --- New Test Cases ---
 		{
 			name:         "Whitespace variations in render attribute",
-			inputHTML:    `<button x-fir-render="  click => doClick  ;  submit -> myForm => doSubmit " x-fir-action-doClick="clickAction()" x-fir-action-doSubmit="submitAction()">WS</button>`,
+			inputHTML:    `<button x-fir-live="  click => doClick  ;  submit -> myForm => doSubmit " x-fir-action-doClick="clickAction()" x-fir-action-doSubmit="submitAction()">WS</button>`,
 			expectedHTML: `<button @fir:click:ok="clickAction()" @fir:submit:ok::myForm="submitAction()">WS</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action value with quotes",
-			inputHTML:    `<div x-fir-render="load=>loadData" x-fir-action-loadData="load('item')">Load</div>`,
+			inputHTML:    `<div x-fir-live="load=>loadData" x-fir-action-loadData="load('item')">Load</div>`,
 			expectedHTML: `<div @fir:load:ok="load('item')">Load</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action value with escaped quotes",
-			inputHTML:    `<div x-fir-render="load=>loadData" x-fir-action-loadData="load(&#34;item&#34;)">Load</div>`,
+			inputHTML:    `<div x-fir-live="load=>loadData" x-fir-action-loadData="load(&#34;item&#34;)">Load</div>`,
 			expectedHTML: `<div @fir:load:ok="load(&#34;item&#34;)">Load</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple states combined",
-			inputHTML:    `<div x-fir-render="save:ok,delete:error=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
+			inputHTML:    `<div x-fir-live="save:ok,delete:error=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
 			expectedHTML: `<div @fir:[save:ok,delete:error]="process()">Handle</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple states with template",
-			inputHTML:    `<div x-fir-render="save:ok,delete:error->result=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
+			inputHTML:    `<div x-fir-live="save:ok,delete:error->result=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
 			expectedHTML: `<div @fir:[save:ok,delete:error]::result="process()">Handle</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Unused x-fir-action attribute",
-			inputHTML:    `<div x-fir-render="click=>doClick" x-fir-action-doClick="clickAction()" x-fir-action-unused="unused()">Click</div>`,
+			inputHTML:    `<div x-fir-live="click=>doClick" x-fir-action-doClick="clickAction()" x-fir-action-unused="unused()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="clickAction()">Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-action attribute without corresponding render action key",
-			inputHTML:    `<div x-fir-render="click" x-fir-action-doClick="clickAction()">Click</div>`,
+			inputHTML:    `<div x-fir-live="click" x-fir-action-doClick="clickAction()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Render expression with only modifier",
-			inputHTML:    `<div x-fir-render=".debounce">Click</div>`,
+			inputHTML:    `<div x-fir-live=".debounce">Click</div>`,
 			expectedHTML: "", // Invalid syntax
 			wantErr:      true,
 		},
 		{
 			name:         "Render expression with only target",
-			inputHTML:    `<div x-fir-render="->myTemplate">Click</div>`,
+			inputHTML:    `<div x-fir-live="->myTemplate">Click</div>`,
 			expectedHTML: "", // Invalid syntax
 			wantErr:      true,
 		},
 		{
 			name:         "Render expression with only action key",
-			inputHTML:    `<div x-fir-render="=>myAction" x-fir-action-myAction="act()">Click</div>`,
+			inputHTML:    `<div x-fir-live="=>myAction" x-fir-action-myAction="act()">Click</div>`,
 			expectedHTML: "", // Invalid syntax
 			wantErr:      true,
 		},
@@ -520,64 +520,64 @@ func TestProcessRenderAttributes(t *testing.T) {
 		// --- Fir Action Rule Tests ---
 		{
 			name:         "Render with Fir Action",
-			inputHTML:    `<div x-fir-render="click => $fir.ActionX()">Click</div>`, // Changed X to ActionX
-			expectedHTML: `<div @fir:click:ok="$fir.ActionX()">Click</div>`,         // Changed X to ActionX
+			inputHTML:    `<div x-fir-live="click => $fir.ActionX()">Click</div>`, // Changed X to ActionX
+			expectedHTML: `<div @fir:click:ok="$fir.ActionX()">Click</div>`,       // Changed X to ActionX
 			wantErr:      false,
 		},
 		{
 			name:         "Render with state and Fir Action",
-			inputHTML:    `<div x-fir-render="submit:pending => $fir.ActionY()">Submitting...</div>`, // Changed Y to ActionY
-			expectedHTML: `<div @fir:submit:pending="$fir.ActionY()">Submitting...</div>`,            // Changed Y to ActionY
+			inputHTML:    `<div x-fir-live="submit:pending => $fir.ActionY()">Submitting...</div>`, // Changed Y to ActionY
+			expectedHTML: `<div @fir:submit:pending="$fir.ActionY()">Submitting...</div>`,          // Changed Y to ActionY
 			wantErr:      false,
 		},
 		{
 			name:         "Render with template and Fir Action",
-			inputHTML:    `<form x-fir-render="submit->myForm => $fir.ActionZ()">Form</form>`, // Changed Z to ActionZ
-			expectedHTML: `<form @fir:submit:ok::myForm="$fir.ActionZ()">Form</form>`,         // Changed Z to ActionZ
+			inputHTML:    `<form x-fir-live="submit->myForm => $fir.ActionZ()">Form</form>`, // Changed Z to ActionZ
+			expectedHTML: `<form @fir:submit:ok::myForm="$fir.ActionZ()">Form</form>`,       // Changed Z to ActionZ
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple events with Fir Action",
-			inputHTML:    `<div x-fir-render="create:ok,update:ok => $fir.ActionA()">Save</div>`, // Changed A to ActionA
-			expectedHTML: `<div @fir:[create:ok,update:ok]="$fir.ActionA()">Save</div>`,          // Changed A to ActionA
+			inputHTML:    `<div x-fir-live="create:ok,update:ok => $fir.ActionA()">Save</div>`, // Changed A to ActionA
+			expectedHTML: `<div @fir:[create:ok,update:ok]="$fir.ActionA()">Save</div>`,        // Changed A to ActionA
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions with Fir Actions",
-			inputHTML:    `<div x-fir-render="save => $fir.Save(); load => $fir.Load()">Data</div>`, // Already multi-letter
-			expectedHTML: `<div @fir:save:ok="$fir.Save()" @fir:load:ok="$fir.Load()">Data</div>`,   // Already multi-letter
+			inputHTML:    `<div x-fir-live="save => $fir.Save(); load => $fir.Load()">Data</div>`, // Already multi-letter
+			expectedHTML: `<div @fir:save:ok="$fir.Save()" @fir:load:ok="$fir.Load()">Data</div>`, // Already multi-letter
 			wantErr:      false,
 		},
 		{
 			name:         "Mixed standard and Fir Actions",
-			inputHTML:    `<div x-fir-render="save => saveData; load => $fir.Load()" x-fir-action-saveData="doSave()">Data</div>`, // Already multi-letter
-			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="$fir.Load()">Data</div>`,                                    // Already multi-letter
+			inputHTML:    `<div x-fir-live="save => saveData; load => $fir.Load()" x-fir-action-saveData="doSave()">Data</div>`, // Already multi-letter
+			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="$fir.Load()">Data</div>`,                                  // Already multi-letter
 			wantErr:      false,
 		},
 		{
 			name:         "Render with modifier and Fir Action",
-			inputHTML:    `<button x-fir-render="click.debounce => $fir.ActionB()">Click</button>`, // Changed B to ActionB
-			expectedHTML: `<button @fir:click:ok.debounce="$fir.ActionB()">Click</button>`,         // Changed B to ActionB
+			inputHTML:    `<button x-fir-live="click.debounce => $fir.ActionB()">Click</button>`, // Changed B to ActionB
+			expectedHTML: `<button @fir:click:ok.debounce="$fir.ActionB()">Click</button>`,       // Changed B to ActionB
 			wantErr:      false,
 		},
 		{
 			name:      "Complex mix with Fir Action",
-			inputHTML: `<div x-fir-render="create:ok.nohtml->todo=>replaceIt;update:pending.debounce->done=>$fir.Archive()" x-fir-action-replaceIt="doReplace()">Complex</div>`, // Already multi-letter
+			inputHTML: `<div x-fir-live="create:ok.nohtml->todo=>replaceIt;update:pending.debounce->done=>$fir.Archive()" x-fir-action-replaceIt="doReplace()">Complex</div>`, // Already multi-letter
 			// Corrected expectedHTML: removed delete:error, adjusted attribute structure
 			expectedHTML: `<div @fir:create:ok::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="$fir.Archive()">Complex</div>`, // Already multi-letter
 			wantErr:      false,
 		},
 		{
 			name:         "Invalid: Modifier after Fir Action in render",
-			inputHTML:    `<div x-fir-render="click => $fir.ActionX().mod">Error</div>`, // Changed X to ActionX
-			expectedHTML: "",                                                            // Not checked on error
-			wantErr:      true,                                                          // Parser should reject this based on lexer changes
+			inputHTML:    `<div x-fir-live="click => $fir.ActionX().mod">Error</div>`, // Changed X to ActionX
+			expectedHTML: "",                                                          // Not checked on error
+			wantErr:      true,                                                        // Parser should reject this based on lexer changes
 		},
 		{
 			name:         "Invalid: Fir Action with incorrect format in render",
-			inputHTML:    `<div x-fir-render="click => $fir.1()">Error</div>`, // Format error, no change needed
-			expectedHTML: "",                                                  // Not checked on error
-			wantErr:      true,                                                // Parser should reject this
+			inputHTML:    `<div x-fir-live="click => $fir.1()">Error</div>`, // Format error, no change needed
+			expectedHTML: "",                                                // Not checked on error
+			wantErr:      true,                                              // Parser should reject this
 		},
 	}
 

@@ -322,14 +322,14 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 
 }
 
-// processRenderAttributes parses x-fir-render attributes, collects associated x-fir-action-* attributes,
+// processRenderAttributes parses x-fir-live attributes, collects associated x-fir-action-* attributes,
 // translates them into the canonical @fir:... syntax, and replaces the original attributes on the node.
 func processRenderAttributes(content []byte) ([]byte, error) {
 	if len(content) == 0 {
 		return content, nil
 	}
 	// Optimization: Check if the relevant attributes likely exist before parsing
-	if !bytes.Contains(content, []byte("x-fir-render")) && !bytes.Contains(content, []byte("x-fir-action-")) {
+	if !bytes.Contains(content, []byte("x-fir-live")) && !bytes.Contains(content, []byte("x-fir-action-")) {
 		return content, nil // Return original content if attributes are not present
 	}
 
@@ -361,7 +361,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 			// First pass: identify attributes to process and remove
 			for i := range n.Attr {
 				attr := &n.Attr[i] // Use pointer
-				if attr.Key == "x-fir-render" {
+				if attr.Key == "x-fir-live" {
 					renderAttr = attr // Found the attribute
 					attrsToRemove[attr.Key] = struct{}{}
 				} else if strings.HasPrefix(attr.Key, "x-fir-action-") {
@@ -380,7 +380,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				}
 			}
 
-			// If x-fir-render attribute was present (even if empty), translate and add new attributes
+			// If x-fir-live attribute was present (even if empty), translate and add new attributes
 			if renderAttr != nil { // Check for presence, not non-empty value
 				modified = true                                                          // Mark that we made changes
 				translated, err := TranslateRenderExpression(renderAttr.Val, actionsMap) // Pass actionsMap
