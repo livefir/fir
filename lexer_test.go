@@ -172,7 +172,7 @@ func TestLexer(t *testing.T) {
 		// Group 8: Complex Mixed Inputs
 		{
 			name:  "Complex Input with Multiple Modifiers and Targets",
-			input: "create:ok.nohtml->todo,delete:error.nocache=>replace;update:pending->done=>archive.final",
+			input: "create:ok.nohtml->todo,delete:error.nocache=>replace;update:pending->done=>archive",
 			expected: []string{
 				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
 				"Template Target: todo",
@@ -180,7 +180,7 @@ func TestLexer(t *testing.T) {
 				"Action Target: replace",
 				"EventExpression: {Name:update State::pending Modifier:}",
 				"Template Target: done",
-				"Action Target: archive.final",
+				"Action Target: archive",
 			},
 		},
 
@@ -275,6 +275,57 @@ func TestLexer(t *testing.T) {
 				"Template Target: templateA",
 				"Action Target: action123_B",
 			},
+		},
+
+		// Group 10: Fir Action Rule Tests
+		{
+			name:  "Single Event with Fir Action",
+			input: "create => $fir.X()",
+			expected: []string{
+				"EventExpression: {Name:create State: Modifier:}",
+				"Action Target: $fir.X()",
+			},
+		},
+		{
+			name:  "Event with Template and Fir Action",
+			input: "update -> myTemplate => $fir.Y()",
+			expected: []string{
+				"EventExpression: {Name:update State: Modifier:}",
+				"Template Target: myTemplate",
+				"Action Target: $fir.Y()",
+			},
+		},
+		{
+			name:  "Multiple Bindings with Fir Actions",
+			input: "load:ok -> data, save => $fir.Z(); submit => $fir.A()",
+			expected: []string{
+				"EventExpression: {Name:load State::ok Modifier:}",
+				"Template Target: data",
+				"EventExpression: {Name:save State: Modifier:}",
+				"Action Target: $fir.Z()",
+				"EventExpression: {Name:submit State: Modifier:}",
+				"Action Target: $fir.A()",
+			},
+		},
+		{
+			name:      "Invalid: Modifier after Fir Action",
+			input:     "create => $fir.X().mod", // Modifier after action is no longer allowed
+			expectErr: true,
+		},
+		{
+			name:      "Invalid: Modifier after Standard Action",
+			input:     "update => myAction.mod", // Modifier after action is no longer allowed
+			expectErr: true,
+		},
+		{
+			name:      "Invalid: Fir Action with incorrect format",
+			input:     "create => $fir.1()", // Digit instead of letter
+			expectErr: true,
+		},
+		{
+			name:      "Invalid: Fir Action with incorrect format 2",
+			input:     "create => $fir.X", // Missing parentheses
+			expectErr: true,
 		},
 	}
 

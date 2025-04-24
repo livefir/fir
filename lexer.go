@@ -2,6 +2,7 @@ package fir
 
 import (
 	"fmt"
+	"regexp" // Import regexp
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -9,11 +10,13 @@ import (
 
 // Define the lexer rules
 var lexerRules = lexer.MustSimple([]lexer.SimpleRule{
+	// Updated pattern to allow one or more letters [a-zA-Z]+
+	{Name: "FirAction", Pattern: `\$fir\.[a-zA-Z]+\(\)`}, // Matches $fir.Save(), $fir.Load(), etc.
 	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},   // Matches event names like "create"
-	{Name: "State", Pattern: `:(ok|error|pending|done)`}, // Matches states like ":ok" without capturing trailing whitespace
-	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},           // Matches modifiers like ".nohtml" (alphabetic only)
-	{Name: "Arrow", Pattern: `->`},                       // Matches "->" without trailing whitespace
-	{Name: "DoubleArrow", Pattern: `=>`},                 // Matches "=>" without trailing whitespace
+	{Name: "State", Pattern: `:(ok|error|pending|done)`}, // Matches states like ":ok"
+	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},           // Matches modifiers like ".nohtml"
+	{Name: "Arrow", Pattern: `->`},                       // Matches "->"
+	{Name: "DoubleArrow", Pattern: `=>`},                 // Matches "=>"
 	{Name: "Comma", Pattern: `,`},                        // Matches ","
 	{Name: "Semicolon", Pattern: `;`},                    // Matches ";"
 	{Name: "Whitespace", Pattern: `\s+`},                 // Ignore standalone whitespace
@@ -41,19 +44,17 @@ type EventExpression struct {
 }
 
 type Target struct {
-	Template string `parser:"( \"->\" @Ident )?"`             // Match template target for "->"
-	Action   string `parser:"( \"=>\" @Ident (@Modifier)?)?"` // Match action target with optional modifier
+	Template string `parser:"( \"->\" @Ident )?"` // Match template target for "->"
+	// Action accepts Ident or FirAction. Modifier is removed. The entire Action part ("=> ...") is optional.
+	Action string `parser:"( \"=>\" ( @Ident | @FirAction ) )?"`
 }
 
 // removeAllWhitespace is helper function to remove all whitespace from a string
+// Using regexp is more concise
+var whitespaceRegex = regexp.MustCompile(`\s+`)
+
 func removeAllWhitespace(input string) string {
-	result := ""
-	for _, r := range input {
-		if r != ' ' && r != '\t' && r != '\n' && r != '\r' {
-			result += string(r)
-		}
-	}
-	return result
+	return whitespaceRegex.ReplaceAllString(input, "")
 }
 
 // getRenderExpressionParser parser function to parse the input string

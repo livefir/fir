@@ -516,6 +516,69 @@ func TestProcessRenderAttributes(t *testing.T) {
 			expectedHTML: "", // Invalid syntax
 			wantErr:      true,
 		},
+
+		// --- Fir Action Rule Tests ---
+		{
+			name:         "Render with Fir Action",
+			inputHTML:    `<div x-fir-render="click => $fir.ActionX()">Click</div>`, // Changed X to ActionX
+			expectedHTML: `<div @fir:click:ok="$fir.ActionX()">Click</div>`,         // Changed X to ActionX
+			wantErr:      false,
+		},
+		{
+			name:         "Render with state and Fir Action",
+			inputHTML:    `<div x-fir-render="submit:pending => $fir.ActionY()">Submitting...</div>`, // Changed Y to ActionY
+			expectedHTML: `<div @fir:submit:pending="$fir.ActionY()">Submitting...</div>`,            // Changed Y to ActionY
+			wantErr:      false,
+		},
+		{
+			name:         "Render with template and Fir Action",
+			inputHTML:    `<form x-fir-render="submit->myForm => $fir.ActionZ()">Form</form>`, // Changed Z to ActionZ
+			expectedHTML: `<form @fir:submit:ok::myForm="$fir.ActionZ()">Form</form>`,         // Changed Z to ActionZ
+			wantErr:      false,
+		},
+		{
+			name:         "Multiple events with Fir Action",
+			inputHTML:    `<div x-fir-render="create:ok,update:ok => $fir.ActionA()">Save</div>`, // Changed A to ActionA
+			expectedHTML: `<div @fir:[create:ok,update:ok]="$fir.ActionA()">Save</div>`,          // Changed A to ActionA
+			wantErr:      false,
+		},
+		{
+			name:         "Multiple expressions with Fir Actions",
+			inputHTML:    `<div x-fir-render="save => $fir.Save(); load => $fir.Load()">Data</div>`, // Already multi-letter
+			expectedHTML: `<div @fir:save:ok="$fir.Save()" @fir:load:ok="$fir.Load()">Data</div>`,   // Already multi-letter
+			wantErr:      false,
+		},
+		{
+			name:         "Mixed standard and Fir Actions",
+			inputHTML:    `<div x-fir-render="save => saveData; load => $fir.Load()" x-fir-action-saveData="doSave()">Data</div>`, // Already multi-letter
+			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="$fir.Load()">Data</div>`,                                    // Already multi-letter
+			wantErr:      false,
+		},
+		{
+			name:         "Render with modifier and Fir Action",
+			inputHTML:    `<button x-fir-render="click.debounce => $fir.ActionB()">Click</button>`, // Changed B to ActionB
+			expectedHTML: `<button @fir:click:ok.debounce="$fir.ActionB()">Click</button>`,         // Changed B to ActionB
+			wantErr:      false,
+		},
+		{
+			name:      "Complex mix with Fir Action",
+			inputHTML: `<div x-fir-render="create:ok.nohtml->todo=>replaceIt;update:pending.debounce->done=>$fir.Archive()" x-fir-action-replaceIt="doReplace()">Complex</div>`, // Already multi-letter
+			// Corrected expectedHTML: removed delete:error, adjusted attribute structure
+			expectedHTML: `<div @fir:create:ok::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="$fir.Archive()">Complex</div>`, // Already multi-letter
+			wantErr:      false,
+		},
+		{
+			name:         "Invalid: Modifier after Fir Action in render",
+			inputHTML:    `<div x-fir-render="click => $fir.ActionX().mod">Error</div>`, // Changed X to ActionX
+			expectedHTML: "",                                                            // Not checked on error
+			wantErr:      true,                                                          // Parser should reject this based on lexer changes
+		},
+		{
+			name:         "Invalid: Fir Action with incorrect format in render",
+			inputHTML:    `<div x-fir-render="click => $fir.1()">Error</div>`, // Format error, no change needed
+			expectedHTML: "",                                                  // Not checked on error
+			wantErr:      true,                                                // Parser should reject this
+		},
 	}
 
 	for _, tt := range tests {

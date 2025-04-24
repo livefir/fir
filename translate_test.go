@@ -185,9 +185,11 @@ func TestTranslateRenderExpression(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "Complex Mix (comma and semicolon) with Modifiers",
-			input:    "create:ok.nohtml,delete:error->todo=>replace.mod;update:pending.debounce->done=>archive",
-			expected: "@fir:[create:ok,delete:error]::todo.nohtml=\"replace.mod\"\n@fir:update:pending::done.debounce=\"archive\"", // No map, action names used directly
+			name: "Complex Mix (comma and semicolon) with Modifiers",
+			// Removed .mod from replace
+			input: "create:ok.nohtml,delete:error->todo=>replace;update:pending.debounce->done=>archive",
+			// Removed .mod from replace in expected output
+			expected: "@fir:[create:ok,delete:error]::todo.nohtml=\"replace\"\n@fir:update:pending::done.debounce=\"archive\"",
 			wantErr:  false,
 		},
 		{
@@ -248,18 +250,20 @@ func TestTranslateRenderExpression(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "Complex mix, actions in map",
-			input:    "create:ok.nohtml,delete:error->todo=>replace.mod;update:pending.debounce->done=>archive",
-			actions:  map[string]string{"replace.mod": "doReplace()", "archive": "doArchive()"},
-			expected: "@fir:[create:ok,delete:error]::todo.nohtml=\"doReplace()\"\n@fir:update:pending::done.debounce=\"doArchive()\"", // Both actions replaced
+			name: "Complex mix, actions in map",
+			// Removed .mod from replace
+			input: "create:ok.nohtml,delete:error->todo=>replace;update:pending.debounce->done=>archive",
+			// Removed .mod from replace key in map and expected output
+			actions:  map[string]string{"replace": "doReplace()", "archive": "doArchive()"},
+			expected: "@fir:[create:ok,delete:error]::todo.nohtml=\"doReplace()\"\n@fir:update:pending::done.debounce=\"doArchive()\"",
 			wantErr:  false,
 		},
 		{
 			name:     "Action name looks like default but is in map",
-			input:    "click=>$fir.replace()", // Action name is literally "$fir.replace()" - INVALID INPUT
-			actions:  map[string]string{"$fir.replace()": "customReplace()"},
-			expected: "",   // Expected output doesn't matter when wantErr is true
-			wantErr:  true, // Updated: Expect an error because the input is invalid according to the grammar
+			input:    "click=>$fir.replace()",                            // This is now VALID input
+			actions:  map[string]string{"someAction": "customReplace()"}, // Map is irrelevant for $fir actions
+			expected: `@fir:click:ok="$fir.replace()"`,                   // Correct expected output
+			wantErr:  false,                                              // Updated: This input is now valid
 		},
 
 		// --- Error Cases Inspired by lexer_test.go ---
