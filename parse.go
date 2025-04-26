@@ -322,24 +322,23 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 
 }
 
-// processRenderAttributes parses x-fir-live attributes, collects associated x-fir-action-* attributes,
-// translates them into the canonical @fir:... syntax, and replaces the original attributes on the node.
+// processRenderAttributes parses x-fir-* attributes, translates them into the canonical @fir:... syntax,
+// and replaces the original attributes on the node.
+// Precedence: x-fir-live > x-fir-refresh > x-fir-remove.
+// x-fir-action-* attributes are collected and used by x-fir-live translation.
 func processRenderAttributes(content []byte) ([]byte, error) {
 	if len(content) == 0 {
 		return content, nil
 	}
-	// Optimization: Check if the relevant attributes likely exist before parsing
-	if !bytes.Contains(content, []byte("x-fir-live")) && !bytes.Contains(content, []byte("x-fir-action-")) {
-		return content, nil // Return original content if attributes are not present
+	// Optimization: Check if any relevant attributes likely exist before parsing
+	if !bytes.Contains(content, []byte("x-fir-")) {
+		return content, nil
 	}
 
 	doc, err := html.Parse(bytes.NewReader(content))
 	if err != nil {
-		// If parsing fails, it might be an invalid fragment. Return original content for now.
-		// Consider logging this error if it's unexpected.
 		// logger.Debugf("HTML parsing failed for render attributes, returning original: %v", err)
-		return content, nil
-		// Or return the error if strict parsing is required:
+		return content, nil // Return original content if parsing fails (e.g., fragment)
 		// return nil, fmt.Errorf("error parsing HTML content for render attributes: %w", err)
 	}
 
@@ -356,15 +355,26 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 			actionsMap := make(map[string]string)
 			attrsToRemove := make(map[string]struct{})
 			var newAttrs []html.Attribute
-			var renderAttr *html.Attribute // Store the attribute itself to check presence
 
-			// First pass: identify attributes to process and remove
+			var liveAttrVal, refreshAttrVal, removeAttrVal *string // Pointers to store values if attributes exist
+
+			// First pass: identify attributes, collect actions, mark for removal
 			for i := range n.Attr {
 				attr := &n.Attr[i] // Use pointer
-				if attr.Key == "x-fir-live" {
-					renderAttr = attr // Found the attribute
+				switch {
+				case attr.Key == "x-fir-live":
+					val := attr.Val // Capture value
+					liveAttrVal = &val
 					attrsToRemove[attr.Key] = struct{}{}
-				} else if strings.HasPrefix(attr.Key, "x-fir-action-") {
+				case attr.Key == "x-fir-refresh":
+					val := attr.Val
+					refreshAttrVal = &val
+					attrsToRemove[attr.Key] = struct{}{}
+				case attr.Key == "x-fir-remove":
+					val := attr.Val
+					removeAttrVal = &val
+					attrsToRemove[attr.Key] = struct{}{}
+				case strings.HasPrefix(attr.Key, "x-fir-action-"):
 					actionKey := strings.TrimPrefix(attr.Key, "x-fir-action-")
 					if actionKey != "" {
 						actionsMap[actionKey] = attr.Val
@@ -380,15 +390,38 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				}
 			}
 
-			// If x-fir-live attribute was present (even if empty), translate and add new attributes
-			if renderAttr != nil { // Check for presence, not non-empty value
-				modified = true                                                          // Mark that we made changes
-				translated, err := TranslateRenderExpression(renderAttr.Val, actionsMap) // Pass actionsMap
-				if err != nil {
-					// Store the error and stop further processing
-					traverseErr = fmt.Errorf("error translating render expression for node %s, expr '%s': %w", n.Data, renderAttr.Val, err)
-					return
+			var translated string
+			var translationErr error
+			translationNeeded := false // Track if any translation occurred
+
+			// Translate based on precedence: live > refresh > remove
+			if liveAttrVal != nil {
+				translationNeeded = true
+				translated, translationErr = TranslateRenderExpression(*liveAttrVal, actionsMap)
+				if translationErr != nil {
+					traverseErr = fmt.Errorf("error translating x-fir-live for node %s, expr '%s': %w", n.Data, *liveAttrVal, translationErr)
 				}
+			} else if refreshAttrVal != nil {
+				translationNeeded = true
+				translated, translationErr = TranslateEventExpression(*refreshAttrVal, "refresh")
+				if translationErr != nil {
+					traverseErr = fmt.Errorf("error translating x-fir-refresh for node %s, expr '%s': %w", n.Data, *refreshAttrVal, translationErr)
+				}
+			} else if removeAttrVal != nil {
+				translationNeeded = true
+				translated, translationErr = TranslateEventExpression(*removeAttrVal, "remove")
+				if translationErr != nil {
+					traverseErr = fmt.Errorf("error translating x-fir-remove for node %s, expr '%s': %w", n.Data, *removeAttrVal, translationErr)
+				}
+			}
+
+			if traverseErr != nil {
+				return // Stop if translation error occurred
+			}
+
+			// If translation happened, add the new attributes
+			if translationNeeded {
+				modified = true // Mark that we made changes
 
 				// Split translated output into individual attributes (lines)
 				translatedAttrs := strings.Split(translated, "\n")
@@ -403,7 +436,6 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 						val := strings.Trim(parts[1], `"`)
 						newAttrs = append(newAttrs, html.Attribute{Key: key, Val: val})
 					} else {
-						// Log or handle malformed translation? For now, just skip.
 						logger.Warnf("Skipping malformed translated attribute: %s", translatedAttr)
 					}
 				}
@@ -423,6 +455,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 	traverse(doc)
 	if traverseErr != nil {
+		// Return original content on error? Or the error? Returning error is safer.
 		return nil, traverseErr
 	}
 
@@ -431,35 +464,21 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 		return content, nil // Return original content if no changes
 	}
 
+	// Render the modified HTML (same rendering logic as before)
 	var buf bytes.Buffer
-	// Iterate through the direct children of the parsed document node.
-	// html.Parse typically creates a structure like:
-	// Document -> [comment] -> <html> -> <head> -> ...
-	//                                  -> <body> -> [div] -> ...
-	//                                           -> [comment] -> ...
-	// We want to render the nodes outside <html> (like leading comments)
-	// and the *children* of <head> and <body> inside <html>.
 	for node := doc.FirstChild; node != nil; node = node.NextSibling {
 		if node.Type == html.ElementNode && node.Data == "html" {
-			// If this node is the <html> element, iterate through its children (<head>, <body>)
 			for htmlChild := node.FirstChild; htmlChild != nil; htmlChild = htmlChild.NextSibling {
-				// htmlChild is either <head> or <body>
 				if htmlChild.Type == html.ElementNode && (htmlChild.Data == "head" || htmlChild.Data == "body") {
-					// Render the *children* of <head> and <body>
 					for contentChild := htmlChild.FirstChild; contentChild != nil; contentChild = contentChild.NextSibling {
 						if err := html.Render(&buf, contentChild); err != nil {
 							return nil, fmt.Errorf("error rendering modified HTML fragment node (%s child): %w", htmlChild.Data, err)
 						}
 					}
 				}
-				// Ignore other direct children of <html> if any (shouldn't be standard)
 			}
 		} else {
-			// If the node is not the <html> element (e.g., a comment or doctype before <html>),
-			// render it directly. This captures leading/trailing comments outside the main structure.
 			if err := html.Render(&buf, node); err != nil {
-				// Ignore doctype rendering errors if necessary, but generally render all top-level nodes.
-				// Example check: if node.Type == html.DoctypeNode { continue }
 				return nil, fmt.Errorf("error rendering modified HTML fragment node (non-html root child %v): %w", node.Type, err)
 			}
 		}

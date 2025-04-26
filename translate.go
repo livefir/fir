@@ -154,6 +154,82 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 	return strings.Join(expressionResults, "\n"), nil
 }
 
+// TranslateEventExpression translates a render expression string focusing only on event expressions
+// into canonical @fir event binding attributes, ignoring any template or action targets.
+// The default action used is determined by the actionType parameter.
+func TranslateEventExpression(input string, actionType string) (string, error) {
+	parser, err := getRenderExpressionParser()
+	if err != nil {
+		return "", fmt.Errorf("error creating parser: %w", err)
+	}
+
+	parsed, err := parseRenderExpression(parser, input)
+	if err != nil {
+		return "", fmt.Errorf("error parsing render expression: %w", err)
+	}
+
+	var defaultAction string
+	switch actionType {
+	case "refresh":
+		defaultAction = "$fir.replace()"
+	case "remove": // Added case for remove
+		defaultAction = "$fir.removeEl()"
+	// Add other action types here if needed
+	// case "anotherAction":
+	// 	defaultAction = "$fir.someOtherFunc()"
+	default:
+		// Default or error if actionType is unknown?
+		// For now, let's default to replace() if type is unspecified or unknown,
+		// but returning an error might be safer depending on requirements.
+		// return "", fmt.Errorf("unknown actionType: %s", actionType)
+		defaultAction = "$fir.replace()" // Defaulting to replace for safety/simplicity
+	}
+
+	var results []string
+
+	for _, expr := range parsed.Expressions {
+		for _, binding := range expr.Bindings {
+			var eventParts []string
+			var modifiers []string
+			modifierSet := make(map[string]struct{}) // To store unique modifiers
+
+			for _, eventExpr := range binding.Eventexpressions {
+				state := eventExpr.State
+				if state == "" {
+					state = ":ok" // Default state
+				}
+				eventPart := eventExpr.Name + state
+				eventParts = append(eventParts, eventPart)
+
+				// Collect unique modifiers
+				if eventExpr.Modifier != "" {
+					if _, exists := modifierSet[eventExpr.Modifier]; !exists {
+						modifiers = append(modifiers, eventExpr.Modifier)
+						modifierSet[eventExpr.Modifier] = struct{}{}
+					}
+				}
+			}
+
+			// Format event part
+			eventStr := ""
+			if len(eventParts) == 1 {
+				eventStr = eventParts[0]
+			} else {
+				eventStr = "[" + strings.Join(eventParts, ",") + "]"
+			}
+
+			// Append modifiers
+			modifierStr := strings.Join(modifiers, "")
+
+			// Construct the final attribute string for this binding, ignoring any parsed target
+			attribute := fmt.Sprintf("@fir:%s%s=\"%s\"", eventStr, modifierStr, defaultAction)
+			results = append(results, attribute)
+		}
+	}
+
+	return strings.Join(results, "\n"), nil
+}
+
 // Assume parseRenderExpression, struct definitions, and getRenderExpressionParser are correctly defined.
 // func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) { ... }
 // type Expressions struct { Expressions []*Expression `@(@@ (";" @@)*)? ';' ?` } // Example grammar

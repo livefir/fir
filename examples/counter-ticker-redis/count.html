@@ -1,11 +1,11 @@
 {{ define "content" }}
     <div x-data>
-        <div x-fir-live="updated">
+        <div x-fir-refresh="updated">
             Count updated: {{ .updated }} seconds ago
         </div>
 
         <hr />
-        <div id="count" x-fir-live="inc,dec">
+        <div id="count" x-fir-refresh="inc,dec">
             Count:
             {{ .count }}
         </div>

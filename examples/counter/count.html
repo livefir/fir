@@ -16,7 +16,7 @@
 
     <body>
         <div x-data>
-            <div x-fir-live="inc,dec">Count:{{ .count }}</div>
+            <div x-fir-refresh="inc,dec">Count:{{ .count }}</div>
             <form method="post" @submit.prevent="$fir.submit()">
                 <button formaction="/?event=inc" type="submit">+</button>
                 <button formaction="/?event=dec" type="submit">-</button>

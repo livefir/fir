@@ -579,6 +579,163 @@ func TestProcessRenderAttributes(t *testing.T) {
 			expectedHTML: "",                                                // Not checked on error
 			wantErr:      true,                                              // Parser should reject this
 		},
+
+		// --- x-fir-refresh tests ---
+		{
+			name:         "Only x-fir-refresh",
+			inputHTML:    `<div x-fir-refresh="inc; dec:ok">Count: {{.}}</div>`,
+			expectedHTML: `<div @fir:inc:ok="$fir.replace()" @fir:dec:ok="$fir.replace()">Count: {{.}}</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-refresh with modifier",
+			inputHTML:    `<div x-fir-refresh="update.debounce">Update</div>`,
+			expectedHTML: `<div @fir:update:ok.debounce="$fir.replace()">Update</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-refresh ignores target",
+			inputHTML:    `<div x-fir-refresh="load->data">Load</div>`,
+			expectedHTML: `<div @fir:load:ok="$fir.replace()">Load</div>`,
+			wantErr:      false,
+		},
+		// --- x-fir-remove tests ---
+		{
+			name:         "Only x-fir-remove",
+			inputHTML:    `<div x-fir-remove="delete:ok.nohtml">Item</div>`,
+			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeEl()">Item</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-remove multiple events",
+			inputHTML:    `<div x-fir-remove="clear:ok, reset:done">Clear</div>`,
+			expectedHTML: `<div @fir:[clear:ok,reset:done]="$fir.removeEl()">Clear</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-remove ignores target",
+			inputHTML:    `<div x-fir-remove="delete=>doDelete">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeEl()">Delete</div>`,
+			wantErr:      false,
+		},
+		// --- x-fir-live tests ---
+		{
+			name:         "Only x-fir-live (no actions)",
+			inputHTML:    `<div x-fir-live="save->task">Task</div>`,
+			expectedHTML: `<div @fir:save:ok::task="$fir.replace()">Task</div>`, // Assuming TranslateRenderExpression default
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-live with x-fir-action",
+			inputHTML:    `<div x-fir-live="save=>doSave" x-fir-action-doSave="saveData()">Data</div>`,
+			expectedHTML: `<div @fir:save:ok="saveData()">Data</div>`, // Action is replaced
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-live with multiple x-fir-action",
+			inputHTML:    `<div x-fir-live="save=>doSave; load=>doLoad" x-fir-action-doSave="saveData()" x-fir-action-doLoad="loadData()">Data</div>`,
+			expectedHTML: `<div @fir:save:ok="saveData()" @fir:load:ok="loadData()">Data</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-live with unused x-fir-action",
+			inputHTML:    `<div x-fir-live="click=>doClick" x-fir-action-doClick="clickAction()" x-fir-action-unused="unused()">Click</div>`,
+			expectedHTML: `<div @fir:click:ok="clickAction()">Click</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-live with x-fir-action not matching action key",
+			inputHTML:    `<div x-fir-live="click" x-fir-action-doClick="clickAction()">Click</div>`,
+			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click</div>`, // Action map doesn't apply
+			wantErr:      false,
+		},
+		// --- Precedence tests ---
+		{
+			name:         "Precedence: live > refresh > remove",
+			inputHTML:    `<div x-fir-live="a=>act" x-fir-refresh="b" x-fir-remove="c" x-fir-action-act="doAct()">Live</div>`,
+			expectedHTML: `<div @fir:a:ok="doAct()">Live</div>`, // Only live is processed
+			wantErr:      false,
+		},
+		{
+			name:         "Precedence: refresh > remove",
+			inputHTML:    `<div x-fir-refresh="b" x-fir-remove="c">Refresh</div>`,
+			expectedHTML: `<div @fir:b:ok="$fir.replace()">Refresh</div>`, // Only refresh is processed
+			wantErr:      false,
+		},
+		// --- General tests ---
+		{
+			name:         "Attributes preserved",
+			inputHTML:    `<div id="myDiv" class="p-4" x-fir-refresh="update">Content</div>`,
+			expectedHTML: `<div id="myDiv" class="p-4" @fir:update:ok="$fir.replace()">Content</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Nested elements",
+			inputHTML:    `<div><span x-fir-refresh="count">Nested {{.}}</span></div>`,
+			expectedHTML: `<div><span @fir:count:ok="$fir.replace()">Nested {{.}}</span></div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Multiple elements",
+			inputHTML:    `<div x-fir-refresh="a">A</div><div x-fir-remove="b">B</div>`,
+			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok="$fir.removeEl()">B</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Void element",
+			inputHTML:    `<input x-fir-refresh="change">`,
+			expectedHTML: `<input @fir:change:ok="$fir.replace()">`,
+			wantErr:      false,
+		},
+		{
+			name:         "HTML with comments",
+			inputHTML:    `<!-- comment --><div x-fir-refresh="load">Load</div><!-- another -->`,
+			expectedHTML: `<!-- comment --><div @fir:load:ok="$fir.replace()">Load</div><!-- another -->`,
+			wantErr:      false,
+		},
+		{
+			name:         "Empty input content",
+			inputHTML:    ``,
+			expectedHTML: ``,
+			wantErr:      false,
+		},
+		// --- Error Cases ---
+		{
+			name:         "Error: Invalid x-fir-live expression",
+			inputHTML:    `<div x-fir-live="click:badstate">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Invalid x-fir-refresh expression",
+			inputHTML:    `<div x-fir-refresh="click->">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Invalid x-fir-remove expression",
+			inputHTML:    `<div x-fir-remove=".mod">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Empty x-fir-live",
+			inputHTML:    `<div x-fir-live="">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Empty x-fir-refresh",
+			inputHTML:    `<div x-fir-refresh="">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Empty x-fir-remove",
+			inputHTML:    `<div x-fir-remove="">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
 	}
 
 	for _, tt := range tests {

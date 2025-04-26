@@ -341,3 +341,111 @@ func TestTranslateRenderExpression(t *testing.T) {
 		})
 	}
 }
+
+// TestTranslateEventExpression tests the TranslateEventExpression function
+func TestTranslateEventExpression(t *testing.T) {
+	// Define different action types to test
+	actionTypes := map[string]string{
+		"refresh": "$fir.replace()",
+		"remove":  "$fir.removeEl()",
+	}
+
+	tests := []struct {
+		name       string
+		input      string
+		actionType string // Add actionType to the test case struct
+		expected   string
+		wantErr    bool
+	}{
+		// --- Test cases for "refresh" actionType ---
+		{
+			name:       "refresh: single event, no target",
+			input:      "click",
+			actionType: "refresh",
+			expected:   `@fir:click:ok="$fir.replace()"`,
+			wantErr:    false,
+		},
+		{
+			name:       "refresh: single event, template target (ignored)",
+			input:      "submit->myform",
+			actionType: "refresh",
+			expected:   `@fir:submit:ok="$fir.replace()"`,
+			wantErr:    false,
+		},
+		{
+			name:       "refresh: multiple expressions (semicolon) with targets (ignored)",
+			input:      "create:ok.debounce->todo;delete:error.nohtml=>replace",
+			actionType: "refresh",
+			expected:   "@fir:create:ok.debounce=\"$fir.replace()\"\n@fir:delete:error.nohtml=\"$fir.replace()\"",
+			wantErr:    false,
+		},
+
+		// --- Test cases for "remove" actionType ---
+		{
+			name:       "remove: single event, no target",
+			input:      "delete",
+			actionType: "remove",
+			expected:   `@fir:delete:ok="$fir.removeEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:       "remove: single event, template target (ignored)",
+			input:      "clear->list",
+			actionType: "remove",
+			expected:   `@fir:clear:ok="$fir.removeEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:       "remove: multiple events (comma) with modifier",
+			input:      "clear:ok,reset:done.mod",
+			actionType: "remove",
+			expected:   `@fir:[clear:ok,reset:done].mod="$fir.removeEl()"`,
+			wantErr:    false,
+		},
+
+		// --- Test cases for default/unknown actionType (assuming it defaults to replace) ---
+		{
+			name:       "default: single event",
+			input:      "notify",
+			actionType: "unknown", // Or ""
+			expected:   `@fir:notify:ok="$fir.replace()"`,
+			wantErr:    false,
+		},
+
+		// --- Error Cases (actionType doesn't matter here) ---
+		{
+			name:       "error: Invalid State",
+			input:      "create:invalid.nohtml",
+			actionType: "refresh", // actionType is irrelevant for parse errors
+			wantErr:    true,
+		},
+		{
+			name:       "error: Empty Input",
+			input:      "",
+			actionType: "refresh",
+			wantErr:    true,
+		},
+		// ... other error cases ...
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Call the renamed function TranslateEventExpression
+			got, err := TranslateEventExpression(tt.input, tt.actionType)
+
+			if tt.wantErr {
+				require.Error(t, err, "Expected an error but got none for input: %s, actionType: %s", tt.input, tt.actionType)
+			} else {
+				require.NoError(t, err, "Got unexpected error for input: %s, actionType: %s", tt.input, tt.actionType)
+				// Check if the expected action matches the actionType tested
+				expectedAction, ok := actionTypes[tt.actionType]
+				if !ok {
+					expectedAction = actionTypes["refresh"] // Assuming refresh is the default
+				}
+				// Ensure the expected string uses the correct default action for the test case
+				require.Contains(t, tt.expected, expectedAction, "Test case expected output doesn't match the actionType being tested")
+				require.Equal(t, tt.expected, got, "Mismatch for input: %s, actionType: %s", tt.input, tt.actionType)
+			}
+		})
+	}
+}
