@@ -43,68 +43,33 @@ The event template binding syntax in the provided code allows associating specif
    - Modifiers can be added to the event binding to control behavior.
    - Common modifiers include `.prevent`, `.stop`, `.self`, etc.
 
-
 ## Alternative Declarative Syntax
 
 The declarative syntax allows you to bind events to templates or actions in a more readable and maintainable way. This is particularly useful for managing dynamic updates in the frontend.
 
 ```html
-<div x-fir-live="inc,dec">
+<div x-fir-live="inc,dec" >
+</div> 
+<div x-fir-refresh="inc,dec" >
 </div>
-   
-```html
-<div 
-   x-fir-live-task="[create:ok,update-later:ok]->task" 
-   x-fir-action-task="$fir.prependEl()" 
-   x-fir-live-later-task="update-now:ok->later-task" 
-   x-fir-action-later-task="$fir.prependEl()" 
-   x-fir-live-query-more="query-more:ok" 
-   x-fir-action-query-more="$fir.appendEl()" 
-   x-fir-live-query="query:ok" 
-   x-fir-action-query="$fir.replace()">
+<div x-fir-remove="delete" >
 </div>
-
-<div x-fir-live="
-create:ok,update-later->task=>fir.prependEl;
-update-now=>fir.prependEl; 
-query-more=>fir.appendEl;
-query=>replace;
-delete-task.nohtml=>fir.removeEl">
-    <!-- This will be replaced with the result of the `query-more` template -->
+<div x-fir-append:todo="inc,dec" >
+</div>
+<div x-fir-prepend:todo="inc,dec" >
+</div>
+<div x-fir-replace:todo="inc,dec" >
+</div>
+<div x-fir-toggleClass:loading="inc,dec" >
+</div>
+<div x-fir-resetForm="submit" >
+</div>
+<div x-fir-trigger:resetForm="inc,dec" x-fir-action-resetForm="$fir.resetForm()" >
+</div>
+<div x-fir-dispatch:close-modal="inc,dec" >
 </div>
 
-    <!-- This will be replaced with the result of the `create` or `update-later` template -->
-
-<div x-fir-live="delete-task=>fir.removeEl">
-    <!-- This will be removed from the DOM when the `remove-task` event is triggered -->
-</div>
-<div x-fir-live="query=>replace;
-delete-task.nohtml=>fir.removeEl">
-
-</div>
-
-
-
-```html
-
-
-```string
-create.pending
-create:ok
-create:error
-create:pending
-create:done
-create:pending.window
-create:ok.window=>fir.replace
-create:ok=>myfunction
-create:ok,delete:error=>fir.replace
-create:ok,update:ok->todo=>fir.replace
-create,update:ok->todo=>fir.replace
-create,update->todo=>fir.replace
-create:ok->todo
-create:ok.window,delete:error.nohtml=>fir.replace;create:ok,delete:error.nohtml=>fir.replace;create:ok,delete:error=>fir.replace
-```
-
+````
 
 ### Examples
 

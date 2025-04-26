@@ -322,10 +322,8 @@ func deepMergeEventTemplates(evt1, evt2 eventTemplates) eventTemplates {
 
 }
 
-// processRenderAttributes parses x-fir-* attributes, translates them into the canonical @fir:... syntax,
+// processRenderAttributes parses x-fir-* attributes using a registry, translates them based on precedence,
 // and replaces the original attributes on the node.
-// Precedence: x-fir-live > x-fir-refresh > x-fir-remove.
-// x-fir-action-* attributes are collected and used by x-fir-live translation.
 func processRenderAttributes(content []byte) ([]byte, error) {
 	if len(content) == 0 {
 		return content, nil
@@ -339,7 +337,6 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 	if err != nil {
 		// logger.Debugf("HTML parsing failed for render attributes, returning original: %v", err)
 		return content, nil // Return original content if parsing fails (e.g., fragment)
-		// return nil, fmt.Errorf("error parsing HTML content for render attributes: %w", err)
 	}
 
 	var traverseErr error
@@ -352,95 +349,105 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 		}
 
 		if n.Type == html.ElementNode {
-			actionsMap := make(map[string]string)
-			attrsToRemove := make(map[string]struct{})
-			var newAttrs []html.Attribute
+			var collectedActions []collectedAction  // Store parsed x-fir-* info + handler
+			attrsToRemove := make(map[int]struct{}) // Indices of attributes to remove
+			var finalAttrs []html.Attribute         // Attributes to keep/add
+			actionsMap := make(map[string]string)   // For x-fir-action-* values
 
-			var liveAttrVal, refreshAttrVal, removeAttrVal *string // Pointers to store values if attributes exist
+			// --- First Pass: Collect ActionInfo, find handlers, build actionsMap ---
+			for i, attr := range n.Attr {
+				if !strings.HasPrefix(attr.Key, "x-fir-") {
+					continue
+				}
 
-			// First pass: identify attributes, collect actions, mark for removal
-			for i := range n.Attr {
-				attr := &n.Attr[i] // Use pointer
-				switch {
-				case attr.Key == "x-fir-live":
-					val := attr.Val // Capture value
-					liveAttrVal = &val
-					attrsToRemove[attr.Key] = struct{}{}
-				case attr.Key == "x-fir-refresh":
-					val := attr.Val
-					refreshAttrVal = &val
-					attrsToRemove[attr.Key] = struct{}{}
-				case attr.Key == "x-fir-remove":
-					val := attr.Val
-					removeAttrVal = &val
-					attrsToRemove[attr.Key] = struct{}{}
-				case strings.HasPrefix(attr.Key, "x-fir-action-"):
-					actionKey := strings.TrimPrefix(attr.Key, "x-fir-action-")
-					if actionKey != "" {
-						actionsMap[actionKey] = attr.Val
-						attrsToRemove[attr.Key] = struct{}{} // Also remove action attributes
+				attrsToRemove[i] = struct{}{} // Mark original attribute for removal
+
+				// Use parseActionExpression from lexer.go to parse the key
+				actionName, params, err := parseActionExpression(attr.Key)
+				if err != nil {
+					logger.Warnf("Skipping attribute with invalid key format '%s': %v", attr.Key, err)
+					continue // Skip this attribute if key parsing fails
+				}
+
+				var handler ActionHandler
+				var found bool
+
+				// Check for exact match first (e.g., "live", "refresh")
+				handler, found = actionRegistry[actionName]
+				if !found {
+					// Check for prefix match (only "action-" for now)
+					if strings.HasPrefix(actionName, "action-") {
+						handler, found = actionRegistry["action-"] // Lookup the prefix handler
+						if found {
+							// Collect value for actionsMap if it's an action prefix
+							actionKey := strings.TrimPrefix(actionName, "action-")
+							if actionKey != "" {
+								actionsMap[actionKey] = attr.Val
+							}
+						}
 					}
 				}
+
+				if !found {
+					logger.Warnf("No registered handler found for action name: %s (from key %s)", actionName, attr.Key)
+					continue // Skip if no handler is found
+				}
+
+				// Store handler and parsed info
+				info := ActionInfo{
+					AttrName:   attr.Key,
+					ActionName: actionName, // Store the specific parsed name (e.g., "live", "action-doSave")
+					Params:     params,
+					Value:      attr.Val,
+				}
+				collectedActions = append(collectedActions, collectedAction{Handler: handler, Info: info})
 			}
 
-			// Keep attributes that are not being removed
-			for _, attr := range n.Attr {
-				if _, found := attrsToRemove[attr.Key]; !found {
-					newAttrs = append(newAttrs, attr)
+			// Keep attributes that are not being removed initially
+			for i, attr := range n.Attr {
+				if _, found := attrsToRemove[i]; !found {
+					finalAttrs = append(finalAttrs, attr)
 				}
 			}
 
-			var translated string
-			var translationErr error
-			translationNeeded := false // Track if any translation occurred
+			// --- Second Pass: Process collected actions based on precedence ---
+			if len(collectedActions) > 0 {
+				modified = true // Mark node as modified since x-fir-* attrs were present
 
-			// Translate based on precedence: live > refresh > remove
-			if liveAttrVal != nil {
-				translationNeeded = true
-				translated, translationErr = TranslateRenderExpression(*liveAttrVal, actionsMap)
-				if translationErr != nil {
-					traverseErr = fmt.Errorf("error translating x-fir-live for node %s, expr '%s': %w", n.Data, *liveAttrVal, translationErr)
-				}
-			} else if refreshAttrVal != nil {
-				translationNeeded = true
-				translated, translationErr = TranslateEventExpression(*refreshAttrVal, "refresh")
-				if translationErr != nil {
-					traverseErr = fmt.Errorf("error translating x-fir-refresh for node %s, expr '%s': %w", n.Data, *refreshAttrVal, translationErr)
-				}
-			} else if removeAttrVal != nil {
-				translationNeeded = true
-				translated, translationErr = TranslateEventExpression(*removeAttrVal, "remove")
-				if translationErr != nil {
-					traverseErr = fmt.Errorf("error translating x-fir-remove for node %s, expr '%s': %w", n.Data, *removeAttrVal, translationErr)
-				}
-			}
+				// Sort collected actions by precedence (lowest number first)
+				sortActionsByPrecedence(collectedActions)
 
-			if traverseErr != nil {
-				return // Stop if translation error occurred
-			}
-
-			// If translation happened, add the new attributes
-			if translationNeeded {
-				modified = true // Mark that we made changes
-
-				// Split translated output into individual attributes (lines)
-				translatedAttrs := strings.Split(translated, "\n")
-				for _, translatedAttr := range translatedAttrs {
-					if translatedAttr == "" {
-						continue
-					}
-					parts := strings.SplitN(translatedAttr, "=", 2)
-					if len(parts) == 2 {
-						key := parts[0]
-						// Remove surrounding quotes from the value
-						val := strings.Trim(parts[1], `"`)
-						newAttrs = append(newAttrs, html.Attribute{Key: key, Val: val})
-					} else {
-						logger.Warnf("Skipping malformed translated attribute: %s", translatedAttr)
+				// Find the highest precedence handler that isn't the ActionPrefixHandler
+				var handlerToUse *collectedAction
+				for i := range collectedActions {
+					// Skip the placeholder ActionPrefixHandler for translation purposes
+					if _, ok := collectedActions[i].Handler.(*ActionPrefixHandler); !ok {
+						handlerToUse = &collectedActions[i]
+						break // Use the first one found after sorting by precedence
 					}
 				}
+
+				// If a translatable handler was found, translate it
+				if handlerToUse != nil {
+					translated, err := handlerToUse.Handler.Translate(handlerToUse.Info, actionsMap)
+					if err != nil {
+						// Use more specific error message including node type/name if possible
+						traverseErr = fmt.Errorf("error translating action '%s' for node %s, expr '%s': %w",
+							handlerToUse.Info.ActionName, n.Data, handlerToUse.Info.Value, err)
+						return // Stop processing this node on error
+					}
+
+					// Add translated attributes if translation produced output
+					if translated != "" {
+						translatedAttrs := parseTranslatedString(translated) // Use helper from actions.go
+						finalAttrs = append(finalAttrs, translatedAttrs...)
+					}
+				}
+				// Note: Even if only ActionPrefixHandler was present, 'modified' is true,
+				// and the original x-fir-action-* attributes are removed.
+
 				// Replace the node's attributes
-				n.Attr = newAttrs
+				n.Attr = finalAttrs
 			}
 		}
 
@@ -455,32 +462,56 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 	traverse(doc)
 	if traverseErr != nil {
-		// Return original content on error? Or the error? Returning error is safer.
-		return nil, traverseErr
+		return nil, traverseErr // Return error if traversal failed
 	}
 
-	// Only render if modifications were actually made
 	if !modified {
 		return content, nil // Return original content if no changes
 	}
 
-	// Render the modified HTML (same rendering logic as before)
+	// Render the modified HTML
 	var buf bytes.Buffer
-	for node := doc.FirstChild; node != nil; node = node.NextSibling {
-		if node.Type == html.ElementNode && node.Data == "html" {
-			for htmlChild := node.FirstChild; htmlChild != nil; htmlChild = htmlChild.NextSibling {
-				if htmlChild.Type == html.ElementNode && (htmlChild.Data == "head" || htmlChild.Data == "body") {
-					for contentChild := htmlChild.FirstChild; contentChild != nil; contentChild = contentChild.NextSibling {
-						if err := html.Render(&buf, contentChild); err != nil {
-							return nil, fmt.Errorf("error rendering modified HTML fragment node (%s child): %w", htmlChild.Data, err)
-						}
-					}
-				}
+	// Use html.Render directly on the potentially modified doc's body or children
+	// Avoid rendering the whole <html> structure if it wasn't there initially.
+	var renderNode *html.Node
+	if doc.FirstChild != nil && doc.FirstChild.Data == "html" && doc.FirstChild.NextSibling == nil { // Check if it's a full document
+		for child := doc.FirstChild.FirstChild; child != nil; child = child.NextSibling {
+			if child.Type == html.ElementNode && child.Data == "body" {
+				renderNode = child
+				break
 			}
-		} else {
-			if err := html.Render(&buf, node); err != nil {
-				return nil, fmt.Errorf("error rendering modified HTML fragment node (non-html root child %v): %w", node.Type, err)
+		}
+		// If body not found, maybe render head+body children? Or just body's?
+		// Let's stick to rendering body's children if body exists.
+		if renderNode == nil {
+			// Fallback: render the whole doc if structure is unexpected
+			renderNode = doc
+		}
+	} else {
+		// It's likely a fragment, render all top-level nodes
+		renderNode = doc
+	}
+
+	// Render children if rendering body/doc, or the node itself if it's the root fragment
+	startNode := renderNode.FirstChild
+	if renderNode == doc {
+		startNode = doc.FirstChild // Render from the first actual node in the fragment
+	} else if renderNode != nil && renderNode.Data == "body" {
+		startNode = renderNode.FirstChild // Render children of body
+	} else {
+		startNode = nil // Should not happen if renderNode logic is correct
+	}
+
+	for node := startNode; node != nil; node = node.NextSibling {
+		if err := html.Render(&buf, node); err != nil {
+			// Provide more context in render error
+			nodeDesc := node.Data
+			if node.Type == html.TextNode {
+				nodeDesc = "text"
+			} else if node.Type == html.CommentNode {
+				nodeDesc = "comment"
 			}
+			return nil, fmt.Errorf("error rendering modified HTML node (%s): %w", nodeDesc, err)
 		}
 	}
 

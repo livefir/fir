@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom" // Import atom package
 )
 
 func TestDeepMergeEventTemplates(t *testing.T) {
@@ -275,24 +276,24 @@ func normalizeHTML(t *testing.T, htmlBytes []byte) string {
 	if len(htmlBytes) == 0 {
 		return ""
 	}
-	doc, err := html.Parse(bytes.NewReader(htmlBytes))
-	require.NoError(t, err, "Failed to parse HTML for normalization")
+	// Use html.ParseFragment to handle fragments correctly, especially with comments
+	// Provide a body context for parsing isolated elements.
+	nodes, err := html.ParseFragment(bytes.NewReader(htmlBytes), &html.Node{
+		Type:     html.ElementNode,
+		Data:     "body",    // Context node type
+		DataAtom: atom.Body, // Use the correct atom for body
+	})
+	require.NoError(t, err, "Failed to parse HTML fragment for normalization")
 
 	var buf bytes.Buffer
-	err = html.Render(&buf, doc)
-	require.NoError(t, err, "Failed to render HTML for normalization")
-
-	// Basic whitespace cleanup and structure normalization
-	s := buf.String()
-	// Render adds html/head/body tags, remove them if the original didn't have them
-	// This is a simplification; robust normalization is complex.
-	if !bytes.Contains(htmlBytes, []byte("<html")) {
-		s = strings.Replace(s, "<html><head></head><body>", "", 1)
-		s = strings.Replace(s, "</body></html>", "", 1)
-	} else if !bytes.Contains(htmlBytes, []byte("<head")) {
-		s = strings.Replace(s, "<head></head>", "", 1)
+	// Render each top-level node returned by ParseFragment
+	for _, node := range nodes {
+		err = html.Render(&buf, node)
+		require.NoError(t, err, "Failed to render HTML fragment node for normalization")
 	}
 
+	// Basic whitespace cleanup
+	s := buf.String()
 	// Collapse multiple spaces and remove spaces around tags
 	s = strings.Join(strings.Fields(s), " ")
 	s = strings.ReplaceAll(s, " >", ">")
