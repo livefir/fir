@@ -403,15 +403,6 @@ func TestTranslateEventExpression(t *testing.T) {
 			wantErr:    false,
 		},
 
-		// --- Test cases for default/unknown actionType (assuming it defaults to replace) ---
-		{
-			name:       "default: single event",
-			input:      "notify",
-			actionType: "unknown", // Or ""
-			expected:   `@fir:notify:ok="$fir.replace()"`,
-			wantErr:    false,
-		},
-
 		// --- Error Cases (actionType doesn't matter here) ---
 		{
 			name:       "error: Invalid State",
@@ -431,7 +422,7 @@ func TestTranslateEventExpression(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Call the renamed function TranslateEventExpression
-			got, err := TranslateEventExpression(tt.input, tt.actionType)
+			got, err := TranslateEventExpression(tt.input, actionTypes[tt.actionType])
 
 			if tt.wantErr {
 				require.Error(t, err, "Expected an error but got none for input: %s, actionType: %s", tt.input, tt.actionType)

@@ -70,7 +70,7 @@ func (h *RefreshActionHandler) Name() string    { return "refresh" }
 func (h *RefreshActionHandler) Precedence() int { return 20 }
 func (h *RefreshActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("refresh")
-	return TranslateEventExpression(info.Value, h.Name())
+	return TranslateEventExpression(info.Value, "$fir.replace()")
 }
 
 // RemoveActionHandler handles x-fir-remove
@@ -80,7 +80,7 @@ func (h *RemoveActionHandler) Name() string    { return "remove" }
 func (h *RemoveActionHandler) Precedence() int { return 30 }
 func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove")
-	return TranslateEventExpression(info.Value, h.Name())
+	return TranslateEventExpression(info.Value, "$fir.removeEl()")
 }
 
 // ActionPrefixHandler handles x-fir-action-* (doesn't translate directly, just used for collection)
