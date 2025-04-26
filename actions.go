@@ -83,6 +83,17 @@ func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]s
 	return TranslateEventExpression(info.Value, "$fir.removeEl()")
 }
 
+// RemoveParentActionHandler handles x-fir-remove-parent
+type RemoveParentActionHandler struct{}
+
+func (h *RemoveParentActionHandler) Name() string    { return "remove-parent" }
+func (h *RemoveParentActionHandler) Precedence() int { return 40 }
+func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// TranslateEventExpression needs the value and the action name ("remove-parent")
+	// Assuming the JS function is $fir.removeParentEl()
+	return TranslateEventExpression(info.Value, "$fir.removeParentEl()")
+}
+
 // ActionPrefixHandler handles x-fir-action-* (doesn't translate directly, just used for collection)
 type ActionPrefixHandler struct{}
 
@@ -99,7 +110,8 @@ func init() {
 	RegisterActionHandler(&LiveActionHandler{})
 	RegisterActionHandler(&RefreshActionHandler{})
 	RegisterActionHandler(&RemoveActionHandler{})
-	RegisterActionHandler(&ActionPrefixHandler{}) // Register the prefix handler
+	RegisterActionHandler(&RemoveParentActionHandler{}) // Register the new handler
+	RegisterActionHandler(&ActionPrefixHandler{})       // Register the prefix handler
 }
 
 // Helper struct for processing within processRenderAttributes

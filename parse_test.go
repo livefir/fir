@@ -619,6 +619,25 @@ func TestProcessRenderAttributes(t *testing.T) {
 			expectedHTML: `<div @fir:delete:ok="$fir.removeEl()">Delete</div>`,
 			wantErr:      false,
 		},
+		// --- x-fir-remove-parent tests ---
+		{
+			name:         "Only x-fir-remove-parent",
+			inputHTML:    `<div x-fir-remove-parent="delete:ok.nohtml">Item</div>`,
+			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeParentEl()">Item</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-remove-parent multiple events",
+			inputHTML:    `<div x-fir-remove-parent="clear:ok, reset:done">Clear</div>`,
+			expectedHTML: `<div @fir:[clear:ok,reset:done]="$fir.removeParentEl()">Clear</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-remove-parent ignores target and action",
+			inputHTML:    `<div x-fir-remove-parent="delete->target=>doDelete">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeParentEl()">Delete</div>`,
+			wantErr:      false,
+		},
 		// --- x-fir-live tests ---
 		{
 			name:         "Only x-fir-live (no actions)",
@@ -652,15 +671,21 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		// --- Precedence tests ---
 		{
-			name:         "Precedence: live > refresh > remove",
-			inputHTML:    `<div x-fir-live="a=>act" x-fir-refresh="b" x-fir-remove="c" x-fir-action-act="doAct()">Live</div>`,
+			name:         "Precedence: live > refresh > remove > remove-parent",
+			inputHTML:    `<div x-fir-live="a=>act" x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d" x-fir-action-act="doAct()">Live</div>`,
 			expectedHTML: `<div @fir:a:ok="doAct()">Live</div>`, // Only live is processed
 			wantErr:      false,
 		},
 		{
-			name:         "Precedence: refresh > remove",
-			inputHTML:    `<div x-fir-refresh="b" x-fir-remove="c">Refresh</div>`,
+			name:         "Precedence: refresh > remove > remove-parent",
+			inputHTML:    `<div x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d">Refresh</div>`,
 			expectedHTML: `<div @fir:b:ok="$fir.replace()">Refresh</div>`, // Only refresh is processed
+			wantErr:      false,
+		},
+		{
+			name:         "Precedence: remove > remove-parent",
+			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d">Remove</div>`,
+			expectedHTML: `<div @fir:c:ok="$fir.removeEl()">Remove</div>`, // Only remove is processed
 			wantErr:      false,
 		},
 		// --- General tests ---
@@ -734,6 +759,18 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Error: Empty x-fir-remove",
 			inputHTML:    `<div x-fir-remove="">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Invalid x-fir-remove-parent expression",
+			inputHTML:    `<div x-fir-remove-parent=".mod">Error</div>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Error: Empty x-fir-remove-parent",
+			inputHTML:    `<div x-fir-remove-parent="">Error</div>`,
 			expectedHTML: "", // Not checked on error
 			wantErr:      true,
 		},
