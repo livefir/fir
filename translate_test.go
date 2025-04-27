@@ -346,16 +346,20 @@ func TestTranslateRenderExpression(t *testing.T) {
 func TestTranslateEventExpression(t *testing.T) {
 	// Define different action types to test
 	actionTypes := map[string]string{
-		"refresh": "$fir.replace()",
-		"remove":  "$fir.removeEl()",
+		"refresh":       "$fir.replace()",
+		"remove":        "$fir.removeEl()",
+		"remove-parent": "$fir.removeParentEl()",
+		"append":        "$fir.appendEl()",
+		"prepend":       "$fir.prependEl()",
 	}
 
 	tests := []struct {
-		name       string
-		input      string
-		actionType string // Add actionType to the test case struct
-		expected   string
-		wantErr    bool
+		name          string
+		input         string
+		actionType    string // Add actionType to the test case struct
+		templateValue string // Add templateValue for testing
+		expected      string
+		wantErr       bool
 	}{
 		// --- Test cases for "refresh" actionType ---
 		{
@@ -366,11 +370,27 @@ func TestTranslateEventExpression(t *testing.T) {
 			wantErr:    false,
 		},
 		{
+			name:          "refresh: single event, with templateValue",
+			input:         "click",
+			actionType:    "refresh",
+			templateValue: "myTemplate",
+			expected:      `@fir:click:ok::myTemplate="$fir.replace()"`,
+			wantErr:       false,
+		},
+		{
 			name:       "refresh: single event, template target (ignored)",
 			input:      "submit->myform",
 			actionType: "refresh",
-			expected:   `@fir:submit:ok="$fir.replace()"`,
+			expected:   `@fir:submit:ok="$fir.replace()"`, // TranslateEventExpression ignores targets in input
 			wantErr:    false,
+		},
+		{
+			name:          "refresh: single event, template target (ignored), with templateValue",
+			input:         "submit->myform",
+			actionType:    "refresh",
+			templateValue: "overrideTmpl",
+			expected:      `@fir:submit:ok::overrideTmpl="$fir.replace()"`, // templateValue overrides ignored target
+			wantErr:       false,
 		},
 		{
 			name:       "refresh: multiple expressions (semicolon) with targets (ignored)",
@@ -378,6 +398,14 @@ func TestTranslateEventExpression(t *testing.T) {
 			actionType: "refresh",
 			expected:   "@fir:create:ok.debounce=\"$fir.replace()\"\n@fir:delete:error.nohtml=\"$fir.replace()\"",
 			wantErr:    false,
+		},
+		{
+			name:          "refresh: multiple expressions (semicolon), with templateValue",
+			input:         "create:ok.debounce->todo;delete:error.nohtml=>replace",
+			actionType:    "refresh",
+			templateValue: "commonTmpl",
+			expected:      "@fir:create:ok::commonTmpl.debounce=\"$fir.replace()\"\n@fir:delete:error::commonTmpl.nohtml=\"$fir.replace()\"",
+			wantErr:       false,
 		},
 
 		// --- Test cases for "remove" actionType ---
@@ -387,6 +415,14 @@ func TestTranslateEventExpression(t *testing.T) {
 			actionType: "remove",
 			expected:   `@fir:delete:ok="$fir.removeEl()"`,
 			wantErr:    false,
+		},
+		{
+			name:          "remove: single event, with templateValue",
+			input:         "delete",
+			actionType:    "remove",
+			templateValue: "itemTmpl",
+			expected:      `@fir:delete:ok::itemTmpl="$fir.removeEl()"`,
+			wantErr:       false,
 		},
 		{
 			name:       "remove: single event, template target (ignored)",
@@ -400,6 +436,146 @@ func TestTranslateEventExpression(t *testing.T) {
 			input:      "clear:ok,reset:done.mod",
 			actionType: "remove",
 			expected:   `@fir:[clear:ok,reset:done].mod="$fir.removeEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "remove: multiple events (comma) with modifier and templateValue",
+			input:         "clear:ok,reset:done.mod",
+			actionType:    "remove",
+			templateValue: "listTmpl",
+			expected:      `@fir:[clear:ok,reset:done]::listTmpl.mod="$fir.removeEl()"`,
+			wantErr:       false,
+		},
+
+		// --- Test cases for "append" actionType ---
+		{
+			name:       "append: single event, no target",
+			input:      "add",
+			actionType: "append",
+			expected:   `@fir:add:ok="$fir.appendEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "append: single event, with templateValue",
+			input:         "add",
+			actionType:    "append",
+			templateValue: "newItem",
+			expected:      `@fir:add:ok::newItem="$fir.appendEl()"`,
+			wantErr:       false,
+		},
+		{
+			name:       "append: single event, template target (ignored)",
+			input:      "insert->items",
+			actionType: "append",
+			expected:   `@fir:insert:ok="$fir.appendEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:       "append: multiple events (comma) with modifier",
+			input:      "add:ok,new:pending.fast",
+			actionType: "append",
+			expected:   `@fir:[add:ok,new:pending].fast="$fir.appendEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "append: multiple events (comma) with modifier and templateValue",
+			input:         "add:ok,new:pending.fast",
+			actionType:    "append",
+			templateValue: "entryTmpl",
+			expected:      `@fir:[add:ok,new:pending]::entryTmpl.fast="$fir.appendEl()"`,
+			wantErr:       false,
+		},
+		{
+			name:       "append: multiple expressions (semicolon) with targets (ignored)",
+			input:      "add_item:ok.debounce->list;add_another=>doAdd",
+			actionType: "append",
+			expected:   "@fir:add_item:ok.debounce=\"$fir.appendEl()\"\n@fir:add_another:ok=\"$fir.appendEl()\"",
+			wantErr:    false,
+		},
+		{
+			name:          "append: multiple expressions (semicolon) with templateValue",
+			input:         "add_item:ok.debounce->list;add_another=>doAdd",
+			actionType:    "append",
+			templateValue: "rowTmpl",
+			expected:      "@fir:add_item:ok::rowTmpl.debounce=\"$fir.appendEl()\"\n@fir:add_another:ok::rowTmpl=\"$fir.appendEl()\"",
+			wantErr:       false,
+		},
+
+		// --- Test cases for "prepend" actionType ---
+		{
+			name:       "prepend: single event, no target",
+			input:      "add_first",
+			actionType: "prepend",
+			expected:   `@fir:add_first:ok="$fir.prependEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "prepend: single event, with templateValue",
+			input:         "add_first",
+			actionType:    "prepend",
+			templateValue: "headerItem",
+			expected:      `@fir:add_first:ok::headerItem="$fir.prependEl()"`,
+			wantErr:       false,
+		},
+		{
+			name:       "prepend: multiple events (comma) with modifier",
+			input:      "insert_top:ok,push_front:pending.slow",
+			actionType: "prepend",
+			expected:   `@fir:[insert_top:ok,push_front:pending].slow="$fir.prependEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "prepend: multiple events (comma) with modifier and templateValue",
+			input:         "insert_top:ok,push_front:pending.slow",
+			actionType:    "prepend",
+			templateValue: "firstEntry",
+			expected:      `@fir:[insert_top:ok,push_front:pending]::firstEntry.slow="$fir.prependEl()"`,
+			wantErr:       false,
+		},
+		{
+			name:       "prepend: multiple expressions (semicolon)",
+			input:      "add_head->list;add_start=>doPrepend",
+			actionType: "prepend",
+			expected:   "@fir:add_head:ok=\"$fir.prependEl()\"\n@fir:add_start:ok=\"$fir.prependEl()\"",
+			wantErr:    false,
+		},
+
+		// --- Test cases for "remove-parent" actionType ---
+		{
+			name:       "remove-parent: single event",
+			input:      "close_container",
+			actionType: "remove-parent",
+			expected:   `@fir:close_container:ok="$fir.removeParentEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "remove-parent: single event, with templateValue (ignored by action)",
+			input:         "close_container",
+			actionType:    "remove-parent",
+			templateValue: "containerTmpl", // Template is still part of the attribute key
+			expected:      `@fir:close_container:ok::containerTmpl="$fir.removeParentEl()"`,
+			wantErr:       false,
+		},
+		{
+			name:       "remove-parent: multiple events (comma) with modifier",
+			input:      "dismiss:ok,hide:done.now",
+			actionType: "remove-parent",
+			expected:   `@fir:[dismiss:ok,hide:done].now="$fir.removeParentEl()"`,
+			wantErr:    false,
+		},
+		{
+			name:          "remove-parent: multiple events (comma) with modifier and templateValue",
+			input:         "dismiss:ok,hide:done.now",
+			actionType:    "remove-parent",
+			templateValue: "modalTmpl",
+			expected:      `@fir:[dismiss:ok,hide:done]::modalTmpl.now="$fir.removeParentEl()"`,
+			wantErr:       false,
+		},
+		{
+			name:       "remove-parent: multiple expressions (semicolon)",
+			input:      "close_modal->modal;hide_popup=>doHide",
+			actionType: "remove-parent",
+			expected:   "@fir:close_modal:ok=\"$fir.removeParentEl()\"\n@fir:hide_popup:ok=\"$fir.removeParentEl()\"",
 			wantErr:    false,
 		},
 
@@ -421,21 +597,26 @@ func TestTranslateEventExpression(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Call the renamed function TranslateEventExpression
-			got, err := TranslateEventExpression(tt.input, actionTypes[tt.actionType])
+			// Get the expected action value based on actionType
+			actionValue, ok := actionTypes[tt.actionType]
+			if !ok {
+				t.Fatalf("Invalid actionType '%s' in test case '%s'", tt.actionType, tt.name)
+			}
+
+			var got string
+			var err error
+			// Call TranslateEventExpression, passing templateValue if provided
+			if tt.templateValue != "" {
+				got, err = TranslateEventExpression(tt.input, actionValue, tt.templateValue)
+			} else {
+				got, err = TranslateEventExpression(tt.input, actionValue)
+			}
 
 			if tt.wantErr {
-				require.Error(t, err, "Expected an error but got none for input: %s, actionType: %s", tt.input, tt.actionType)
+				require.Error(t, err, "Expected an error but got none for input: %s, actionType: %s, templateValue: '%s'", tt.input, tt.actionType, tt.templateValue)
 			} else {
-				require.NoError(t, err, "Got unexpected error for input: %s, actionType: %s", tt.input, tt.actionType)
-				// Check if the expected action matches the actionType tested
-				expectedAction, ok := actionTypes[tt.actionType]
-				if !ok {
-					expectedAction = actionTypes["refresh"] // Assuming refresh is the default
-				}
-				// Ensure the expected string uses the correct default action for the test case
-				require.Contains(t, tt.expected, expectedAction, "Test case expected output doesn't match the actionType being tested")
-				require.Equal(t, tt.expected, got, "Mismatch for input: %s, actionType: %s", tt.input, tt.actionType)
+				require.NoError(t, err, "Got unexpected error for input: %s, actionType: %s, templateValue: '%s'", tt.input, tt.actionType, tt.templateValue)
+				require.Equal(t, tt.expected, got, "Mismatch for input: %s, actionType: %s, templateValue: '%s'", tt.input, tt.actionType, tt.templateValue)
 			}
 		})
 	}

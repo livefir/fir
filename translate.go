@@ -155,8 +155,14 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 }
 
 // TranslateEventExpression translates a render expression string focusing only on event expressions
-// into canonical @fir event binding attributes, ignoring any template or action targets.
-func TranslateEventExpression(input string, actionValue string) (string, error) {
+// into canonical @fir event binding attributes, ignoring any parsed action targets.
+// It accepts an actionValue to be used in the attribute and an optional templateValue.
+func TranslateEventExpression(input string, actionValue string, templateValue ...string) (string, error) {
+	var template string
+	if len(templateValue) > 0 {
+		template = templateValue[0]
+	}
+
 	parser, err := getRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("error creating parser: %w", err)
@@ -183,11 +189,12 @@ func TranslateEventExpression(input string, actionValue string) (string, error) 
 				eventPart := eventExpr.Name + state
 				eventParts = append(eventParts, eventPart)
 
-				// Collect unique modifiers
+				// Collect unique modifiers, removing the leading dot for storage
 				if eventExpr.Modifier != "" {
-					if _, exists := modifierSet[eventExpr.Modifier]; !exists {
-						modifiers = append(modifiers, eventExpr.Modifier)
-						modifierSet[eventExpr.Modifier] = struct{}{}
+					mod := strings.TrimPrefix(eventExpr.Modifier, ".")
+					if _, exists := modifierSet[mod]; !exists {
+						modifiers = append(modifiers, mod)
+						modifierSet[mod] = struct{}{}
 					}
 				}
 			}
@@ -200,11 +207,19 @@ func TranslateEventExpression(input string, actionValue string) (string, error) 
 				eventStr = "[" + strings.Join(eventParts, ",") + "]"
 			}
 
-			// Append modifiers
-			modifierStr := strings.Join(modifiers, "")
+			// Sort and format modifiers
+			sort.Strings(modifiers)
+			modifierStr := ""
+			if len(modifiers) > 0 {
+				modifierStr = "." + strings.Join(modifiers, ".")
+			}
 
-			// Construct the final attribute string for this binding, ignoring any parsed target
-			attribute := fmt.Sprintf("@fir:%s%s=\"%s\"", eventStr, modifierStr, actionValue)
+			// Construct the final attribute string for this binding
+			attribute := fmt.Sprintf("@fir:%s", eventStr)
+			if template != "" {
+				attribute += fmt.Sprintf("::%s", template)
+			}
+			attribute += fmt.Sprintf("%s=\"%s\"", modifierStr, actionValue)
 			results = append(results, attribute)
 		}
 	}
