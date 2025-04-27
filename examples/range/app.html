@@ -30,7 +30,7 @@
                 value="0"
                 @input="$fir.emit('update',{count: $event.target.value})" />
 
-            <div @fir:update:ok="$fir.replace()">
+            <div x-fir-refresh="update">
                 Price:
                 {{ .total }}
             </div>

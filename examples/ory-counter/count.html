@@ -16,7 +16,7 @@
 
     <body>
         <div x-data>
-            <div @fir:[inc:ok,dec:ok]="$fir.replace()">
+            <div x-fir-refresh="inc,dec">
                 Count:
                 {{ .count }}
             </div>

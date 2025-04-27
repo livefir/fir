@@ -654,6 +654,7 @@ func (rt *route) parseTemplates() {
 		var rtTemplate *template.Template
 		rtTemplate, successEventTemplates, err = parseTemplate(rt.routeOpt)
 		if err != nil {
+			logger.Errorf("error parsing template: %v", err)
 			panic(err)
 		}
 		rtTemplate.Option("missingkey=zero")

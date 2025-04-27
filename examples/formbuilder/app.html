@@ -1,13 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        {{ if fir.Development }}
-            <script defer src="http://localhost:8000/cdn.js"></script>
-        {{ else }}
-            <script
-                defer
-                src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
-        {{ end }}
+        <script
+            defer
+            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
         <script
             defer
             src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -19,33 +15,23 @@
     <body>
         <div x-data>
             {{ define "input-text" }}
-                <div fir-key="{{ .key }}" @fir:remove:ok="$fir.removeEl()">
+                <div fir-key="{{ .key }}" x-fir-remove="remove">
                     <form method="post" @submit.prevent="$fir.submit()">
                         <input
                             type="text"
                             name="text"
                             placeholder="input something" />
-                        <button
-                            formaction="/?event=remove"
-                            name="element"
-                            value="input-text">
-                            Remove
-                        </button>
+                        <button formaction="/?event=remove">Remove</button>
                     </form>
                 </div>
             {{ end }}
 
 
             <form method="post" @submit.prevent="$fir.submit()">
-                <button
-                    formaction="/?event=add"
-                    name="element"
-                    value="input-text">
-                    Add input
-                </button>
+                <button formaction="/?event=add">Add input</button>
             </form>
 
-            <div @fir:add:ok::input-text.window="$fir.appendEl()"></div>
+            <div x-fir-append:input-text="add"></div>
         </div>
     </body>
 </html>

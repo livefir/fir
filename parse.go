@@ -250,12 +250,18 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 			if err1 != nil {
 				return fileInfo{name: name, err: err1}
 			}
+			// extractTemplates internally calls processRenderAttributes which uses html.Render, escaping attributes
 			b, blocks, err2 := extractTemplates(b)
 			if err2 != nil {
 				return fileInfo{name: name, err: err2}
 			}
 
-			return readAttributes(fileInfo{name: name, content: b, blocks: blocks})
+			// Unescape the content before passing it to the template parser
+			// to revert the escaping done by html.Render in processRenderAttributes.
+			unescapedBytes := []byte(html.UnescapeString(string(b)))
+
+			// Pass the unescaped content to readAttributes
+			return readAttributes(fileInfo{name: name, content: unescapedBytes, blocks: blocks})
 		})
 	}
 
@@ -268,7 +274,7 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 			return t, evt, fi.err
 		}
 
-		s := string(fi.content)
+		s := string(fi.content) // This content should now be unescaped
 		// First template becomes return value if not already defined,
 		// and we use that one for subsequent New calls to associate
 		// all the templates together. Also, if this file has the same name
@@ -284,7 +290,9 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 			tmpl = t.New(fi.name)
 		}
 
+		// Parse the potentially unescaped string
 		if _, err := tmpl.Parse(s); err != nil {
+			logger.Errorf("content: %s, error parsing %s: %v", s, fi.name, err)
 			return t, evt, fmt.Errorf("parsing %s: %v", fi.name, err)
 		}
 		for name, block := range fi.blocks {

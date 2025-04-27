@@ -38,7 +38,7 @@
                     @input="$dispatch('input-changed')" />
             </form>
 
-            <div @fir:query:ok="$fir.replace()">
+            <div x-fir-refresh="query">
                 {{- range $k,$v := .cities }}
                     <div id="{{ $k }}">{{ $v }}</div>
                 {{- end }}

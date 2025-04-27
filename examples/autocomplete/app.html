@@ -33,7 +33,7 @@
                 autofocus
                 @input="$fir.emit('query',{query: $event.target.value})" />
 
-            <datalist id="cities" x-fir-replace-on="query">
+            <datalist id="cities" x-fir-refresh="query">
                 {{ range .cities }}
                     <option value="{{ . }}"></option>
                 {{ end }}
