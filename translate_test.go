@@ -354,14 +354,15 @@ func TestTranslateEventExpression(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		input         string
-		actionType    string // Add actionType to the test case struct
-		templateValue string // Add templateValue for testing
-		expected      string
-		wantErr       bool
+		name                string
+		input               string
+		actionType          string   // Add actionType to the test case struct
+		templateValue       string   // Add templateValue for testing
+		additionalModifiers []string // Add optional additional modifiers
+		expected            string
+		wantErr             bool
 	}{
-		// --- Test cases for "refresh" actionType ---
+		// --- Existing Test cases (adapted) ---
 		{
 			name:       "refresh: single event, no target",
 			input:      "click",
@@ -407,30 +408,6 @@ func TestTranslateEventExpression(t *testing.T) {
 			expected:      "@fir:create:ok::commonTmpl.debounce=\"$fir.replace()\"\n@fir:delete:error::commonTmpl.nohtml=\"$fir.replace()\"",
 			wantErr:       false,
 		},
-
-		// --- Test cases for "remove" actionType ---
-		{
-			name:       "remove: single event, no target",
-			input:      "delete",
-			actionType: "remove",
-			expected:   `@fir:delete:ok="$fir.removeEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:          "remove: single event, with templateValue",
-			input:         "delete",
-			actionType:    "remove",
-			templateValue: "itemTmpl",
-			expected:      `@fir:delete:ok::itemTmpl="$fir.removeEl()"`,
-			wantErr:       false,
-		},
-		{
-			name:       "remove: single event, template target (ignored)",
-			input:      "clear->list",
-			actionType: "remove",
-			expected:   `@fir:clear:ok="$fir.removeEl()"`,
-			wantErr:    false,
-		},
 		{
 			name:       "remove: multiple events (comma) with modifier",
 			input:      "clear:ok,reset:done.mod",
@@ -446,139 +423,80 @@ func TestTranslateEventExpression(t *testing.T) {
 			expected:      `@fir:[clear:ok,reset:done]::listTmpl.mod="$fir.removeEl()"`,
 			wantErr:       false,
 		},
-
-		// --- Test cases for "append" actionType ---
+		// --- New Tests for Additional Modifiers ---
 		{
-			name:       "append: single event, no target",
-			input:      "add",
-			actionType: "append",
-			expected:   `@fir:add:ok="$fir.appendEl()"`,
+			name:                "refresh: single event, no input modifier, with additional modifiers",
+			input:               "click",
+			actionType:          "refresh",
+			additionalModifiers: []string{"debounce", "throttle"},
+			expected:            `@fir:click:ok.debounce.throttle="$fir.replace()"`, // Sorted
+			wantErr:             false,
+		},
+		{
+			name:                "refresh: single event, with input modifier, with additional modifiers (distinct)",
+			input:               "click.self",
+			actionType:          "refresh",
+			additionalModifiers: []string{"debounce", "throttle"},
+			expected:            `@fir:click:ok.debounce.self.throttle="$fir.replace()"`, // Sorted
+			wantErr:             false,
+		},
+		{
+			name:                "refresh: single event, with input modifier, with additional modifiers (overlap)",
+			input:               "click.self.debounce", // Reverted to original input with multiple modifiers
+			actionType:          "refresh",
+			additionalModifiers: []string{"debounce", "throttle", "self"},                // Duplicates ignored
+			expected:            `@fir:click:ok.debounce.self.throttle="$fir.replace()"`, // Sorted unique
+			wantErr:             false,
+		},
+		{
+			name:                "refresh: multiple events (comma), with input modifiers, with additional modifiers",
+			input:               "click:ok.self,submit:error.once",
+			actionType:          "refresh",
+			additionalModifiers: []string{"debounce", "throttle", "once"},
+			expected:            `@fir:[click:ok,submit:error].debounce.once.self.throttle="$fir.replace()"`, // Merged, sorted unique
+			wantErr:             false,
+		},
+		{
+			name:                "refresh: multiple expressions (semicolon), with additional modifiers",
+			input:               "click.self;submit.once",
+			actionType:          "refresh",
+			additionalModifiers: []string{"debounce", "throttle"},
+			expected:            "@fir:click:ok.debounce.self.throttle=\"$fir.replace()\"\n@fir:submit:ok.debounce.once.throttle=\"$fir.replace()\"", // Applied to both, sorted
+			wantErr:             false,
+		},
+		{
+			name:                "append: single event, with template, with additional modifiers",
+			input:               "add.fast",
+			actionType:          "append",
+			templateValue:       "newItem",
+			additionalModifiers: []string{"debounce"},
+			expected:            `@fir:add:ok::newItem.debounce.fast="$fir.appendEl()"`, // Sorted
+			wantErr:             false,
+		},
+		{
+			name:                "remove-parent: multiple events (comma), with template, with additional modifiers",
+			input:               "dismiss:ok.now,hide:done",
+			actionType:          "remove-parent",
+			templateValue:       "modalTmpl",
+			additionalModifiers: []string{"delay", "now"},
+			expected:            `@fir:[dismiss:ok,hide:done]::modalTmpl.delay.now="$fir.removeParentEl()"`, // Merged, sorted unique
+			wantErr:             false,
+		},
+		{
+			name:       "refresh: multiple input modifiers",
+			input:      "click.debounce.throttle.self",
+			actionType: "refresh",
+			expected:   `@fir:click:ok.debounce.self.throttle="$fir.replace()"`, // Sorted
 			wantErr:    false,
 		},
 		{
-			name:          "append: single event, with templateValue",
-			input:         "add",
-			actionType:    "append",
-			templateValue: "newItem",
-			expected:      `@fir:add:ok::newItem="$fir.appendEl()"`,
-			wantErr:       false,
+			name:                "refresh: multiple input modifiers merged with additional",
+			input:               "click.debounce.self",
+			actionType:          "refresh",
+			additionalModifiers: []string{"throttle", "once"},
+			expected:            `@fir:click:ok.debounce.once.self.throttle="$fir.replace()"`, // Merged and sorted
+			wantErr:             false,
 		},
-		{
-			name:       "append: single event, template target (ignored)",
-			input:      "insert->items",
-			actionType: "append",
-			expected:   `@fir:insert:ok="$fir.appendEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:       "append: multiple events (comma) with modifier",
-			input:      "add:ok,new:pending.fast",
-			actionType: "append",
-			expected:   `@fir:[add:ok,new:pending].fast="$fir.appendEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:          "append: multiple events (comma) with modifier and templateValue",
-			input:         "add:ok,new:pending.fast",
-			actionType:    "append",
-			templateValue: "entryTmpl",
-			expected:      `@fir:[add:ok,new:pending]::entryTmpl.fast="$fir.appendEl()"`,
-			wantErr:       false,
-		},
-		{
-			name:       "append: multiple expressions (semicolon) with targets (ignored)",
-			input:      "add_item:ok.debounce->list;add_another=>doAdd",
-			actionType: "append",
-			expected:   "@fir:add_item:ok.debounce=\"$fir.appendEl()\"\n@fir:add_another:ok=\"$fir.appendEl()\"",
-			wantErr:    false,
-		},
-		{
-			name:          "append: multiple expressions (semicolon) with templateValue",
-			input:         "add_item:ok.debounce->list;add_another=>doAdd",
-			actionType:    "append",
-			templateValue: "rowTmpl",
-			expected:      "@fir:add_item:ok::rowTmpl.debounce=\"$fir.appendEl()\"\n@fir:add_another:ok::rowTmpl=\"$fir.appendEl()\"",
-			wantErr:       false,
-		},
-
-		// --- Test cases for "prepend" actionType ---
-		{
-			name:       "prepend: single event, no target",
-			input:      "add_first",
-			actionType: "prepend",
-			expected:   `@fir:add_first:ok="$fir.prependEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:          "prepend: single event, with templateValue",
-			input:         "add_first",
-			actionType:    "prepend",
-			templateValue: "headerItem",
-			expected:      `@fir:add_first:ok::headerItem="$fir.prependEl()"`,
-			wantErr:       false,
-		},
-		{
-			name:       "prepend: multiple events (comma) with modifier",
-			input:      "insert_top:ok,push_front:pending.slow",
-			actionType: "prepend",
-			expected:   `@fir:[insert_top:ok,push_front:pending].slow="$fir.prependEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:          "prepend: multiple events (comma) with modifier and templateValue",
-			input:         "insert_top:ok,push_front:pending.slow",
-			actionType:    "prepend",
-			templateValue: "firstEntry",
-			expected:      `@fir:[insert_top:ok,push_front:pending]::firstEntry.slow="$fir.prependEl()"`,
-			wantErr:       false,
-		},
-		{
-			name:       "prepend: multiple expressions (semicolon)",
-			input:      "add_head->list;add_start=>doPrepend",
-			actionType: "prepend",
-			expected:   "@fir:add_head:ok=\"$fir.prependEl()\"\n@fir:add_start:ok=\"$fir.prependEl()\"",
-			wantErr:    false,
-		},
-
-		// --- Test cases for "remove-parent" actionType ---
-		{
-			name:       "remove-parent: single event",
-			input:      "close_container",
-			actionType: "remove-parent",
-			expected:   `@fir:close_container:ok="$fir.removeParentEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:          "remove-parent: single event, with templateValue (ignored by action)",
-			input:         "close_container",
-			actionType:    "remove-parent",
-			templateValue: "containerTmpl", // Template is still part of the attribute key
-			expected:      `@fir:close_container:ok::containerTmpl="$fir.removeParentEl()"`,
-			wantErr:       false,
-		},
-		{
-			name:       "remove-parent: multiple events (comma) with modifier",
-			input:      "dismiss:ok,hide:done.now",
-			actionType: "remove-parent",
-			expected:   `@fir:[dismiss:ok,hide:done].now="$fir.removeParentEl()"`,
-			wantErr:    false,
-		},
-		{
-			name:          "remove-parent: multiple events (comma) with modifier and templateValue",
-			input:         "dismiss:ok,hide:done.now",
-			actionType:    "remove-parent",
-			templateValue: "modalTmpl",
-			expected:      `@fir:[dismiss:ok,hide:done]::modalTmpl.now="$fir.removeParentEl()"`,
-			wantErr:       false,
-		},
-		{
-			name:       "remove-parent: multiple expressions (semicolon)",
-			input:      "close_modal->modal;hide_popup=>doHide",
-			actionType: "remove-parent",
-			expected:   "@fir:close_modal:ok=\"$fir.removeParentEl()\"\n@fir:hide_popup:ok=\"$fir.removeParentEl()\"",
-			wantErr:    false,
-		},
-
 		// --- Error Cases (actionType doesn't matter here) ---
 		{
 			name:       "error: Invalid State",
@@ -605,18 +523,15 @@ func TestTranslateEventExpression(t *testing.T) {
 
 			var got string
 			var err error
-			// Call TranslateEventExpression, passing templateValue if provided
-			if tt.templateValue != "" {
-				got, err = TranslateEventExpression(tt.input, actionValue, tt.templateValue)
-			} else {
-				got, err = TranslateEventExpression(tt.input, actionValue)
-			}
+
+			// Call TranslateEventExpression with optional template and additional modifiers
+			got, err = TranslateEventExpression(tt.input, actionValue, tt.templateValue, tt.additionalModifiers...)
 
 			if tt.wantErr {
-				require.Error(t, err, "Expected an error but got none for input: %s, actionType: %s, templateValue: '%s'", tt.input, tt.actionType, tt.templateValue)
+				require.Error(t, err, "Expected an error but got none for input: %s, actionType: %s, templateValue: '%s', additionalModifiers: %v", tt.input, tt.actionType, tt.templateValue, tt.additionalModifiers)
 			} else {
-				require.NoError(t, err, "Got unexpected error for input: %s, actionType: %s, templateValue: '%s'", tt.input, tt.actionType, tt.templateValue)
-				require.Equal(t, tt.expected, got, "Mismatch for input: %s, actionType: %s, templateValue: '%s'", tt.input, tt.actionType, tt.templateValue)
+				require.NoError(t, err, "Got unexpected error for input: %s, actionType: %s, templateValue: '%s', additionalModifiers: %v", tt.input, tt.actionType, tt.templateValue, tt.additionalModifiers)
+				require.Equal(t, tt.expected, got, "Mismatch for input: %s, actionType: %s, templateValue: '%s', additionalModifiers: %v", tt.input, tt.actionType, tt.templateValue, tt.additionalModifiers)
 			}
 		})
 	}

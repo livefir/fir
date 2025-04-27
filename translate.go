@@ -60,8 +60,9 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 				// Use helper to apply default state ":ok" if missing
 				eventState := getStateOrDefault(eventExpr.State)
 				allEventStrings = append(allEventStrings, fmt.Sprintf("%s%s", eventExpr.Name, eventState))
-				if eventExpr.Modifier != "" {
-					allModifierSet[strings.TrimPrefix(eventExpr.Modifier, ".")] = struct{}{}
+				// Collect unique modifiers from the expression
+				for _, mod := range eventExpr.Modifiers { // Iterate over the slice
+					allModifierSet[strings.TrimPrefix(mod, ".")] = struct{}{}
 				}
 			}
 			// "Last target wins" rule for comma-separated bindings within an expression
@@ -156,11 +157,12 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 
 // TranslateEventExpression translates a render expression string focusing only on event expressions
 // into canonical @fir event binding attributes, ignoring any parsed action targets.
-// It accepts an actionValue to be used in the attribute and an optional templateValue.
-func TranslateEventExpression(input string, actionValue string, templateValue ...string) (string, error) {
+// It accepts an actionValue to be used in the attribute, an optional templateValue,
+// and optional additionalModifiers to merge with parsed ones.
+func TranslateEventExpression(input string, actionValue string, templateValue string, additionalModifiers ...string) (string, error) {
 	var template string
-	if len(templateValue) > 0 {
-		template = templateValue[0]
+	if templateValue != "" {
+		template = templateValue
 	}
 
 	parser, err := getRenderExpressionParser()
@@ -178,7 +180,6 @@ func TranslateEventExpression(input string, actionValue string, templateValue ..
 	for _, expr := range parsed.Expressions {
 		for _, binding := range expr.Bindings {
 			var eventParts []string
-			var modifiers []string
 			modifierSet := make(map[string]struct{}) // To store unique modifiers
 
 			for _, eventExpr := range binding.Eventexpressions {
@@ -189,22 +190,32 @@ func TranslateEventExpression(input string, actionValue string, templateValue ..
 				eventPart := eventExpr.Name + state
 				eventParts = append(eventParts, eventPart)
 
-				// Collect unique modifiers, removing the leading dot for storage
-				if eventExpr.Modifier != "" {
-					mod := strings.TrimPrefix(eventExpr.Modifier, ".")
-					if _, exists := modifierSet[mod]; !exists {
-						modifiers = append(modifiers, mod)
-						modifierSet[mod] = struct{}{}
-					}
+				// Collect unique modifiers from the expression, removing the leading dot
+				for _, mod := range eventExpr.Modifiers { // Iterate over the slice
+					modifierSet[strings.TrimPrefix(mod, ".")] = struct{}{}
 				}
+			}
+
+			// Add additional modifiers, ensuring uniqueness
+			for _, mod := range additionalModifiers {
+				modifierSet[mod] = struct{}{}
+			}
+
+			// Extract unique modifiers into a slice for sorting
+			var modifiers []string
+			for mod := range modifierSet {
+				modifiers = append(modifiers, mod)
 			}
 
 			// Format event part
 			eventStr := ""
 			if len(eventParts) == 1 {
 				eventStr = eventParts[0]
-			} else {
+			} else if len(eventParts) > 1 {
 				eventStr = "[" + strings.Join(eventParts, ",") + "]"
+			} else {
+				// Should not happen with valid grammar, but handle defensively
+				continue
 			}
 
 			// Sort and format modifiers
@@ -219,7 +230,9 @@ func TranslateEventExpression(input string, actionValue string, templateValue ..
 			if template != "" {
 				attribute += fmt.Sprintf("::%s", template)
 			}
-			attribute += fmt.Sprintf("%s=\"%s\"", modifierStr, actionValue)
+			// Append modifiers before the action value
+			attribute += modifierStr
+			attribute += fmt.Sprintf("=\"%s\"", actionValue)
 			results = append(results, attribute)
 		}
 	}

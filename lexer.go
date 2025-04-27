@@ -40,9 +40,9 @@ type Binding struct {
 }
 
 type EventExpression struct {
-	Name     string `parser:"@Ident"`
-	State    string `parser:"(@State)?"`
-	Modifier string `parser:"(@Modifier)?"` // Optional modifier after event or state
+	Name      string   `parser:"@Ident"`
+	State     string   `parser:"(@State)?"`
+	Modifiers []string `parser:"(@Modifier)*"` // Changed to slice and '*' for zero or more
 }
 
 type Target struct {

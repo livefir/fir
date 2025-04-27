@@ -77,7 +77,7 @@ func (h *RefreshActionHandler) Name() string    { return "refresh" }
 func (h *RefreshActionHandler) Precedence() int { return 20 }
 func (h *RefreshActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("refresh")
-	return TranslateEventExpression(info.Value, "$fir.replace()")
+	return TranslateEventExpression(info.Value, "$fir.replace()", "")
 }
 
 // RemoveActionHandler handles x-fir-remove
@@ -87,7 +87,7 @@ func (h *RemoveActionHandler) Name() string    { return "remove" }
 func (h *RemoveActionHandler) Precedence() int { return 30 }
 func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove")
-	return TranslateEventExpression(info.Value, "$fir.removeEl()")
+	return TranslateEventExpression(info.Value, "$fir.removeEl()", "", "nohtml")
 }
 
 // AppendActionHandler handles x-fir-append:target
@@ -105,6 +105,7 @@ func (h *AppendActionHandler) Translate(info ActionInfo, actionsMap map[string]s
 		// This check might be redundant if the parser ensures non-empty params, but good for safety.
 		return "", fmt.Errorf("empty target template name parameter for append action: '%s'", info.AttrName)
 	}
+
 	// TranslateEventExpression needs the value, the JS action, and the templateValue
 	return TranslateEventExpression(info.Value, "$fir.appendEl()", templateValue)
 }
@@ -123,6 +124,7 @@ func (h *PrependActionHandler) Translate(info ActionInfo, actionsMap map[string]
 	if templateValue == "" {
 		return "", fmt.Errorf("empty target template name parameter for prepend action: '%s'", info.AttrName)
 	}
+
 	// TranslateEventExpression needs the value, the JS action, and the templateValue
 	return TranslateEventExpression(info.Value, "$fir.prependEl()", templateValue)
 }
@@ -135,7 +137,7 @@ func (h *RemoveParentActionHandler) Precedence() int { return 40 }
 func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove-parent")
 	// Assuming the JS function is $fir.removeParentEl()
-	return TranslateEventExpression(info.Value, "$fir.removeParentEl()")
+	return TranslateEventExpression(info.Value, "$fir.removeParentEl()", "", "nohtml")
 }
 
 // ActionPrefixHandler handles x-fir-action-* (doesn't translate directly, just used for collection)

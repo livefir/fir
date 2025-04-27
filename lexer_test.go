@@ -2,6 +2,7 @@ package fir
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require" // Import testify/require
@@ -24,14 +25,14 @@ func TestLexer(t *testing.T) {
 			name:  "Single Event without State, Template, or Action",
 			input: "create",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:}",
+				"EventExpression: {Name:create State: Modifiers:[]}",
 			},
 		},
 		{
 			name:  "Single Event with Template Target",
 			input: "create->todo",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:}",
+				"EventExpression: {Name:create State: Modifiers:[]}",
 				"Template Target: todo",
 			},
 		},
@@ -39,8 +40,8 @@ func TestLexer(t *testing.T) {
 			name:  "Multiple Events without States",
 			input: "create,delete=>replace",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:}",
-				"EventExpression: {Name:delete State: Modifier:}",
+				"EventExpression: {Name:create State: Modifiers:[]}",
+				"EventExpression: {Name:delete State: Modifiers:[]}",
 				"Action Target: replace",
 			},
 		},
@@ -50,7 +51,7 @@ func TestLexer(t *testing.T) {
 			name:  "Event with State and Template",
 			input: "create:ok->todo",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:}",
+				"EventExpression: {Name:create State::ok Modifiers:[]}",
 				"Template Target: todo",
 			},
 		},
@@ -58,14 +59,14 @@ func TestLexer(t *testing.T) {
 			name:  "Event with State: pending", // New test
 			input: "create:pending",
 			expected: []string{
-				"EventExpression: {Name:create State::pending Modifier:}",
+				"EventExpression: {Name:create State::pending Modifiers:[]}",
 			},
 		},
 		{
 			name:  "Event with State: done", // New test
 			input: "create:done",
 			expected: []string{
-				"EventExpression: {Name:create State::done Modifier:}",
+				"EventExpression: {Name:create State::done Modifiers:[]}",
 			},
 		},
 
@@ -74,21 +75,21 @@ func TestLexer(t *testing.T) {
 			name:  "Event with Modifier",
 			input: "create.nohtml",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
+				"EventExpression: {Name:create State: Modifiers:[.nohtml]}",
 			},
 		},
 		{
 			name:  "Event with State and Modifier",
 			input: "create:ok.nohtml",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
+				"EventExpression: {Name:create State::ok Modifiers:[.nohtml]}",
 			},
 		},
 		{
 			name:  "Event with Modifier and Template Target",
 			input: "create.nohtml->todo",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.nohtml}",
+				"EventExpression: {Name:create State: Modifiers:[.nohtml]}",
 				"Template Target: todo",
 			},
 		},
@@ -98,11 +99,11 @@ func TestLexer(t *testing.T) {
 			name:  "Complex Mixed Input",
 			input: "create:ok->todo,delete:error=>replace;update:pending->done=>archive",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:}",
+				"EventExpression: {Name:create State::ok Modifiers:[]}",
 				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifier:}",
+				"EventExpression: {Name:delete State::error Modifiers:[]}",
 				"Action Target: replace",
-				"EventExpression: {Name:update State::pending Modifier:}",
+				"EventExpression: {Name:update State::pending Modifiers:[]}",
 				"Template Target: done",
 				"Action Target: archive",
 			},
@@ -150,9 +151,9 @@ func TestLexer(t *testing.T) {
 			name:  "Whitespace Ignored",
 			input: "  create: ok  -> todo  , delete: error => replace  ",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:}",
+				"EventExpression: {Name:create State::ok Modifiers:[]}",
 				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifier:}",
+				"EventExpression: {Name:delete State::error Modifiers:[]}",
 				"Action Target: replace",
 			},
 		},
@@ -167,7 +168,7 @@ func TestLexer(t *testing.T) {
 			name:  "Event with Modifier and Valid State but No Targets",
 			input: "create:ok.nohtml",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
+				"EventExpression: {Name:create State::ok Modifiers:[.nohtml]}",
 			},
 		},
 
@@ -176,11 +177,11 @@ func TestLexer(t *testing.T) {
 			name:  "Complex Input with Multiple Modifiers and Targets",
 			input: "create:ok.nohtml->todo,delete:error.nocache=>replace;update:pending->done=>archive",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:.nohtml}",
+				"EventExpression: {Name:create State::ok Modifiers:[.nohtml]}",
 				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifier:.nocache}",
+				"EventExpression: {Name:delete State::error Modifiers:[.nocache]}",
 				"Action Target: replace",
-				"EventExpression: {Name:update State::pending Modifier:}",
+				"EventExpression: {Name:update State::pending Modifiers:[]}",
 				"Template Target: done",
 				"Action Target: archive",
 			},
@@ -196,9 +197,9 @@ func TestLexer(t *testing.T) {
 			name:  "Multiple Expressions with Trailing Semicolon",
 			input: "create:ok->todo;delete:error=>replace;",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifier:}",
+				"EventExpression: {Name:create State::ok Modifiers:[]}",
 				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifier:}",
+				"EventExpression: {Name:delete State::error Modifiers:[]}",
 				"Action Target: replace",
 			},
 			expectErr: false, // Should parse successfully now
@@ -232,7 +233,7 @@ func TestLexer(t *testing.T) {
 			name:  "Event with Modifier and Action Target Only", // New test
 			input: "create.mod=>doAction",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.mod}",
+				"EventExpression: {Name:create State: Modifiers:[.mod]}",
 				"Action Target: doAction",
 			},
 		},
@@ -240,7 +241,7 @@ func TestLexer(t *testing.T) {
 			name:  "Event with Modifier and Template Target",
 			input: "create.mod->doTemplate",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:.mod}",
+				"EventExpression: {Name:create State: Modifiers:[.mod]}",
 				"Template Target: doTemplate",
 			},
 		},
@@ -248,7 +249,7 @@ func TestLexer(t *testing.T) {
 			name:  "Single Event with Action Target Only", // New test
 			input: "create=>doAction",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:}",
+				"EventExpression: {Name:create State: Modifiers:[]}",
 				"Action Target: doAction",
 			},
 		},
@@ -256,8 +257,8 @@ func TestLexer(t *testing.T) {
 			name:  "Multiple Events without States",
 			input: "create,delete=>replace",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:}",
-				"EventExpression: {Name:delete State: Modifier:}",
+				"EventExpression: {Name:create State: Modifiers:[]}",
+				"EventExpression: {Name:delete State: Modifiers:[]}",
 				"Action Target: replace",
 			},
 		},
@@ -265,15 +266,15 @@ func TestLexer(t *testing.T) {
 			name:  "Comma-Separated Bindings without Target", // New test
 			input: "event1:ok, event2.mod",
 			expected: []string{
-				"EventExpression: {Name:event1 State::ok Modifier:}",
-				"EventExpression: {Name:event2 State: Modifier:.mod}",
+				"EventExpression: {Name:event1 State::ok Modifiers:[]}",
+				"EventExpression: {Name:event2 State: Modifiers:[.mod]}",
 			},
 		},
 		{
 			name:  "Identifiers with Numbers and Underscores", // New test
 			input: "event_1->templateA=>action123_B",
 			expected: []string{
-				"EventExpression: {Name:event_1 State: Modifier:}",
+				"EventExpression: {Name:event_1 State: Modifiers:[]}",
 				"Template Target: templateA",
 				"Action Target: action123_B",
 			},
@@ -284,7 +285,7 @@ func TestLexer(t *testing.T) {
 			name:  "Single Event with Fir Action",
 			input: "create => $fir.X()",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifier:}",
+				"EventExpression: {Name:create State: Modifiers:[]}",
 				"Action Target: $fir.X()",
 			},
 		},
@@ -292,7 +293,7 @@ func TestLexer(t *testing.T) {
 			name:  "Event with Template and Fir Action",
 			input: "update -> myTemplate => $fir.Y()",
 			expected: []string{
-				"EventExpression: {Name:update State: Modifier:}",
+				"EventExpression: {Name:update State: Modifiers:[]}",
 				"Template Target: myTemplate",
 				"Action Target: $fir.Y()",
 			},
@@ -301,11 +302,11 @@ func TestLexer(t *testing.T) {
 			name:  "Multiple Bindings with Fir Actions",
 			input: "load:ok -> data, save => $fir.Z(); submit => $fir.A()",
 			expected: []string{
-				"EventExpression: {Name:load State::ok Modifier:}",
+				"EventExpression: {Name:load State::ok Modifiers:[]}",
 				"Template Target: data",
-				"EventExpression: {Name:save State: Modifier:}",
+				"EventExpression: {Name:save State: Modifiers:[]}",
 				"Action Target: $fir.Z()",
-				"EventExpression: {Name:submit State: Modifier:}",
+				"EventExpression: {Name:submit State: Modifiers:[]}",
 				"Action Target: $fir.A()",
 			},
 		},
@@ -348,11 +349,16 @@ func TestLexer(t *testing.T) {
 			for _, expr := range parsed.Expressions {
 				for _, binding := range expr.Bindings {
 					for _, eventExpr := range binding.Eventexpressions {
+						// Format modifiers for output
+						modsStr := "[]"
+						if len(eventExpr.Modifiers) > 0 {
+							modsStr = fmt.Sprintf("[%s]", strings.Join(eventExpr.Modifiers, " "))
+						}
 						output = append(output, fmt.Sprintf(
-							"EventExpression: {Name:%s State:%s Modifier:%s}",
+							"EventExpression: {Name:%s State:%s Modifiers:%s}", // Changed Modifier to Modifiers
 							eventExpr.Name,
 							eventExpr.State,
-							eventExpr.Modifier,
+							modsStr, // Use formatted modifiers string
 						))
 					}
 					if binding.Target != nil {

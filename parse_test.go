@@ -610,13 +610,13 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "x-fir-remove multiple events",
 			inputHTML:    `<div x-fir-remove="clear:ok, reset:done">Clear</div>`,
-			expectedHTML: `<div @fir:[clear:ok,reset:done]="$fir.removeEl()">Clear</div>`,
+			expectedHTML: `<div @fir:[clear:ok,reset:done].nohtml="$fir.removeEl()">Clear</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-remove ignores target",
 			inputHTML:    `<div x-fir-remove="delete=>doDelete">Delete</div>`,
-			expectedHTML: `<div @fir:delete:ok="$fir.removeEl()">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeEl()">Delete</div>`,
 			wantErr:      false,
 		},
 		// --- x-fir-remove-parent tests ---
@@ -629,13 +629,13 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "x-fir-remove-parent multiple events",
 			inputHTML:    `<div x-fir-remove-parent="clear:ok, reset:done">Clear</div>`,
-			expectedHTML: `<div @fir:[clear:ok,reset:done]="$fir.removeParentEl()">Clear</div>`,
+			expectedHTML: `<div @fir:[clear:ok,reset:done].nohtml="$fir.removeParentEl()">Clear</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-remove-parent ignores target and action",
 			inputHTML:    `<div x-fir-remove-parent="delete->target=>doDelete">Delete</div>`,
-			expectedHTML: `<div @fir:delete:ok="$fir.removeParentEl()">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeParentEl()">Delete</div>`,
 			wantErr:      false,
 		},
 		// --- x-fir-live tests ---
@@ -685,7 +685,25 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Precedence: remove > remove-parent",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok="$fir.removeEl()">Remove</div>`, // Only remove is processed
+			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()">Remove</div>`, // Only remove is processed
+			wantErr:      false,
+		},
+		{
+			name:         "Precedence: remove > remove-parent > append > prepend",
+			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove</div>`,
+			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()">Remove</div>`, // Only remove is processed
+			wantErr:      false,
+		},
+		{
+			name:         "Precedence: remove-parent > append > prepend",
+			inputHTML:    `<div x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove Parent</div>`,
+			expectedHTML: `<div @fir:d:ok.nohtml="$fir.removeParentEl()">Remove Parent</div>`, // Only remove-parent is processed
+			wantErr:      false,
+		},
+		{
+			name:         "Precedence: append > prepend",
+			inputHTML:    `<div x-fir-append:t1="e" x-fir-prepend:t2="f">Append</div>`,
+			expectedHTML: `<div @fir:e:ok::t1="$fir.appendEl()">Append</div>`, // Only append is processed
 			wantErr:      false,
 		},
 		// --- General tests ---
@@ -704,7 +722,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Multiple elements",
 			inputHTML:    `<div x-fir-refresh="a">A</div><div x-fir-remove="b">B</div>`,
-			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok="$fir.removeEl()">B</div>`,
+			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok.nohtml="$fir.removeEl()">B</div>`,
 			wantErr:      false,
 		},
 		{
@@ -852,13 +870,13 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Precedence: remove > remove-parent > append > prepend",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok="$fir.removeEl()">Remove</div>`, // Only remove is processed
+			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()">Remove</div>`, // Only remove is processed
 			wantErr:      false,
 		},
 		{
 			name:         "Precedence: remove-parent > append > prepend",
 			inputHTML:    `<div x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove Parent</div>`,
-			expectedHTML: `<div @fir:d:ok="$fir.removeParentEl()">Remove Parent</div>`, // Only remove-parent is processed
+			expectedHTML: `<div @fir:d:ok.nohtml="$fir.removeParentEl()">Remove Parent</div>`, // Only remove-parent is processed
 			wantErr:      false,
 		},
 		{
@@ -883,7 +901,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Multiple elements",
 			inputHTML:    `<div x-fir-refresh="a">A</div><div x-fir-remove="b">B</div>`,
-			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok="$fir.removeEl()">B</div>`,
+			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok.nohtml="$fir.removeEl()">B</div>`,
 			wantErr:      false,
 		},
 		{
