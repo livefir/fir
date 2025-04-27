@@ -365,8 +365,9 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				// Use parseActionExpression from lexer.go to parse the key
 				actionName, params, err := parseActionExpression(attr.Key)
 				if err != nil {
-					logger.Warnf("Skipping attribute with invalid key format '%s': %v", attr.Key, err)
-					continue // Skip this attribute if key parsing fails
+					// Instead of logging and continuing, return the error
+					traverseErr = fmt.Errorf("attribute key '%s' has invalid format: %w", attr.Key, err)
+					return // Stop traversal immediately
 				}
 
 				var handler ActionHandler

@@ -15,6 +15,9 @@ const (
 	TypeLive ActionType = iota
 	TypeRefresh
 	TypeRemove
+	TypeAppend       // Add new type
+	TypePrepend      // Add new type
+	TypeRemoveParent // Add new type
 	TypeActionPrefix // Represents x-fir-action-* attributes
 	TypeUnknown
 )
@@ -46,6 +49,10 @@ var actionRegistry = make(map[string]ActionHandler)
 func RegisterActionHandler(handler ActionHandler) {
 	name := handler.Name()
 	if _, exists := actionRegistry[name]; exists {
+		// Allow registering handlers with the same base name if they handle prefixes (like append:)
+		// The lookup logic will need to handle this.
+		// For now, we keep the simple check, assuming base names are unique for direct handlers.
+		// Update: Reverted to simple check as prefix handling is managed by lookup.
 		panic(fmt.Sprintf("action handler already registered for name: %s", name))
 	}
 	actionRegistry[name] = handler
@@ -83,6 +90,43 @@ func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]s
 	return TranslateEventExpression(info.Value, "$fir.removeEl()")
 }
 
+// AppendActionHandler handles x-fir-append:target
+type AppendActionHandler struct{}
+
+func (h *AppendActionHandler) Name() string    { return "append" } // Base name
+func (h *AppendActionHandler) Precedence() int { return 50 }
+func (h *AppendActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// Expect the templateValue to be the first parameter
+	if len(info.Params) == 0 {
+		return "", fmt.Errorf("missing target template name parameter for append action: '%s'", info.AttrName)
+	}
+	templateValue := info.Params[0]
+	if templateValue == "" {
+		// This check might be redundant if the parser ensures non-empty params, but good for safety.
+		return "", fmt.Errorf("empty target template name parameter for append action: '%s'", info.AttrName)
+	}
+	// TranslateEventExpression needs the value, the JS action, and the templateValue
+	return TranslateEventExpression(info.Value, "$fir.appendEl()", templateValue)
+}
+
+// PrependActionHandler handles x-fir-prepend:target
+type PrependActionHandler struct{}
+
+func (h *PrependActionHandler) Name() string    { return "prepend" } // Base name
+func (h *PrependActionHandler) Precedence() int { return 60 }
+func (h *PrependActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// Expect the templateValue to be the first parameter
+	if len(info.Params) == 0 {
+		return "", fmt.Errorf("missing target template name parameter for prepend action: '%s'", info.AttrName)
+	}
+	templateValue := info.Params[0]
+	if templateValue == "" {
+		return "", fmt.Errorf("empty target template name parameter for prepend action: '%s'", info.AttrName)
+	}
+	// TranslateEventExpression needs the value, the JS action, and the templateValue
+	return TranslateEventExpression(info.Value, "$fir.prependEl()", templateValue)
+}
+
 // RemoveParentActionHandler handles x-fir-remove-parent
 type RemoveParentActionHandler struct{}
 
@@ -110,8 +154,10 @@ func init() {
 	RegisterActionHandler(&LiveActionHandler{})
 	RegisterActionHandler(&RefreshActionHandler{})
 	RegisterActionHandler(&RemoveActionHandler{})
-	RegisterActionHandler(&RemoveParentActionHandler{}) // Register the new handler
-	RegisterActionHandler(&ActionPrefixHandler{})       // Register the prefix handler
+	RegisterActionHandler(&AppendActionHandler{})  // Register the append handler
+	RegisterActionHandler(&PrependActionHandler{}) // Register the prepend handler
+	RegisterActionHandler(&RemoveParentActionHandler{})
+	RegisterActionHandler(&ActionPrefixHandler{}) // Register the prefix handler
 }
 
 // Helper struct for processing within processRenderAttributes

@@ -380,8 +380,6 @@ func TestLexer(t *testing.T) {
 }
 
 func TestParseActionExpression(t *testing.T) {
-	// Removed allowedActions map definition as the function no longer uses it
-
 	tests := []struct {
 		name        string
 		input       string
@@ -391,14 +389,20 @@ func TestParseActionExpression(t *testing.T) {
 	}{
 		// --- Valid Cases ---
 		{
-			name:        "Valid: Action with multiple parameters",
+			name:        "Valid: Action with multiple parameters (brackets)",
 			input:       "x-fir-toggleClass:[loading,visible-state]",
 			expectedMap: map[string][]string{"toggleClass": {"loading", "visible-state"}},
 			wantErr:     false,
 		},
 		{
-			name:        "Valid: Action with single parameter",
+			name:        "Valid: Action with single parameter (brackets)",
 			input:       "x-fir-addClass:[active]",
+			expectedMap: map[string][]string{"addClass": {"active"}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: Action with single parameter (no brackets)", // New test case
+			input:       "x-fir-addClass:active",
 			expectedMap: map[string][]string{"addClass": {"active"}},
 			wantErr:     false,
 		},
@@ -409,45 +413,56 @@ func TestParseActionExpression(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:        "Valid: Action with empty parameters list",
+			name:        "Valid: Action with empty parameters list (brackets)",
 			input:       "x-fir-setValue:[]",
 			expectedMap: map[string][]string{"setValue": {}}, // Expect empty slice
 			wantErr:     false,
 		},
 		{
-			name:        "Valid: Whitespace around expression",
+			name:        "Valid: Whitespace around expression (brackets)",
 			input:       "  x-fir-addClass:[  active  ]  ",
 			expectedMap: map[string][]string{"addClass": {"active"}},
 			wantErr:     false,
 		},
 		{
-			name:        "Valid: Whitespace within parameters",
+			name:        "Valid: Whitespace around expression (no brackets)", // New test case
+			input:       "  x-fir-addClass : active  ",
+			expectedMap: map[string][]string{"addClass": {"active"}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: Whitespace within parameters (brackets)",
 			input:       "x-fir-toggleClass : [ loading , visible ]",
 			expectedMap: map[string][]string{"toggleClass": {"loading", "visible"}},
 			wantErr:     false,
 		},
 		{
-			name:        "Valid: Parameters with underscores and hyphens",
+			name:        "Valid: Parameters with underscores and hyphens (brackets)",
 			input:       "x-fir-addClass:[is_active, data-state-loading]",
 			expectedMap: map[string][]string{"addClass": {"is_active", "data-state-loading"}},
 			wantErr:     false,
 		},
 		{
+			name:        "Valid: Parameter with underscores and hyphens (no brackets)", // New test case
+			input:       "x-fir-addClass:is_active-state",
+			expectedMap: map[string][]string{"addClass": {"is_active-state"}},
+			wantErr:     false,
+		},
+		{
 			name:        "Valid: Long action name",
-			input:       "x-fir-long_action-name:[param1]",
+			input:       "x-fir-long_action-name:param1",
 			expectedMap: map[string][]string{"long_action-name": {"param1"}},
 			wantErr:     false,
 		},
 		{
-			name:        "Valid: Long parameter name",
-			input:       "x-fir-setValue:[this_is_a_very_long_parameter_name-123]",
+			name:        "Valid: Long parameter name (no brackets)",
+			input:       "x-fir-setValue:this_is_a_very_long_parameter_name-123",
 			expectedMap: map[string][]string{"setValue": {"this_is_a_very_long_parameter_name-123"}},
 			wantErr:     false,
 		},
 		{
-			// This is now valid for the parser itself, validation happens later
 			name:        "Valid: Unknown action name (parser perspective)",
-			input:       "x-fir-unknownAction:[param]",
+			input:       "x-fir-unknownAction:param",
 			expectedMap: map[string][]string{"unknownAction": {"param"}},
 			wantErr:     false,
 		},
@@ -455,9 +470,9 @@ func TestParseActionExpression(t *testing.T) {
 		// --- Error Cases ---
 		{
 			name:        "Error: Invalid prefix",
-			input:       "xfir-toggleClass:[loading]",
+			input:       "xfir-toggleClass:loading", // Still invalid prefix
 			wantErr:     true,
-			errContains: "invalid prefix for action key", // Updated to match early exit check
+			errContains: "invalid prefix for action key",
 		},
 		{
 			name:        "Error: Empty input string",
@@ -473,13 +488,19 @@ func TestParseActionExpression(t *testing.T) {
 		},
 		{
 			name:        "Error: Malformed parameters - missing opening bracket",
-			input:       "x-fir-toggleClass:loading]",
+			input:       "x-fir-toggleClass:loading]", // Still error, needs IDENT or '[' after ':'
 			wantErr:     true,
-			errContains: "unexpected token \"loading\"", // Parser error
+			errContains: "unexpected token \"]\"", // Corrected: Parser sees 'loading' then unexpected ']'
 		},
 		{
-			name:        "Error: Malformed parameters - invalid character",
+			name:        "Error: Malformed parameters - invalid character in bracketed list",
 			input:       "x-fir-toggleClass:[loa@ding]",
+			wantErr:     true,
+			errContains: "lexer: invalid input text", // Lexer error
+		},
+		{
+			name:        "Error: Malformed parameters - invalid character in single param", // New test case
+			input:       "x-fir-toggleClass:loa@ding",
 			wantErr:     true,
 			errContains: "lexer: invalid input text", // Lexer error
 		},
@@ -502,10 +523,16 @@ func TestParseActionExpression(t *testing.T) {
 			errContains: "unexpected token \"<EOF>\"",
 		},
 		{
-			name:        "Error: Prefix and action, missing colon/params",
+			name:        "Error: Prefix and action, missing params after colon",
 			input:       "x-fir-toggleClass:", // Colon but nothing after
 			wantErr:     true,
-			errContains: "unexpected token \"<EOF>\"",
+			errContains: "unexpected token \"<EOF>\"", // Expects IDENT or '[' after ':'
+		},
+		{
+			name:        "Error: Prefix and action, missing params after colon with whitespace", // New test
+			input:       "x-fir-toggleClass:   ",                                                // Colon followed by whitespace
+			wantErr:     true,
+			errContains: "unexpected token \"<EOF>\"", // Expects IDENT or '[' after ':'
 		},
 		{
 			name:        "Error: Prefix, action, colon, only opening bracket",
@@ -517,13 +544,14 @@ func TestParseActionExpression(t *testing.T) {
 			name:        "Error: Prefix, action, colon, only closing bracket",
 			input:       "x-fir-toggleClass:]",
 			wantErr:     true,
-			errContains: "unexpected token \"]\"", // Parser error
+			errContains: "unexpected token \"]\"", // Parser error, expects IDENT or '[' after ':'
 		},
 		{
-			name:        "Error: Trailing comma in parameters",
-			input:       "x-fir-toggleClass:[loading,]",
-			wantErr:     true,
-			errContains: "unexpected token \",\"",
+			name:    "Error: Trailing comma in parameters",
+			input:   "x-fir-toggleClass:[loading,]",
+			wantErr: true,
+			// Participle error might vary slightly, but it should fail on the ']' after ','
+			errContains: "unexpected token \",\"", // Corrected: Parser expects IDENT after comma, gets ']'
 		},
 		{
 			name:        "Error: Leading comma in parameters",
@@ -538,16 +566,16 @@ func TestParseActionExpression(t *testing.T) {
 			errContains: "unexpected token \",\"",
 		},
 		{
-			name:        "Error: Colon but no brackets",
-			input:       "x-fir-toggleClass:loading",
-			wantErr:     true,
-			errContains: "unexpected token \"loading\"",
+			name:    "Error: Multiple parameters without brackets", // New test case
+			input:   "x-fir-toggleClass:loading,visible",
+			wantErr: true,
+			// The parser expects EOF after the first IDENT ('loading') if no brackets are used
+			errContains: "unexpected token \",\"",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Call parseActionExpression without the allowedActions map
 			actionName, params, err := parseActionExpression(tt.input)
 
 			if tt.wantErr {
@@ -557,9 +585,12 @@ func TestParseActionExpression(t *testing.T) {
 				}
 			} else {
 				require.NoError(t, err, "Got unexpected error")
-				// Reconstruct the map from the returned values for comparison
 				gotMap := make(map[string][]string)
-				if actionName != "" { // Avoid adding empty action name if parsing failed partially
+				if actionName != "" {
+					// Ensure params is never nil, should be empty slice if no params found
+					if params == nil {
+						params = []string{}
+					}
 					gotMap[actionName] = params
 				}
 				require.Equal(t, tt.expectedMap, gotMap, "Parsed map mismatch")

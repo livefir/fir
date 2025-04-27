@@ -103,8 +103,11 @@ type ActionExpression struct {
 }
 
 type Parameters struct {
-	// Handles cases like [], [param1], [param1,param2,...]
-	Params []string `parser:"'[' (@Ident (',' @Ident)*)? ']'" `
+	// Use pointers to distinguish between matched cases
+	// Handles cases like [param1, param2,...] or []
+	BracketedParams *[]string `parser:"( '[' (@Ident (',' @Ident)*)? ']' "`
+	// Handles the case like :param1
+	SingleParam *string `parser:"| @Ident )"`
 }
 
 // --- End Action Expression ---
@@ -128,9 +131,8 @@ func getActionExpressionParser() (*participle.Parser[ActionExpression], error) {
 	return actionParser, actionParserErr
 }
 
-// parseActionExpression parses an attribute key string like "x-fir-actionName:[param1,param2]".
+// parseActionExpression parses an attribute key string like "x-fir-actionName:[param1,param2]" or "x-fir-actionName:param1".
 // It returns the parsed action name and parameters.
-// Note: Renamed from ParseActionKey back to parseActionExpression as requested.
 func parseActionExpression(key string) (actionName string, params []string, err error) {
 	parser, buildErr := getActionExpressionParser()
 	if buildErr != nil {
@@ -154,15 +156,23 @@ func parseActionExpression(key string) (actionName string, params []string, err 
 		return "", nil, fmt.Errorf("error parsing action key '%s': %w", key, err)
 	}
 
-	// Prefix validation is implicitly handled by the parser grammar/lexer rule
-
 	actionName = parsed.ActionName
 	params = []string{} // Default to empty slice
-	if parsed.Params != nil && parsed.Params.Params != nil {
-		params = parsed.Params.Params
-	}
 
-	// Removed allowedActions check
+	if parsed.Params != nil { // Check if the optional ':' and parameters were present
+		if parsed.Params.BracketedParams != nil {
+			// Use the pointer dereference safely, ensuring it's not nil first
+			// The parser rule ('[' (@Ident (',' @Ident)*)? ']') ensures BracketedParams is non-nil if matched,
+			// even for `[]`, where it will point to an empty slice.
+			params = *parsed.Params.BracketedParams
+		} else if parsed.Params.SingleParam != nil {
+			// Create a slice with the single parameter
+			params = []string{*parsed.Params.SingleParam}
+		}
+		// If parsed.Params is not nil, but both BracketedParams and SingleParam are nil,
+		// it implies an issue with the grammar or an unexpected parse state.
+		// The current grammar ('[' ... ']' | @Ident) should ensure one of them is non-nil if Params itself is non-nil.
+	}
 
 	return actionName, params, nil
 }
