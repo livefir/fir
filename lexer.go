@@ -30,9 +30,9 @@ var renderExpressionlexerRules = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "State", Pattern: `:(ok|error|pending|done)`},
 	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},
 
-	// Identifiers last
+	// Identifiers last - Fix the HyphenIdent pattern to correctly match identifiers with hyphens
+	{Name: "HyphenIdent", Pattern: `[a-zA-Z_][a-zA-Z0-9_\-]*`}, // This will match both regular and hyphenated identifiers
 	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},
-	{Name: "HyphenIdent", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*\-[a-zA-Z0-9_\-]*`},
 })
 
 // Define the grammar structure

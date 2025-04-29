@@ -414,8 +414,8 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Action key with hyphen",
 			inputHTML:    `<button x-fir-live="click=>my-action" x-fir-action-my-action="handleIt()">Click</button>`,
-			expectedHTML: ``,   // Not checked on error
-			wantErr:      true, // Expecting parser error for "my-action"
+			expectedHTML: `<button @fir:click:ok="handleIt()">Click</button>`, // Not checked on error
+			wantErr:      false,
 		},
 
 		// --- Error Cases ---
