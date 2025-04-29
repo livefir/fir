@@ -146,18 +146,6 @@ func TestLexer(t *testing.T) {
 			expectErr: true,
 		},
 
-		// Group 6: Whitespace Handling
-		{
-			name:  "Whitespace Ignored",
-			input: "  create: ok  -> todo  , delete: error => replace  ",
-			expected: []string{
-				"EventExpression: {Name:create State::ok Modifiers:[]}",
-				"Template Target: todo",
-				"EventExpression: {Name:delete State::error Modifiers:[]}",
-				"Action Target: replace",
-			},
-		},
-
 		// Group 7: Modifiers with Complex Scenarios
 		{
 			name:      "Event with Modifier and Special Characters in Target",

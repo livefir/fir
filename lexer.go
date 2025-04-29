@@ -1,8 +1,7 @@
 package fir
 
 import (
-	"fmt"
-	"regexp" // Import regexp
+	"fmt" // Import regexp
 	"strings"
 	"sync" // Import sync for caching
 
@@ -12,16 +11,28 @@ import (
 
 // Define the lexer rules for parsing the render expression
 var renderExpressionlexerRules = lexer.MustSimple([]lexer.SimpleRule{
-	// Updated pattern to allow one or more letters [a-zA-Z]+
-	{Name: "FirAction", Pattern: `\$fir\.[a-zA-Z]+\(\)`}, // Matches $fir.Save(), $fir.Load(), etc.
-	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},   // Matches event names like "create"
-	{Name: "State", Pattern: `:(ok|error|pending|done)`}, // Matches states like ":ok"
-	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},           // Matches modifiers like ".nohtml"
-	{Name: "Arrow", Pattern: `->`},                       // Matches "->"
-	{Name: "DoubleArrow", Pattern: `=>`},                 // Matches "=>"
-	{Name: "Comma", Pattern: `,`},                        // Matches ","
-	{Name: "Semicolon", Pattern: `;`},                    // Matches ";"
-	{Name: "Whitespace", Pattern: `\s+`},                 // Ignore standalone whitespace
+	// Whitespace - handled by participle.Elide("Whitespace") in the parser
+	{Name: "Whitespace", Pattern: `\s+`},
+
+	// Handle expressions with -> and => WITHOUT spaces
+	// Extract ONLY the identifier part after the arrow, not the arrow itself
+	{Name: "TemplateExpression", Pattern: `\->([a-zA-Z_][a-zA-Z0-9_\-]*)`}, // Captures group 1 = identifier only
+	{Name: "ActionExpression", Pattern: `=>([a-zA-Z_][a-zA-Z0-9_\-]*)`},    // Captures group 1 = identifier only
+
+	// Then define regular operators for when they have spaces
+	{Name: "Arrow", Pattern: `\->`},
+	{Name: "DoubleArrow", Pattern: `=>`},
+
+	// Then define other tokens
+	{Name: "FirAction", Pattern: `\$fir\.[a-zA-Z]+\(\)`},
+	{Name: "Comma", Pattern: `,`},
+	{Name: "Semicolon", Pattern: `;`},
+	{Name: "State", Pattern: `:(ok|error|pending|done)`},
+	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},
+
+	// Identifiers last
+	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},
+	{Name: "HyphenIdent", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*\-[a-zA-Z0-9_\-]*`},
 })
 
 // Define the grammar structure
@@ -40,23 +51,14 @@ type Binding struct {
 }
 
 type EventExpression struct {
-	Name      string   `parser:"@Ident"`
+	Name      string   `parser:"@(Ident | HyphenIdent)"`
 	State     string   `parser:"(@State)?"`
 	Modifiers []string `parser:"(@Modifier)*"` // Changed to slice and '*' for zero or more
 }
 
 type Target struct {
-	Template string `parser:"( \"->\" @Ident )?"` // Match template target for "->"
-	// Action accepts Ident or FirAction. Modifier is removed. The entire Action part ("=> ...") is optional.
-	Action string `parser:"( \"=>\" ( @Ident | @FirAction ) )?"`
-}
-
-// removeAllWhitespace is helper function to remove all whitespace from a string
-// Using regexp is more concise
-var whitespaceRegex = regexp.MustCompile(`\s+`)
-
-func removeAllWhitespace(input string) string {
-	return whitespaceRegex.ReplaceAllString(input, "")
+	Template string `parser:"( \"->\" @(Ident | HyphenIdent) | @TemplateExpression )?"`
+	Action   string `parser:"( \"=>\" ( @(Ident | HyphenIdent) | @FirAction ) | @ActionExpression )?"`
 }
 
 // getRenderExpressionParser parser function to parse the input string
@@ -68,14 +70,31 @@ func getRenderExpressionParser() (*participle.Parser[Expressions], error) {
 	return parser, err
 }
 
+// Add a preprocessing step before parsing
+func preProcessExpression(input string) string {
+	// Add spaces around the operators to ensure they're recognized as separate tokens
+	input = strings.ReplaceAll(input, "->", " -> ")
+	input = strings.ReplaceAll(input, "=>", " => ")
+
+	// Normalize multiple spaces to single space
+	for strings.Contains(input, "  ") {
+		input = strings.ReplaceAll(input, "  ", " ")
+	}
+
+	return strings.TrimSpace(input)
+}
+
+// Call this function before passing to the parser
 func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) {
 	if input == "" {
 		return nil, fmt.Errorf("render expression cannot be empty")
 	}
-	input = removeAllWhitespace(input)
+
+	// Preprocess the input
+	input = preProcessExpression(input)
+
 	parsed, err := parser.ParseString("", input)
 	if err != nil {
-
 		return nil, err
 	}
 

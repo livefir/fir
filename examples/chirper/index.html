@@ -41,7 +41,7 @@
             <p>
                 {{ fir.Error "onload" }}
             </p>
-            <div @fir:create-chirp:ok::chirp="$fir.prependEl()">
+            <div x-fir-prepend:chirp="create-chirp">
                 {{ range .chirps }}
                     {{ block "chirp" . }}
                         <section
