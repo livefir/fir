@@ -36,7 +36,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(el)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const replaceFn = magicFunctions.replace()
 
             // Create mock event with HTML content
@@ -65,7 +69,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(container)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const replaceElFn = magicFunctions.replaceEl()
 
             // Create mock event with HTML content that includes an ID
@@ -92,7 +100,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(el)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const appendElFn = magicFunctions.appendEl()
 
             // Create mock event with HTML content
@@ -120,7 +132,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(el)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const prependElFn = magicFunctions.prependEl()
 
             // Create mock event with HTML content
@@ -152,7 +168,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             container.appendChild(el)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const afterElFn = magicFunctions.afterEl()
 
             // Create mock event with HTML content
@@ -187,7 +207,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             container.appendChild(el)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const beforeElFn = magicFunctions.beforeEl()
 
             // Create a mock event with properly structured HTML
@@ -220,7 +244,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(container)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const removeElFn = magicFunctions.removeEl()
 
             // Act
@@ -248,7 +276,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(grandparent)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const removeParentElFn = magicFunctions.removeParentEl()
 
             // Act
@@ -274,7 +306,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             form.reset = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(form, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                form,
+                Alpine,
+                global.post
+            )
             const resetFn = magicFunctions.reset()
 
             // Act
@@ -292,7 +328,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             console.error = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(div, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                div,
+                Alpine,
+                global.post
+            )
             const resetFn = magicFunctions.reset()
 
             // Act
@@ -312,7 +352,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(button)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(button, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                button,
+                Alpine,
+                global.post
+            )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Act
@@ -331,7 +375,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             document.body.appendChild(button)
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(button, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                button,
+                Alpine,
+                global.post
+            )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Act
@@ -350,7 +398,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             console.error = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(div, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                div,
+                Alpine,
+                global.post
+            )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Act
@@ -373,7 +425,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             global.post = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const emitFn = magicFunctions.emit(
                 'test-event',
                 { foo: 'bar' },
@@ -402,7 +458,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             global.post = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
             const emitFn = magicFunctions.emit()
 
             // Act
@@ -426,7 +486,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             global.post = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(el, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                global.post
+            )
 
             // Test invalid ID
             const emitWithInvalidId = magicFunctions.emit(123)
@@ -478,7 +542,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             global.post = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(form, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                form,
+                Alpine,
+                global.post
+            )
             const submitFn = magicFunctions.submit()
 
             // Create a submit event
@@ -513,7 +581,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             global.post = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(form, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                form,
+                Alpine,
+                global.post
+            )
             const submitFn = magicFunctions.submit()
 
             // Create a submit event
@@ -542,7 +614,11 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             global.post = jest.fn()
 
             // Use real Alpine instance
-            const magicFunctions = createFirMagicFunctions(form, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                form,
+                Alpine,
+                global.post
+            )
             const submitFn = magicFunctions.submit({
                 event: 'override-event',
                 params: { extra: 'param' },

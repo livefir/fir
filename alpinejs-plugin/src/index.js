@@ -7,7 +7,8 @@ const isObject = (obj) => {
 }
 
 // Define magic functions outside of Alpine.magic for better testability
-export const createFirMagicFunctions = (el, Alpine) => {
+export const createFirMagicFunctions = (el, Alpine, postFn) => {
+    // Add postFn parameter
     // Helper functions
     const eventHTML = (event) => {
         let html = ''
@@ -214,7 +215,8 @@ export const createFirMagicFunctions = (el, Alpine) => {
                 console.error('target must start with # or .')
                 return
             }
-            post({
+            // Use the passed-in postFn
+            postFn({
                 event_id: id,
                 params: params,
                 target: target,
@@ -308,8 +310,8 @@ export const createFirMagicFunctions = (el, Alpine) => {
                 return
             }
 
-            // post event to server
-            post({
+            // Use the passed-in postFn
+            postFn({
                 event_id: eventID,
                 params: params,
                 is_form: true,
@@ -433,10 +435,69 @@ const Plugin = (Alpine) => {
         }
     )
 
+    // Define the post function locally within the Plugin scope
+    const post = (firEvent) => {
+        if (!firEvent.event_id) {
+            throw new Error('event id is required.')
+        }
+
+        Object.assign(firEvent, { ts: Date.now() })
+
+        const eventIdLower = firEvent.event_id.toLowerCase()
+        // camel to kebab case
+        const eventIdKebab = firEvent.event_id
+            .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
+            .toLowerCase()
+
+        eventTypeLower = `fir:${eventIdLower}:pending`
+        dispatchServerEvent({
+            type: eventTypeLower,
+            target: `.${eventTypeLower.replaceAll(':', '-')}`,
+        })
+
+        if (eventIdLower !== eventIdKebab) {
+            eventTypeKebab = `fir:${eventIdKebab}:pending`
+            dispatchServerEvent({
+                type: eventTypeKebab,
+                target: `.${eventTypeKebab.replaceAll(':', '-')}`,
+            })
+        }
+
+        if (socket && socket.emit(firEvent)) {
+        } else {
+            const body = JSON.stringify(firEvent)
+            fetch(window.location.pathname, {
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-FIR-MODE': 'event',
+                },
+                body: body,
+            })
+                .then((response) => {
+                    if (response.redirected) {
+                        window.location.href = response.url
+                        return
+                    }
+                    return response.json()
+                })
+                .then((serverEvents) => {
+                    dispatchServerEvents(serverEvents)
+                })
+                .catch((error) => {
+                    console.error(
+                        `${firEvent.event_id} error: ${error}, request body: ${body}`,
+                        error
+                    )
+                })
+        }
+    }
+
     // Register the fir magic helper
     Alpine.magic('fir', (el, { Alpine }) => {
-        // Create the magic functions
-        const magicFunctions = createFirMagicFunctions(el, Alpine)
+        // Create the magic functions, passing the local post function
+        const magicFunctions = createFirMagicFunctions(el, Alpine, post)
 
         // Return an object with all the magic functions
         return {
@@ -576,64 +637,6 @@ const Plugin = (Alpine) => {
                     }
                 }
             }
-        }
-    }
-
-    const post = (firEvent) => {
-        if (!firEvent.event_id) {
-            throw new Error('event id is required.')
-        }
-
-        Object.assign(firEvent, { ts: Date.now() })
-
-        const eventIdLower = firEvent.event_id.toLowerCase()
-        // camel to kebab case
-        const eventIdKebab = firEvent.event_id
-            .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
-            .toLowerCase()
-
-        eventTypeLower = `fir:${eventIdLower}:pending`
-        dispatchServerEvent({
-            type: eventTypeLower,
-            target: `.${eventTypeLower.replaceAll(':', '-')}`,
-        })
-
-        if (eventIdLower !== eventIdKebab) {
-            eventTypeKebab = `fir:${eventIdKebab}:pending`
-            dispatchServerEvent({
-                type: eventTypeKebab,
-                target: `.${eventTypeKebab.replaceAll(':', '-')}`,
-            })
-        }
-
-        if (socket && socket.emit(firEvent)) {
-        } else {
-            const body = JSON.stringify(firEvent)
-            fetch(window.location.pathname, {
-                method: 'POST',
-
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-FIR-MODE': 'event',
-                },
-                body: body,
-            })
-                .then((response) => {
-                    if (response.redirected) {
-                        window.location.href = response.url
-                        return
-                    }
-                    return response.json()
-                })
-                .then((serverEvents) => {
-                    dispatchServerEvents(serverEvents)
-                })
-                .catch((error) => {
-                    console.error(
-                        `${eventIdLower} error: ${error}, request body: ${body}`,
-                        error
-                    )
-                })
         }
     }
 

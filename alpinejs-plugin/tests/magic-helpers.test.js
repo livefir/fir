@@ -18,6 +18,9 @@ describe('Fir Magic Helpers', () => {
 
         // Initialize Alpine once
         initializeAlpineOnce()
+
+        // Define a mock post for this test suite if needed, or use the one from test-helpers
+        window.post = window.post || jest.fn()
     })
 
     afterEach(() => {
@@ -37,7 +40,11 @@ describe('Fir Magic Helpers', () => {
                 .mockImplementation(() => {})
 
             // Get the magic function directly
-            const magicFunctions = createFirMagicFunctions(form, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                form,
+                Alpine,
+                window.post
+            )
             const resetFn = magicFunctions.reset()
 
             // Call the function directly
@@ -61,7 +68,11 @@ describe('Fir Magic Helpers', () => {
                 .mockImplementation(() => {})
 
             // Create the magic functions
-            const magicFunctions = createFirMagicFunctions(div, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                div,
+                Alpine,
+                window.post
+            )
             const resetFn = magicFunctions.reset()
 
             // Call the function directly
@@ -81,7 +92,11 @@ describe('Fir Magic Helpers', () => {
             document.body.appendChild(button)
 
             // Create the magic functions
-            const magicFunctions = createFirMagicFunctions(button, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                button,
+                Alpine,
+                window.post
+            )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Call the function with a pending event
@@ -100,7 +115,11 @@ describe('Fir Magic Helpers', () => {
             document.body.appendChild(button)
 
             // Create the magic functions
-            const magicFunctions = createFirMagicFunctions(button, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                button,
+                Alpine,
+                window.post
+            )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Call the function with an ok event
@@ -122,7 +141,11 @@ describe('Fir Magic Helpers', () => {
                 .mockImplementation(() => {})
 
             // Create the magic functions
-            const magicFunctions = createFirMagicFunctions(div, Alpine)
+            const magicFunctions = createFirMagicFunctions(
+                div,
+                Alpine,
+                window.post
+            )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Call the function with a pending event
