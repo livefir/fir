@@ -1,6 +1,369 @@
 import websocket from './websocket'
 import morph from '@alpinejs/morph'
 
+// Utility functions
+const isObject = (obj) => {
+    return Object.prototype.toString.call(obj) === '[object Object]'
+}
+
+// Define magic functions outside of Alpine.magic for better testability
+export const createFirMagicFunctions = (el, Alpine) => {
+    // Helper functions
+    const eventHTML = (event) => {
+        let html = ''
+        if (event?.detail) {
+            html = event.detail.html ? event.detail.html : ''
+        }
+        return html
+    }
+
+    const morphElement = (el, value) => {
+        if (!value) {
+            console.error(`morph value is null`)
+            return
+        }
+        Alpine.morph(el, value, {
+            key(el) {
+                return el.getAttribute('fir-key')
+            },
+        })
+    }
+
+    const toElements = (htmlString) => {
+        var template = document.createElement('template')
+        template.innerHTML = htmlString
+        return template.content.childNodes
+    }
+
+    const toElement = (htmlString) => {
+        var template = document.createElement('template')
+        template.innerHTML = htmlString
+        return template.content.firstChild
+    }
+
+    const afterElement = (el, value) => {
+        el.insertBefore(toElement(value), el.nextSibling)
+    }
+
+    const beforeElement = (el, value) => {
+        if (el.parentNode) {
+            el.parentNode.insertBefore(toElement(value), el)
+        } else {
+            console.error('Element has no parent, cannot insert before')
+        }
+    }
+
+    const appendElement = (el, value) => {
+        let clonedEl = el.cloneNode(true)
+        clonedEl.append(...toElements(value))
+        morphElement(el, clonedEl)
+    }
+
+    const prependElement = (el, value) => {
+        let clonedEl = el.cloneNode(true)
+        clonedEl.prepend(...toElements(value))
+        morphElement(el, clonedEl)
+    }
+
+    const removeElement = (el) => {
+        el.remove()
+    }
+
+    const removeParentElement = (el) => {
+        el.parentElement.remove()
+    }
+
+    const getSessionIDFromCookie = () => {
+        return document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('_fir_session_='))
+            ?.substring(14)
+    }
+
+    // Define individual magic functions
+    const replace = () => {
+        return function (event) {
+            let toHTML = el.cloneNode(false)
+            toHTML.innerHTML = eventHTML(event).trim()
+            morphElement(el, toHTML.outerHTML)
+        }
+    }
+
+    const replaceEl = () => {
+        return function (event) {
+            morphElement(el, eventHTML(event))
+        }
+    }
+
+    const appendEl = () => {
+        return function (event) {
+            appendElement(el, eventHTML(event))
+        }
+    }
+
+    const prependEl = () => {
+        return function (event) {
+            prependElement(el, eventHTML(event))
+        }
+    }
+
+    const afterEl = () => {
+        return function (event) {
+            afterElement(el, eventHTML(event))
+        }
+    }
+
+    const beforeEl = () => {
+        return function (event) {
+            beforeElement(el, eventHTML(event))
+        }
+    }
+
+    const removeEl = () => {
+        return function (event) {
+            removeElement(el)
+        }
+    }
+
+    const removeParentEl = () => {
+        return function (event) {
+            removeParentElement(el)
+        }
+    }
+
+    const reset = () => {
+        return function (event) {
+            if (el instanceof HTMLFormElement) {
+                el.reset()
+            } else {
+                console.error('$fir.reset() can only be used on form elements')
+            }
+        }
+    }
+
+    const toggleDisabled = () => {
+        return function (event) {
+            // Elements that typically support the disabled attribute
+            const supportsDisabled = [
+                'button',
+                'fieldset',
+                'input',
+                'optgroup',
+                'option',
+                'select',
+                'textarea',
+                'command',
+                'keygen',
+                'progress',
+            ]
+
+            // Check if element type supports disabled
+            const tagName = el.tagName.toLowerCase()
+            if (!supportsDisabled.includes(tagName)) {
+                console.error(
+                    `$fir.toggleDisabled() cannot be used on <${tagName}> elements`
+                )
+                return
+            }
+
+            // Extract state from the event type
+            const eventParts = event.type.split(':')
+            const state = eventParts.length >= 3 ? eventParts[2] : ''
+
+            // Determine if we should disable based on the state
+            // Disable on 'pending', enable on 'ok', 'error', 'done'
+            const shouldDisable = state === 'pending'
+
+            // Apply the disabled state
+            if (shouldDisable) {
+                el.setAttribute('disabled', '')
+                el.setAttribute('aria-disabled', 'true')
+            } else {
+                el.removeAttribute('disabled')
+                el.removeAttribute('aria-disabled')
+            }
+        }
+    }
+
+    const emit = (id, params, target) => {
+        return function (event) {
+            if (id) {
+                if (typeof id !== 'string') {
+                    console.error(`id ${id} is not a string.`)
+                    return
+                }
+            } else {
+                if (!el.getAttribute('id')) {
+                    console.error(
+                        `event id is empty and element id is not set. can't emit event`
+                    )
+                    return
+                }
+                id = el.getAttribute('id')
+            }
+            if (params) {
+                if (!isObject(params)) {
+                    console.error(`params ${params} is not an object.`)
+                    return
+                }
+            } else {
+                params = {}
+            }
+
+            if (target && !target.startsWith('#') && !target.startsWith('.')) {
+                console.error('target must start with # or .')
+                return
+            }
+            post({
+                event_id: id,
+                params: params,
+                target: target,
+                element_key: el.getAttribute('fir-key'),
+                session_id: getSessionIDFromCookie(),
+            })
+        }
+    }
+
+    const submit = (opts) => {
+        // Implementation remains the same
+        return function (event) {
+            if (event.type !== 'submit' && !(el instanceof HTMLFormElement)) {
+                console.error(
+                    `event type ${event.type} is not submit nor the element is an instance of HTMLFormElement.
+                     $fir.submit() can only be used on forms.`
+                )
+                return
+            }
+
+            let form
+            if (el instanceof HTMLFormElement) {
+                form = el
+            } else {
+                form = event.target
+            }
+
+            if (
+                (!form.getAttribute('id') &&
+                    !form.action &&
+                    !event.submitter) ||
+                (event.submitter && !event.submitter.formAction)
+            ) {
+                console.error(`event id is empty, form element id is not set, form action is not set,
+                or it wasn't sumbmitted by a button with formaction set. can't submit form`)
+                return
+            }
+
+            let formMethod = form.getAttribute('method')
+            if (!formMethod) {
+                formMethod = 'get'
+            }
+
+            let formData = new FormData(form)
+            let eventID
+
+            if (form.getAttribute('id')) {
+                eventID = form.getAttribute('id')
+            }
+            if (form.action) {
+                const url = new URL(form.action)
+                if (url.searchParams.get('event')) {
+                    eventID = url.searchParams.get('event')
+                }
+            }
+            if (event.submitter && event.submitter.formAction) {
+                const url = new URL(event.submitter.formAction)
+                if (url.searchParams.get('event')) {
+                    eventID = url.searchParams.get('event')
+                }
+            }
+
+            if (event.submitter && event.submitter.name) {
+                formData.append(event.submitter.name, event.submitter.value)
+            }
+            let params = {}
+            formData.forEach((value, key) => (params[key] = new Array(value)))
+            let target = ''
+
+            if (opts) {
+                if (opts.event) {
+                    eventID = opts.event
+                }
+                if (opts.params) {
+                    params = opts.params
+                }
+                if (opts.target) {
+                    target = opts.target
+                }
+            }
+
+            if (target && !target.startsWith('#') && !target.startsWith('.')) {
+                console.error('target must start with # or .')
+                return
+            }
+
+            if (!eventID) {
+                console.error(
+                    `event id is empty and element id is not set. can't emit event`
+                )
+                return
+            }
+
+            // post event to server
+            post({
+                event_id: eventID,
+                params: params,
+                is_form: true,
+                target: target,
+                element_key: el.getAttribute('fir-key'),
+                session_id: getSessionIDFromCookie(),
+            })
+
+            if (formMethod.toLowerCase() === 'get') {
+                const url = new URL(window.location)
+                formData.forEach((value, key) => {
+                    if (value) {
+                        url.searchParams.set(key, value)
+                    } else {
+                        url.searchParams.delete(key)
+                    }
+                })
+
+                Object.keys(params).forEach((key) => {
+                    if (params[key]) {
+                        url.searchParams.set(key, params[key])
+                    } else {
+                        url.searchParams.delete(key)
+                    }
+                })
+
+                url.searchParams.forEach((value, key) => {
+                    if (!formData.has(key) && !params.hasOwnProperty(key)) {
+                        url.searchParams.delete(key)
+                    }
+                })
+                window.history.pushState({}, '', url)
+            }
+            return
+        }
+    }
+
+    // Return all the magic functions
+    return {
+        replace,
+        replaceEl,
+        appendEl,
+        prependEl,
+        afterEl,
+        beforeEl,
+        removeEl,
+        removeParentEl,
+        reset,
+        toggleDisabled,
+        emit,
+        submit,
+    }
+}
+
 const Plugin = (Alpine) => {
     const getSessionIDFromCookie = () => {
         return document.cookie
@@ -70,405 +433,27 @@ const Plugin = (Alpine) => {
         }
     )
 
+    // Register the fir magic helper
     Alpine.magic('fir', (el, { Alpine }) => {
+        // Create the magic functions
+        const magicFunctions = createFirMagicFunctions(el, Alpine)
+
+        // Return an object with all the magic functions
         return {
-            /**
-             * Replaces the content of an element with the HTML generated from the provided event.
-             * @returns {Function} - A function that accepts an event and replaces the element's content.
-             * @example
-             * <div x-data>
-             *    <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *   <div x-on:fir:event-id:ok="fir.replace()">Content</div>
-             * </div>
-             */
-            replace() {
-                return function (event) {
-                    let toHTML = el.cloneNode(false)
-                    toHTML.innerHTML = eventHTML(event).trim()
-                    morphElement(el, toHTML.outerHTML)
-                }
-            },
-            /**
-             * Replaces the element with the new HTML content generated by the event.
-             * @returns {Function} - A function that accepts an event and replaces the element with the new HTML content from
-             * event.html.detail.
-             * @example
-             * <div x-data>
-             *   <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *   <div x-on:fir:event-id:ok="fir.replaceEl()"></div>
-             * </div>
-             */
-            replaceEl() {
-                return function (event) {
-                    morphElement(el, eventHTML(event))
-                }
-            },
-            /**
-             * Appends an element to the DOM.
-             * @returns {Function} - A function that accepts an event and appends event.detail.html to the DOM.
-             * @example
-             * <div x-data>
-             *  <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *  <div x-on:fir:event-id:ok="fir.appendEl()"></div>
-             * </div>
-             */
-            appendEl() {
-                return function (event) {
-                    appendElement(el, eventHTML(event))
-                }
-            },
-            /**
-             * Prepends an element to the DOM.
-             * @returns {Function} - A function that accepts an event and prepends event.detail.html to the DOM.
-             * @example
-             * <div x-data>
-             *  <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *  <div x-on:fir:event-id:ok="fir.prependEl()"></div>
-             * </div>
-             */
-            prependEl() {
-                return function (event) {
-                    prependElement(el, eventHTML(event))
-                }
-            },
-            /**
-             * Inserts an element after the current element.
-             * @returns {Function} - A function that accepts an event and inserts event.detail.html after the current element.
-             * @example
-             * <div x-data>
-             *  <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *  <div x-on:fir:event-id:ok="fir.afterEl()"></div>
-             * </div>
-             */
-            afterEl() {
-                return function (event) {
-                    afterElement(el, eventHTML(event))
-                }
-            },
-            /**
-             * Inserts an element before the current element.
-             * @returns {Function} - A function that accepts an event and inserts event.detail.html before the current element.
-             * @example
-             * <div x-data>
-             *  <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *  <div x-on:fir:event-id:ok="fir.beforeEl()"></div>
-             * </div>
-             */
-            beforeEl() {
-                return function (event) {
-                    beforeElement(el, eventHTML(event))
-                }
-            },
-            /**
-             * Removes the specified element from the DOM.
-             *
-             * @param {HTMLElement} detail - The element to be removed.
-             * @returns {Function} - A function that accepts an event and removes the current element from the DOM.
-             * @example
-             * <div x-data>
-             *  <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *  <div x-on:fir:event-id:ok="fir.removeEl()"></div>
-             * </div>
-             */
-            /**
-             * Removes the element from the DOM.
-             *
-             * @returns {Function} The event handler function that removes the element.
-             */
-            removeEl() {
-                return function (event) {
-                    removeElement(el)
-                }
-            },
-            /**
-             * Removes the parent element of the current element from the DOM.
-             * @returns {Function} - A function that accepts an event and removes the parent element of the current element from the DOM.
-             * @example
-             * <div x-data>
-             *  <button x-on:click="fir.emit('event-id', {name: 'John'})">Emit</button>
-             *  <div x-on:fir:event-id:ok="fir.removeParentEl()"></div>
-             * </div>
-             */
-            /**
-             * Removes the parent element of the specified element.
-             *
-             * @param {Event} event - The event object.
-             */
-            removeParentEl() {
-                return function (event) {
-                    removeParentElement(el)
-                }
-            },
-            /**
-             * Emits an event with the specified ID, parameters, and target.
-             * @param {string} id - The ID of the event.
-             * @param {object} params - The parameters to be passed with the event.
-             * @param {string} target - The target of the event.
-             * @returns {Function} - A function that can be called to emit the event.
-             * @example
-             * <div x-data>
-             * <button x-on:click="fir.emit('event-id', {name: 'John'}, '#target')">
-             * Emit
-             * </button>
-             */
-            emit(id, params, target) {
-                return function (event) {
-                    if (id) {
-                        if (typeof id !== 'string') {
-                            console.error(`id ${id} is not a string.`)
-                            return
-                        }
-                    } else {
-                        if (!el.getAttribute('id')) {
-                            console.error(
-                                `event id is empty and element id is not set. can't emit event`
-                            )
-                            return
-                        }
-                        id = el.getAttribute('id')
-                    }
-                    if (params) {
-                        if (!isObject(params)) {
-                            console.error(`params ${params} is not an object.`)
-                            return
-                        }
-                    } else {
-                        params = {}
-                    }
-
-                    if (
-                        target &&
-                        !target.startsWith('#') &&
-                        !target.startsWith('.')
-                    ) {
-                        console.error('target must start with # or .')
-                        return
-                    }
-                    post({
-                        event_id: id,
-                        params: params,
-                        target: target,
-                        element_key: el.getAttribute('fir-key'),
-                        session_id: getSessionIDFromCookie(),
-                    })
-                }
-            },
-            /**
-             * Submits a form or emits an event to the server.
-             * @param {Object} opts - Options for the submission.
-             * @param {string} opts.event - The event ID to be emitted.
-             * @param {Object} opts.params - The parameters to be sent with the submission.
-             * @param {string} opts.target - The target element for the response.
-             * @returns {void}
-             * @example
-             * <form
-                method="post"
-                action="/?event=create-todo"
-                @submit.prevent="$fir.submit()"
-                @fir:create-todo:ok.nohtml="$el.reset()"
-                >
-                <input type="text" name="todo" />
-                <button type="submit">Chirp</button>
-                </form>
-             */
-            submit(opts) {
-                return function (event) {
-                    if (
-                        event.type !== 'submit' &&
-                        !(el instanceof HTMLFormElement)
-                    ) {
-                        console.error(
-                            `event type ${event.type} is not submit nor the element is an instance of HTMLFormElement.
-                             $fir.submit() can only be used on forms.`
-                        )
-                        return
-                    }
-
-                    let form
-                    if (el instanceof HTMLFormElement) {
-                        form = el
-                    } else {
-                        form = event.target
-                    }
-
-                    if (
-                        (!form.getAttribute('id') &&
-                            !form.action &&
-                            !event.submitter) ||
-                        (event.submitter && !event.submitter.formAction)
-                    ) {
-                        console.error(`event id is empty, form element id is not set, form action is not set,
-                        or it wasn't sumbmitted by a button with formaction set. can't submit form`)
-                        return
-                    }
-
-                    let formMethod = form.getAttribute('method')
-                    if (!formMethod) {
-                        formMethod = 'get'
-                    }
-
-                    let formData = new FormData(form)
-                    let eventID
-
-                    if (form.getAttribute('id')) {
-                        eventID = form.getAttribute('id')
-                    }
-                    if (form.action) {
-                        const url = new URL(form.action)
-                        if (url.searchParams.get('event')) {
-                            eventID = url.searchParams.get('event')
-                        }
-                    }
-                    if (event.submitter && event.submitter.formAction) {
-                        const url = new URL(event.submitter.formAction)
-                        if (url.searchParams.get('event')) {
-                            eventID = url.searchParams.get('event')
-                        }
-                    }
-
-                    if (event.submitter && event.submitter.name) {
-                        formData.append(
-                            event.submitter.name,
-                            event.submitter.value
-                        )
-                    }
-                    let params = {}
-                    formData.forEach(
-                        (value, key) => (params[key] = new Array(value))
-                    )
-                    let target = ''
-
-                    if (opts) {
-                        if (opts.event) {
-                            eventID = opts.event
-                        }
-                        if (opts.params) {
-                            params = opts.params
-                        }
-                        if (opts.target) {
-                            target = opts.target
-                        }
-                    }
-
-                    if (
-                        target &&
-                        !target.startsWith('#') &&
-                        !target.startsWith('.')
-                    ) {
-                        console.error('target must start with # or .')
-                        return
-                    }
-
-                    if (!eventID) {
-                        console.error(
-                            `event id is empty and element id is not set. can't emit event`
-                        )
-                        return
-                    }
-
-                    // post event to server
-                    post({
-                        event_id: eventID,
-                        params: params,
-                        is_form: true,
-                        target: target,
-                        element_key: el.getAttribute('fir-key'),
-                        session_id: getSessionIDFromCookie(),
-                    })
-
-                    if (formMethod.toLowerCase() === 'get') {
-                        const url = new URL(window.location)
-                        formData.forEach((value, key) => {
-                            if (value) {
-                                url.searchParams.set(key, value)
-                            } else {
-                                url.searchParams.delete(key)
-                            }
-                        })
-
-                        Object.keys(params).forEach((key) => {
-                            if (params[key]) {
-                                url.searchParams.set(key, params[key])
-                            } else {
-                                url.searchParams.delete(key)
-                            }
-                        })
-
-                        url.searchParams.forEach((value, key) => {
-                            if (
-                                !formData.has(key) &&
-                                !params.hasOwnProperty(key)
-                            ) {
-                                url.searchParams.delete(key)
-                            }
-                        })
-                        window.history.pushState({}, '', url)
-                    }
-                    return
-                }
-            },
+            replace: magicFunctions.replace(),
+            replaceEl: magicFunctions.replaceEl(),
+            appendEl: magicFunctions.appendEl(),
+            prependEl: magicFunctions.prependEl(),
+            afterEl: magicFunctions.afterEl(),
+            beforeEl: magicFunctions.beforeEl(),
+            removeEl: magicFunctions.removeEl(),
+            removeParentEl: magicFunctions.removeParentEl(),
+            reset: magicFunctions.reset(),
+            toggleDisabled: magicFunctions.toggleDisabled(),
+            emit: magicFunctions.emit,
+            submit: magicFunctions.submit,
         }
     })
-
-    const eventHTML = (event) => {
-        let html = ''
-        if (event.detail) {
-            html = event.detail.html ? event.detail.html : ''
-        }
-        return html
-    }
-
-    const toElements = (htmlString) => {
-        var template = document.createElement('template')
-        template.innerHTML = htmlString
-        return template.content.childNodes
-    }
-
-    const toElement = (htmlString) => {
-        var template = document.createElement('template')
-        template.innerHTML = htmlString
-        return template.content.firstChild
-    }
-
-    const morphElement = (el, value) => {
-        if (!value) {
-            console.error(`morph value is null`)
-            return
-        }
-        Alpine.morph(el, value, {
-            key(el) {
-                return el.getAttribute('fir-key')
-            },
-        })
-    }
-
-    const afterElement = (el, value) => {
-        el.insertBefore(toElement(value), el.nextSibling)
-    }
-
-    const beforeElement = (el, value) => {
-        el.insertBefore(toElement(value), el)
-    }
-
-    const appendElement = (el, value) => {
-        let clonedEl = el.cloneNode(true)
-        clonedEl.append(...toElements(value))
-        morphElement(el, clonedEl)
-    }
-
-    const prependElement = (el, value) => {
-        let clonedEl = el.cloneNode(true)
-        clonedEl.prepend(...toElements(value))
-        morphElement(el, clonedEl)
-    }
-
-    const removeElement = (el) => {
-        el.remove()
-    }
-
-    const removeParentElement = (el) => {
-        el.parentElement.remove()
-    }
 
     const dispatchServerEvents = (serverEvents) => {
         if (!serverEvents) {
@@ -653,10 +638,6 @@ const Plugin = (Alpine) => {
     }
 
     Alpine.plugin(morph)
-}
-
-const isObject = (obj) => {
-    return Object.prototype.toString.call(obj) === '[object Object]'
 }
 
 export default Plugin

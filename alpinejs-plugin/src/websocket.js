@@ -1,66 +1,102 @@
-const reopenTimeouts = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
+const REOPEN_TIMEOUTS = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
+const MAX_RECONNECT_ATTEMPTS = 10
+const HEARTBEAT_TIMEOUT = 500
 const firDocument = typeof document !== 'undefined' ? document : null
 
-export default websocket = (url, socketOptions, dispatchServerEvents) => {
-    let socket, openPromise, reopenTimeoutHandler
-    let reopenCount = 0
+/**
+ * Creates a WebSocket connection with automatic reconnection and heartbeat functionality
+ * @param {string} url - WebSocket URL
+ * @param {string|string[]} socketOptions - WebSocket protocol options
+ * @param {Function} dispatchServerEvents - Callback to handle server events
+ * @returns {Object} WebSocket API
+ */
+export default function createWebSocket(
+    url,
+    socketOptions,
+    dispatchServerEvents
+) {
+    let socket = null
+    let openPromise = null
+    let reopenTimeoutHandler = null
+    let reconnectAttempts = 0
     let pendingHeartbeat = false
+    let visibilityHandler = null
+    let isClosedByUser = false
 
-    // modified from https://github.com/arlac77/svelte-websocket-store/blob/master/src/index.mjs
-    // thank you https://github.com/arlac77 !!
-    function reopenTimeout() {
-        const n = reopenCount
-        reopenCount++
-        return reopenTimeouts[
-            n >= reopenTimeouts.length - 1 ? reopenTimeouts.length - 1 : n
-        ]
+    /**
+     * Calculate exponential backoff time for reconnection attempts
+     * @returns {number} Timeout in milliseconds
+     */
+    function getReconnectTimeout() {
+        const index = Math.min(reconnectAttempts, REOPEN_TIMEOUTS.length - 1)
+        reconnectAttempts++
+        return REOPEN_TIMEOUTS[index]
     }
 
+    /**
+     * Properly close the WebSocket connection
+     */
     function closeSocket() {
         if (reopenTimeoutHandler) {
             clearTimeout(reopenTimeoutHandler)
+            reopenTimeoutHandler = null
         }
 
-        if (socket && socket.readyState === WebSocket.CLOSED) {
-            socket = undefined
-        }
+        if (!socket) return
 
-        if (socket && socket.readyState == WebSocket.CONNECTING) {
-            setTimeout(() => {
+        try {
+            if (
+                socket.readyState === WebSocket.OPEN ||
+                socket.readyState === WebSocket.CONNECTING
+            ) {
                 socket.close()
-                socket = undefined
-            }, 1000)
-        }
-
-        if (socket && socket.readyState == WebSocket.OPEN) {
-            socket.close()
-            socket = undefined
-        }
-    }
-
-    if (firDocument && firDocument.addEventListener) {
-        firDocument.addEventListener('visibilitychange', () => {
-            if (firDocument.visibilityState === 'visible') {
-                sendAndAckHeartbeat()
             }
-        })
+        } catch (err) {
+            console.error('Error closing socket:', err)
+        } finally {
+            socket = null
+        }
     }
 
+    /**
+     * Send heartbeat and verify server response
+     */
     function sendAndAckHeartbeat() {
         if (!socket || socket.readyState !== WebSocket.OPEN) {
             return
         }
-        socket.send(JSON.stringify({ event_id: 'heartbeat' }))
-        pendingHeartbeat = true
-        setTimeout(() => {
-            if (pendingHeartbeat) {
-                pendingHeartbeat = false
-                closeSocket()
-            }
-        }, 500)
+
+        try {
+            socket.send(JSON.stringify({ event_id: 'heartbeat' }))
+            pendingHeartbeat = true
+
+            setTimeout(() => {
+                if (pendingHeartbeat && !isClosedByUser) {
+                    console.warn('Heartbeat timeout - reconnecting')
+                    pendingHeartbeat = false
+                    closeSocket()
+                    reopenSocket()
+                }
+            }, HEARTBEAT_TIMEOUT)
+        } catch (err) {
+            console.error('Error sending heartbeat:', err)
+            pendingHeartbeat = false
+        }
     }
 
+    /**
+     * Schedule a socket reconnection
+     */
     function reopenSocket() {
+        if (isClosedByUser) return
+
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            console.error(
+                `Maximum reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached`
+            )
+            return
+        }
+
         if (socket && socket.readyState === WebSocket.CONNECTING) {
             return
         }
@@ -68,46 +104,63 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
         if (socket && socket.readyState === WebSocket.OPEN) {
             closeSocket()
         }
+
+        const timeout = getReconnectTimeout()
+        console.log(
+            `Reconnecting in ${timeout}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`
+        )
+
         reopenTimeoutHandler = setTimeout(() => {
             openSocket()
                 .then(() => {
                     pendingHeartbeat = false
                 })
                 .catch((e) => {
-                    console.error(e)
+                    console.error('Reconnection failed:', e)
+                    reopenSocket()
                 })
-        }, reopenTimeout())
+        }, timeout)
     }
 
+    /**
+     * Open a new WebSocket connection
+     * @returns {Promise} Promise resolving when connection is established
+     */
     async function openSocket() {
         if (reopenTimeoutHandler) {
             clearTimeout(reopenTimeoutHandler)
-            reopenTimeoutHandler = undefined
+            reopenTimeoutHandler = null
         }
 
-        // we are still in the opening phase
+        // Return existing promise if we're already connecting
         if (openPromise) {
             return openPromise
         }
 
         try {
             socket = new WebSocket(url, socketOptions)
-        } catch (e) {
-            console.error("can't create socket", e)
+        } catch (err) {
+            console.error('Failed to create WebSocket:', err)
+            throw err
         }
 
+        // Set up socket event handlers
         socket.onclose = (event) => {
-            console.warn('socket closed', event)
-            if (event.code == 4001) {
-                console.warn(`socket closed by server: unauthorized`)
-                if (event.reason) {
+            console.warn('WebSocket closed', event)
+
+            if (event.code === 4001) {
+                console.warn('Socket closed by server: unauthorized')
+                if (event.reason && typeof window !== 'undefined') {
                     window.location.href = event.reason
                 }
                 return
             }
 
-            return reopenSocket()
+            if (!isClosedByUser) {
+                reopenSocket()
+            }
         }
+
         socket.onmessage = (event) => {
             try {
                 const serverEvents = JSON.parse(event.data)
@@ -116,43 +169,113 @@ export default websocket = (url, socketOptions, dispatchServerEvents) => {
                     return
                 }
                 dispatchServerEvents(serverEvents)
-            } catch (e) {}
+            } catch (err) {
+                console.error('Error processing message:', err)
+            }
         }
 
         socket.onerror = (error) => {
-            console.warn('socket error', error)
-            return reopenSocket()
+            console.warn('WebSocket error', error)
         }
 
+        // Create promise for connection establishment
         openPromise = new Promise((resolve, reject) => {
-            socket.onerror = (error) => {
-                console.error('socket error on connect', error)
+            const errorHandler = (error) => {
+                console.error('WebSocket connection error:', error)
+                socket.onopen = null
+                socket.onerror = socket.onerror || (() => {})
                 reject(error)
-                openPromise = undefined
+                openPromise = null
             }
-            socket.onopen = (event) => {
-                reopenCount = 0
+
+            const openHandler = () => {
+                console.log('WebSocket connected')
+                reconnectAttempts = 0
+                socket.onerror = (error) => {
+                    console.warn('WebSocket error:', error)
+                }
                 resolve()
-                openPromise = undefined
+                openPromise = null
             }
+
+            socket.onerror = errorHandler
+            socket.onopen = openHandler
+
+            // Timeout if connection takes too long
+            setTimeout(() => {
+                if (openPromise) {
+                    errorHandler(new Error('Connection timeout'))
+                }
+            }, 5000)
         })
+
         return openPromise
     }
 
+    // Set up visibility change handler
+    if (firDocument) {
+        visibilityHandler = () => {
+            if (firDocument.visibilityState === 'visible') {
+                if (!socket || socket.readyState !== WebSocket.OPEN) {
+                    openSocket().catch((err) => console.error(err))
+                } else {
+                    sendAndAckHeartbeat()
+                }
+            }
+        }
+        firDocument.addEventListener('visibilitychange', visibilityHandler)
+    }
+
+    // Initial connection
     openSocket()
         .then(() => {
             pendingHeartbeat = false
         })
-        .catch((e) => console.error(e))
+        .catch((err) => console.error('Initial connection failed:', err))
 
+    // Public API
     return {
+        /**
+         * Send a message through the WebSocket
+         * @param {any} value - Data to send (will be JSON stringified)
+         * @returns {boolean} Success status
+         */
         emit(value) {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify(value))
-                return true
-            } else {
-                return false
+                try {
+                    socket.send(JSON.stringify(value))
+                    return true
+                } catch (err) {
+                    console.error('Error sending message:', err)
+                    return false
+                }
             }
+            return false
+        },
+
+        /**
+         * Close the WebSocket connection and clean up resources
+         */
+        close() {
+            isClosedByUser = true
+
+            if (firDocument && visibilityHandler) {
+                firDocument.removeEventListener(
+                    'visibilitychange',
+                    visibilityHandler
+                )
+                visibilityHandler = null
+            }
+
+            closeSocket()
+        },
+
+        /**
+         * Get the current state of the WebSocket connection
+         * @returns {number|null} WebSocket readyState or null if not initialized
+         */
+        getState() {
+            return socket ? socket.readyState : null
         },
     }
 }
