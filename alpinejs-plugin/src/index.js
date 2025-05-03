@@ -501,16 +501,16 @@ const Plugin = (Alpine) => {
 
         // Return an object with all the magic functions
         return {
-            replace: magicFunctions.replace(),
-            replaceEl: magicFunctions.replaceEl(),
-            appendEl: magicFunctions.appendEl(),
-            prependEl: magicFunctions.prependEl(),
-            afterEl: magicFunctions.afterEl(),
-            beforeEl: magicFunctions.beforeEl(),
-            removeEl: magicFunctions.removeEl(),
-            removeParentEl: magicFunctions.removeParentEl(),
-            reset: magicFunctions.reset(),
-            toggleDisabled: magicFunctions.toggleDisabled(),
+            replace: magicFunctions.replace,
+            replaceEl: magicFunctions.replaceEl,
+            appendEl: magicFunctions.appendEl,
+            prependEl: magicFunctions.prependEl,
+            afterEl: magicFunctions.afterEl,
+            beforeEl: magicFunctions.beforeEl,
+            removeEl: magicFunctions.removeEl,
+            removeParentEl: magicFunctions.removeParentEl,
+            reset: magicFunctions.reset,
+            toggleDisabled: magicFunctions.toggleDisabled,
             emit: magicFunctions.emit,
             submit: magicFunctions.submit,
         }
