@@ -55,6 +55,11 @@ export function initializeAlpineOnce() {
                     this.onclose = null
                     this.onerror = null
                     this.close = jest.fn()
+
+                    // Simulate connection
+                    setTimeout(() => {
+                        if (this.onopen) this.onopen({ target: this })
+                    }, 0)
                 }
                 send(data) {
                     return true
@@ -66,4 +71,26 @@ export function initializeAlpineOnce() {
         isAlpineInitialized = true
     }
     return Alpine
+}
+
+// Add this function to the file
+
+export function createTestElement(html) {
+    // Create a container
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    // Set the inner HTML
+    container.innerHTML = html
+
+    // Initialize Alpine for this element
+    Alpine.initTree(container)
+
+    return {
+        container,
+        // Helper to find elements
+        find: (selector) => container.querySelector(selector),
+        // Helper to clean up
+        cleanup: () => document.body.removeChild(container),
+    }
 }
