@@ -19,10 +19,19 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
     }
 
     const morphElement = (el, value) => {
-        if (!value) {
-            console.error(`morph value is null`)
+        // Allow empty strings, only return if null or undefined
+        if (value == null) {
+            console.error(`morph value is null or undefined`)
             return
         }
+        // *** ADD THIS CHECK ***
+        // If the value is an empty string, clear the element instead of morphing
+        if (value === '') {
+            el.innerHTML = ''
+            return
+        }
+        // *** END ADDED CHECK ***
+
         Alpine.morph(el, value, {
             key(el) {
                 return el.getAttribute('fir-key')

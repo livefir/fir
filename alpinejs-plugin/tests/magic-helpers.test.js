@@ -158,5 +158,81 @@ describe('Fir Magic Helpers', () => {
         })
     })
 
+    describe('DOM Manipulation Edge Cases', () => {
+        test('replaceEl should handle empty HTML string', () => {
+            const el = document.createElement('div')
+            el.id = 'original'
+            el.innerHTML = '<span>Initial Content</span>' // Give it some content initially
+            document.body.appendChild(el)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                jest.fn()
+            )
+            const replaceElFn = magicFunctions.replaceEl()
+            const event = { detail: { html: '' } } // Empty HTML
+
+            // Spy on morph to ensure it's NOT called
+            const morphSpy = jest.spyOn(Alpine, 'morph')
+
+            replaceElFn(event)
+
+            // Assert that morph was NOT called for an empty string
+            expect(morphSpy).not.toHaveBeenCalled()
+            // Assert that the element's content was cleared
+            expect(el.innerHTML).toBe('')
+
+            morphSpy.mockRestore() // Restore the spy
+        })
+
+        test('appendEl should handle empty HTML string', () => {
+            const el = document.createElement('div')
+            el.innerHTML = '<span>Hi</span>'
+            document.body.appendChild(el)
+            const magicFunctions = createFirMagicFunctions(
+                el,
+                Alpine,
+                jest.fn()
+            )
+            const appendElFn = magicFunctions.appendEl()
+            const event = { detail: { html: '' } } // Empty HTML
+
+            const initialHTML = el.innerHTML
+            appendElFn(event)
+
+            // Content should remain unchanged
+            expect(el.innerHTML).toBe(initialHTML)
+        })
+
+        // Add similar tests for prependEl, afterEl, beforeEl with empty HTML
+    })
+
+    describe('toggleDisabled() edge cases', () => {
+        test('should not change state for non-standard event states', () => {
+            const button = document.createElement('button')
+            document.body.appendChild(button)
+            const magicFunctions = createFirMagicFunctions(
+                button,
+                Alpine,
+                jest.fn()
+            )
+            const toggleDisabledFn = magicFunctions.toggleDisabled()
+
+            // Call with an unknown state
+            toggleDisabledFn({ type: 'fir:action:unknown' })
+            expect(button.hasAttribute('disabled')).toBe(false)
+
+            // Call with 'done' state (should enable)
+            button.setAttribute('disabled', '')
+            toggleDisabledFn({ type: 'fir:action:done' })
+            expect(button.hasAttribute('disabled')).toBe(false)
+
+            // Call with 'error' state (should enable)
+            button.setAttribute('disabled', '')
+            toggleDisabledFn({ type: 'fir:action:error' })
+            expect(button.hasAttribute('disabled')).toBe(false)
+        })
+    })
+
     // You can add more tests for other magic helpers here
 })
