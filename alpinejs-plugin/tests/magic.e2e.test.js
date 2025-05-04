@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs'
-import firPlugin from '../src/index' // Adjust path if needed
+import firPlugin, { createFirMagicFunctions } from '../src/index'
 import morph from '@alpinejs/morph'
 
 // Mock the fetch function globally
@@ -418,5 +418,74 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
         const body = JSON.parse(fetchCall[1].body)
         expect(body.event_id).toBe('buttonClick')
         expect(body.params).toEqual({ value: 456 })
+    })
+
+    test('$fir.emit should use element ID if provided ID is null/undefined', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <button id="fallbackBtn" @click="$fir.emit()">Click</button>
+            </div>
+        `
+        await Alpine.nextTick()
+        document.getElementById('fallbackBtn').click()
+        await Alpine.nextTick()
+
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+        const fetchCall = global.fetch.mock.calls.find(
+            (call) => call[1]?.method === 'POST'
+        )
+        expect(fetchCall).toBeDefined()
+        const body = JSON.parse(fetchCall[1].body)
+        expect(body.event_id).toBe('fallbackBtn') // Uses element ID
+    })
+
+    test('$fir.emit should error if no ID provided and element has no ID', async () => {
+        const consoleSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {})
+        document.body.innerHTML = `
+            <div x-data>
+                <button @click="$fir.emit()">Click</button> {/* No button ID */}
+            </div>
+        `
+        await Alpine.nextTick()
+        document.querySelector('button').click()
+        await Alpine.nextTick()
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+            "event id is empty and element id is not set. can't emit event"
+        )
+        expect(global.fetch).not.toHaveBeenCalled() // Should not attempt fetch
+        consoleSpy.mockRestore()
+    })
+
+    // Skip this test in JSDOM: event.submitter is not populated correctly.
+    // This behavior needs to be verified via browser-based E2E tests.
+    test.skip('fir.submit should use event from submitter formaction', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <form id="testForm" @submit.prevent="$fir.submit()">
+                    <input name="data" value="abc"/>
+                    <button type="submit" formaction="/?event=fromButton">Submit</button>
+                </form>
+            </div>
+        `
+        await Alpine.nextTick()
+
+        const form = document.getElementById('testForm')
+        const button = form.querySelector('button')
+
+        button.click()
+
+        await Alpine.nextTick()
+        await new Promise(process.nextTick)
+
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+        const fetchCall = global.fetch.mock.calls.find(
+            (call) => call[1]?.method === 'POST'
+        )
+        expect(fetchCall).toBeDefined()
+        const body = JSON.parse(fetchCall[1].body)
+        expect(body.event_id).toBe('fromButton')
     })
 }) // End describe block
