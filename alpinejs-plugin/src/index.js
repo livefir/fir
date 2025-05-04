@@ -215,6 +215,7 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
                 console.error('target must start with # or .')
                 return
             }
+
             // Use the passed-in postFn
             postFn({
                 event_id: id,
@@ -449,14 +450,14 @@ const Plugin = (Alpine) => {
             .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
             .toLowerCase()
 
-        eventTypeLower = `fir:${eventIdLower}:pending`
+        let eventTypeLower = `fir:${eventIdLower}:pending`
         dispatchServerEvent({
             type: eventTypeLower,
             target: `.${eventTypeLower.replaceAll(':', '-')}`,
         })
 
         if (eventIdLower !== eventIdKebab) {
-            eventTypeKebab = `fir:${eventIdKebab}:pending`
+            let eventTypeKebab = `fir:${eventIdKebab}:pending`
             dispatchServerEvent({
                 type: eventTypeKebab,
                 target: `.${eventTypeKebab.replaceAll(':', '-')}`,
