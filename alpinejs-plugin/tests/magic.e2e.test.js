@@ -17,6 +17,27 @@ const dispatch = (type, detail) => {
     )
 }
 
+// *** NEW: Helper function to wait for a DOM condition ***
+async function waitForDOMUpdate(
+    checkFn,
+    { timeout = 200, interval = 20 } = {}
+) {
+    const endTime = Date.now() + timeout
+    while (Date.now() < endTime) {
+        await Alpine.nextTick() // Allow Alpine to process updates
+        if (checkFn()) {
+            return // Condition met
+        }
+        // Wait briefly before checking again
+        await new Promise((resolve) => setTimeout(resolve, interval))
+    }
+    throw new Error(`waitForDOMUpdate timed out after ${timeout}ms`)
+}
+// *** End new helper ***
+
+// Mock history API
+let mockPushState
+
 describe('Alpine.js $fir Magic E2E Tests', () => {
     beforeAll(() => {
         // Mock the initial HEAD request *before* registering the plugin
@@ -32,6 +53,8 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
 
         // Explicitly start Alpine *once* after plugins are registered
         Alpine.start()
+
+        mockPushState = jest.spyOn(window.history, 'pushState')
     })
 
     beforeEach(() => {
@@ -64,6 +87,8 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
             writable: true,
             value: '_fir_session_=test-session-id',
         })
+
+        mockPushState.mockClear() // Clear history mock calls
     })
 
     test('$fir.emit sends correct fetch request', async () => {
@@ -145,6 +170,27 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
         expect(body.session_id).toBe('test-session-id')
     })
 
+    test('$fir.submit handles GET form and updates history', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <form id="searchForm" method="GET" @submit.prevent="$fir.submit()">
+                    <input type="text" name="query" value="alpine" />
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+        `
+        await Alpine.nextTick()
+        document
+            .getElementById('searchForm')
+            .dispatchEvent(
+                new Event('submit', { bubbles: true, cancelable: true })
+            )
+        await Alpine.nextTick()
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+        expect(mockPushState).toHaveBeenCalledTimes(1)
+        // ... rest of assertions ...
+    })
+
     test('$fir.replaceEl updates element on server event', async () => {
         // Arrange: Set up DOM with listener
         document.body.innerHTML = `
@@ -207,13 +253,170 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
         )
     })
 
-    // Add more tests for other magic functions:
-    // - $fir.submit with GET
-    // - $fir.appendEl
-    // - $fir.afterEl
-    // - $fir.beforeEl
-    // - $fir.removeEl
-    // - $fir.removeParentEl
-    // - $fir.reset
-    // - $fir.toggleDisabled (checking attributes on pending/done events)
-})
+    test('$fir.appendEl updates element on server event', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <ul id="targetList" @fir:additem:ok.window="$fir.appendEl()">
+                    <li>Existing Item</li>
+                </ul>
+            </div>
+        `
+        await Alpine.nextTick()
+        const targetElement = document.getElementById('targetList')
+        const serverEventDetail = { html: '<li>Appended Item</li>' }
+        dispatch('fir:additem:ok', serverEventDetail)
+        await Alpine.nextTick()
+        expect(targetElement.children.length).toBe(2)
+        expect(targetElement.lastElementChild.textContent.trim()).toBe(
+            'Appended Item'
+        )
+    })
+
+    // Re-enable the test by removing .skip
+    test('$fir.afterEl inserts element on server event', async () => {
+        // Arrange
+        document.body.innerHTML = `
+            <div x-data>
+                <div id="container">
+                    <span id="marker" @fir:insertafter:ok.window="$fir.afterEl()">Marker</span>
+                </div>
+            </div>
+        `
+        await Alpine.nextTick()
+        const container = document.getElementById('container')
+        const marker = document.getElementById('marker') // Get reference to the marker
+        expect(container.children.length).toBe(1)
+
+        // Act
+        const serverEventDetail = { html: '<div>Inserted After</div>' }
+        dispatch('fir:insertafter:ok', serverEventDetail)
+
+        // Wait for the DOM update using the helper, checking the condition
+        await waitForDOMUpdate(() => container.children.length === 2, {
+            timeout: 500,
+        }) // Increased timeout slightly just in case
+
+        // Assert
+        expect(container.children.length).toBe(2)
+        expect(container.children[0].id).toBe('marker') // Check marker is still first
+        expect(container.children[1].textContent.trim()).toBe('Inserted After') // Check new element is second
+    })
+
+    test('$fir.beforeEl inserts element on server event', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <div id="container">
+                    <span id="marker" @fir:insertbefore:ok.window="$fir.beforeEl()">Marker</span>
+                </div>
+            </div>
+        `
+        await Alpine.nextTick()
+        const container = document.getElementById('container')
+        const serverEventDetail = { html: '<div>Inserted Before</div>' }
+        dispatch('fir:insertbefore:ok', serverEventDetail)
+        await Alpine.nextTick()
+        expect(container.children.length).toBe(2)
+        expect(container.children[0].textContent.trim()).toBe('Inserted Before')
+    })
+
+    test('$fir.removeEl removes element on server event', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <div id="removable" @fir:removeme:ok.window="$fir.removeEl()">Remove Me</div>
+            </div>
+        `
+        await Alpine.nextTick()
+        expect(document.getElementById('removable')).not.toBeNull()
+        dispatch('fir:removeme:ok', {})
+        await Alpine.nextTick()
+        expect(document.getElementById('removable')).toBeNull()
+    })
+
+    test('$fir.removeParentEl removes parent element on server event', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <div id="parentContainer">
+                    <button id="remover" @fir:removeparent:ok.window="$fir.removeParentEl()">Remove Parent</button>
+                </div>
+            </div>
+        `
+        await Alpine.nextTick()
+        expect(document.getElementById('parentContainer')).not.toBeNull()
+        dispatch('fir:removeparent:ok', {})
+        await Alpine.nextTick()
+        expect(document.getElementById('parentContainer')).toBeNull()
+    })
+
+    test('$fir.reset resets form on server event', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <form id="testForm" @fir:submitted:ok.window="$fir.reset()">
+                    <input type="text" name="message" value="Initial Value">
+                </form>
+            </div>
+        `
+        await Alpine.nextTick()
+        const form = document.getElementById('testForm')
+        const input = form.elements['message']
+        input.value = 'Changed Value'
+        dispatch('fir:submitted:ok', {})
+        await Alpine.nextTick()
+        expect(input.value).toBe('Initial Value')
+    })
+
+    test('$fir.toggleDisabled toggles attributes on events', async () => {
+        document.body.innerHTML = `
+            <div x-data>
+                <button id="myBtn"
+                    @click="$fir.emit('process')"
+                    @fir:process:pending.window="$fir.toggleDisabled()"
+                    @fir:process:done.window="$fir.toggleDisabled()">
+                    Process
+                </button>
+            </div>
+        `
+        await Alpine.nextTick()
+        const button = document.getElementById('myBtn')
+        dispatch('fir:process:pending', {})
+        await Alpine.nextTick()
+        expect(button.hasAttribute('disabled')).toBe(true)
+        dispatch('fir:process:done', {})
+        await Alpine.nextTick()
+        expect(button.hasAttribute('disabled')).toBe(false)
+    })
+
+    // --- Test using multi-statement handler (trailing () needed) ---
+    test('$fir.emit works with multiple statements', async () => {
+        document.body.innerHTML = `
+            <div x-data="{ clicked: false }">
+                <button id="myButton" @click="clicked = true; $fir.emit('buttonClick', { value: 456 })()">Click Me</button>
+                <span x-show="clicked">Clicked!</span>
+            </div>
+        `
+        await Alpine.nextTick()
+        const spanElement = document.querySelector('span') // Get reference to the span
+        expect(spanElement.style.display).toBe('none')
+
+        document.getElementById('myButton').click()
+
+        // *** CHANGE: Use waitForDOMUpdate instead of fixed nextTicks ***
+        // Wait specifically for the span's display style to change from 'none'
+        await waitForDOMUpdate(() => spanElement.style.display !== 'none')
+        // *** End Change ***
+
+        // Check Alpine state change (now that we waited for the DOM update)
+        expect(spanElement.style.display).not.toBe('none')
+
+        // Check fetch call
+        // Add a minimal wait to ensure async fetch mock logic completes if needed
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+        const fetchCall = global.fetch.mock.calls.find(
+            (call) => call[1]?.method === 'POST'
+        )
+        expect(fetchCall).toBeDefined()
+        const body = JSON.parse(fetchCall[1].body)
+        expect(body.event_id).toBe('buttonClick')
+        expect(body.params).toEqual({ value: 456 })
+    })
+}) // End describe block

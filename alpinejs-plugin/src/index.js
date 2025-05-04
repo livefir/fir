@@ -43,7 +43,13 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
     }
 
     const afterElement = (el, value) => {
-        el.insertBefore(toElement(value), el.nextSibling)
+        // Alternative implementation:
+        if (el.parentNode) {
+            // Insert the new element before the element that comes *after* el
+            el.parentNode.insertBefore(toElement(value), el.nextSibling)
+        } else {
+            console.error('Element has no parent, cannot insert after')
+        }
     }
 
     const beforeElement = (el, value) => {
