@@ -1,6 +1,8 @@
 import Alpine from 'alpinejs'
-import firPlugin, { createFirMagicFunctions } from '../src/index'
 import morph from '@alpinejs/morph'
+
+// Import the plugin itself
+import firPlugin from '../src/index'
 
 // Mock the fetch function globally
 global.fetch = jest.fn()
@@ -58,11 +60,10 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
     })
 
     beforeEach(() => {
-        // Reset mocks and setup default implementation
+        // Reset mocks and setup default implementation for fetch
         global.fetch.mockClear()
         global.fetch.mockImplementation(async (url, options) => {
             if (options?.method === 'HEAD') {
-                // console.log('Mock Fetch HEAD:', url); // Optional: debug log
                 return {
                     ok: true,
                     headers: new Headers({
@@ -71,12 +72,11 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
                 }
             }
             // Default for POST or other methods
-            // console.log('Mock Fetch POST/Other:', url, options); // Optional: debug log
             return {
                 ok: true,
                 redirected: false,
                 headers: new Headers({ 'Content-Type': 'application/json' }),
-                json: async () => [],
+                json: async () => [], // Default empty array response
             }
         })
 

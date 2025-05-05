@@ -7,13 +7,13 @@ const firDocument = typeof document !== 'undefined' ? document : null
  * Creates a WebSocket connection with automatic reconnection and heartbeat functionality
  * @param {string} url - WebSocket URL
  * @param {string|string[]} socketOptions - WebSocket protocol options
- * @param {Function} dispatchServerEvents - Callback to handle server events
+ * @param {Function} processServerEventsCallback - Callback to handle and dispatch server events (e.g., processAndDispatchServerEvents)
  * @returns {Object} WebSocket API
  */
 export default function createWebSocket(
     url,
     socketOptions,
-    dispatchServerEvents
+    processServerEventsCallback // Renamed parameter for clarity
 ) {
     let socket = null
     let openPromise = null
@@ -168,7 +168,8 @@ export default function createWebSocket(
                     pendingHeartbeat = false
                     return
                 }
-                dispatchServerEvents(serverEvents)
+                // Use the renamed callback parameter
+                processServerEventsCallback(serverEvents)
             } catch (err) {
                 console.error('Error processing message:', err)
             }

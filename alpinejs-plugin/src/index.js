@@ -1,5 +1,11 @@
 import websocket from './websocket'
 import morph from '@alpinejs/morph'
+import {
+    createCustomEvent,
+    dispatchEventOnIdTarget,
+    dispatchEventOnClassTarget,
+    isValidFirEvent,
+} from './eventDispatcher'
 
 // Utility functions
 const isObject = (obj) => {
@@ -24,13 +30,11 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
             console.error(`morph value is null or undefined`)
             return
         }
-        // *** ADD THIS CHECK ***
         // If the value is an empty string, clear the element instead of morphing
         if (value === '') {
             el.innerHTML = ''
             return
         }
-        // *** END ADDED CHECK ***
 
         Alpine.morph(el, value, {
             key(el) {
@@ -382,7 +386,178 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
     }
 }
 
+// Define postEvent function outside Plugin
+/**
+ * Handles sending the firEvent via WebSocket or Fetch.
+ * @param {object} firEvent - The event object to send.
+ * @param {Function} dispatchSingleServerEvent - Function to dispatch pending events.
+ * @param {Function} processAndDispatchServerEvents - Function to process fetch responses.
+ * @param {object|null} socket - The WebSocket instance (or null).
+ * @param {Function} fetchFn - The fetch function (usually window.fetch).
+ */
+export const postEvent = (
+    firEvent,
+    dispatchSingleServerEvent,
+    processAndDispatchServerEvents,
+    socket,
+    fetchFn = fetch // Default to global fetch
+) => {
+    if (!firEvent.event_id) {
+        // Use console.error for actual errors
+        console.error(
+            "event id is empty and element id is not set. can't emit event"
+        )
+        return // Stop execution if no ID
+    }
+
+    Object.assign(firEvent, { ts: Date.now() })
+
+    const eventIdLower = firEvent.event_id.toLowerCase()
+    const eventIdKebab = firEvent.event_id
+        .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
+        .toLowerCase()
+
+    // Dispatch pending events using the provided dispatcher
+    let eventTypeLower = `fir:${eventIdLower}:pending`
+    dispatchSingleServerEvent({
+        type: eventTypeLower,
+        target: `.${eventTypeLower.replaceAll(':', '-')}`,
+    })
+
+    if (eventIdLower !== eventIdKebab) {
+        let eventTypeKebab = `fir:${eventIdKebab}:pending`
+        dispatchSingleServerEvent({
+            type: eventTypeKebab,
+            target: `.${eventTypeKebab.replaceAll(':', '-')}`,
+        })
+    }
+
+    // Use the provided socket instance
+    if (socket && socket.emit(firEvent)) {
+        // Event sent via websocket
+    } else {
+        // Event sent via HTTP POST using the provided fetch function
+        const body = JSON.stringify(firEvent)
+        fetchFn(window.location.pathname, {
+            // Use fetchFn
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-FIR-MODE': 'event',
+            },
+            body: body,
+        })
+            .then((response) => {
+                if (response.redirected) {
+                    window.location.href = response.url
+                    return null // Stop promise chain on redirect
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`)
+                }
+                const contentType = response.headers.get('content-type')
+                if (
+                    contentType &&
+                    contentType.indexOf('application/json') !== -1
+                ) {
+                    return response.json()
+                } else {
+                    return null // Handle non-JSON responses
+                }
+            })
+            .then((serverEvents) => {
+                if (serverEvents) {
+                    // Use the provided processor function for HTTP responses
+                    processAndDispatchServerEvents(serverEvents)
+                }
+            })
+            .catch((error) => {
+                console.error(
+                    `${firEvent.event_id} fetch error: ${error}, request body: ${body}`
+                )
+            })
+    }
+}
+
 const Plugin = (Alpine) => {
+    // --- Start Refactored Dispatch Logic ---
+
+    const FIR_PREFIX = 'fir:'
+    const ID_SELECTOR_PREFIX = '#'
+    const CLASS_SELECTOR_PREFIX = '.'
+
+    /**
+     * Dispatches a single server event to the appropriate targets (window, ID, class).
+     * Assumes the input serverEvent object is valid.
+     */
+    const dispatchSingleServerEvent = (serverEvent) => {
+        // Use directly imported function
+        const event = createCustomEvent(serverEvent.type, serverEvent.detail)
+
+        // Always dispatch on window first
+        window.dispatchEvent(event)
+
+        // Dispatch based on target selector
+        const target = serverEvent.target
+        if (target) {
+            if (target.startsWith(ID_SELECTOR_PREFIX)) {
+                const targetId = target.substring(1)
+                // Use directly imported function
+                dispatchEventOnIdTarget(event, targetId)
+            } else if (target.startsWith(CLASS_SELECTOR_PREFIX)) {
+                const targetClass = target.substring(1)
+                // Use directly imported function
+                dispatchEventOnClassTarget(event, targetClass, serverEvent.key)
+            } else {
+                console.warn(
+                    `Invalid target format "${target}" for event "${serverEvent.type}". Target must start with # or .`
+                )
+            }
+        }
+    }
+
+    /**
+     * Processes an array of server events, validates them, adds corresponding ':done' events,
+     * and dispatches all resulting events.
+     */
+    const processAndDispatchServerEvents = (serverEvents) => {
+        if (!Array.isArray(serverEvents) || serverEvents.length === 0) {
+            return
+        }
+
+        // Use directly imported function
+        const validEvents = serverEvents.filter(isValidFirEvent)
+        const eventsToDispatch = [...validEvents]
+        const processedEventNames = new Set()
+
+        validEvents.forEach((serverEvent) => {
+            const parts = serverEvent.type.split(':')
+            const eventName = parts[1]
+
+            if (
+                eventName === 'onevent' ||
+                eventName === 'onload' ||
+                processedEventNames.has(eventName)
+            ) {
+                return
+            }
+
+            processedEventNames.add(eventName)
+
+            const doneEventType = `${FIR_PREFIX}${eventName}:done`
+            eventsToDispatch.push({
+                type: doneEventType,
+                target: `.${doneEventType.replaceAll(':', '-')}`,
+                detail: serverEvent.detail,
+            })
+        })
+
+        // Use dispatchSingleServerEvent which internally uses the imported functions now
+        eventsToDispatch.forEach(dispatchSingleServerEvent)
+    }
+
+    // --- End Refactored Dispatch Logic ---
+
     const getSessionIDFromCookie = () => {
         return document.cookie
             .split('; ')
@@ -406,8 +581,9 @@ const Plugin = (Alpine) => {
                 if (
                     response.headers.get('X-FIR-WEBSOCKET-ENABLED') === 'true'
                 ) {
+                    // Pass the orchestrator function as the callback
                     socket = websocket(connectURL, [], (events) =>
-                        dispatchServerEvents(events)
+                        processAndDispatchServerEvents(events)
                     )
                 }
             })
@@ -451,69 +627,26 @@ const Plugin = (Alpine) => {
         }
     )
 
-    // Define the post function locally within the Plugin scope
-    const post = (firEvent) => {
-        if (!firEvent.event_id) {
-            throw new Error('event id is required.')
-        }
-
-        Object.assign(firEvent, { ts: Date.now() })
-
-        const eventIdLower = firEvent.event_id.toLowerCase()
-        // camel to kebab case
-        const eventIdKebab = firEvent.event_id
-            .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
-            .toLowerCase()
-
-        let eventTypeLower = `fir:${eventIdLower}:pending`
-        dispatchServerEvent({
-            type: eventTypeLower,
-            target: `.${eventTypeLower.replaceAll(':', '-')}`,
-        })
-
-        if (eventIdLower !== eventIdKebab) {
-            let eventTypeKebab = `fir:${eventIdKebab}:pending`
-            dispatchServerEvent({
-                type: eventTypeKebab,
-                target: `.${eventTypeKebab.replaceAll(':', '-')}`,
-            })
-        }
-
-        if (socket && socket.emit(firEvent)) {
-        } else {
-            const body = JSON.stringify(firEvent)
-            fetch(window.location.pathname, {
-                method: 'POST',
-
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-FIR-MODE': 'event',
-                },
-                body: body,
-            })
-                .then((response) => {
-                    if (response.redirected) {
-                        window.location.href = response.url
-                        return
-                    }
-                    return response.json()
-                })
-                .then((serverEvents) => {
-                    dispatchServerEvents(serverEvents)
-                })
-                .catch((error) => {
-                    console.error(
-                        `${firEvent.event_id} error: ${error}, request body: ${body}`,
-                        error
-                    )
-                })
-        }
-    }
-
     // Register the fir magic helper
     Alpine.magic('fir', (el, { Alpine }) => {
-        // Create the magic functions, passing the local post function
-        const magicFunctions = createFirMagicFunctions(el, Alpine, post)
+        // Create a wrapper function to pass to createFirMagicFunctions
+        // This wrapper calls the external postEvent with dependencies from this scope
+        const postFnWrapper = (firEvent) => {
+            postEvent(
+                firEvent,
+                dispatchSingleServerEvent, // Pass the function from Plugin scope
+                processAndDispatchServerEvents, // Pass the function from Plugin scope
+                socket, // Pass the socket instance from Plugin scope
+                fetch // Pass the global fetch (or could be a mock in tests)
+            )
+        }
+
+        // Create the magic functions, passing the wrapper function
+        const magicFunctions = createFirMagicFunctions(
+            el,
+            Alpine,
+            postFnWrapper
+        )
 
         // Return an object with all the magic functions
         return {
@@ -532,129 +665,8 @@ const Plugin = (Alpine) => {
         }
     })
 
-    const dispatchServerEvents = (serverEvents) => {
-        if (!serverEvents) {
-            console.error(`server events is empty`)
-            return
-        }
-        if (serverEvents.length == 0) {
-            console.error(`server events is empty`)
-            return
-        }
-
-        const doneEvents = new Set()
-        serverEvents.forEach((serverEvent) => {
-            if (!serverEvent) {
-                console.error(`server event is empty`)
-                return
-            }
-            if (serverEvent && serverEvent.type == '') {
-                console.error(`server event type is empty`)
-                return
-            }
-
-            const parts = serverEvent.type.split(':')
-            if (parts.length < 2) {
-                console.error(
-                    `server event type ${serverEvent.type} is invalid`
-                )
-                return
-            }
-
-            if (parts[0] != 'fir') {
-                console.error(
-                    `server event type ${serverEvent.type} is invalid`
-                )
-                return
-            }
-            const eventName = parts[1]
-
-            if (eventName === 'onevent' || eventName === 'onload') {
-                return
-            }
-            if (doneEvents.has(eventName)) {
-                return
-            }
-            doneEvents.add(eventName)
-            let eventType = `fir:${eventName}:done`
-            serverEvents.push({
-                type: eventType,
-                target: `.${eventType.replaceAll(':', '-')}`,
-                detail: serverEvent.detail,
-            })
-        })
-
-        for (const doneEvent of doneEvents) {
-            serverEvents.push(doneEvent)
-        }
-        serverEvents.forEach((serverEvent) => {
-            dispatchServerEvent(serverEvent)
-        })
-    }
-
-    const dispatchServerEvent = (serverEvent) => {
-        const opts = {
-            detail: serverEvent.detail,
-            bubbles: true,
-            // Allows events to pass the shadow DOM barrier.
-            composed: true,
-            cancelable: true,
-        }
-        const renderEvent = new CustomEvent(serverEvent.type, opts)
-        window.dispatchEvent(renderEvent)
-        if (serverEvent.target && serverEvent.target.startsWith('#')) {
-            const elem = document.getElementById(
-                serverEvent.target.substring(1)
-            )
-
-            elem.dispatchEvent(renderEvent)
-            const getSiblings = (elm) =>
-                elm &&
-                elm.parentNode &&
-                [...elm.parentNode.children].filter(
-                    (node) =>
-                        node != elm &&
-                        (node.hasAttribute(`@${serverEvent.type}`) ||
-                            node.hasAttribute(`x-on:${serverEvent.type}`))
-                )
-
-            const sibs = getSiblings(elem)
-            sibs.forEach((sib) => {
-                sib.dispatchEvent(renderEvent)
-            })
-        }
-
-        if (serverEvent.target && serverEvent.target.startsWith('.')) {
-            const elems = Array.from(
-                document.getElementsByClassName(serverEvent.target.substring(1))
-            )
-            for (let i = 0; i < elems.length; i++) {
-                if (
-                    elems[i].hasAttribute(`@${serverEvent.type}`) ||
-                    elems[i].hasAttribute(`x-on:${serverEvent.type}`)
-                ) {
-                    elems[i].dispatchEvent(renderEvent)
-                }
-            }
-            // target with key
-            if (serverEvent.key) {
-                const elems = Array.from(
-                    document.getElementsByClassName(
-                        serverEvent.target.substring(1) + '--' + serverEvent.key
-                    )
-                )
-
-                for (let i = 0; i < elems.length; i++) {
-                    if (
-                        elems[i].hasAttribute(`@${serverEvent.type}`) ||
-                        elems[i].hasAttribute(`x-on:${serverEvent.type}`)
-                    ) {
-                        elems[i].dispatchEvent(renderEvent)
-                    }
-                }
-            }
-        }
-    }
+    // The old dispatchServerEvents and dispatchServerEvent functions are now replaced
+    // by the refactored helper functions (imported) and processAndDispatchServerEvents (local).
 
     Alpine.plugin(morph)
 }
