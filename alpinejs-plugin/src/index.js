@@ -5,152 +5,79 @@ import {
     dispatchEventOnIdTarget,
     dispatchEventOnClassTarget,
     isValidFirEvent,
-} from './eventDispatcher'
-
-// Utility functions
-const isObject = (obj) => {
-    return Object.prototype.toString.call(obj) === '[object Object]'
-}
+} from './eventDispatcher' // Assuming this file exists and is correct
+// Import from new utility modules
+import { isObject, getSessionIDFromCookie } from './utils' // Import utils
+import * as domUtils from './domUtils' // Import all DOM utils under a namespace
 
 // Define magic functions outside of Alpine.magic for better testability
 export const createFirMagicFunctions = (el, Alpine, postFn) => {
-    // Add postFn parameter
-    // Helper functions
-    const eventHTML = (event) => {
-        let html = ''
-        if (event?.detail) {
-            html = event.detail.html ? event.detail.html : ''
-        }
-        return html
-    }
-
-    const morphElement = (el, value) => {
-        // Allow empty strings, only return if null or undefined
-        if (value == null) {
-            console.error(`morph value is null or undefined`)
-            return
-        }
-        // If the value is an empty string, clear the element instead of morphing
-        if (value === '') {
-            el.innerHTML = ''
-            return
-        }
-
-        Alpine.morph(el, value, {
-            key(el) {
-                return el.getAttribute('fir-key')
-            },
-        })
-    }
-
-    const toElements = (htmlString) => {
-        var template = document.createElement('template')
-        template.innerHTML = htmlString
-        return template.content.childNodes
-    }
-
-    const toElement = (htmlString) => {
-        var template = document.createElement('template')
-        template.innerHTML = htmlString
-        return template.content.firstChild
-    }
-
-    const afterElement = (el, value) => {
-        // Alternative implementation:
-        if (el.parentNode) {
-            // Insert the new element before the element that comes *after* el
-            el.parentNode.insertBefore(toElement(value), el.nextSibling)
-        } else {
-            console.error('Element has no parent, cannot insert after')
-        }
-    }
-
-    const beforeElement = (el, value) => {
-        if (el.parentNode) {
-            el.parentNode.insertBefore(toElement(value), el)
-        } else {
-            console.error('Element has no parent, cannot insert before')
-        }
-    }
-
-    const appendElement = (el, value) => {
-        let clonedEl = el.cloneNode(true)
-        clonedEl.append(...toElements(value))
-        morphElement(el, clonedEl)
-    }
-
-    const prependElement = (el, value) => {
-        let clonedEl = el.cloneNode(true)
-        clonedEl.prepend(...toElements(value))
-        morphElement(el, clonedEl)
-    }
-
-    const removeElement = (el) => {
-        el.remove()
-    }
-
-    const removeParentElement = (el) => {
-        el.parentElement.remove()
-    }
-
-    const getSessionIDFromCookie = () => {
-        return document.cookie
-            .split('; ')
-            .find((row) => row.startsWith('_fir_session_='))
-            ?.substring(14)
-    }
-
-    // Define individual magic functions
+    // Define individual magic functions using imported helpers
     const replace = () => {
         return function (event) {
             let toHTML = el.cloneNode(false)
-            toHTML.innerHTML = eventHTML(event).trim()
-            morphElement(el, toHTML.outerHTML)
+            const html = domUtils.eventHTML(event) // Use imported domUtils.eventHTML
+            toHTML.innerHTML = html // Assign potentially untrimmed HTML if original did
+            // Use imported domUtils.morphElement, passing Alpine
+            domUtils.morphElement(el, toHTML.outerHTML, Alpine)
         }
     }
 
     const replaceEl = () => {
         return function (event) {
-            morphElement(el, eventHTML(event))
+            const html = domUtils.eventHTML(event) // Use imported domUtils.eventHTML
+            // Use imported domUtils.morphElement, passing Alpine
+            domUtils.morphElement(el, html, Alpine)
         }
     }
 
     const appendEl = () => {
         return function (event) {
-            appendElement(el, eventHTML(event))
+            const html = domUtils.eventHTML(event) // Use imported domUtils.eventHTML
+            // Use imported domUtils.appendElement, passing Alpine
+            domUtils.appendElement(el, html, Alpine)
         }
     }
 
     const prependEl = () => {
         return function (event) {
-            prependElement(el, eventHTML(event))
+            const html = domUtils.eventHTML(event) // Use imported domUtils.eventHTML
+            // Use imported domUtils.prependElement, passing Alpine
+            domUtils.prependElement(el, html, Alpine)
         }
     }
 
     const afterEl = () => {
         return function (event) {
-            afterElement(el, eventHTML(event))
+            const html = domUtils.eventHTML(event) // Use imported domUtils.eventHTML
+            // Use imported domUtils.afterElement
+            domUtils.afterElement(el, html)
         }
     }
 
     const beforeEl = () => {
         return function (event) {
-            beforeElement(el, eventHTML(event))
+            const html = domUtils.eventHTML(event) // Use imported domUtils.eventHTML
+            // Use imported domUtils.beforeElement
+            domUtils.beforeElement(el, html)
         }
     }
 
     const removeEl = () => {
         return function (event) {
-            removeElement(el)
+            // Use imported domUtils.removeElement
+            domUtils.removeElement(el)
         }
     }
 
     const removeParentEl = () => {
         return function (event) {
-            removeParentElement(el)
+            // Use imported domUtils.removeParentElement
+            domUtils.removeParentElement(el)
         }
     }
 
+    // reset and toggleDisabled implementations remain the same
     const reset = () => {
         return function (event) {
             if (el instanceof HTMLFormElement) {
@@ -205,6 +132,7 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
         }
     }
 
+    // emit and submit use imported utils
     const emit = (id, params, target) => {
         return function (event) {
             if (id) {
@@ -247,7 +175,6 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
     }
 
     const submit = (opts) => {
-        // Implementation remains the same
         return function (event) {
             if (event.type !== 'submit' && !(el instanceof HTMLFormElement)) {
                 console.error(
@@ -386,28 +313,19 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
     }
 }
 
-// Define postEvent function outside Plugin
-/**
- * Handles sending the firEvent via WebSocket or Fetch.
- * @param {object} firEvent - The event object to send.
- * @param {Function} dispatchSingleServerEvent - Function to dispatch pending events.
- * @param {Function} processAndDispatchServerEvents - Function to process fetch responses.
- * @param {object|null} socket - The WebSocket instance (or null).
- * @param {Function} fetchFn - The fetch function (usually window.fetch).
- */
+// Define postEvent function outside Plugin (as before)
 export const postEvent = (
     firEvent,
     dispatchSingleServerEvent,
     processAndDispatchServerEvents,
     socket,
-    fetchFn = fetch // Default to global fetch
+    fetchFn = fetch
 ) => {
     if (!firEvent.event_id) {
-        // Use console.error for actual errors
         console.error(
             "event id is empty and element id is not set. can't emit event"
         )
-        return // Stop execution if no ID
+        return
     }
 
     Object.assign(firEvent, { ts: Date.now() })
@@ -417,7 +335,6 @@ export const postEvent = (
         .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
         .toLowerCase()
 
-    // Dispatch pending events using the provided dispatcher
     let eventTypeLower = `fir:${eventIdLower}:pending`
     dispatchSingleServerEvent({
         type: eventTypeLower,
@@ -432,14 +349,10 @@ export const postEvent = (
         })
     }
 
-    // Use the provided socket instance
     if (socket && socket.emit(firEvent)) {
-        // Event sent via websocket
     } else {
-        // Event sent via HTTP POST using the provided fetch function
         const body = JSON.stringify(firEvent)
         fetchFn(window.location.pathname, {
-            // Use fetchFn
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -450,7 +363,7 @@ export const postEvent = (
             .then((response) => {
                 if (response.redirected) {
                     window.location.href = response.url
-                    return null // Stop promise chain on redirect
+                    return null
                 }
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`)
@@ -462,12 +375,11 @@ export const postEvent = (
                 ) {
                     return response.json()
                 } else {
-                    return null // Handle non-JSON responses
+                    return null
                 }
             })
             .then((serverEvents) => {
                 if (serverEvents) {
-                    // Use the provided processor function for HTTP responses
                     processAndDispatchServerEvents(serverEvents)
                 }
             })
@@ -480,33 +392,21 @@ export const postEvent = (
 }
 
 const Plugin = (Alpine) => {
-    // --- Start Refactored Dispatch Logic ---
-
     const FIR_PREFIX = 'fir:'
     const ID_SELECTOR_PREFIX = '#'
     const CLASS_SELECTOR_PREFIX = '.'
 
-    /**
-     * Dispatches a single server event to the appropriate targets (window, ID, class).
-     * Assumes the input serverEvent object is valid.
-     */
     const dispatchSingleServerEvent = (serverEvent) => {
-        // Use directly imported function
         const event = createCustomEvent(serverEvent.type, serverEvent.detail)
-
-        // Always dispatch on window first
         window.dispatchEvent(event)
 
-        // Dispatch based on target selector
         const target = serverEvent.target
         if (target) {
             if (target.startsWith(ID_SELECTOR_PREFIX)) {
                 const targetId = target.substring(1)
-                // Use directly imported function
                 dispatchEventOnIdTarget(event, targetId)
             } else if (target.startsWith(CLASS_SELECTOR_PREFIX)) {
                 const targetClass = target.substring(1)
-                // Use directly imported function
                 dispatchEventOnClassTarget(event, targetClass, serverEvent.key)
             } else {
                 console.warn(
@@ -516,16 +416,11 @@ const Plugin = (Alpine) => {
         }
     }
 
-    /**
-     * Processes an array of server events, validates them, adds corresponding ':done' events,
-     * and dispatches all resulting events.
-     */
     const processAndDispatchServerEvents = (serverEvents) => {
         if (!Array.isArray(serverEvents) || serverEvents.length === 0) {
             return
         }
 
-        // Use directly imported function
         const validEvents = serverEvents.filter(isValidFirEvent)
         const eventsToDispatch = [...validEvents]
         const processedEventNames = new Set()
@@ -552,36 +447,20 @@ const Plugin = (Alpine) => {
             })
         })
 
-        // Use dispatchSingleServerEvent which internally uses the imported functions now
         eventsToDispatch.forEach(dispatchSingleServerEvent)
     }
 
-    // --- End Refactored Dispatch Logic ---
-
-    const getSessionIDFromCookie = () => {
-        return document.cookie
-            .split('; ')
-            .find((row) => row.startsWith('_fir_session_='))
-            ?.substring(14)
-    }
-
-    // connect to websocket
     let connectURL = `ws://${window.location.host}${window.location.pathname}`
     if (window.location.protocol === 'https:') {
         connectURL = `wss://${window.location.host}${window.location.pathname}`
     }
-
     let socket
     if (getSessionIDFromCookie()) {
-        // fetch HEAD request to check if websocket is enabled
-        fetch(window.location.href, {
-            method: 'HEAD',
-        })
+        fetch(window.location.href, { method: 'HEAD' })
             .then((response) => {
                 if (
                     response.headers.get('X-FIR-WEBSOCKET-ENABLED') === 'true'
                 ) {
-                    // Pass the orchestrator function as the callback
                     socket = websocket(connectURL, [], (events) =>
                         processAndDispatchServerEvents(events)
                     )
@@ -598,12 +477,6 @@ const Plugin = (Alpine) => {
         window.location.reload()
     })
 
-    // source from https://dev.to/iamcherta/hotwire-empty-states-with-alpinejs-4gpo
-    /** fir-mutation-observer implements the https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver as an
-     * alpine directive. It allows you to observe changes to the DOM and react to them.
-     * @example
-     * e.g.x-fir-mutation-observer.child-list.subtree="if ($el.children.length === 0) { empty = true } else { empty = false }"
-     */
     Alpine.directive(
         'fir-mutation-observer',
         (el, { expression, modifiers }, { evaluateLater, cleanup }) => {
@@ -627,28 +500,22 @@ const Plugin = (Alpine) => {
         }
     )
 
-    // Register the fir magic helper
     Alpine.magic('fir', (el, { Alpine }) => {
-        // Create a wrapper function to pass to createFirMagicFunctions
-        // This wrapper calls the external postEvent with dependencies from this scope
         const postFnWrapper = (firEvent) => {
             postEvent(
                 firEvent,
-                dispatchSingleServerEvent, // Pass the function from Plugin scope
-                processAndDispatchServerEvents, // Pass the function from Plugin scope
-                socket, // Pass the socket instance from Plugin scope
-                fetch // Pass the global fetch (or could be a mock in tests)
+                dispatchSingleServerEvent,
+                processAndDispatchServerEvents,
+                socket,
+                fetch
             )
         }
-
-        // Create the magic functions, passing the wrapper function
         const magicFunctions = createFirMagicFunctions(
             el,
             Alpine,
             postFnWrapper
         )
 
-        // Return an object with all the magic functions
         return {
             replace: magicFunctions.replace,
             replaceEl: magicFunctions.replaceEl,
@@ -664,9 +531,6 @@ const Plugin = (Alpine) => {
             submit: magicFunctions.submit,
         }
     })
-
-    // The old dispatchServerEvents and dispatchServerEvent functions are now replaced
-    // by the refactored helper functions (imported) and processAndDispatchServerEvents (local).
 
     Alpine.plugin(morph)
 }
