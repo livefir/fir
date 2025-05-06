@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs'
 import morph from '@alpinejs/morph'
-import { createFirMagicFunctions } from '../src/index'
+import { createFirMagicFunctions } from '../src/magicFunctions'
 
 // Don't mock Alpine or morph
 jest.unmock('alpinejs')

@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs'
-import FirPlugin, { createFirMagicFunctions } from '../src/index'
+import FirPlugin, { createFirMagicFunctions } from '../src/magicFunctions'
 import { initializeAlpineOnce } from './test-helpers' // Import from the helper file
 
 describe('Fir Magic Helpers', () => {

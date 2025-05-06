@@ -1,3 +1,5 @@
+import { getSessionIDFromCookie } from './utils' // Adjust path if necessary
+
 const REOPEN_TIMEOUTS = [500, 1000, 1500, 2000, 5000, 10000, 30000, 60000]
 const MAX_RECONNECT_ATTEMPTS = 10
 const HEARTBEAT_TIMEOUT = 500
@@ -278,5 +280,67 @@ export default function createWebSocket(
         getState() {
             return socket ? socket.readyState : null
         },
+    }
+}
+
+const createWebSocketInstance = (url, protocols, onMessageCallback) => {
+    const socket = new WebSocket(url, protocols)
+    //
+    // ... WebSocket event handlers (onopen, onmessage, onerror, onclose) ...
+    //
+    socket.onmessage = (event) => {
+        try {
+            const serverEvents = JSON.parse(event.data)
+            onMessageCallback(serverEvents)
+        } catch (e) {
+            console.error('Error parsing WebSocket message:', e)
+        }
+    }
+
+    return {
+        emit: (firEvent) => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(firEvent))
+                return true
+            }
+            return false
+        },
+        close: () => socket.close(),
+        // ... other methods you might need
+    }
+}
+
+export const setupWebSocketConnection = async (
+    processEventsFn,
+    fetchFn = fetch,
+    windowLocation = window.location,
+    // wsFactory now defaults to the main function exported by this module for creating a WebSocket
+    wsFactory = createWebSocketInstance
+) => {
+    let connectURL = `ws://${windowLocation.host}${windowLocation.pathname}`
+    if (windowLocation.protocol === 'https:') {
+        connectURL = `wss://${windowLocation.host}${windowLocation.pathname}`
+    }
+
+    if (!getSessionIDFromCookie()) {
+        console.error('No session ID found in cookie. WebSocket disabled.')
+        return null
+    }
+
+    try {
+        const response = await fetchFn(windowLocation.href, { method: 'HEAD' })
+        if (response.headers.get('X-FIR-WEBSOCKET-ENABLED') === 'true') {
+            console.log('WebSocket enabled, attempting connection...')
+            // Call the wsFactory to create and return the WebSocket instance
+            return wsFactory(connectURL, [], (events) =>
+                processEventsFn(events)
+            )
+        } else {
+            console.log('WebSocket not enabled by server.')
+            return null
+        }
+    } catch (error) {
+        console.error('Error checking WebSocket status:', error)
+        return null
     }
 }
