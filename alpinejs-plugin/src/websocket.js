@@ -17,6 +17,7 @@ export default function createWebSocket(
     socketOptions,
     processServerEventsCallback // Renamed parameter for clarity
 ) {
+    console.log('createWebSocket called')
     let socket = null
     let openPromise = null
     let reopenTimeoutHandler = null
@@ -290,6 +291,7 @@ export const setupWebSocketConnection = async (
     // Use the default export 'createWebSocket' as the default factory
     wsFactory = createWebSocket
 ) => {
+    console.log('Setting up WebSocket connection...')
     let connectURL = `ws://${windowLocation.host}${windowLocation.pathname}`
     if (windowLocation.protocol === 'https:') {
         connectURL = `wss://${windowLocation.host}${windowLocation.pathname}`

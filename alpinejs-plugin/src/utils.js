@@ -13,6 +13,7 @@ export const isObject = (obj) => {
  * @returns {string|undefined} The session ID or undefined if not found.
  */
 export const getSessionIDFromCookie = () => {
+    console.log('getSessionIDFromCookie called')
     if (typeof document === 'undefined' || !document.cookie) {
         return undefined
     }
