@@ -283,39 +283,12 @@ export default function createWebSocket(
     }
 }
 
-const createWebSocketInstance = (url, protocols, onMessageCallback) => {
-    const socket = new WebSocket(url, protocols)
-    //
-    // ... WebSocket event handlers (onopen, onmessage, onerror, onclose) ...
-    //
-    socket.onmessage = (event) => {
-        try {
-            const serverEvents = JSON.parse(event.data)
-            onMessageCallback(serverEvents)
-        } catch (e) {
-            console.error('Error parsing WebSocket message:', e)
-        }
-    }
-
-    return {
-        emit: (firEvent) => {
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify(firEvent))
-                return true
-            }
-            return false
-        },
-        close: () => socket.close(),
-        // ... other methods you might need
-    }
-}
-
 export const setupWebSocketConnection = async (
     processEventsFn,
     fetchFn = fetch,
     windowLocation = window.location,
-    // wsFactory now defaults to the main function exported by this module for creating a WebSocket
-    wsFactory = createWebSocketInstance
+    // Use the default export 'createWebSocket' as the default factory
+    wsFactory = createWebSocket
 ) => {
     let connectURL = `ws://${windowLocation.host}${windowLocation.pathname}`
     if (windowLocation.protocol === 'https:') {
@@ -331,7 +304,8 @@ export const setupWebSocketConnection = async (
         const response = await fetchFn(windowLocation.href, { method: 'HEAD' })
         if (response.headers.get('X-FIR-WEBSOCKET-ENABLED') === 'true') {
             console.log('WebSocket enabled, attempting connection...')
-            // Call the wsFactory to create and return the WebSocket instance
+            // The parameters (connectURL, [], callback) align with createWebSocket's signature
+            // (url, socketOptions, processServerEventsCallback)
             return wsFactory(connectURL, [], (events) =>
                 processEventsFn(events)
             )
