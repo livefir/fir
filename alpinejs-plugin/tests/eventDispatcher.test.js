@@ -1,20 +1,3 @@
-// ... other imports ...
-
-// REMOVE or COMMENT OUT the global jest.mock if its sole purpose was to mock dispatchEventOnElement
-// for the tests of dispatchEventOnIdTarget/ClassTarget.
-// If it's used for other functions (like dispatchSingleServerEvent's old mocking style),
-// you might need to adjust it or refactor those tests too.
-/*
-jest.mock('../src/eventDispatcher', () => {
-    const originalModule = jest.requireActual('../src/eventDispatcher');
-    return {
-        __esModule: true,
-        ...originalModule,
-        // dispatchEventOnElement: jest.fn(), // This was the problematic part for DI
-    };
-});
-*/
-
 // Get the actual module before mocking
 const actualEventDispatcher = jest.requireActual('../src/eventDispatcher')
 
