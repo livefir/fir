@@ -11,13 +11,12 @@ const ALPINE_XON_PREFIX = 'x-on:'
  * @returns {CustomEvent} The configured CustomEvent object.
  */
 export const createCustomEvent = (type, detail) => {
-    const opts = {
-        detail: detail,
+    return new CustomEvent(type, {
+        detail,
         bubbles: true,
-        composed: true, // Allows events to pass the shadow DOM barrier.
+        composed: true,
         cancelable: true,
-    }
-    return new CustomEvent(type, opts)
+    })
 }
 
 /**
@@ -27,9 +26,12 @@ export const createCustomEvent = (type, detail) => {
  * @returns {boolean} True if the element listens for the event, false otherwise.
  */
 export const isListenableElement = (element, eventType) => {
+    if (!element || typeof element.hasAttribute !== 'function') {
+        return false
+    }
     return (
-        element.hasAttribute(`${ALPINE_EVENT_PREFIX}${eventType}`) ||
-        element.hasAttribute(`${ALPINE_XON_PREFIX}${eventType}`)
+        element.hasAttribute(ALPINE_EVENT_PREFIX + eventType) ||
+        element.hasAttribute(ALPINE_XON_PREFIX + eventType)
     )
 }
 
@@ -38,10 +40,12 @@ export const isListenableElement = (element, eventType) => {
  * @param {Element} element - The target DOM element.
  * @param {CustomEvent} event - The event object to dispatch.
  */
-export const dispatchEventOnElement = (element, event) => {
-    // Only dispatch if the element exists and is listening for this specific event type
-    if (element && isListenableElement(element, event.type)) {
-        // Dispatch a new instance of the event for this specific target
+export const dispatchEventOnElement = (
+    element,
+    event,
+    isListenable = isListenableElement
+) => {
+    if (element && isListenable(element, event.type)) {
         element.dispatchEvent(
             new CustomEvent(event.type, {
                 detail: event.detail,
@@ -58,7 +62,14 @@ export const dispatchEventOnElement = (element, event) => {
  * @param {CustomEvent} event - The event object to dispatch.
  * @param {string} targetId - The ID of the target element (without '#').
  */
-export const dispatchEventOnIdTarget = (event, targetId, doc = document) => {
+export const dispatchEventOnIdTarget = (
+    event,
+    targetId,
+    doc = document,
+    isListenable = isListenableElement,
+    // Add dispatchEventElementFunc as a parameter with a default
+    dispatchEventElementFunc = dispatchEventOnElement
+) => {
     const element = doc.getElementById(targetId)
     if (!element) {
         console.warn(
@@ -67,15 +78,17 @@ export const dispatchEventOnIdTarget = (event, targetId, doc = document) => {
         return
     }
 
-    // Dispatch on the element itself
-    dispatchEventOnElement(element, event)
+    // Use the passed-in or default function
+    dispatchEventElementFunc(element, event, isListenable)
 
-    // Dispatch on siblings listening for the event
     if (element.parentNode) {
         const siblings = [...element.parentNode.children].filter(
             (node) => node !== element
         )
-        siblings.forEach((sibling) => dispatchEventOnElement(sibling, event))
+        siblings.forEach((sibling) =>
+            // Use the passed-in or default function
+            dispatchEventElementFunc(sibling, event, isListenable)
+        )
     }
 }
 
@@ -89,17 +102,19 @@ export const dispatchEventOnClassTarget = (
     event,
     targetClass,
     key,
-    doc = document
+    doc = document,
+    // Add dispatchEventElementFunc as a parameter with a default
+    dispatchEventElementFunc = dispatchEventOnElement
 ) => {
     let className = targetClass
-    // Append key if provided, creating a more specific class selector
     if (key) {
         className += '--' + key
     }
     const elements = doc.getElementsByClassName(className)
-    // It's okay if no elements match, just proceed.
     Array.from(elements).forEach((element) =>
-        dispatchEventOnElement(element, event)
+        // Use the passed-in or default function
+        // Note: original dispatchEventOnClassTarget calls dispatchEventOnElement with 2 args
+        dispatchEventElementFunc(element, event)
     )
 }
 
@@ -113,16 +128,25 @@ export const isValidFirEvent = (serverEvent) => {
         console.error('Server event is null or undefined.')
         return false
     }
-    if (!serverEvent.type || typeof serverEvent.type !== 'string') {
-        console.error('Server event type is missing or invalid:', serverEvent)
-        return false
-    }
-    const parts = serverEvent.type.split(':')
-    // Ensure it starts with 'fir:' and has at least 'fir' and 'eventName' parts
-    if (parts.length < 2 || parts[0] !== FIR_PREFIX.slice(0, -1)) {
-        console.error(
-            `Server event type "${serverEvent.type}" is invalid. Must start with "fir:" and have at least two parts.`
-        )
+    if (
+        typeof serverEvent.type !== 'string' ||
+        !serverEvent.type.startsWith(FIR_PREFIX) ||
+        serverEvent.type.split(':').length < 2 ||
+        serverEvent.type.split(':')[1] === ''
+    ) {
+        if (
+            typeof serverEvent.type !== 'string' ||
+            serverEvent.type.trim() === ''
+        ) {
+            console.error(
+                'Server event type is missing or invalid:',
+                serverEvent
+            )
+        } else {
+            console.error(
+                `Server event type "${serverEvent.type}" is invalid. Must start with "fir:" and have at least two parts.`
+            )
+        }
         return false
     }
     return true
@@ -133,6 +157,11 @@ export const dispatchSingleServerEvent = (
     serverEvent,
     windowObj = window,
     doc = document
+    // If dispatchSingleServerEvent calls dispatchEventOnIdTarget or dispatchEventOnClassTarget,
+    // and you want to control their internal calls to dispatchEventOnElement for tests of
+    // dispatchSingleServerEvent, you might need to pass the mock down through here too,
+    // or rely on those functions using their defaults (which would be the actual dispatchEventOnElement).
+    // For now, this example focuses on testing dispatchEventOnIdTarget/ClassTarget directly.
 ) => {
     const event = createCustomEvent(serverEvent.type, serverEvent.detail)
     windowObj.dispatchEvent(event)
@@ -141,9 +170,11 @@ export const dispatchSingleServerEvent = (
     if (target) {
         if (target.startsWith(ID_SELECTOR_PREFIX)) {
             const targetId = target.substring(1)
+            // It will use its default for dispatchEventElementFunc unless specified
             dispatchEventOnIdTarget(event, targetId, doc)
         } else if (target.startsWith(CLASS_SELECTOR_PREFIX)) {
             const targetClass = target.substring(1)
+            // It will use its default for dispatchEventElementFunc unless specified
             dispatchEventOnClassTarget(event, targetClass, serverEvent.key, doc)
         } else {
             console.warn(
@@ -195,52 +226,58 @@ export const processAndDispatchServerEvents = (
     eventsToDispatch.forEach(dispatchFn)
 }
 
-export const postEvent = async (
-    firEvent,
-    socket, // WebSocket instance, passed in
-    processEventsFn = processAndDispatchServerEvents, // Default to the one in this module
-    dispatchSingleEventFn = dispatchSingleServerEvent, // Default to the one in this module
-    fetchFn = fetch, // Default to global fetch
-    windowLocation = window.location // Default to global window.location
-) => {
-    if (!firEvent.event_id) {
-        console.error(
-            "event id is empty and element id is not set. can't emit event"
-        )
-        return
-    }
-
-    Object.assign(firEvent, { ts: Date.now() })
-
-    // Dispatch pending events immediately
-    const eventIdLower = firEvent.event_id.toLowerCase()
-    const eventIdKebab = firEvent.event_id
-        .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
+/**
+ * Generates standard event names (lowercase, kebab-case) and types/targets for a given suffix.
+ * @param {string} baseEventId - The base event ID (e.g., "MyEvent" or "my-event").
+ * @param {string} suffix - The suffix to append (e.g., "pending", "error").
+ * @returns {object} An object containing { eventIdLower, eventIdKebab, typeLower, targetLower, typeKebab, targetKebab }.
+ */
+export const generateFirEventNames = (baseEventId, suffix) => {
+    const eventIdLower = baseEventId.toLowerCase()
+    const eventIdKebab = baseEventId
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2') // Handles cases like "MyEVENT" -> "my-event"
         .toLowerCase()
 
-    let eventTypeLower = `${FIR_PREFIX}${eventIdLower}:pending` // FIR_PREFIX is from this module
-    dispatchSingleEventFn({
-        // dispatchSingleEventFn defaults to dispatchSingleServerEvent from this module
-        type: eventTypeLower,
-        target: `.${eventTypeLower.replaceAll(':', '-')}`,
-    })
+    const typeLower = `${FIR_PREFIX}${eventIdLower}:${suffix}`
+    const targetLower = `.${typeLower.replace(/:/g, '-')}` // Replace all colons for class selector
+
+    let typeKebab = null
+    let targetKebab = null
 
     if (eventIdLower !== eventIdKebab) {
-        let eventTypeKebab = `${FIR_PREFIX}${eventIdKebab}:pending` // FIR_PREFIX is from this module
-        dispatchSingleEventFn({
-            // dispatchSingleEventFn defaults to dispatchSingleServerEvent from this module
-            type: eventTypeKebab,
-            target: `.${eventTypeKebab.replaceAll(':', '-')}`,
-        })
+        typeKebab = `${FIR_PREFIX}${eventIdKebab}:${suffix}`
+        targetKebab = `.${typeKebab.replace(/:/g, '-')}` // Replace all colons for class selector
     }
 
-    // Try sending via WebSocket if available and connected
-    if (socket && socket.emit(firEvent)) {
-        return // Event sent via WebSocket
+    return {
+        eventIdLower,
+        eventIdKebab,
+        typeLower,
+        targetLower,
+        typeKebab,
+        targetKebab,
     }
+}
 
-    // Fallback to Fetch
-    const body = JSON.stringify(firEvent)
+/**
+ * Handles the Fetch fallback logic for postEvent.
+ * @private
+ */
+async function _handleFetchFallback(
+    firEvent,
+    fetchFn,
+    windowLocation,
+    processEventsFn,
+    dispatchSingleEventFn,
+    now // Current timestamp, passed from postEvent
+) {
+    const { eventIdLower, eventIdKebab } = generateFirEventNames(
+        firEvent.event_id,
+        '_temp_suffix_for_ids_only_'
+    ) // Suffix doesn't matter here
+    const body = JSON.stringify({ ...firEvent, ts: now }) // Ensure timestamp is in the body
+
     try {
         const response = await fetchFn(windowLocation.pathname, {
             method: 'POST',
@@ -252,7 +289,7 @@ export const postEvent = async (
         })
 
         if (response.redirected) {
-            window.location.href = response.url // Use injected window object if needed
+            windowLocation.href = response.url // Note: direct assignment
             return
         }
 
@@ -264,32 +301,107 @@ export const postEvent = async (
         if (contentType && contentType.includes('application/json')) {
             const serverEvents = await response.json()
             if (serverEvents) {
-                processEventsFn(serverEvents) // processEventsFn defaults to processAndDispatchServerEvents from this module
+                processEventsFn(serverEvents)
             }
         } else {
-            // Handle non-JSON responses if necessary, or just ignore
             console.log('Received non-JSON response, ignoring.')
         }
     } catch (error) {
         console.error(
             `${firEvent.event_id} fetch error: ${error}, request body: ${body}`
         )
-        // Optionally dispatch error events here
-        const errorEventTypeLower = `${FIR_PREFIX}${eventIdLower}:error` // FIR_PREFIX is from this module
+        const errorNames = generateFirEventNames(firEvent.event_id, 'error')
         dispatchSingleEventFn({
-            // dispatchSingleEventFn defaults to dispatchSingleServerEvent from this module
-            type: errorEventTypeLower,
-            target: `.${errorEventTypeLower.replaceAll(':', '-')}`,
+            type: errorNames.typeLower,
+            target: errorNames.targetLower,
             detail: { error: error.message },
         })
-        if (eventIdLower !== eventIdKebab) {
-            const errorEventTypeKebab = `${FIR_PREFIX}${eventIdKebab}:error` // FIR_PREFIX is from this module
+        if (errorNames.typeKebab) {
             dispatchSingleEventFn({
-                // dispatchSingleEventFn defaults to dispatchSingleServerEvent from this module
-                type: errorEventTypeKebab,
-                target: `.${errorEventTypeKebab.replaceAll(':', '-')}`,
+                type: errorNames.typeKebab,
+                target: errorNames.targetKebab,
                 detail: { error: error.message },
             })
         }
+    }
+}
+
+export const postEvent = async (
+    firEvent,
+    socket,
+    processEvents = processAndDispatchServerEvents,
+    dispatchSingleEvent = dispatchSingleServerEvent,
+    fetchFn = fetch,
+    windowLocation = window.location,
+    now = Date.now,
+    generateFirEventNamesFn = generateFirEventNames // Add as parameter with default
+) => {
+    if (!firEvent.event_id && !firEvent.element_id) {
+        console.error(
+            "event id is empty and element id is not set. can't emit event"
+        )
+        return
+    }
+
+    const eventId = firEvent.event_id || firEvent.element_id
+    const timestamp = now()
+
+    const dispatchFirEvent = (suffix, detail) => {
+        const names = generateFirEventNamesFn(eventId, suffix) // Use the injected/defaulted function
+        dispatchSingleEvent({
+            type: names.typeLower,
+            target: names.targetLower,
+            detail,
+        })
+        if (names.typeKebab) {
+            dispatchSingleEvent({
+                type: names.typeKebab,
+                target: names.targetKebab,
+                detail,
+            })
+        }
+    }
+
+    dispatchFirEvent('pending', { params: firEvent.params })
+
+    const payload = { ...firEvent, ts: timestamp }
+
+    if (socket && socket.emit && socket.emit(payload)) {
+        return
+    }
+
+    try {
+        const response = await fetchFn(windowLocation.pathname, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-FIR-MODE': 'event',
+            },
+            body: JSON.stringify(payload),
+        })
+
+        if (response.redirected) {
+            windowLocation.href = response.url
+            return
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+            const serverEvents = await response.json()
+            processEvents(serverEvents)
+        } else {
+            console.log('Received non-JSON response, ignoring.')
+        }
+    } catch (error) {
+        console.error(
+            `${eventId} fetch error: ${error}, request body: ${JSON.stringify(
+                payload
+            )}`
+        )
+        dispatchFirEvent('error', { error: error.message }) // This will also use generateFirEventNamesFn
     }
 }
