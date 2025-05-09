@@ -655,33 +655,21 @@ describe('eventDispatcher', () => {
                 `Server event type "${invalidEvent.type}" is invalid. Must start with "fir:" and have at least two parts.`
             )
             expect(mockDispatchFn).toHaveBeenCalledTimes(4) // 2 valid events + 2 done events
-            expect(mockDispatchFn).toHaveBeenCalledWith(
-                validEvent1,
-                expect.any(Number),
-                expect.any(Array)
-            )
-            expect(mockDispatchFn).toHaveBeenCalledWith(
-                validEvent2,
-                expect.any(Number),
-                expect.any(Array)
-            )
+            expect(mockDispatchFn).toHaveBeenCalledWith(validEvent1)
+            expect(mockDispatchFn).toHaveBeenCalledWith(validEvent2)
             expect(mockDispatchFn).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'fir:event1:done',
                     target: '.fir-event1-done',
                     detail: validEvent1.detail,
-                }),
-                expect.any(Number),
-                expect.any(Array)
+                })
             )
             expect(mockDispatchFn).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'fir:event2:done',
                     target: '.fir-event2-done',
                     detail: validEvent2.detail,
-                }),
-                expect.any(Number),
-                expect.any(Array)
+                })
             )
         })
 

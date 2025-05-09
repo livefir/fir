@@ -164,7 +164,22 @@ export const dispatchSingleServerEvent = (
     // For now, this example focuses on testing dispatchEventOnIdTarget/ClassTarget directly.
 ) => {
     const event = createCustomEvent(serverEvent.type, serverEvent.detail)
-    windowObj.dispatchEvent(event)
+
+    if (windowObj && typeof windowObj.dispatchEvent === 'function') {
+        windowObj.dispatchEvent(event)
+    } else {
+        console.error(
+            'Error: windowObj.dispatchEvent is not a function. Current windowObj:',
+            windowObj
+        )
+        // Optionally, you could try to fall back to the global window if windowObj is problematic
+        // if (window && typeof window.dispatchEvent === 'function') {
+        //     console.warn('Falling back to global window.dispatchEvent');
+        //     window.dispatchEvent(event);
+        // } else {
+        //     console.error('Global window.dispatchEvent is also not a function.');
+        // }
+    }
 
     const target = serverEvent.target
     if (target) {
@@ -223,7 +238,9 @@ export const processAndDispatchServerEvents = (
         })
     })
 
-    eventsToDispatch.forEach(dispatchFn)
+    eventsToDispatch.forEach((eventToDispatch) => {
+        dispatchFn(eventToDispatch) // Call with only the event argument
+    })
 }
 
 /**
