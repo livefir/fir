@@ -5,11 +5,11 @@
         </div>
 
         <hr />
-        <div id="count" x-fir-refresh="inc,dec">
+        <div x-fir-refresh="inc,dec">
             Count:
             {{ .count }}
         </div>
-        <button @click="$fir.emit('inc')">+</button>
-        <button @click="$fir.emit('dec')">-</button>
+        <button id="increment-btn" @click="$fir.emit('inc')">+</button>
+        <button id="decrement-btn" @click="$fir.emit('dec')">-</button>
     </div>
 {{ end }}
