@@ -2,13 +2,14 @@ package pubsub
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/redis/go-redis/v9"
-	"github.com/testcontainers/testcontainers-go"
 	redisContainer "github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
@@ -38,13 +39,13 @@ func TestInmemPublishAndSubscribe(t *testing.T) {
 	// Subscribe to the channel
 	subscription, err := pubsub.Subscribe(context.Background(), channel)
 	if err != nil {
-		t.Errorf("failed to subscribe to channel: %v", err)
+		t.Fatalf("failed to subscribe to channel: %v", err)
 	}
 
 	// Publish the event to the channel
 	err = pubsub.Publish(context.Background(), channel, event)
 	if err != nil {
-		t.Errorf("failed to publish event: %v", err)
+		t.Fatalf("failed to publish event: %v", err)
 	}
 
 	// Wait for the event to be received
@@ -52,7 +53,7 @@ func TestInmemPublishAndSubscribe(t *testing.T) {
 
 	// Check if the received event matches the published event
 	if *receivedEvent.ID != *event.ID {
-		t.Errorf("received event ID does not match published event ID")
+		t.Fatalf("received event ID does not match published event ID")
 	}
 
 	// Close the subscription
@@ -69,19 +70,19 @@ func TestInmemHasSubscribers(t *testing.T) {
 	// Check if the channel has subscribers
 	hasSubscribers := pubsub.HasSubscribers(context.Background(), channel)
 	if hasSubscribers {
-		t.Errorf("channel should not have subscribers")
+		t.Fatalf("channel should not have subscribers")
 	}
 
 	// Subscribe to the channel
 	subscription, err := pubsub.Subscribe(context.Background(), channel)
 	if err != nil {
-		t.Errorf("failed to subscribe to channel: %v", err)
+		t.Fatalf("failed to subscribe to channel: %v", err)
 	}
 
 	// Check if the channel has subscribers
 	hasSubscribers = pubsub.HasSubscribers(context.Background(), channel)
 	if !hasSubscribers {
-		t.Errorf("channel should have subscribers")
+		t.Fatalf("channel should have subscribers")
 	}
 
 	// Close the subscription
@@ -98,25 +99,25 @@ func TestInmemHasSubscribersWithPattern(t *testing.T) {
 	// Check if the channel has subscribers
 	hasSubscribers := pubsub.HasSubscribers(context.Background(), channel)
 	if hasSubscribers {
-		t.Errorf("channel should not have subscribers")
+		t.Fatalf("channel should not have subscribers")
 	}
 
 	// Subscribe to the channel
 	subscription, err := pubsub.Subscribe(context.Background(), channel)
 	if err != nil {
-		t.Errorf("failed to subscribe to channel: %v", err)
+		t.Fatalf("failed to subscribe to channel: %v", err)
 	}
 
 	// Check if the channel has subscribers
 	hasSubscribers = pubsub.HasSubscribers(context.Background(), channel)
 	if !hasSubscribers {
-		t.Errorf("channel should have subscribers")
+		t.Fatalf("channel should have subscribers")
 	}
 
 	// Check if the channel has subscribers with a pattern
 	hasSubscribers = pubsub.HasSubscribers(context.Background(), "test-*")
 	if !hasSubscribers {
-		t.Errorf("channel should have subscribers with pattern")
+		t.Fatalf("channel should have subscribers with pattern")
 	}
 
 	// Close the subscription
@@ -129,22 +130,37 @@ func TestRedisPublishAndSubscribe(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	redisContainer, err := redisContainer.RunContainer(ctx,
-		testcontainers.WithImage("docker.io/redis:7"),
-	)
+	rc, err := redisContainer.Run(ctx, "redis:7")
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)
 	}
 
 	// Clean up the container
 	defer func() {
-		if err := redisContainer.Terminate(ctx); err != nil {
+		if err := rc.Terminate(ctx); err != nil {
 			t.Fatalf("failed to terminate container: %s", err)
 		}
 	}()
 
+	host, err := rc.Host(ctx)
+	if err != nil {
+		t.Fatalf("failed to get host: %s", err)
+	}
+
+	port, err := rc.MappedPort(ctx, "6379")
+
+	if err != nil {
+		t.Fatalf("failed to get mapped port: %s", err)
+
+	}
+
+	addr := fmt.Sprintf("%s:%s", host, port.Port())
+	if addr == "" {
+		t.Fatalf("failed to get address: %s", err)
+	}
+
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     addr,
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
@@ -172,13 +188,13 @@ func TestRedisPublishAndSubscribe(t *testing.T) {
 	// Subscribe to the channel
 	subscription, err := pubsub.Subscribe(context.Background(), channel)
 	if err != nil {
-		t.Errorf("failed to subscribe to channel: %v", err)
+		t.Fatalf("failed to subscribe to channel: %v", err)
 	}
 
 	// Publish the event to the channel
 	err = pubsub.Publish(context.Background(), channel, event)
 	if err != nil {
-		t.Errorf("failed to publish event: %v", err)
+		t.Fatalf("failed to publish event: %v", err)
 	}
 
 	// Wait for the event to be received
@@ -186,7 +202,7 @@ func TestRedisPublishAndSubscribe(t *testing.T) {
 
 	// Check if the received event matches the published event
 	if *receivedEvent.ID != *event.ID {
-		t.Errorf("received event ID does not match published event ID %v, %v", *receivedEvent.ID, *event.ID)
+		t.Fatalf("received event ID does not match published event ID %v, %v", *receivedEvent.ID, *event.ID)
 	}
 
 	// Close the subscription
@@ -199,22 +215,37 @@ func TestRedisHasSubscribers(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	redisContainer, err := redisContainer.RunContainer(ctx,
-		testcontainers.WithImage("docker.io/redis:7"),
-	)
+	rc, err := redisContainer.Run(ctx, "redis:7")
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)
 	}
 
 	// Clean up the container
 	defer func() {
-		if err := redisContainer.Terminate(ctx); err != nil {
+		if err := rc.Terminate(ctx); err != nil {
 			t.Fatalf("failed to terminate container: %s", err)
 		}
 	}()
 
+	host, err := rc.Host(ctx)
+	if err != nil {
+		t.Fatalf("failed to get host: %s", err)
+	}
+
+	port, err := rc.MappedPort(ctx, "6379")
+
+	if err != nil {
+		t.Fatalf("failed to get mapped port: %s", err)
+
+	}
+
+	addr := fmt.Sprintf("%s:%s", host, port.Port())
+	if addr == "" {
+		t.Fatalf("failed to get address: %s", err)
+	}
+
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     addr,
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
@@ -230,25 +261,27 @@ func TestRedisHasSubscribers(t *testing.T) {
 	// Check if the channel has subscribers
 	hasSubscribers := pubsub.HasSubscribers(context.Background(), channel)
 	if hasSubscribers {
-		t.Errorf("channel should not have subscribers")
+		t.Fatalf("channel should not have subscribers")
 	}
 
 	// Subscribe to the channel
 	subscription, err := pubsub.Subscribe(context.Background(), channel)
 	if err != nil {
-		t.Errorf("failed to subscribe to channel: %v", err)
+		t.Fatalf("failed to subscribe to channel: %v", err)
 	}
+
+	time.Sleep(500 * time.Millisecond)
 
 	// Check if the channel has subscribers
 	hasSubscribers = pubsub.HasSubscribers(context.Background(), channel)
 	if !hasSubscribers {
-		t.Errorf("channel should have subscribers")
+		t.Fatalf("channel should have subscribers")
 	}
 
 	// Check if the channel has subscribers with a pattern
 	hasSubscribers = pubsub.HasSubscribers(context.Background(), "test-*")
 	if !hasSubscribers {
-		t.Errorf("channel should have subscribers with pattern")
+		t.Fatalf("channel should have subscribers with pattern")
 	}
 
 	// Close the subscription
