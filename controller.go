@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -291,7 +292,7 @@ func (c *controller) defaults() *routeOpt {
 		id:                shortuuid.New(),
 		content:           "Hello Fir App!",
 		layoutContentName: "content",
-		partials:          []string{"./routes/partials"},
+		partials:          []string{}, // Remove default routes/partials path
 		funcMap:           c.opt.funcMap,
 		extensions:        []string{".gohtml", ".gotmpl", ".html", ".tmpl"},
 		eventSender:       make(chan Event),
@@ -311,7 +312,14 @@ func (c *controller) Route(route Route) http.HandlerFunc {
 	}
 
 	// create new route
-	r := newRoute(c, defaultRouteOpt)
+	r, err := newRoute(c, defaultRouteOpt)
+	if err != nil {
+		// Return a handler that serves the error with a non-zero exit code
+		return func(w http.ResponseWriter, req *http.Request) {
+			logger.Errorf("route creation failed: %v", err)
+			http.Error(w, fmt.Sprintf("route creation failed: %v", err), http.StatusInternalServerError)
+		}
+	}
 	// register route in the controller
 	c.routes[r.id] = r
 	return servertiming.Middleware(r, nil).ServeHTTP
@@ -324,7 +332,14 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 		option(defaultRouteOpt)
 	}
 	// create new route
-	r := newRoute(c, defaultRouteOpt)
+	r, err := newRoute(c, defaultRouteOpt)
+	if err != nil {
+		// Return a handler that serves the error with a non-zero exit code
+		return func(w http.ResponseWriter, req *http.Request) {
+			logger.Errorf("route creation failed: %v", err)
+			http.Error(w, fmt.Sprintf("route creation failed: %v", err), http.StatusInternalServerError)
+		}
+	}
 	// register route in the controller
 	c.routes[r.id] = r
 

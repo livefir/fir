@@ -1,0 +1,19 @@
+=== RUN   TestCounterExampleE2E
+controller starting in developer mode
+eventID:  inc:ok  templates:  fir-03f6dd43146caaa8 
+eventID:  dec:ok  templates:  fir-03f6dd43146caaa8 
+    counter_test.go:81: Initial body HTML:
+        <body>
+                <div x-data="">
+                    <div @fir:inc:ok::fir-03f6dd43146caaa8="$fir.replace()" @fir:dec:ok::fir-03f6dd43146caaa8="$fir.replace()" class="fir-inc-ok--fir-03f6dd43146caaa8 fir-dec-ok--fir-03f6dd43146caaa8">Count:0</div>
+                    <form method="post" @submit.prevent="$fir.submit()">
+                        <button formaction="/?event=inc" type="submit">+</button>
+                        <button formaction="/?event=dec" type="submit">-</button>
+                    </form>
+                </div>
+            
+        
+        </body>
+--- PASS: TestCounterExampleE2E (4.14s)
+PASS
+ok  	command-line-arguments	4.561s

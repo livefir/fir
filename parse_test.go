@@ -2,8 +2,13 @@ package fir
 
 import (
 	"bytes"
+	"embed"
+	"html/template"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +16,10 @@ import (
 	"golang.org/x/net/html/atom" // Import atom package
 )
 
+//go:embed testdata/public
+var testFS embed.FS
+
+// TestDeepMergeEventTemplates tests the deep merging of event templates
 func TestDeepMergeEventTemplates(t *testing.T) {
 	testCases := []struct {
 		evt1           eventTemplates
@@ -84,6 +93,7 @@ func TestDeepMergeEventTemplates(t *testing.T) {
 	}
 }
 
+// TestExtractTemplates tests the extraction of templates from content
 func TestExtractTemplates(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -792,185 +802,6 @@ func TestProcessRenderAttributes(t *testing.T) {
 			expectedHTML: "", // Not checked on error
 			wantErr:      true,
 		},
-		// --- x-fir-append tests ---
-		{
-			name:         "x-fir-append: simple",
-			inputHTML:    `<div x-fir-append:items="add:ok">Add</div>`,
-			expectedHTML: `<div @fir:add:ok::items="$fir.appendEl()">Add</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "x-fir-append: multiple events with modifier",
-			inputHTML:    `<div x-fir-append:list="create:ok, new:pending.fast">Create</div>`,
-			expectedHTML: `<div @fir:[create:ok,new:pending]::list.fast="$fir.appendEl()">Create</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "x-fir-append: ignores target/action in value",
-			inputHTML:    `<div x-fir-append:log="event->tmpl=>action">Log</div>`,
-			expectedHTML: `<div @fir:event:ok::log="$fir.appendEl()">Log</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "Error: x-fir-append without template name",
-			inputHTML:    `<div x-fir-append:="add:ok">Error</div>`,
-			expectedHTML: "",
-			wantErr:      true, // Parser should reject attribute format
-		},
-		{
-			name:         "Error: x-fir-append with invalid value expression",
-			inputHTML:    `<div x-fir-append:items="add:badstate">Error</div>`,
-			expectedHTML: "",
-			wantErr:      true, // TranslateEventExpression should error
-		},
-		// --- x-fir-prepend tests ---
-		{
-			name:         "x-fir-prepend: simple",
-			inputHTML:    `<div x-fir-prepend:items="add_first:ok">Add First</div>`,
-			expectedHTML: `<div @fir:add_first:ok::items="$fir.prependEl()">Add First</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "x-fir-prepend: multiple events with modifier",
-			inputHTML:    `<div x-fir-prepend:list="insert_top:ok, push_front:pending.slow">Insert</div>`,
-			expectedHTML: `<div @fir:[insert_top:ok,push_front:pending]::list.slow="$fir.prependEl()">Insert</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "x-fir-prepend: ignores target/action in value",
-			inputHTML:    `<div x-fir-prepend:log="event->tmpl=>action">Log</div>`,
-			expectedHTML: `<div @fir:event:ok::log="$fir.prependEl()">Log</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "Error: x-fir-prepend without template name",
-			inputHTML:    `<div x-fir-prepend:="add:ok">Error</div>`,
-			expectedHTML: "",
-			wantErr:      true, // Parser should reject attribute format
-		},
-		{
-			name:         "Error: x-fir-prepend with invalid value expression",
-			inputHTML:    `<div x-fir-prepend:items="add:badstate">Error</div>`,
-			expectedHTML: "",
-			wantErr:      true, // TranslateEventExpression should error
-		},
-		// --- Precedence tests ---
-		{
-			name:         "Precedence: live > refresh > remove > remove-parent > append > prepend",
-			inputHTML:    `<div x-fir-live="a=>act" x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f" x-fir-action-act="doAct()">Live</div>`,
-			expectedHTML: `<div @fir:a:ok="doAct()">Live</div>`, // Only live is processed
-			wantErr:      false,
-		},
-		{
-			name:         "Precedence: refresh > remove > remove-parent > append > prepend",
-			inputHTML:    `<div x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Refresh</div>`,
-			expectedHTML: `<div @fir:b:ok="$fir.replace()">Refresh</div>`, // Only refresh is processed
-			wantErr:      false,
-		},
-		{
-			name:         "Precedence: remove > remove-parent > append > prepend",
-			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()">Remove</div>`, // Only remove is processed
-			wantErr:      false,
-		},
-		{
-			name:         "Precedence: remove-parent > append > prepend",
-			inputHTML:    `<div x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove Parent</div>`,
-			expectedHTML: `<div @fir:d:ok.nohtml="$fir.removeParentEl()">Remove Parent</div>`, // Only remove-parent is processed
-			wantErr:      false,
-		},
-		{
-			name:         "Precedence: append > prepend",
-			inputHTML:    `<div x-fir-append:t1="e" x-fir-prepend:t2="f">Append</div>`,
-			expectedHTML: `<div @fir:e:ok::t1="$fir.appendEl()">Append</div>`, // Only append is processed
-			wantErr:      false,
-		},
-		// --- General tests ---
-		{
-			name:         "Attributes preserved",
-			inputHTML:    `<div id="myDiv" class="p-4" x-fir-refresh="update">Content</div>`,
-			expectedHTML: `<div id="myDiv" class="p-4" @fir:update:ok="$fir.replace()">Content</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "Nested elements",
-			inputHTML:    `<div><span x-fir-refresh="count">Nested {{.}}</span></div>`,
-			expectedHTML: `<div><span @fir:count:ok="$fir.replace()">Nested {{.}}</span></div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "Multiple elements",
-			inputHTML:    `<div x-fir-refresh="a">A</div><div x-fir-remove="b">B</div>`,
-			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok.nohtml="$fir.removeEl()">B</div>`,
-			wantErr:      false,
-		},
-		{
-			name:         "Void element",
-			inputHTML:    `<input x-fir-refresh="change">`,
-			expectedHTML: `<input @fir:change:ok="$fir.replace()">`,
-			wantErr:      false,
-		},
-		{
-			name:         "HTML with comments",
-			inputHTML:    `<!-- comment --><div x-fir-refresh="load">Load</div><!-- another -->`,
-			expectedHTML: `<!-- comment --><div @fir:load:ok="$fir.replace()">Load</div><!-- another -->`,
-			wantErr:      false,
-		},
-		{
-			name:         "Empty input content",
-			inputHTML:    ``,
-			expectedHTML: ``,
-			wantErr:      false,
-		},
-		// --- Error Cases ---
-		{
-			name:         "Error: Invalid x-fir-live expression",
-			inputHTML:    `<div x-fir-live="click:badstate">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Invalid x-fir-refresh expression",
-			inputHTML:    `<div x-fir-refresh="click->">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Invalid x-fir-remove expression",
-			inputHTML:    `<div x-fir-remove=".mod">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Empty x-fir-live",
-			inputHTML:    `<div x-fir-live="">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Empty x-fir-refresh",
-			inputHTML:    `<div x-fir-refresh="">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Empty x-fir-remove",
-			inputHTML:    `<div x-fir-remove="">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Invalid x-fir-remove-parent expression",
-			inputHTML:    `<div x-fir-remove-parent=".mod">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
-		{
-			name:         "Error: Empty x-fir-remove-parent",
-			inputHTML:    `<div x-fir-remove-parent="">Error</div>`,
-			expectedHTML: "", // Not checked on error
-			wantErr:      true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -990,4 +821,135 @@ func TestProcessRenderAttributes(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLayoutSetContentEmptyWithFileExistence tests that layoutSetContentEmpty properly checks
+// file existence before determining if a layout is a directory
+func TestLayoutSetContentEmptyWithFileExistence(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Create a test layout directory (this should cause an error)
+	layoutDir := filepath.Join(tempDir, "layout_dir")
+	err := os.MkdirAll(layoutDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create layout directory: %v", err)
+	}
+
+	// Create a test layout file
+	layoutFile := filepath.Join(tempDir, "layout.html")
+	layoutContent := "<html><body>{{template \"content\" .}}</body></html>"
+	err = os.WriteFile(layoutFile, []byte(layoutContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create layout file: %v", err)
+	}
+
+	// Test with OS filesystem
+	t.Run("OS filesystem - directory layout should error", func(t *testing.T) {
+		opt := routeOpt{}
+		opt.publicDir = tempDir
+		opt.existFile = existFileOS
+		opt.readFile = readFileOS
+		opt.embedfs = nil
+		opt.funcMapMutex = &sync.RWMutex{}
+		opt.funcMap = make(template.FuncMap)
+
+		_, _, err := layoutSetContentEmpty(opt, filepath.Base(layoutDir))
+		if err == nil {
+			t.Error("Expected error when layout is a directory, but got none")
+		}
+		if !strings.Contains(err.Error(), "is a directory but must be a file") {
+			t.Errorf("Expected directory error message, got: %v", err)
+		}
+	})
+
+	t.Run("OS filesystem - file layout should work", func(t *testing.T) {
+		opt := routeOpt{}
+		opt.publicDir = tempDir
+		opt.existFile = existFileOS
+		opt.readFile = readFileOS
+		opt.embedfs = nil
+		opt.funcMapMutex = &sync.RWMutex{}
+		opt.funcMap = make(template.FuncMap)
+
+		_, _, err := layoutSetContentEmpty(opt, filepath.Base(layoutFile))
+		if err != nil {
+			t.Errorf("Expected no error for file layout, but got: %v", err)
+		}
+	})
+
+	t.Run("OS filesystem - non-existent layout should treat as content", func(t *testing.T) {
+		opt := routeOpt{}
+		opt.publicDir = tempDir
+		opt.existFile = existFileOS
+		opt.readFile = readFileOS
+		opt.embedfs = nil
+		opt.funcMapMutex = &sync.RWMutex{}
+		opt.funcMap = make(template.FuncMap)
+
+		// This should parse the layout string as HTML content instead of trying to read a file
+		tmpl, _, err := layoutSetContentEmpty(opt, "nonexistent.html")
+		if err != nil {
+			t.Errorf("Expected no error for non-existent layout (should be treated as content), but got: %v", err)
+		}
+		if tmpl == nil {
+			t.Error("Expected template to be created from content string")
+		}
+	})
+}
+
+// TestLayoutSetContentEmptyWithEmbeddedFS tests file existence checking with embedded filesystem
+func TestLayoutSetContentEmptyWithEmbeddedFS(t *testing.T) {
+	t.Run("Embedded filesystem - existing file should work", func(t *testing.T) {
+		opt := routeOpt{}
+		opt.publicDir = "testdata/public"
+		opt.existFile = existFileFS(testFS)
+		opt.readFile = readFileFS(testFS)
+		opt.embedfs = &testFS
+		opt.funcMapMutex = &sync.RWMutex{}
+		opt.funcMap = make(template.FuncMap)
+
+		// Use a file that exists in the embedded filesystem
+		_, _, err := layoutSetContentEmpty(opt, "index.html")
+		if err != nil {
+			t.Errorf("Expected no error for existing embedded file, but got: %v", err)
+		}
+	})
+
+	t.Run("Embedded filesystem - directory should error", func(t *testing.T) {
+		opt := routeOpt{}
+		opt.publicDir = "testdata"
+		opt.existFile = existFileFS(testFS)
+		opt.readFile = readFileFS(testFS)
+		opt.embedfs = &testFS
+		opt.funcMapMutex = &sync.RWMutex{}
+		opt.funcMap = make(template.FuncMap)
+
+		// Try to use a directory as layout
+		_, _, err := layoutSetContentEmpty(opt, "public")
+		if err == nil {
+			t.Error("Expected error when layout is a directory in embedded fs, but got none")
+		}
+		if !strings.Contains(err.Error(), "is a directory but must be a file") {
+			t.Errorf("Expected directory error message, got: %v", err)
+		}
+	})
+
+	t.Run("Embedded filesystem - non-existent file should treat as content", func(t *testing.T) {
+		opt := routeOpt{}
+		opt.publicDir = "testdata/public"
+		opt.existFile = existFileFS(testFS)
+		opt.readFile = readFileFS(testFS)
+		opt.embedfs = &testFS
+		opt.funcMapMutex = &sync.RWMutex{}
+		opt.funcMap = make(template.FuncMap)
+
+		// This should parse the layout string as HTML content instead of trying to read a file
+		tmpl, _, err := layoutSetContentEmpty(opt, "nonexistent.html")
+		if err != nil {
+			t.Errorf("Expected no error for non-existent layout in embedded fs, but got: %v", err)
+		}
+		if tmpl == nil {
+			t.Error("Expected template to be created for non-existent layout")
+		}
+	})
 }

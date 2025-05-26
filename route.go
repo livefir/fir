@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,10 +52,59 @@ func Layout(layout string) RouteOption {
 	}
 }
 
-// Content sets the content for the route
+// Content sets the content for the route with automatic relative path resolution.
+// This function detects the caller's file location and resolves relative paths accordingly,
+// ensuring the final path is correctly resolved relative to the working directory.
+// It handles both relative and absolute paths, as well as inline HTML content.
 func Content(content string) RouteOption {
+	trimmedContent := strings.TrimSpace(content)
+
+	// First, check if this is a valid file path by trying to resolve it
+	var resolvedPath string
+	var isValidFilePath bool
+
+	if filepath.IsAbs(trimmedContent) {
+		// Absolute path - check if file exists
+		if fileExists(trimmedContent) {
+			resolvedPath = trimmedContent
+			isValidFilePath = true
+		}
+	} else {
+		// Relative path - resolve relative to caller's directory
+		_, callerFile, _, ok := runtime.Caller(1)
+		if ok {
+			callerDir := filepath.Dir(callerFile)
+			absolutePath := filepath.Join(callerDir, trimmedContent)
+			absolutePath = filepath.Clean(absolutePath)
+
+			if fileExists(absolutePath) {
+				// File exists, convert back to relative path from working directory if possible
+				wd, err := os.Getwd()
+				if err == nil {
+					relativePath, err := filepath.Rel(wd, absolutePath)
+					if err == nil {
+						resolvedPath = filepath.ToSlash(filepath.Clean(relativePath))
+					} else {
+						resolvedPath = absolutePath
+					}
+				} else {
+					resolvedPath = absolutePath
+				}
+				isValidFilePath = true
+			}
+		}
+	}
+
+	// If it's not a valid file path, treat as inline content
+	if !isValidFilePath {
+		return func(opt *routeOpt) {
+			opt.content = content
+		}
+	}
+
+	// It's a valid file path, use the resolved path
 	return func(opt *routeOpt) {
-		opt.content = content
+		opt.content = resolvedPath
 	}
 }
 
@@ -204,15 +256,18 @@ type route struct {
 	sync.RWMutex
 }
 
-func newRoute(cntrl *controller, routeOpt *routeOpt) *route {
+func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
 	routeOpt.opt = cntrl.opt
 	rt := &route{
 		routeOpt:       *routeOpt,
 		cntrl:          cntrl,
 		eventTemplates: make(eventTemplates),
 	}
-	rt.parseTemplates()
-	return rt
+	err := rt.parseTemplates()
+	if err != nil {
+		return nil, err
+	}
+	return rt, nil
 }
 
 func publishEvents(ctx context.Context, eventCtx RouteContext, channel string) eventPublisher {
@@ -645,7 +700,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 
 }
 
-func (rt *route) parseTemplates() {
+func (rt *route) parseTemplates() error {
 	rt.Lock()
 	defer rt.Unlock()
 	var err error
@@ -655,7 +710,7 @@ func (rt *route) parseTemplates() {
 		rtTemplate, successEventTemplates, err = parseTemplate(rt.routeOpt)
 		if err != nil {
 			logger.Errorf("error parsing template: %v", err)
-			panic(err)
+			return err
 		}
 		rtTemplate.Option("missingkey=zero")
 		rt.setTemplate(rtTemplate)
@@ -664,7 +719,7 @@ func (rt *route) parseTemplates() {
 		var rtErrorTemplate *template.Template
 		rtErrorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		rtTemplate.Option("missingkey=zero")
 		rt.setErrorTemplate(rtErrorTemplate)
@@ -683,4 +738,35 @@ func (rt *route) parseTemplates() {
 		rt.setEventTemplates(rtEventTemplates)
 
 	}
+	return nil
+}
+
+// findProjectRoot walks up the directory tree from the given file path
+// looking for a go.mod file to determine the project root
+func findProjectRoot(startPath string) string {
+	dir := filepath.Dir(startPath)
+	for {
+		// Check if go.mod exists in current directory
+		goModPath := filepath.Join(dir, "go.mod")
+		if _, err := filepath.Abs(goModPath); err == nil {
+			if fileExists(goModPath) {
+				return dir
+			}
+		}
+
+		// Move up one directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached the root directory, stop
+			break
+		}
+		dir = parent
+	}
+	return ""
+}
+
+// fileExists checks if a file exists
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
