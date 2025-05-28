@@ -14,7 +14,7 @@ import (
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/livefir/fir"
-	"github.com/livefir/fir/examples/formbuilder/handler" // Import the new handler package
+	"github.com/livefir/fir/examples/formbuilder"
 )
 
 // listenForConsoleMessages sets up a listener for JavaScript console messages and exceptions.
@@ -51,10 +51,10 @@ func listenForConsoleMessages(ctx context.Context, t *testing.T) context.CancelF
 func TestFormBuilderExampleE2E(t *testing.T) {
 	controller := fir.NewController("formbuilder_e2e_"+strings.ReplaceAll(t.Name(), "/", "_"), fir.DevelopmentMode(true))
 	mux := http.NewServeMux()
-	// Use the NewRoute function from the imported handler package
+	// Use the NewRoute function from the imported formbuilder package
 	// Wrap the call in a function literal to match RouteFunc signature
 	mux.Handle("/", controller.RouteFunc(func() fir.RouteOptions {
-		return handler.NewRoute("../formbuilder/app.html")
+		return formbuilder.NewRoute("../formbuilder/app.html")
 	}))
 	ts := httptest.NewServer(mux)
 	defer ts.Close()

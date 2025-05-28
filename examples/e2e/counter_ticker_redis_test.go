@@ -9,116 +9,37 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/livefir/fir"
+	countertickerredis "github.com/livefir/fir/examples/counter-ticker-redis"
 	"github.com/livefir/fir/pubsub"
 	"github.com/redis/go-redis/v9"
 	redisContainer "github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
-// CounterRedisModel is similar to the Counter model in counter-ticker-redis/main.go
-type CounterRedisModel struct {
-	count   int32
-	updated time.Time
-	sync.RWMutex
-}
+// Removed CounterRedisModel struct and its methods (Inc, Dec, Count, UpdatedSecondsAgo)
+// Removed countUpdateDataRedis struct
 
-func (c *CounterRedisModel) Inc(ctx fir.RouteContext) error {
-	c.Lock()
-	defer c.Unlock()
-	c.count++
-	c.updated = time.Now()
-	return ctx.Data(map[string]any{"count": c.count})
-}
-
-func (c *CounterRedisModel) Dec(ctx fir.RouteContext) error {
-	c.Lock()
-	defer c.Unlock()
-	c.count--
-	c.updated = time.Now()
-	return ctx.Data(map[string]any{"count": c.count})
-}
-
-func (c *CounterRedisModel) Count() int32 {
-	c.RLock()
-	defer c.RUnlock()
-	return c.count
-}
-
-func (c *CounterRedisModel) UpdatedSecondsAgo() float64 {
-	c.RLock()
-	defer c.RUnlock()
-	if c.updated.IsZero() {
-		return 0
-	}
-	return time.Since(c.updated).Seconds()
-}
-
-type countUpdateDataRedis struct {
-	CountUpdated float64
-}
-
-// counterTickerRedisRouteForTest sets up the route similar to NewCounterIndex in counter-ticker-redis/main.go
+// counterTickerRedisRouteForTest now uses the imported package and correctly overrides options
 func counterTickerRedisRouteForTest(t *testing.T, pubsubAdapter pubsub.Adapter) fir.RouteOptions {
-	model := &CounterRedisModel{updated: time.Now()}
-	eventSender := make(chan fir.Event)
-	routeID := "counter_ticker_redis_test_" + strings.ReplaceAll(t.Name(), "/", "_")
+	// Use the new package structure to create a route with the test's pubsub adapter
+	actualRoute := countertickerredis.NewRoute(pubsubAdapter)
+	originalOpts := actualRoute.Options()
 
-	ticker := time.NewTicker(1 * time.Second) // 1-second ticker for the test
-	ctx, cancel := context.WithCancel(context.Background())
-	pattern := fmt.Sprintf("*:%s", routeID) // Channel pattern for HasSubscribers
+	// Append new options for ID, Content, and Layout for testing.
+	// These will override any defaults set by the original package's options
+	// because route options are applied sequentially.
+	overriddenOpts := append(originalOpts,
+		fir.ID("counter_ticker_redis_test_"+strings.ReplaceAll(t.Name(), "/", "_")),
+		fir.Content("../counter-ticker-redis/count.html"), // Path relative to e2e test directory
+		fir.Layout("../counter-ticker-redis/layout.html"), // Path relative to e2e test directory
+	)
 
-	t.Cleanup(func() {
-		ticker.Stop()
-		cancel()
-		close(eventSender)
-	})
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				// Check for subscribers before sending, similar to the main example
-				if !pubsubAdapter.HasSubscribers(context.Background(), pattern) {
-					// t.Logf("Test ticker: channel pattern %s has no subscribers, skipping event", pattern)
-					continue
-				}
-				// t.Logf("Test ticker: sending updated event for %s", pattern)
-				eventSender <- fir.NewEvent("updated", countUpdateDataRedis{CountUpdated: model.UpdatedSecondsAgo()})
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	return fir.RouteOptions{
-		fir.ID(routeID),
-		// Assuming count.html and layout.html are in examples/counter-ticker/
-		// and this test file is in examples/e2e/
-		fir.Content("../counter-ticker/count.html"),
-		fir.Layout("../counter-ticker/layout.html"),
-		fir.EventSender(eventSender),
-		fir.OnLoad(func(rc fir.RouteContext) error {
-			return rc.Data(map[string]any{
-				"count":   model.Count(),
-				"updated": model.UpdatedSecondsAgo(), // Initial updated value
-			})
-		}),
-		fir.OnEvent("inc", model.Inc), // Directly use model methods
-		fir.OnEvent("dec", model.Dec), // Directly use model methods
-		fir.OnEvent("updated", func(rc fir.RouteContext) error {
-			req := &countUpdateDataRedis{}
-			if err := rc.Bind(req); err != nil {
-				return err
-			}
-			return rc.Data(map[string]any{"updated": req.CountUpdated})
-		}),
-	}
+	return overriddenOpts
 }
 
 func TestCounterTickerRedisE2E(t *testing.T) {

@@ -14,19 +14,17 @@ import (
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/livefir/fir"
-	handler "github.com/livefir/fir/examples/counter-ticker/handler" // Import the actual handler
+	counterticker "github.com/livefir/fir/examples/counter-ticker"
 	"github.com/livefir/fir/pubsub"
 )
 
 // Removed Counter struct and its methods (Inc, Dec, Count, Updated)
 // Removed countUpdateData struct
 
-// counterTickerRouteForTest now uses the imported handler and correctly overrides options
+// counterTickerRouteForTest now uses the imported package and correctly overrides options
 func counterTickerRouteForTest(t *testing.T, pubsubAdapter pubsub.Adapter) fir.RouteOptions {
-	// Removed local model, eventSender, ticker setup, and associated t.Cleanup.
-	// The handler's NewRoute will set up its own model, event sender, and ticker.
-
-	actualHandlerRoute := handler.NewRoute(pubsubAdapter)
+	// Use the new package structure to create a route with the test's pubsub adapter
+	actualHandlerRoute := counterticker.NewRoute(pubsubAdapter)
 	originalOpts := actualHandlerRoute.Options()
 
 	// Append new options for ID, Content, and Layout.
@@ -41,8 +39,8 @@ func counterTickerRouteForTest(t *testing.T, pubsubAdapter pubsub.Adapter) fir.R
 		fir.Layout("../counter-ticker/layout.html"), // Path relative to e2e test directory
 	)
 
-	// Note: The EventSender, OnLoad, OnEvent handlers are from the imported handler's originalOpts.
-	// The ticker goroutine started by handler.NewRoute is part of the imported handler's logic.
+	// Note: The EventSender, OnLoad, OnEvent handlers are from the imported package's originalOpts.
+	// The ticker goroutine started by counterticker.NewRoute is part of the imported package's logic.
 
 	return overriddenOpts
 }
