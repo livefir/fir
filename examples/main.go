@@ -8,10 +8,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/livefir/fir/examples/autocomplete"
+	"github.com/livefir/fir/examples/chirper"
 	"github.com/livefir/fir/examples/counter"
 	counterticker "github.com/livefir/fir/examples/counter-ticker"
 	countertickerredis "github.com/livefir/fir/examples/counter-ticker-redis"
+	defaultroute "github.com/livefir/fir/examples/default_route"
+	"github.com/livefir/fir/examples/fira"
 	"github.com/livefir/fir/examples/formbuilder"
+	orycounter "github.com/livefir/fir/examples/ory-counter"
+	rangecounter "github.com/livefir/fir/examples/range"
+	"github.com/livefir/fir/examples/routing"
+	"github.com/livefir/fir/examples/search"
 )
 
 func main() {
@@ -19,18 +27,27 @@ func main() {
 		name string
 		run  func(int) error
 	}{
-		1: {"Counter", counter.Run},
-		2: {"Counter with Ticker", counterticker.Run},
-		3: {"Form Builder", formbuilder.Run},
-		4: {"Counter with Ticker (Redis)", countertickerredis.Run},
+		1:  {"Counter", counter.Run},
+		2:  {"Counter with Ticker", counterticker.Run},
+		3:  {"Form Builder", formbuilder.Run},
+		4:  {"Counter with Ticker (Redis)", countertickerredis.Run},
+		5:  {"Autocomplete", autocomplete.Run},
+		6:  {"Chirper (Social Media)", chirper.Run},
+		7:  {"Default Route", defaultroute.Run},
+		8:  {"Fira (Project Manager)", fira.Run},
+		9:  {"Ory Counter (Auth)", orycounter.Run},
+		10: {"Range Counter", rangecounter.Run},
+		11: {"Routing", routing.Run},
+		12: {"Search", search.Run},
 	}
 
 	fmt.Println("Available Fir Examples:")
 	fmt.Println("======================")
-	for i, example := range examples {
+	for i := 1; i <= len(examples); i++ {
+		example := examples[i]
 		fmt.Printf("%d. %s\n", i, example.name)
 	}
-	fmt.Print("\nSelect an example to run (1-4): ")
+	fmt.Printf("\nSelect an example to run (1-%d): ", len(examples))
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
