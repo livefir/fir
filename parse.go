@@ -389,10 +389,26 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 					continue
 				}
 
+				// Extract base action name from Alpine.js directive syntax
+				// For x-fir-mutation-observer.child-list.subtree, we want just x-fir-mutation-observer
+				baseAttrKey := attr.Key
+				if strings.HasPrefix(attr.Key, "x-fir-") {
+					// Find the first dot after x-fir- prefix to handle Alpine.js modifiers
+					prefixLen := len("x-fir-")
+					if dotIndex := strings.Index(attr.Key[prefixLen:], "."); dotIndex != -1 {
+						baseAttrKey = attr.Key[:prefixLen+dotIndex]
+					}
+				}
+
+				// Skip Alpine.js-only directives that should not be processed by Go
+				if baseAttrKey == "x-fir-mutation-observer" {
+					continue // Let this pass through to Alpine.js
+				}
+
 				attrsToRemove[i] = struct{}{} // Mark original attribute for removal
 
-				// Use parseActionExpression from lexer.go to parse the key
-				actionName, params, err := parseActionExpression(attr.Key)
+				// Use parseActionExpression from lexer.go to parse the base key
+				actionName, params, err := parseActionExpression(baseAttrKey)
 				if err != nil {
 					// Instead of logging and continuing, return the error
 					traverseErr = fmt.Errorf("attribute key '%s' has invalid format: %w", attr.Key, err)

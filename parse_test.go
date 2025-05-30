@@ -802,6 +802,31 @@ func TestProcessRenderAttributes(t *testing.T) {
 			expectedHTML: "", // Not checked on error
 			wantErr:      true,
 		},
+		// --- Alpine.js Directive Modifier Tests ---
+		{
+			name:         "Alpine.js directive: x-fir-mutation-observer with modifiers",
+			inputHTML:    `<div x-fir-mutation-observer.child-list.subtree="observe">Observer</div>`,
+			expectedHTML: `<div x-fir-mutation-observer.child-list.subtree="observe">Observer</div>`, // Should remain unchanged
+			wantErr:      false,
+		},
+		{
+			name:         "Alpine.js directive: x-fir-refresh with modifiers",
+			inputHTML:    `<div x-fir-refresh.once.passive="load">Load</div>`,
+			expectedHTML: `<div @fir:load:ok="$fir.replace()">Load</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Alpine.js directive: x-fir-live with complex modifiers",
+			inputHTML:    `<div x-fir-live.prevent.stop.outside="click=>doClick" x-fir-action-doClick="handleClick()">Click</div>`,
+			expectedHTML: `<div @fir:click:ok="handleClick()">Click</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Alpine.js directive: x-fir-remove with attribute filter modifier",
+			inputHTML:    `<div x-fir-remove.child-list.attribute-filter:class,id="delete">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeEl()">Delete</div>`,
+			wantErr:      false,
+		},
 	}
 
 	for _, tt := range tests {

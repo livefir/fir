@@ -77,13 +77,29 @@ Here Fir automatically extracts a template out of the content of `p`tag. Under t
 
 ### Directives
 
-`x-fir-mutation-observer` implements the https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver as an
+`x-fir-mutation-observer` implements the [MutationObserver API](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) as an
 alpine directive. It allows you to observe changes to the DOM and react to them.
+
+**Available modifiers:**
+- `.child-list` - Monitor for addition/removal of child nodes
+- `.attributes` - Monitor for attribute value changes  
+- `.subtree` - Extend monitoring to entire subtree
+- `.character-data` - Monitor for character data changes
+- `.attribute-old-value` - Record previous attribute values
+- `.character-data-old-value` - Record previous character data values
+- `.attribute-filter:attr1,attr2` - Only monitor specific attributes
 
 e.g.
 
 ```html
+<!-- Basic usage -->
 x-fir-mutation-observer.child-list.subtree="if ($el.children.length === 0) { empty = true } else { empty = false }"
+
+<!-- Monitor specific attributes with old values -->
+x-fir-mutation-observer.attributes.attribute-old-value.attribute-filter:class,data-status="handleAttributeChange()"
+
+<!-- Monitor character data changes -->
+x-fir-mutation-observer.character-data.character-data-old-value="handleTextChange()"
 ```
 
 ### Magics

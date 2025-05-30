@@ -267,6 +267,15 @@ func TestLexer(t *testing.T) {
 				"Action Target: action123_B",
 			},
 		},
+		{
+			name:  "Identifiers with Hyphens (like mutation-observer)", // New test for hyphenated identifiers
+			input: "mutation-observer:ok->template-name=>action-handler",
+			expected: []string{
+				"EventExpression: {Name:mutation-observer State::ok Modifiers:[]}",
+				"Template Target: template-name",
+				"Action Target: action-handler",
+			},
+		},
 
 		// Group 10: Fir Action Rule Tests
 		{
@@ -577,6 +586,73 @@ func TestParseActionExpression(t *testing.T) {
 				if tt.errContains != "" {
 					require.ErrorContains(t, err, tt.errContains, "Error message mismatch")
 				}
+			} else {
+				require.NoError(t, err, "Got unexpected error")
+				gotMap := make(map[string][]string)
+				if actionName != "" {
+					// Ensure params is never nil, should be empty slice if no params found
+					if params == nil {
+						params = []string{}
+					}
+					gotMap[actionName] = params
+				}
+				require.Equal(t, tt.expectedMap, gotMap, "Parsed map mismatch")
+			}
+		})
+	}
+}
+
+func TestParseActionExpressionMutationObserver(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectedMap map[string][]string
+		wantErr     bool
+	}{
+		{
+			name:        "Valid: x-fir-mutation-observer with no parameters",
+			input:       "x-fir-mutation-observer",
+			expectedMap: map[string][]string{"mutation-observer": {}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: x-fir-mutation-observer with single parameter",
+			input:       "x-fir-mutation-observer:childList",
+			expectedMap: map[string][]string{"mutation-observer": {"childList"}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: x-fir-mutation-observer with multiple parameters",
+			input:       "x-fir-mutation-observer:[childList,attributes,subtree]",
+			expectedMap: map[string][]string{"mutation-observer": {"childList", "attributes", "subtree"}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: x-fir-mutation-observer with hyphenated parameters",
+			input:       "x-fir-mutation-observer:[child-list,attribute-old-value]",
+			expectedMap: map[string][]string{"mutation-observer": {"child-list", "attribute-old-value"}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: x-fir-mutation-observer with whitespace",
+			input:       "  x-fir-mutation-observer : [ childList , attributes ]  ",
+			expectedMap: map[string][]string{"mutation-observer": {"childList", "attributes"}},
+			wantErr:     false,
+		},
+		{
+			name:        "Valid: x-fir-mutation-observer with complex modifier names",
+			input:       "x-fir-mutation-observer:[child-list,attribute-old-value,character-data-old-value]",
+			expectedMap: map[string][]string{"mutation-observer": {"child-list", "attribute-old-value", "character-data-old-value"}},
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actionName, params, err := parseActionExpression(tt.input)
+
+			if tt.wantErr {
+				require.Error(t, err, "Expected an error but got none")
 			} else {
 				require.NoError(t, err, "Got unexpected error")
 				gotMap := make(map[string][]string)

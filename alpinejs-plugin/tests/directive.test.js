@@ -88,6 +88,99 @@ describe('x-fir-mutation-observer Directive', () => {
                 childList: true,
                 attributes: true,
                 subtree: true,
+                characterData: false,
+                attributeOldValue: false,
+                characterDataOldValue: false,
+            })
+        )
+    })
+
+    test('should handle character data modifiers', async () => {
+        window.testCallback = jest.fn()
+        document.body.innerHTML = `
+            <div id="testDiv" x-data
+                 x-fir-mutation-observer.character-data.character-data-old-value="testCallback()">
+            </div>
+        `
+        await Alpine.nextTick()
+
+        expect(mockObserve).toHaveBeenCalledWith(
+            expect.any(HTMLDivElement),
+            expect.objectContaining({
+                childList: false,
+                attributes: false,
+                subtree: false,
+                characterData: true,
+                attributeOldValue: false,
+                characterDataOldValue: true,
+            })
+        )
+    })
+
+    test('should handle attribute old value modifier', async () => {
+        window.testCallback = jest.fn()
+        document.body.innerHTML = `
+            <div id="testDiv" x-data
+                 x-fir-mutation-observer.attributes.attribute-old-value="testCallback()">
+            </div>
+        `
+        await Alpine.nextTick()
+
+        expect(mockObserve).toHaveBeenCalledWith(
+            expect.any(HTMLDivElement),
+            expect.objectContaining({
+                childList: false,
+                attributes: true,
+                subtree: false,
+                characterData: false,
+                attributeOldValue: true,
+                characterDataOldValue: false,
+            })
+        )
+    })
+
+    test('should handle attribute filter modifier', async () => {
+        window.testCallback = jest.fn()
+        document.body.innerHTML = `
+            <div id="testDiv" x-data
+                 x-fir-mutation-observer.attributes.attribute-filter:class,id,data-value="testCallback()">
+            </div>
+        `
+        await Alpine.nextTick()
+
+        expect(mockObserve).toHaveBeenCalledWith(
+            expect.any(HTMLDivElement),
+            expect.objectContaining({
+                childList: false,
+                attributes: true,
+                subtree: false,
+                characterData: false,
+                attributeOldValue: false,
+                characterDataOldValue: false,
+                attributeFilter: ['class', 'id', 'data-value'],
+            })
+        )
+    })
+
+    test('should handle all modifiers combined', async () => {
+        window.testCallback = jest.fn()
+        document.body.innerHTML = `
+            <div id="testDiv" x-data
+                 x-fir-mutation-observer.child-list.attributes.subtree.character-data.attribute-old-value.character-data-old-value.attribute-filter:class,id="testCallback()">
+            </div>
+        `
+        await Alpine.nextTick()
+
+        expect(mockObserve).toHaveBeenCalledWith(
+            expect.any(HTMLDivElement),
+            expect.objectContaining({
+                childList: true,
+                attributes: true,
+                subtree: true,
+                characterData: true,
+                attributeOldValue: true,
+                characterDataOldValue: true,
+                attributeFilter: ['class', 'id'],
             })
         )
     })
