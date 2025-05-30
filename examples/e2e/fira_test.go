@@ -52,6 +52,20 @@ func TestFiraExampleE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for page to load completely
+	if err := chromedp.Run(ctx, chromedp.WaitReady("body")); err != nil {
+		t.Fatal(err)
+	}
+
+	// Debug: Get the actual body content
+	var bodyHTML string
+	if err := chromedp.Run(ctx,
+		chromedp.OuterHTML("body", &bodyHTML),
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Fira page body HTML: %s", bodyHTML)
+
 	// Test that the fira project manager page loads
 	var pageLoaded bool
 	if err := chromedp.Run(ctx,

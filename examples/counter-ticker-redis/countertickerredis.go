@@ -67,12 +67,33 @@ func (i *index) Options() fir.RouteOptions {
 		fir.OnEvent("inc", i.inc),
 		fir.OnEvent("dec", i.dec),
 		fir.OnEvent("updated", i.updated),
+		fir.OnEvent(fir.EventSocketConnected, func(ctx fir.RouteContext) error {
+			var status fir.SocketStatus
+			err := ctx.Bind(&status)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("onevent: socket connected for user %s\n", status.User)
+			return nil
+		}),
+		fir.OnEvent(fir.EventSocketDisconnected, func(ctx fir.RouteContext) error {
+			var status fir.SocketStatus
+			err := ctx.Bind(&status)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("onevent: socket disconnected for user %s\n", status.User)
+			return nil
+		}),
 		fir.EventSender(i.eventSender),
 	}
 }
 
 func (i *index) load(ctx fir.RouteContext) error {
-	return ctx.Data(map[string]any{"count": i.model.Count()})
+	return ctx.Data(map[string]any{
+		"count":   i.model.Count(),
+		"updated": i.model.Updated(),
+	})
 }
 
 func (i *index) inc(ctx fir.RouteContext) error {

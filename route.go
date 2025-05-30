@@ -45,10 +45,13 @@ func ID(id string) RouteOption {
 	}
 }
 
-// Layout sets the layout for the route's template engine
+// Layout sets the layout for the route's template engine with automatic relative path resolution.
+// This function detects the caller's file location and resolves relative paths accordingly,
+// ensuring the final path is correctly resolved relative to the working directory.
 func Layout(layout string) RouteOption {
+	resolvedPath, _ := resolveTemplatePath(layout, 2)
 	return func(opt *routeOpt) {
-		opt.layout = layout
+		opt.layout = resolvedPath
 	}
 }
 
@@ -57,54 +60,24 @@ func Layout(layout string) RouteOption {
 // ensuring the final path is correctly resolved relative to the working directory.
 // It handles both relative and absolute paths, as well as inline HTML content.
 func Content(content string) RouteOption {
-	trimmedContent := strings.TrimSpace(content)
+	resolvedPath, _ := resolveTemplatePath(content, 2)
 
-	// First, check if this is a valid file path by trying to resolve it
-	var resolvedPath string
-	var isValidFilePath bool
+	// Check if content looks like a file path (has extension or path separators)
+	// rather than inline HTML content
+	looksLikeFilePath := strings.Contains(content, "/") || strings.Contains(content, "\\") ||
+		(strings.Contains(content, ".") && !strings.Contains(content, " ") &&
+			!strings.Contains(content, "<") && !strings.Contains(content, "{{"))
 
-	if filepath.IsAbs(trimmedContent) {
-		// Absolute path - check if file exists
-		if fileExists(trimmedContent) {
-			resolvedPath = trimmedContent
-			isValidFilePath = true
+	// If it looks like a file path, always use the resolved path
+	// If it doesn't look like a file path, treat as inline content
+	if looksLikeFilePath {
+		return func(opt *routeOpt) {
+			opt.content = resolvedPath
 		}
 	} else {
-		// Relative path - resolve relative to caller's directory
-		_, callerFile, _, ok := runtime.Caller(1)
-		if ok {
-			callerDir := filepath.Dir(callerFile)
-			absolutePath := filepath.Join(callerDir, trimmedContent)
-			absolutePath = filepath.Clean(absolutePath)
-
-			if fileExists(absolutePath) {
-				// File exists, convert back to relative path from working directory if possible
-				wd, err := os.Getwd()
-				if err == nil {
-					relativePath, err := filepath.Rel(wd, absolutePath)
-					if err == nil {
-						resolvedPath = filepath.ToSlash(filepath.Clean(relativePath))
-					} else {
-						resolvedPath = absolutePath
-					}
-				} else {
-					resolvedPath = absolutePath
-				}
-				isValidFilePath = true
-			}
-		}
-	}
-
-	// If it's not a valid file path, treat as inline content
-	if !isValidFilePath {
 		return func(opt *routeOpt) {
 			opt.content = content
 		}
-	}
-
-	// It's a valid file path, use the resolved path
-	return func(opt *routeOpt) {
-		opt.content = resolvedPath
 	}
 }
 
@@ -123,17 +96,38 @@ func LayoutContentName(name string) RouteOption {
 	}
 }
 
-// ErrorLayout sets the layout for the route's template engine
+// ErrorLayout sets the layout for the route's template engine with automatic relative path resolution.
+// This function detects the caller's file location and resolves relative paths accordingly,
+// ensuring the final path is correctly resolved relative to the working directory.
 func ErrorLayout(layout string) RouteOption {
+	resolvedPath, _ := resolveTemplatePath(layout, 2)
 	return func(opt *routeOpt) {
-		opt.errorLayout = layout
+		opt.errorLayout = resolvedPath
 	}
 }
 
-// ErrorContent sets the content for the route
+// ErrorContent sets the content for the route with automatic relative path resolution.
+// This function detects the caller's file location and resolves relative paths accordingly,
+// ensuring the final path is correctly resolved relative to the working directory.
 func ErrorContent(content string) RouteOption {
-	return func(opt *routeOpt) {
-		opt.errorContent = content
+	resolvedPath, _ := resolveTemplatePath(content, 2)
+
+	// Check if content looks like a file path (has extension or path separators)
+	// rather than inline HTML content
+	looksLikeFilePath := strings.Contains(content, "/") || strings.Contains(content, "\\") ||
+		(strings.Contains(content, ".") && !strings.Contains(content, " ") &&
+			!strings.Contains(content, "<") && !strings.Contains(content, "{{"))
+
+	// If it looks like a file path, always use the resolved path
+	// If it doesn't look like a file path, treat as inline content
+	if looksLikeFilePath {
+		return func(opt *routeOpt) {
+			opt.errorContent = resolvedPath
+		}
+	} else {
+		return func(opt *routeOpt) {
+			opt.errorContent = content
+		}
 	}
 }
 
@@ -152,10 +146,16 @@ func ErrorLayoutContentName(name string) RouteOption {
 	}
 }
 
-// Partials sets the template partials for the route's template engine
+// Partials sets the template partials for the route's template engine with automatic relative path resolution.
+// This function detects the caller's file location and resolves relative paths accordingly,
+// ensuring the final paths are correctly resolved relative to the working directory.
 func Partials(partials ...string) RouteOption {
+	resolvedPartials := make([]string, len(partials))
+	for i, partial := range partials {
+		resolvedPartials[i], _ = resolveTemplatePath(partial, 2)
+	}
 	return func(opt *routeOpt) {
-		opt.partials = partials
+		opt.partials = append(opt.partials, resolvedPartials...)
 	}
 }
 
@@ -739,6 +739,83 @@ func (rt *route) parseTemplates() error {
 
 	}
 	return nil
+}
+
+// resolveTemplatePath resolves template paths with automatic relative path resolution.
+// This function detects the caller's file location and resolves relative paths accordingly,
+// ensuring the final path is correctly resolved relative to the working directory.
+// It handles both relative and absolute paths, as well as inline HTML content.
+// The callerDepth parameter specifies how many levels up the call stack to look for the caller.
+func resolveTemplatePath(path string, callerDepth int) (string, bool) {
+	trimmedPath := strings.TrimSpace(path)
+
+	// First, check if this is a valid file path by trying to resolve it
+	var resolvedPath string
+	var isValidFilePath bool
+
+	if filepath.IsAbs(trimmedPath) {
+		// Absolute path - check if file exists
+		if fileExists(trimmedPath) {
+			resolvedPath = trimmedPath
+			isValidFilePath = true
+		}
+	} else {
+		// Relative path - resolve relative to caller's directory
+		_, callerFile, _, ok := runtime.Caller(callerDepth)
+		if ok {
+			callerDir := filepath.Dir(callerFile)
+
+			// Special handling for examples directory structure
+			// If the caller is in an examples subdirectory, resolve paths relative to the example root
+			var baseDir string
+			if strings.Contains(callerFile, "/examples/") {
+				// Find the example root directory (e.g., examples/fira, examples/routing)
+				parts := strings.Split(callerFile, "/examples/")
+				if len(parts) >= 2 {
+					examplesPart := parts[1]
+					exampleDirEnd := strings.Index(examplesPart, "/")
+					if exampleDirEnd > 0 {
+						exampleName := examplesPart[:exampleDirEnd]
+						baseDir = filepath.Join(parts[0], "examples", exampleName)
+					} else {
+						// Direct file in examples root
+						baseDir = filepath.Join(parts[0], "examples")
+					}
+				}
+			}
+
+			// If we couldn't determine an example root, use caller's directory
+			if baseDir == "" {
+				baseDir = callerDir
+			}
+
+			absolutePath := filepath.Join(baseDir, trimmedPath)
+			absolutePath = filepath.Clean(absolutePath)
+
+			if fileExists(absolutePath) {
+				// File exists, convert back to relative path from working directory if possible
+				wd, err := os.Getwd()
+				if err == nil {
+					relativePath, err := filepath.Rel(wd, absolutePath)
+					if err == nil {
+						resolvedPath = filepath.ToSlash(filepath.Clean(relativePath))
+					} else {
+						resolvedPath = absolutePath
+					}
+				} else {
+					resolvedPath = absolutePath
+				}
+				isValidFilePath = true
+			}
+		}
+	}
+
+	// If it's not a valid file path, use the original path (might be inline content or will be handled later)
+	if !isValidFilePath {
+		resolvedPath = path
+	}
+
+	return resolvedPath, isValidFilePath
 }
 
 // findProjectRoot walks up the directory tree from the given file path

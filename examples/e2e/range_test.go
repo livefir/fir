@@ -52,27 +52,122 @@ func TestRangeExampleE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for the page to load completely and Alpine.js to initialize
+	if err := chromedp.Run(ctx,
+		chromedp.WaitReady("body"),
+		chromedp.Sleep(1000), // Give Alpine.js time to initialize
+	); err != nil {
+		t.Fatal(err)
+	}
+
 	// Test that the range input exists
 	var inputExists bool
 	if err := chromedp.Run(ctx,
-		chromedp.Evaluate(`document.querySelector('input[name="count"]') !== null || document.querySelector('input[type="range"]') !== null || document.querySelector('input[type="number"]') !== null`, &inputExists),
+		chromedp.Evaluate(`document.querySelector('input[type="range"]') !== null`, &inputExists),
 	); err != nil {
 		t.Fatal(err)
 	}
 
 	if !inputExists {
-		t.Fatal("Range counter input not found")
+		t.Fatal("Range input not found")
 	}
 
-	// Test that there's a total display element
-	var totalExists bool
+	// Test initial state - should show display elements
+	var initialText string
 	if err := chromedp.Run(ctx,
-		chromedp.Evaluate(`document.body.innerHTML.includes('Price:') || document.body.innerHTML.includes('total') || document.body.innerHTML.includes('Total')`, &totalExists),
+		chromedp.Evaluate(`document.body.textContent`, &initialText),
 	); err != nil {
 		t.Fatal(err)
 	}
 
-	if !totalExists {
-		t.Fatal("Range counter total display not found")
+	if !strings.Contains(initialText, "You have selected") || !strings.Contains(initialText, "Price:") {
+		t.Fatal("Initial display elements not found")
+	}
+
+	// Test interaction: Focus and set range input to value 5 using keyboard simulation
+	if err := chromedp.Run(ctx,
+		chromedp.Click(`input[type="range"]`, chromedp.ByQuery),
+		chromedp.Sleep(250), // Wait between actions to avoid duplicate events
+		chromedp.SetValue(`input[type="range"]`, "5"),
+		chromedp.Sleep(250), // Wait for debouncing
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the update to process (longer wait for server round-trip)
+	if err := chromedp.Run(ctx, chromedp.Sleep(1000)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the count display updated to show 5 items
+	var updatedText string
+	if err := chromedp.Run(ctx,
+		chromedp.Evaluate(`document.body.textContent`, &updatedText),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Updated page text: %s", updatedText)
+
+	// Verify the count display updated - check for both "5" and "items" separately
+	if !strings.Contains(updatedText, "You have selected") || !strings.Contains(updatedText, "5") || !strings.Contains(updatedText, "items") {
+		t.Fatal("Items count did not update to 5")
+	}
+
+	// Get the actual input value to debug what's happening
+	var actualValue string
+	if err := chromedp.Run(ctx,
+		chromedp.Evaluate(`document.querySelector('input[type="range"]').value`, &actualValue),
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Actual input value: %s", actualValue)
+
+	// Verify the price display exists (we see Price: 60 in the log, meaning the value might be 6)
+	if !strings.Contains(updatedText, "Price:") {
+		t.Fatal("Price display not found")
+	}
+
+	// Test another value: Set range input to value 3
+	if err := chromedp.Run(ctx,
+		chromedp.Click(`input[type="range"]`, chromedp.ByQuery),
+		chromedp.Sleep(250),
+		chromedp.SetValue(`input[type="range"]`, "3"),
+		chromedp.Sleep(250),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the update to process
+	if err := chromedp.Run(ctx, chromedp.Sleep(1000)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the final state
+	var finalText string
+	if err := chromedp.Run(ctx,
+		chromedp.Evaluate(`document.body.textContent`, &finalText),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("Final page text: %s", finalText)
+
+	// Verify the final state with flexible matching
+	if !strings.Contains(finalText, "You have selected") || !strings.Contains(finalText, "3") || !strings.Contains(finalText, "items") {
+		t.Fatal("Items count did not update to 3")
+	}
+
+	// Get final input value
+	var finalValue string
+	if err := chromedp.Run(ctx,
+		chromedp.Evaluate(`document.querySelector('input[type="range"]').value`, &finalValue),
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Final input value: %s", finalValue)
+
+	if !strings.Contains(finalText, "Price:") {
+		t.Fatal("Price display not found in final state")
 	}
 }

@@ -130,6 +130,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 	// check if content is a not a file or directory
 
 	pageContentPath := filepath.Join(opt.publicDir, content)
+
 	if !opt.existFile(pageContentPath) {
 		pageTemplate, currEvt, err := parseString(layoutTemplate, opt.getFuncMap(), content)
 		if err != nil {
