@@ -18,6 +18,7 @@ const (
 	TypeAppend       // Add new type
 	TypePrepend      // Add new type
 	TypeRemoveParent // Add new type
+	TypeDispatch     // Add new type for dispatch
 	TypeActionPrefix // Represents x-fir-action-* attributes
 	TypeUnknown
 )
@@ -140,6 +141,53 @@ func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[st
 	return TranslateEventExpression(info.Value, "$fir.removeParentEl()", "", "nohtml")
 }
 
+// DispatchActionHandler handles x-fir-dispatch:event1,event2
+type DispatchActionHandler struct{}
+
+func (h *DispatchActionHandler) Name() string    { return "dispatch" }
+func (h *DispatchActionHandler) Precedence() int { return 45 }
+func (h *DispatchActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// Expect at least one parameter (the event names to dispatch)
+	if len(info.Params) == 0 {
+		return "", fmt.Errorf("missing event parameters for dispatch action: '%s'", info.AttrName)
+	}
+
+	// Build the $dispatch() call with the parameters
+	var dispatchArgs []string
+	for _, param := range info.Params {
+		if param == "" {
+			return "", fmt.Errorf("empty event parameter for dispatch action: '%s'", info.AttrName)
+		}
+		// Quote each parameter for the JavaScript call
+		dispatchArgs = append(dispatchArgs, fmt.Sprintf("'%s'", param))
+	}
+
+	// Create the $dispatch() function call
+	actionValue := fmt.Sprintf("$dispatch(%s)", strings.Join(dispatchArgs, ","))
+
+	// Parse the input expression to extract template information
+	parser, err := getRenderExpressionParser()
+	if err != nil {
+		return "", fmt.Errorf("failed to create parser: %w", err)
+	}
+	parsed, err := parseRenderExpression(parser, info.Value)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse expression: %w", err)
+	}
+
+	// Extract template from the parsed expression (if any)
+	templateValue := ""
+	if len(parsed.Expressions) > 0 && len(parsed.Expressions[0].Bindings) > 0 {
+		binding := parsed.Expressions[0].Bindings[0]
+		if binding.Target != nil && binding.Target.Template != "" {
+			templateValue = binding.Target.Template
+		}
+	}
+
+	// TranslateEventExpression needs the value, the JS action, template, and modifiers
+	return TranslateEventExpression(info.Value, actionValue, templateValue, "nohtml")
+}
+
 // ActionPrefixHandler handles x-fir-action-* (doesn't translate directly, just used for collection)
 type ActionPrefixHandler struct{}
 
@@ -159,7 +207,8 @@ func init() {
 	RegisterActionHandler(&AppendActionHandler{})  // Register the append handler
 	RegisterActionHandler(&PrependActionHandler{}) // Register the prepend handler
 	RegisterActionHandler(&RemoveParentActionHandler{})
-	RegisterActionHandler(&ActionPrefixHandler{}) // Register the prefix handler
+	RegisterActionHandler(&DispatchActionHandler{}) // Register the dispatch handler
+	RegisterActionHandler(&ActionPrefixHandler{})   // Register the prefix handler
 }
 
 // Helper struct for processing within processRenderAttributes

@@ -428,6 +428,32 @@ func TestProcessRenderAttributes(t *testing.T) {
 			wantErr:      false,
 		},
 
+		// --- Dispatch Action Tests ---
+		{
+			name:         "Single dispatch event",
+			inputHTML:    `<button x-fir-dispatch:[switch-tab]="update-now:ok">Dispatch</button>`,
+			expectedHTML: `<button @fir:update-now:ok.nohtml="$dispatch('switch-tab')">Dispatch</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Multiple dispatch events",
+			inputHTML:    `<button x-fir-dispatch:[switch-tab,now]="update-now:ok">Dispatch Multiple</button>`,
+			expectedHTML: `<button @fir:update-now:ok.nohtml="$dispatch('switch-tab','now')">Dispatch Multiple</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Dispatch with different trigger event",
+			inputHTML:    `<div x-fir-dispatch:[modal-open]="click">Open Modal</div>`,
+			expectedHTML: `<div @fir:click:ok.nohtml="$dispatch('modal-open')">Open Modal</div>`,
+			wantErr:      false,
+		},
+		{
+			name:         "Dispatch with state and template",
+			inputHTML:    `<form x-fir-dispatch:[form-submit,validation]="submit:pending->form">Submit</form>`,
+			expectedHTML: `<form @fir:submit:pending::form.nohtml="$dispatch('form-submit','validation')">Submit</form>`,
+			wantErr:      false,
+		},
+
 		// --- Error Cases ---
 		{
 			name:         "Invalid render expression - bad state",
@@ -452,6 +478,18 @@ func TestProcessRenderAttributes(t *testing.T) {
 			inputHTML:    ``,
 			expectedHTML: ``, // Function returns empty for empty input
 			wantErr:      false,
+		},
+		{
+			name:         "Dispatch with no parameters",
+			inputHTML:    `<button x-fir-dispatch:[]="click">Error</button>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
+		},
+		{
+			name:         "Dispatch with empty parameter",
+			inputHTML:    `<button x-fir-dispatch:[,valid]="click">Error</button>`,
+			expectedHTML: "", // Not checked on error
+			wantErr:      true,
 		},
 		{
 			name:         "Void element",
