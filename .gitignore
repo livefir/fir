@@ -5,3 +5,5 @@ dist
 tmp
 .DS_Store
 __debug_bin
+*.log
+*.test

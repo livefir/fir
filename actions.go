@@ -18,7 +18,6 @@ const (
 	TypeAppend       // Add new type
 	TypePrepend      // Add new type
 	TypeRemoveParent // Add new type
-	TypeDispatch     // Add new type for dispatch
 	TypeActionPrefix // Represents x-fir-action-* attributes
 	TypeUnknown
 )
@@ -141,51 +140,90 @@ func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[st
 	return TranslateEventExpression(info.Value, "$fir.removeParentEl()", "", "nohtml")
 }
 
-// DispatchActionHandler handles x-fir-dispatch:event1,event2
+// ResetActionHandler handles x-fir-reset
+type ResetActionHandler struct{}
+
+func (h *ResetActionHandler) Name() string    { return "reset" }
+func (h *ResetActionHandler) Precedence() int { return 35 }
+func (h *ResetActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// TranslateEventExpression needs the value and the action
+	// For reset, we use $el.reset() and force nohtml modifier
+	return TranslateEventExpression(info.Value, "$el.reset()", "", "nohtml")
+}
+
+// ToggleDisabledActionHandler handles x-fir-toggle-disabled
+type ToggleDisabledActionHandler struct{}
+
+func (h *ToggleDisabledActionHandler) Name() string    { return "toggle-disabled" }
+func (h *ToggleDisabledActionHandler) Precedence() int { return 34 }
+func (h *ToggleDisabledActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// For toggle-disabled, we use $fir.toggleDisabled() and force nohtml modifier
+	// The toggleDisabled function automatically handles enabling/disabling based on event state
+	return TranslateEventExpression(info.Value, "$fir.toggleDisabled()", "", "nohtml")
+}
+
+// DispatchActionHandler handles x-fir-dispatch:[param1,param2,...]
 type DispatchActionHandler struct{}
 
 func (h *DispatchActionHandler) Name() string    { return "dispatch" }
-func (h *DispatchActionHandler) Precedence() int { return 45 }
+func (h *DispatchActionHandler) Precedence() int { return 33 }
 func (h *DispatchActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
-	// Expect at least one parameter (the event names to dispatch)
+	// Check that we have parameters for dispatch
 	if len(info.Params) == 0 {
-		return "", fmt.Errorf("missing event parameters for dispatch action: '%s'", info.AttrName)
+		return "", fmt.Errorf("dispatch requires at least one parameter")
 	}
 
-	// Build the $dispatch() call with the parameters
-	var dispatchArgs []string
-	for _, param := range info.Params {
-		if param == "" {
-			return "", fmt.Errorf("empty event parameter for dispatch action: '%s'", info.AttrName)
+	// Check for empty parameters
+	for i, param := range info.Params {
+		if strings.TrimSpace(param) == "" {
+			return "", fmt.Errorf("empty parameter found in dispatch at position %d", i)
 		}
-		// Quote each parameter for the JavaScript call
-		dispatchArgs = append(dispatchArgs, fmt.Sprintf("'%s'", param))
 	}
 
-	// Create the $dispatch() function call
-	actionValue := fmt.Sprintf("$dispatch(%s)", strings.Join(dispatchArgs, ","))
+	// Build the $dispatch function call
+	dispatchCall := h.buildDispatchCall(info.Params)
 
-	// Parse the input expression to extract template information
+	// Parse the expression to extract template
+	template, err := h.extractTemplate(info.Value)
+	if err != nil {
+		return "", fmt.Errorf("error parsing dispatch expression: %w", err)
+	}
+
+	// For dispatch, we use the built dispatch call and force nohtml modifier
+	return TranslateEventExpression(info.Value, dispatchCall, template, "nohtml")
+}
+
+// buildDispatchCall creates the $dispatch() function call with quoted parameters
+func (h *DispatchActionHandler) buildDispatchCall(params []string) string {
+	var quotedParams []string
+	for _, param := range params {
+		quotedParams = append(quotedParams, "'"+param+"'")
+	}
+	return "$dispatch(" + strings.Join(quotedParams, ",") + ")"
+}
+
+// extractTemplate parses the expression and extracts the template from the binding target
+func (h *DispatchActionHandler) extractTemplate(input string) (string, error) {
 	parser, err := getRenderExpressionParser()
 	if err != nil {
-		return "", fmt.Errorf("failed to create parser: %w", err)
-	}
-	parsed, err := parseRenderExpression(parser, info.Value)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse expression: %w", err)
+		return "", fmt.Errorf("error creating parser: %w", err)
 	}
 
-	// Extract template from the parsed expression (if any)
-	templateValue := ""
-	if len(parsed.Expressions) > 0 && len(parsed.Expressions[0].Bindings) > 0 {
-		binding := parsed.Expressions[0].Bindings[0]
-		if binding.Target != nil && binding.Target.Template != "" {
-			templateValue = binding.Target.Template
+	parsed, err := parseRenderExpression(parser, input)
+	if err != nil {
+		return "", fmt.Errorf("error parsing render expression: %w", err)
+	}
+
+	// Look for template in any binding's target
+	for _, expr := range parsed.Expressions {
+		for _, binding := range expr.Bindings {
+			if binding.Target != nil && binding.Target.Template != "" {
+				return binding.Target.Template, nil
+			}
 		}
 	}
 
-	// TranslateEventExpression needs the value, the JS action, template, and modifiers
-	return TranslateEventExpression(info.Value, actionValue, templateValue, "nohtml")
+	return "", nil // No template found
 }
 
 // ActionPrefixHandler handles x-fir-action-* (doesn't translate directly, just used for collection)
@@ -207,6 +245,8 @@ func init() {
 	RegisterActionHandler(&AppendActionHandler{})  // Register the append handler
 	RegisterActionHandler(&PrependActionHandler{}) // Register the prepend handler
 	RegisterActionHandler(&RemoveParentActionHandler{})
+	RegisterActionHandler(&ResetActionHandler{}) // Register the reset handler
+	RegisterActionHandler(&ToggleDisabledActionHandler{})
 	RegisterActionHandler(&DispatchActionHandler{}) // Register the dispatch handler
 	RegisterActionHandler(&ActionPrefixHandler{})   // Register the prefix handler
 }

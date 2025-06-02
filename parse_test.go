@@ -686,6 +686,86 @@ func TestProcessRenderAttributes(t *testing.T) {
 			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeParentEl()">Delete</div>`,
 			wantErr:      false,
 		},
+		// --- x-fir-reset tests ---
+		{
+			name:         "Only x-fir-reset",
+			inputHTML:    `<form x-fir-reset="create-chirp">Submit</form>`,
+			expectedHTML: `<form @fir:create-chirp:ok.nohtml="$el.reset()">Submit</form>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-reset with state",
+			inputHTML:    `<form x-fir-reset="submit:ok">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok.nohtml="$el.reset()">Form</form>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-reset multiple events",
+			inputHTML:    `<form x-fir-reset="create:ok, update:done">Form</form>`,
+			expectedHTML: `<form @fir:[create:ok,update:done].nohtml="$el.reset()">Form</form>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-reset ignores target",
+			inputHTML:    `<form x-fir-reset="submit->myForm">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok.nohtml="$el.reset()">Form</form>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-reset ignores action target",
+			inputHTML:    `<form x-fir-reset="submit=>doSubmit">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok.nohtml="$el.reset()">Form</form>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-reset with modifier (nohtml is added to existing modifiers)",
+			inputHTML:    `<form x-fir-reset="submit.debounce">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok.debounce.nohtml="$el.reset()">Form</form>`,
+			wantErr:      false,
+		},
+		// --- x-fir-toggle-disabled tests ---
+		{
+			name:         "Only x-fir-toggle-disabled",
+			inputHTML:    `<button x-fir-toggle-disabled="submit">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-toggle-disabled with state",
+			inputHTML:    `<button x-fir-toggle-disabled="submit:pending">Submit</button>`,
+			expectedHTML: `<button @fir:submit:pending.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-toggle-disabled multiple events",
+			inputHTML:    `<button x-fir-toggle-disabled="submit:pending, submit:ok">Submit</button>`,
+			expectedHTML: `<button @fir:[submit:pending,submit:ok].nohtml="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-toggle-disabled ignores target",
+			inputHTML:    `<button x-fir-toggle-disabled="submit->form">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-toggle-disabled ignores action target",
+			inputHTML:    `<button x-fir-toggle-disabled="submit=>doSubmit">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-toggle-disabled with modifier (nohtml is added to existing modifiers)",
+			inputHTML:    `<button x-fir-toggle-disabled="submit.prevent">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok.nohtml.prevent="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-toggle-disabled with complex events",
+			inputHTML:    `<button x-fir-toggle-disabled="submit:pending, submit:ok, submit:error">Submit</button>`,
+			expectedHTML: `<button @fir:[submit:pending,submit:ok,submit:error].nohtml="$fir.toggleDisabled()">Submit</button>`,
+			wantErr:      false,
+		},
 		// --- x-fir-live tests ---
 		{
 			name:         "Only x-fir-live (no actions)",

@@ -25,22 +25,25 @@
     </head>
 
     <body>
-        <div x-data="{ disable: false }">
+        <div x-data>
             <h1>Chirper</h1>
             <hr />
             <form
                 method="post"
                 action="?event=create-chirp"
                 @submit.prevent="$fir.submit()"
-                @fir:create-chirp:ok.nohtml="$el.reset()"
-                @fir:[create-chirp:pending,create-chirp:done]="disable = !disable">
+                x-fir-reset="create-chirp">
                 <!-- prettier-ignore -->
                 <textarea type="text" name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
-                <p @fir:create-chirp:error="$fir.replace()">
+                <p x-fir-refresh="create-chirp:error">
                     {{ fir.Error "create-chirp.body" }}
                 </p>
                 <footer>
-                    <button :disabled="disable" type="submit">Chirp</button>
+                    <button
+                        x-fir-toggle-disabled="create-chirp:pending,create-chirp:done"
+                        type="submit">
+                        Chirp
+                    </button>
                 </footer>
             </form>
             <hr />
@@ -52,7 +55,7 @@
                     {{ block "chirp" . }}
                         <section
                             fir-key="{{ .ID }}"
-                            @fir:delete-chirp:ok.nohtml="$fir.removeEl()">
+                            x-fir-remove="delete-chirp:ok">
                             <form method="post" @submit.prevent="$fir.submit()">
                                 <blockquote>
                                     {{ .Body }}
@@ -63,7 +66,7 @@
                                     value="{{ .ID }}" />
                                 <footer>
                                     <button
-                                        @fir:like-chirp:ok="$fir.replace()"
+                                        x-fir-refresh="like-chirp:ok"
                                         formaction="?event=like-chirp"
                                         type="submit">
                                         &#9829;
