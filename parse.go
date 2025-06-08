@@ -418,7 +418,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				var handler ActionHandler
 				var found bool
 
-				// Check for exact match first (e.g., "live", "refresh")
+				// Check for exact match first (e.g., "refresh")
 				handler, found = actionRegistry[actionName]
 				if found {
 					// If this is a js handler, collect the JavaScript value
@@ -438,7 +438,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				// Store handler and parsed info
 				info := ActionInfo{
 					AttrName:   attr.Key,
-					ActionName: actionName, // Store the specific parsed name (e.g., "live", "action-doSave")
+					ActionName: actionName, // Store the specific parsed name (e.g., "refresh", "action-doSave")
 					Params:     params,
 					Value:      attr.Val,
 				}

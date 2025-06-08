@@ -14,25 +14,19 @@ var renderExpressionlexerRules = lexer.MustSimple([]lexer.SimpleRule{
 	// Whitespace - handled by participle.Elide("Whitespace") in the parser
 	{Name: "Whitespace", Pattern: `\s+`},
 
-	// Handle expressions with -> and => WITHOUT spaces
-	// Extract ONLY the identifier part after the arrow, not the arrow itself
-	{Name: "TemplateExpression", Pattern: `\->([a-zA-Z_][a-zA-Z0-9_\-]*)`}, // Captures group 1 = identifier only
-	{Name: "ActionExpression", Pattern: `=>([a-zA-Z_][a-zA-Z0-9_\-]*)`},    // Captures group 1 = identifier only
-
-	// Then define regular operators for when they have spaces
+	// Arrow operators
 	{Name: "Arrow", Pattern: `\->`},
 	{Name: "DoubleArrow", Pattern: `=>`},
 
-	// Then define other tokens
+	// Other tokens
 	{Name: "FirAction", Pattern: `\$fir\.[a-zA-Z]+\(\)`},
 	{Name: "Comma", Pattern: `,`},
 	{Name: "Semicolon", Pattern: `;`},
 	{Name: "State", Pattern: `:(ok|error|pending|done)`},
 	{Name: "Modifier", Pattern: `\.[a-zA-Z]+`},
 
-	// Identifiers last - Fix the HyphenIdent pattern to correctly match identifiers with hyphens
-	{Name: "HyphenIdent", Pattern: `[a-zA-Z_][a-zA-Z0-9_\-]*`}, // This will match both regular and hyphenated identifiers
-	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_]*`},
+	// Identifiers - covers both regular and hyphenated identifiers
+	{Name: "Ident", Pattern: `[a-zA-Z_][a-zA-Z0-9_\-]*`},
 })
 
 // Define the grammar structure
@@ -51,14 +45,14 @@ type Binding struct {
 }
 
 type EventExpression struct {
-	Name      string   `parser:"@(Ident | HyphenIdent)"`
+	Name      string   `parser:"@Ident"`
 	State     string   `parser:"(@State)?"`
 	Modifiers []string `parser:"(@Modifier)*"` // Changed to slice and '*' for zero or more
 }
 
 type Target struct {
-	Template string `parser:"( \"->\" @(Ident | HyphenIdent) | @TemplateExpression )?"`
-	Action   string `parser:"( \"=>\" ( @(Ident | HyphenIdent) | @FirAction ) | @ActionExpression )?"`
+	Template string `parser:"( \"->\" @Ident )?"`
+	Action   string `parser:"( \"=>\" ( @Ident | @FirAction ) )?"`
 }
 
 // getRenderExpressionParser parser function to parse the input string
@@ -90,7 +84,7 @@ func parseRenderExpression(parser *participle.Parser[Expressions], input string)
 		return nil, fmt.Errorf("render expression cannot be empty")
 	}
 
-	// Preprocess the input
+	// Preprocess the input to add spaces around arrows
 	input = preProcessExpression(input)
 
 	parsed, err := parser.ParseString("", input)

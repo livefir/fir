@@ -48,8 +48,6 @@ The event template binding syntax in the provided code allows associating specif
 The declarative syntax allows you to bind events to templates or actions in a more readable and maintainable way. This is particularly useful for managing dynamic updates in the frontend.
 
 ```html
-<div x-fir-live="inc,dec" >
-</div> 
 <div x-fir-refresh="inc,dec" >
 </div>
 <div x-fir-remove="delete" >

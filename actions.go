@@ -12,8 +12,7 @@ import (
 type ActionType int
 
 const (
-	TypeLive ActionType = iota
-	TypeRefresh
+	TypeRefresh ActionType = iota
 	TypeRemove
 	TypeAppend       // Add new type
 	TypePrepend      // Add new type
@@ -24,15 +23,15 @@ const (
 
 // ActionInfo holds parsed data from an x-fir-* attribute.
 type ActionInfo struct {
-	AttrName   string   // Original full attribute name (e.g., "x-fir-live", "x-fir-action-doSave")
-	ActionName string   // Parsed action name (e.g., "live", "refresh", "action-doSave")
+	AttrName   string   // Original full attribute name (e.g., "x-fir-refresh", "x-fir-action-doSave")
+	ActionName string   // Parsed action name (e.g., "refresh", "action-doSave")
 	Params     []string // Parsed parameters like ["loading", "visible"]
 	Value      string   // The attribute's value
 }
 
 // ActionHandler defines the interface for processing a specific x-fir-* action.
 type ActionHandler interface {
-	// Name returns the core action name (e.g., "live", "refresh") or prefix identifier ("action-").
+	// Name returns the core action name (e.g., "refresh") or prefix identifier ("action-").
 	Name() string
 	// Precedence returns the processing priority (lower value means higher priority).
 	Precedence() int
@@ -59,16 +58,6 @@ func RegisterActionHandler(handler ActionHandler) {
 }
 
 // --- Concrete Handler Implementations ---
-
-// LiveActionHandler handles x-fir-live
-type LiveActionHandler struct{}
-
-func (h *LiveActionHandler) Name() string    { return "live" }
-func (h *LiveActionHandler) Precedence() int { return 10 } // Highest precedence
-func (h *LiveActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
-	// TranslateRenderExpression needs the value and the collected actionsMap
-	return TranslateRenderExpression(info.Value, actionsMap)
-}
 
 // RefreshActionHandler handles x-fir-refresh
 type RefreshActionHandler struct{}
@@ -272,7 +261,6 @@ func (h *ActionPrefixHandler) Translate(info ActionInfo, actionsMap map[string]s
 
 // Register default handlers
 func init() {
-	RegisterActionHandler(&LiveActionHandler{})
 	RegisterActionHandler(&RefreshActionHandler{})
 	RegisterActionHandler(&RemoveActionHandler{})
 	RegisterActionHandler(&AppendActionHandler{})  // Register the append handler
