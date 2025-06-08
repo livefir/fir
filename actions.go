@@ -226,11 +226,44 @@ func (h *DispatchActionHandler) extractTemplate(input string) (string, error) {
 	return "", nil // No template found
 }
 
-// ActionPrefixHandler handles x-fir-action-* (doesn't translate directly, just used for collection)
+// TriggerActionHandler handles x-fir-runjs:actionName
+type TriggerActionHandler struct{}
+
+func (h *TriggerActionHandler) Name() string    { return "runjs" }
+func (h *TriggerActionHandler) Precedence() int { return 32 }
+func (h *TriggerActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// Check that we have parameters for runjs (the action name)
+	if len(info.Params) == 0 {
+		return "", fmt.Errorf("runjs requires exactly one parameter (action name)")
+	}
+	if len(info.Params) > 1 {
+		return "", fmt.Errorf("runjs accepts only one parameter (action name), got %d", len(info.Params))
+	}
+
+	actionName := strings.TrimSpace(info.Params[0])
+	if actionName == "" {
+		return "", fmt.Errorf("runjs action name parameter cannot be empty")
+	}
+
+	// Look up the action in the actionsMap
+	actionValue, exists := actionsMap[actionName]
+	if !exists {
+		return "", fmt.Errorf("runjs action '%s' not found in actions map", actionName)
+	}
+
+	if strings.TrimSpace(actionValue) == "" {
+		return "", fmt.Errorf("runjs action '%s' value cannot be empty", actionName)
+	}
+
+	// Use TranslateEventExpression to translate the events, forcing nohtml modifier
+	return TranslateEventExpression(info.Value, actionValue, "", "nohtml")
+}
+
+// ActionPrefixHandler handles x-fir-js:* (doesn't translate directly, just used for collection)
 type ActionPrefixHandler struct{}
 
-func (h *ActionPrefixHandler) Name() string    { return "action-" } // Special prefix identifier
-func (h *ActionPrefixHandler) Precedence() int { return 100 }       // Lowest precedence, processed first for collection
+func (h *ActionPrefixHandler) Name() string    { return "js" } // Special prefix identifier for JavaScript actions
+func (h *ActionPrefixHandler) Precedence() int { return 100 }  // Lowest precedence, processed first for collection
 func (h *ActionPrefixHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// This handler doesn't produce translated attributes itself.
 	// Its presence is mainly for identification during the collection phase and removal.
@@ -247,6 +280,7 @@ func init() {
 	RegisterActionHandler(&RemoveParentActionHandler{})
 	RegisterActionHandler(&ResetActionHandler{}) // Register the reset handler
 	RegisterActionHandler(&ToggleDisabledActionHandler{})
+	RegisterActionHandler(&TriggerActionHandler{})  // Register the trigger handler
 	RegisterActionHandler(&DispatchActionHandler{}) // Register the dispatch handler
 	RegisterActionHandler(&ActionPrefixHandler{})   // Register the prefix handler
 }

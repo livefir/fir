@@ -420,16 +420,12 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 				// Check for exact match first (e.g., "live", "refresh")
 				handler, found = actionRegistry[actionName]
-				if !found {
-					// Check for prefix match (only "action-" for now)
-					if strings.HasPrefix(actionName, "action-") {
-						handler, found = actionRegistry["action-"] // Lookup the prefix handler
-						if found {
-							// Collect value for actionsMap if it's an action prefix
-							actionKey := strings.TrimPrefix(actionName, "action-")
-							if actionKey != "" {
-								actionsMap[actionKey] = attr.Val
-							}
+				if found {
+					// If this is a js handler, collect the JavaScript value
+					if actionName == "js" && len(params) > 0 {
+						actionKey := params[0]
+						if actionKey != "" {
+							actionsMap[actionKey] = attr.Val
 						}
 					}
 				}

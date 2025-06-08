@@ -345,7 +345,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Render with action target, action defined",
-			inputHTML:    `<button x-fir-live="click=>doClick" x-fir-action-doClick="handleMyClick()">Click</button>`,
+			inputHTML:    `<button x-fir-live="click=>doClick" x-fir-js:doClick="handleMyClick()">Click</button>`,
 			expectedHTML: `<button @fir:click:ok="handleMyClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
@@ -357,7 +357,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Render with template and action target, action defined",
-			inputHTML:    `<form x-fir-live="submit->myForm=>doSubmit" x-fir-action-doSubmit="submitTheForm()">Submit</form>`,
+			inputHTML:    `<form x-fir-live="submit->myForm=>doSubmit" x-fir-js:doSubmit="submitTheForm()">Submit</form>`,
 			expectedHTML: `<form @fir:submit:ok::myForm="submitTheForm()">Submit</form>`, // No wrapper
 			wantErr:      false,
 		},
@@ -369,19 +369,19 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Multiple events, template and action target, action defined",
-			inputHTML:    `<div x-fir-live="create:ok,update:ok->item=>saveItem" x-fir-action-saveItem="save()">Save</div>`,
+			inputHTML:    `<div x-fir-live="create:ok,update:ok->item=>saveItem" x-fir-js:saveItem="save()">Save</div>`,
 			expectedHTML: `<div @fir:[create:ok,update:ok]::item="save()">Save</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions, actions defined",
-			inputHTML:    `<div x-fir-live="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()" x-fir-action-loadData="doLoad()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>saveData;load=>loadData" x-fir-js:saveData="doSave()" x-fir-js:loadData="doLoad()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple expressions, one action defined",
-			inputHTML:    `<div x-fir-live="save=>saveData;load=>loadData" x-fir-action-saveData="doSave()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>saveData;load=>loadData" x-fir-js:saveData="doSave()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="loadData">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
@@ -393,37 +393,37 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Render with modifier and action, action defined",
-			inputHTML:    `<button x-fir-live="click.throttle=>handleClick" x-fir-action-handleClick="throttledClick()">Click</button>`,
+			inputHTML:    `<button x-fir-live="click.throttle=>handleClick" x-fir-js:handleClick="throttledClick()">Click</button>`,
 			expectedHTML: `<button @fir:click:ok.throttle="throttledClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Complex mix with modifiers and actions",
-			inputHTML:    `<div x-fir-live="create:ok.nohtml,delete:error->todo=>replaceIt;update:pending.debounce->done=>archiveIt" x-fir-action-replaceIt="doReplace()" x-fir-action-archiveIt="doArchive()">Complex</div>`,
+			inputHTML:    `<div x-fir-live="create:ok.nohtml,delete:error->todo=>replaceIt;update:pending.debounce->done=>archiveIt" x-fir-js:replaceIt="doReplace()" x-fir-js:archiveIt="doArchive()">Complex</div>`,
 			expectedHTML: `<div @fir:[create:ok,delete:error]::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="doArchive()">Complex</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Retain other attributes",
-			inputHTML:    `<button id="myBtn" class="btn" x-fir-live="click=>doClick" x-fir-action-doClick="handleClick()">Click</button>`,
+			inputHTML:    `<button id="myBtn" class="btn" x-fir-live="click=>doClick" x-fir-js:doClick="handleClick()">Click</button>`,
 			expectedHTML: `<button id="myBtn" class="btn" @fir:click:ok="handleClick()">Click</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Nested elements with render attributes",
-			inputHTML:    `<div><div x-fir-live="load=>loadOuter" x-fir-action-loadOuter="outer()"><button x-fir-live="click=>clickInner" x-fir-action-clickInner="inner()">Inner</button></div></div>`,
+			inputHTML:    `<div><div x-fir-live="load=>loadOuter" x-fir-js:loadOuter="outer()"><button x-fir-live="click=>clickInner" x-fir-js:clickInner="inner()">Inner</button></div></div>`,
 			expectedHTML: `<div><div @fir:load:ok="outer()"><button @fir:click:ok="inner()">Inner</button></div></div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions on one node",
-			inputHTML:    `<div x-fir-live="save=>saveIt; load=>loadIt" x-fir-action-saveIt="doSave()" x-fir-action-loadIt="doLoad()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>saveIt; load=>loadIt" x-fir-js:saveIt="doSave()" x-fir-js:loadIt="doLoad()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="doLoad()">Data</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action key with hyphen",
-			inputHTML:    `<button x-fir-live="click=>my-action" x-fir-action-my-action="handleIt()">Click</button>`,
+			inputHTML:    `<button x-fir-live="click=>my-action" x-fir-js:my-action="handleIt()">Click</button>`,
 			expectedHTML: `<button @fir:click:ok="handleIt()">Click</button>`, // Not checked on error
 			wantErr:      false,
 		},
@@ -493,13 +493,13 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Void element",
-			inputHTML:    `<input x-fir-live="change=>updateValue" x-fir-action-updateValue="val()">`,
+			inputHTML:    `<input x-fir-live="change=>updateValue" x-fir-js:updateValue="val()">`,
 			expectedHTML: `<input @fir:change:ok="val()">`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "HTML with comments",
-			inputHTML:    `<!-- comment --><div x-fir-live="load=>init" x-fir-action-init="doInit()">Load</div><!-- another -->`,
+			inputHTML:    `<!-- comment --><div x-fir-live="load=>init" x-fir-js:init="doInit()">Load</div><!-- another -->`,
 			expectedHTML: `<!-- comment --><div @fir:load:ok="doInit()">Load</div><!-- another -->`, // No wrapper
 			wantErr:      false,
 		},
@@ -507,43 +507,43 @@ func TestProcessRenderAttributes(t *testing.T) {
 		// --- New Test Cases ---
 		{
 			name:         "Whitespace variations in render attribute",
-			inputHTML:    `<button x-fir-live="  click => doClick  ;  submit -> myForm => doSubmit " x-fir-action-doClick="clickAction()" x-fir-action-doSubmit="submitAction()">WS</button>`,
+			inputHTML:    `<button x-fir-live="  click => doClick  ;  submit -> myForm => doSubmit " x-fir-js:doClick="clickAction()" x-fir-js:doSubmit="submitAction()">WS</button>`,
 			expectedHTML: `<button @fir:click:ok="clickAction()" @fir:submit:ok::myForm="submitAction()">WS</button>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action value with quotes",
-			inputHTML:    `<div x-fir-live="load=>loadData" x-fir-action-loadData="load('item')">Load</div>`,
+			inputHTML:    `<div x-fir-live="load=>loadData" x-fir-js:loadData="load('item')">Load</div>`,
 			expectedHTML: `<div @fir:load:ok="load('item')">Load</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Action value with escaped quotes",
-			inputHTML:    `<div x-fir-live="load=>loadData" x-fir-action-loadData="load(&#34;item&#34;)">Load</div>`,
+			inputHTML:    `<div x-fir-live="load=>loadData" x-fir-js:loadData="load(&#34;item&#34;)">Load</div>`,
 			expectedHTML: `<div @fir:load:ok="load(&#34;item&#34;)">Load</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple states combined",
-			inputHTML:    `<div x-fir-live="save:ok,delete:error=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
+			inputHTML:    `<div x-fir-live="save:ok,delete:error=>handleResult" x-fir-js:handleResult="process()">Handle</div>`,
 			expectedHTML: `<div @fir:[save:ok,delete:error]="process()">Handle</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple states with template",
-			inputHTML:    `<div x-fir-live="save:ok,delete:error->result=>handleResult" x-fir-action-handleResult="process()">Handle</div>`,
+			inputHTML:    `<div x-fir-live="save:ok,delete:error->result=>handleResult" x-fir-js:handleResult="process()">Handle</div>`,
 			expectedHTML: `<div @fir:[save:ok,delete:error]::result="process()">Handle</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "Unused x-fir-action attribute",
-			inputHTML:    `<div x-fir-live="click=>doClick" x-fir-action-doClick="clickAction()" x-fir-action-unused="unused()">Click</div>`,
+			inputHTML:    `<div x-fir-live="click=>doClick" x-fir-js:doClick="clickAction()" x-fir-js:unused="unused()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="clickAction()">Click</div>`, // No wrapper
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-action attribute without corresponding render action key",
-			inputHTML:    `<div x-fir-live="click" x-fir-action-doClick="clickAction()">Click</div>`,
+			inputHTML:    `<div x-fir-live="click" x-fir-js:doClick="clickAction()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click</div>`, // No wrapper
 			wantErr:      false,
 		},
@@ -561,7 +561,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Render expression with only action key",
-			inputHTML:    `<div x-fir-live="=>myAction" x-fir-action-myAction="act()">Click</div>`,
+			inputHTML:    `<div x-fir-live="=>myAction" x-fir-js:myAction="act()">Click</div>`,
 			expectedHTML: "", // Invalid syntax
 			wantErr:      true,
 		},
@@ -599,8 +599,8 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Mixed standard and Fir Actions",
-			inputHTML:    `<div x-fir-live="save => saveData; load => $fir.Load()" x-fir-action-saveData="doSave()">Data</div>`, // Already multi-letter
-			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="$fir.Load()">Data</div>`,                                  // Already multi-letter
+			inputHTML:    `<div x-fir-live="save => saveData; load => $fir.Load()" x-fir-js:saveData="doSave()">Data</div>`, // Already multi-letter
+			expectedHTML: `<div @fir:save:ok="doSave()" @fir:load:ok="$fir.Load()">Data</div>`,                              // Already multi-letter
 			wantErr:      false,
 		},
 		{
@@ -611,7 +611,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:      "Complex mix with Fir Action",
-			inputHTML: `<div x-fir-live="create:ok.nohtml->todo=>replaceIt;update:pending.debounce->done=>$fir.Archive()" x-fir-action-replaceIt="doReplace()">Complex</div>`, // Already multi-letter
+			inputHTML: `<div x-fir-live="create:ok.nohtml->todo=>replaceIt;update:pending.debounce->done=>$fir.Archive()" x-fir-js:replaceIt="doReplace()">Complex</div>`, // Already multi-letter
 			// Corrected expectedHTML: removed delete:error, adjusted attribute structure
 			expectedHTML: `<div @fir:create:ok::todo.nohtml="doReplace()" @fir:update:pending::done.debounce="$fir.Archive()">Complex</div>`, // Already multi-letter
 			wantErr:      false,
@@ -775,32 +775,32 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "x-fir-live with x-fir-action",
-			inputHTML:    `<div x-fir-live="save=>doSave" x-fir-action-doSave="saveData()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>doSave" x-fir-js:doSave="saveData()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="saveData()">Data</div>`, // Action is replaced
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-live with multiple x-fir-action",
-			inputHTML:    `<div x-fir-live="save=>doSave; load=>doLoad" x-fir-action-doSave="saveData()" x-fir-action-doLoad="loadData()">Data</div>`,
+			inputHTML:    `<div x-fir-live="save=>doSave; load=>doLoad" x-fir-js:doSave="saveData()" x-fir-js:doLoad="loadData()">Data</div>`,
 			expectedHTML: `<div @fir:save:ok="saveData()" @fir:load:ok="loadData()">Data</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-live with unused x-fir-action",
-			inputHTML:    `<div x-fir-live="click=>doClick" x-fir-action-doClick="clickAction()" x-fir-action-unused="unused()">Click</div>`,
+			inputHTML:    `<div x-fir-live="click=>doClick" x-fir-js:doClick="clickAction()" x-fir-js:unused="unused()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="clickAction()">Click</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-live with x-fir-action not matching action key",
-			inputHTML:    `<div x-fir-live="click" x-fir-action-doClick="clickAction()">Click</div>`,
+			inputHTML:    `<div x-fir-live="click" x-fir-js:doClick="clickAction()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="$fir.replace()">Click</div>`, // Action map doesn't apply
 			wantErr:      false,
 		},
 		// --- Precedence tests ---
 		{
 			name:         "Precedence: live > refresh > remove > remove-parent",
-			inputHTML:    `<div x-fir-live="a=>act" x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d" x-fir-action-act="doAct()">Live</div>`,
+			inputHTML:    `<div x-fir-live="a=>act" x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d" x-fir-js:act="doAct()">Live</div>`,
 			expectedHTML: `<div @fir:a:ok="doAct()">Live</div>`, // Only live is processed
 			wantErr:      false,
 		},
@@ -935,7 +935,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		},
 		{
 			name:         "Alpine.js directive: x-fir-live with complex modifiers",
-			inputHTML:    `<div x-fir-live.prevent.stop.outside="click=>doClick" x-fir-action-doClick="handleClick()">Click</div>`,
+			inputHTML:    `<div x-fir-live.prevent.stop.outside="click=>doClick" x-fir-js:doClick="handleClick()">Click</div>`,
 			expectedHTML: `<div @fir:click:ok="handleClick()">Click</div>`,
 			wantErr:      false,
 		},
