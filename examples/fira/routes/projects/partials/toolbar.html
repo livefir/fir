@@ -3,7 +3,6 @@
         x-ref="queryForm"
         class="mb-4"
         action="/?event=query"
-        @query-changed="$fir.submit()"
         @submit.prevent="$fir.submit()">
         <div class="field is-horizontal">
             <div class="field-body">
@@ -57,14 +56,14 @@
         </div>
 
         <div
-            @fir:query:ok="$fir.replace()"
+            x-fir-refresh="query:ok"
             id="pagination"
             class="pagination is-right mt-4"
             role="navigation"
             aria-label="pagination">
             <button
                 type="submit"
-                class="button is-small {{ if not .hasPrevious }}
+                class="button is-small{{ if not .hasPrevious }}
                     is-static
                 {{ end }}"
                 name="page"
@@ -73,9 +72,7 @@
             </button>
             <button
                 type="submit"
-                class="button is-small {{ if not .hasNext }}
-                    is-static
-                {{ end }}"
+                class="button is-small{{ if not .hasNext }}is-static{{ end }}"
                 name="page"
                 value="{{ .next }}">
                 Next

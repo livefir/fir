@@ -43,15 +43,22 @@ func readAttributes(fi fileInfo) fileInfo {
 }
 
 // eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
+// but preserve .nohtml for server-side processing
 func removeModifiers(eventns string) string {
-	if strings.Contains(eventns, ".nohtml") {
+	eventnsParts := strings.SplitN(eventns, ".", -1)
+	if len(eventnsParts) <= 1 {
 		return eventns
 	}
-	eventnsParts := strings.SplitN(eventns, ".", -1)
-	if len(eventnsParts) > 0 {
-		return eventnsParts[0]
+
+	// Keep only the event part and .nohtml if present
+	eventPart := eventnsParts[0]
+	for _, part := range eventnsParts[1:] {
+		if part == "nohtml" {
+			return eventPart + ".nohtml"
+		}
 	}
-	return eventns
+
+	return eventPart
 }
 
 func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {

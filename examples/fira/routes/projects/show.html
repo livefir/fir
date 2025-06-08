@@ -17,7 +17,7 @@
             </nav>
             <hr />
 
-            <p @fir:update:error="$fir.replace()" class="help is-danger">
+            <p x-fir-refresh="update:error" class="help is-danger">
                 {{ fir.Error "update" }}
             </p>
 
@@ -27,7 +27,7 @@
                         method="post"
                         id="update"
                         action="/?event=update"
-                        @fir:[update:pending,update:ok,update:error].nohtml="toggle"
+                        x-fir-update:[pending,ok,error].nohtml="toggle"
                         @submit.prevent="$fir.submit()">
                         <input
                             type="hidden"
@@ -38,7 +38,7 @@
 
                             <div
                                 id="title"
-                                @fir:update:ok="$fir.replace()"
+                                x-fir-refresh="update:ok"
                                 class="control">
                                 <input
                                     name="title"
@@ -49,7 +49,7 @@
                             </div>
 
                             <p
-                                @fir:update:error="$fir.replace()"
+                                x-fir-refresh="update:error"
                                 class="help is-danger">
                                 {{ fir.Error "update.title" }}
                             </p>
@@ -58,7 +58,7 @@
                             <label class="label"> Description </label>
                             <div
                                 id="description"
-                                @fir:update:ok="$fir.replace()"
+                                x-fir-refresh="update:ok"
                                 class="control">
                                 <input
                                     name="description"
@@ -69,7 +69,7 @@
                             </div>
 
                             <p
-                                @fir:update:error="$fir.replace()"
+                                x-fir-refresh="update:error"
                                 class="help is-danger">
                                 {{ fir.Error "update.description" }}
                             </p>

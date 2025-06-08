@@ -6,7 +6,7 @@
 
         <form
             x-ref="createForm"
-            @fir:create:ok.window="$refs.createForm.reset()"
+            x-fir-reset="create:ok.window"
             method="post"
             action="/?event=create"
             @submit.prevent="$fir.submit()">
@@ -21,7 +21,7 @@
                         placeholder="Title" />
                 </div>
 
-                <div @fir:create:error="$fir.replace()">
+                <div x-fir-refresh="create:error">
                     <p class="help is-danger">
                         {{ fir.Error "create.title" }}
                     </p>
@@ -37,7 +37,7 @@
                         value=""
                         placeholder="Description" />
                 </div>
-                <div @fir:create:error="$fir.replace()">
+                <div x-fir-refresh="create:error">
                     <p class="help is-danger">
                         {{ fir.Error "create.description" }}
                     </p>

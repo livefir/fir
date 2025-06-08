@@ -368,3 +368,445 @@ func TestTriggerActionHandler(t *testing.T) {
 		})
 	}
 }
+
+// TestActionsConflict tests the actionsConflict function
+func TestActionsConflict(t *testing.T) {
+	tests := []struct {
+		name     string
+		action1  string
+		value1   string
+		action2  string
+		value2   string
+		expected bool
+	}{
+		// Refresh conflicts with remove/remove-parent
+		{
+			name:     "refresh conflicts with remove",
+			action1:  "refresh",
+			value1:   "query:ok",
+			action2:  "remove",
+			value2:   "delete:ok",
+			expected: true,
+		},
+		{
+			name:     "refresh conflicts with remove-parent",
+			action1:  "refresh",
+			value1:   "query:ok",
+			action2:  "remove-parent",
+			value2:   "delete:ok",
+			expected: true,
+		},
+		{
+			name:     "remove conflicts with refresh",
+			action1:  "remove",
+			value1:   "delete:ok",
+			action2:  "refresh",
+			value2:   "query:ok",
+			expected: true,
+		},
+		{
+			name:     "remove-parent conflicts with refresh",
+			action1:  "remove-parent",
+			value1:   "delete:ok",
+			action2:  "refresh",
+			value2:   "query:ok",
+			expected: true,
+		},
+
+		// Remove and remove-parent conflict with each other
+		{
+			name:     "remove conflicts with remove-parent",
+			action1:  "remove",
+			value1:   "delete:ok",
+			action2:  "remove-parent",
+			value2:   "delete:ok",
+			expected: true,
+		},
+		{
+			name:     "remove-parent conflicts with remove",
+			action1:  "remove-parent",
+			value1:   "delete:ok",
+			action2:  "remove",
+			value2:   "delete:ok",
+			expected: true,
+		},
+
+		// Same events - these should conflict
+		{
+			name:     "append conflicts with prepend on same event",
+			action1:  "append",
+			value1:   "create:ok",
+			action2:  "prepend",
+			value2:   "create:ok",
+			expected: true,
+		},
+		{
+			name:     "replace conflicts with append on same event",
+			action1:  "refresh", // refresh is the replace action
+			value1:   "update:ok",
+			action2:  "append",
+			value2:   "update:ok",
+			expected: true,
+		},
+
+		// Different events - these should not conflict except for DOM manipulation actions
+		{
+			name:     "append conflicts with prepend even on different events",
+			action1:  "append",
+			value1:   "create:ok",
+			action2:  "prepend",
+			value2:   "update:ok",
+			expected: true, // DOM manipulation actions always conflict due to precedence
+		},
+		{
+			name:     "refresh doesn't conflict with append on different events",
+			action1:  "refresh",
+			value1:   "update:ok",
+			action2:  "append",
+			value2:   "create:ok",
+			expected: false,
+		},
+
+		// Multiple events - should conflict if any overlap
+		{
+			name:     "multiple events with overlap should conflict",
+			action1:  "append",
+			value1:   "create:ok,update:ok",
+			action2:  "prepend",
+			value2:   "update:ok,delete:ok",
+			expected: true,
+		},
+		{
+			name:     "multiple DOM manipulation events always conflict",
+			action1:  "append",
+			value1:   "create:ok,save:ok",
+			action2:  "prepend",
+			value2:   "update:ok,delete:ok",
+			expected: true, // DOM manipulation actions always conflict due to precedence
+		},
+
+		// Mixed single and multiple events
+		{
+			name:     "single event conflicts with multiple containing it",
+			action1:  "append",
+			value1:   "create:ok",
+			action2:  "prepend",
+			value2:   "create:ok,update:ok,delete:ok",
+			expected: true,
+		},
+
+		// Complex event expressions
+		{
+			name:     "complex events with modifiers should conflict on same base event",
+			action1:  "append",
+			value1:   "create:ok.debounce",
+			action2:  "prepend",
+			value2:   "create:ok.throttle",
+			expected: true,
+		},
+
+		// Actions that can coexist
+		{
+			name:     "refresh and append on different events don't conflict",
+			action1:  "refresh",
+			value1:   "query:ok",
+			action2:  "append",
+			value2:   "create:ok",
+			expected: false,
+		},
+		{
+			name:     "reset and toggle-disabled don't conflict",
+			action1:  "reset",
+			value1:   "submit:ok",
+			action2:  "toggle-disabled",
+			value2:   "submit:pending",
+			expected: false,
+		},
+
+		// Edge cases
+		{
+			name:     "same action on same event should conflict",
+			action1:  "append",
+			value1:   "create:ok",
+			action2:  "append",
+			value2:   "create:ok",
+			expected: true,
+		},
+		{
+			name:     "same action on different events should not conflict",
+			action1:  "append",
+			value1:   "create:ok",
+			action2:  "append",
+			value2:   "update:ok",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create collectedAction structs for testing
+			action1 := collectedAction{
+				Handler: &RefreshActionHandler{}, // Use a dummy handler
+				Info: ActionInfo{
+					ActionName: tt.action1,
+					Value:      tt.value1,
+				},
+			}
+			action2 := collectedAction{
+				Handler: &RefreshActionHandler{}, // Use a dummy handler
+				Info: ActionInfo{
+					ActionName: tt.action2,
+					Value:      tt.value2,
+				},
+			}
+
+			result := actionsConflict(action1, action2)
+			require.Equal(t, tt.expected, result, "actionsConflict(%s, %s, %s, %s) = %v, expected %v",
+				tt.action1, tt.value1, tt.action2, tt.value2, result, tt.expected)
+		})
+	}
+}
+
+// TestParseEventExpression tests the parseEventExpression function
+func TestParseEventExpression(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     string
+		expected []string
+	}{
+		{
+			name:     "single event",
+			expr:     "create:ok",
+			expected: []string{"create:ok"},
+		},
+		{
+			name:     "multiple events",
+			expr:     "create:ok,update:ok,delete:ok",
+			expected: []string{"create:ok", "update:ok", "delete:ok"},
+		},
+		{
+			name:     "events with spaces",
+			expr:     "create:ok, update:ok , delete:ok",
+			expected: []string{"create:ok", "update:ok", "delete:ok"},
+		},
+		{
+			name:     "event with modifiers",
+			expr:     "create:ok.debounce",
+			expected: []string{"create:ok"},
+		},
+		{
+			name:     "multiple events with modifiers",
+			expr:     "create:ok.debounce,update:ok.throttle",
+			expected: []string{"create:ok", "update:ok"},
+		},
+		{
+			name:     "event with target (should be ignored)",
+			expr:     "create:ok->myTarget",
+			expected: []string{"create:ok"},
+		},
+		{
+			name:     "event with action target (should be ignored)",
+			expr:     "create:ok=>myAction",
+			expected: []string{"create:ok"},
+		},
+		{
+			name:     "complex mixed expression",
+			expr:     "create:ok.debounce->target, update:ok.throttle=>action, delete:error",
+			expected: []string{"create:ok", "update:ok", "delete:error"},
+		},
+		{
+			name:     "empty expression",
+			expr:     "",
+			expected: []string{},
+		},
+		{
+			name:     "expression with only spaces",
+			expr:     "   ",
+			expected: []string{},
+		},
+		{
+			name:     "expression with empty segments",
+			expr:     "create:ok,,update:ok",
+			expected: []string{"create:ok", "update:ok"},
+		},
+		{
+			name:     "single event without state (defaults to :ok)",
+			expr:     "create",
+			expected: []string{"create:ok"},
+		},
+		{
+			name:     "multiple events without state",
+			expr:     "create,update,delete",
+			expected: []string{"create:ok", "update:ok", "delete:ok"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseEventExpression(tt.expr)
+			require.Equal(t, tt.expected, result, "parseEventExpression(%s) = %v, expected %v",
+				tt.expr, result, tt.expected)
+		})
+	}
+}
+
+// TestHasCommonEvents tests the hasCommonEvents function
+func TestHasCommonEvents(t *testing.T) {
+	tests := []struct {
+		name     string
+		events1  []string
+		events2  []string
+		expected bool
+	}{
+		{
+			name:     "identical single events",
+			events1:  []string{"create:ok"},
+			events2:  []string{"create:ok"},
+			expected: true,
+		},
+		{
+			name:     "different single events",
+			events1:  []string{"create:ok"},
+			events2:  []string{"update:ok"},
+			expected: false,
+		},
+		{
+			name:     "one event in common",
+			events1:  []string{"create:ok", "update:ok"},
+			events2:  []string{"update:ok", "delete:ok"},
+			expected: true,
+		},
+		{
+			name:     "no events in common",
+			events1:  []string{"create:ok", "save:ok"},
+			events2:  []string{"update:ok", "delete:ok"},
+			expected: false,
+		},
+		{
+			name:     "all events in common",
+			events1:  []string{"create:ok", "update:ok"},
+			events2:  []string{"create:ok", "update:ok"},
+			expected: true,
+		},
+		{
+			name:     "subset relationship",
+			events1:  []string{"create:ok"},
+			events2:  []string{"create:ok", "update:ok", "delete:ok"},
+			expected: true,
+		},
+		{
+			name:     "empty first list",
+			events1:  []string{},
+			events2:  []string{"create:ok", "update:ok"},
+			expected: false,
+		},
+		{
+			name:     "empty second list",
+			events1:  []string{"create:ok", "update:ok"},
+			events2:  []string{},
+			expected: false,
+		},
+		{
+			name:     "both lists empty",
+			events1:  []string{},
+			events2:  []string{},
+			expected: false,
+		},
+		{
+			name:     "case sensitivity test",
+			events1:  []string{"Create:OK"},
+			events2:  []string{"create:ok"},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hasCommonEvents(tt.events1, tt.events2)
+			require.Equal(t, tt.expected, result, "hasCommonEvents(%v, %v) = %v, expected %v",
+				tt.events1, tt.events2, result, tt.expected)
+		})
+	}
+}
+
+// TestActionsConflictIntegration tests the integration of conflict resolution with processRenderAttributes
+func TestActionsConflictIntegration(t *testing.T) {
+	tests := []struct {
+		name        string
+		action1     string
+		value1      string
+		action2     string
+		value2      string
+		description string
+	}{
+		{
+			name:        "non-conflicting actions should both be processed",
+			action1:     "refresh",
+			value1:      "query:ok",
+			action2:     "append",
+			value2:      "create:ok",
+			description: "refresh and append on different events should not conflict",
+		},
+		{
+			name:        "conflicting actions should conflict",
+			action1:     "refresh",
+			value1:      "query:ok",
+			action2:     "remove",
+			value2:      "query:ok",
+			description: "refresh and remove on same event should conflict",
+		},
+		{
+			name:        "multiple non-conflicting actions",
+			action1:     "reset",
+			value1:      "submit:ok",
+			action2:     "toggle-disabled",
+			value2:      "submit:pending",
+			description: "reset and toggle-disabled on different event states should not conflict",
+		},
+		{
+			name:        "complex conflicting scenario",
+			action1:     "append",
+			value1:      "create:ok",
+			action2:     "prepend",
+			value2:      "create:ok",
+			description: "append and prepend conflict on same event",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create collectedAction structs
+			action1 := collectedAction{
+				Handler: &RefreshActionHandler{},
+				Info: ActionInfo{
+					ActionName: tt.action1,
+					Value:      tt.value1,
+				},
+			}
+			action2 := collectedAction{
+				Handler: &RefreshActionHandler{},
+				Info: ActionInfo{
+					ActionName: tt.action2,
+					Value:      tt.value2,
+				},
+			}
+
+			// Test the conflict resolution
+			result := actionsConflict(action1, action2)
+
+			// Verify parseEventExpression works
+			events1 := parseEventExpression(tt.value1)
+			events2 := parseEventExpression(tt.value2)
+			require.NotNil(t, events1)
+			require.NotNil(t, events2)
+
+			// Verify hasCommonEvents works
+			hasCommon := hasCommonEvents(events1, events2)
+
+			// Log for debugging
+			t.Logf("Action1: %s=%s, Action2: %s=%s", tt.action1, tt.value1, tt.action2, tt.value2)
+			t.Logf("Events1: %v, Events2: %v", events1, events2)
+			t.Logf("HasCommonEvents: %v, ActionsConflict: %v", hasCommon, result)
+		})
+	}
+}

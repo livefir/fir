@@ -3,7 +3,7 @@
         {{ block "err" . }}
             {{ fir.Error "route" }}
         {{ end }}
-        <p @fir:create:error="$fir.replace()">
+        <p x-fir-refresh="create:error">
             {{ fir.Error "create.route" }}
         </p>
         <div class="column is-4">
@@ -12,9 +12,9 @@
         <div class="column is-8">
             {{ template "toolbar" . }}
             <div
-                @fir:query:ok="$fir.replace()"
+                x-fir-refresh="query:ok"
                 id="projects"
-                @fir:create:ok::projectitem="$fir.appendEl()">
+                x-fir-append:projectitem="create:ok">
                 {{ range .projects }}
                     {{ template "projectitem" . }}
                 {{ else }}

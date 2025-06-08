@@ -120,7 +120,16 @@ func getAttr(n *html.Node, key string) string {
 }
 
 func addAttributes(content []byte) []byte {
-	doc, err := html.Parse(bytes.NewReader(content))
+	// First, process x-fir-* attributes and convert them to @fir: attributes
+	// Since this is called during rendering, Go templates have been executed
+	// so we can safely process x-fir-* attributes without corrupting template syntax
+	processedContent, err := processRenderAttributes(content)
+	if err != nil {
+		// If processing fails, continue with original content
+		processedContent = content
+	}
+
+	doc, err := html.Parse(bytes.NewReader(processedContent))
 	if err != nil {
 		panic(err)
 	}
