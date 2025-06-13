@@ -904,3 +904,539 @@ func TestActionsConflictIntegration(t *testing.T) {
 		})
 	}
 }
+
+// TestRefreshActionHandler tests the RefreshActionHandler implementation
+func TestRefreshActionHandler(t *testing.T) {
+	handler := &RefreshActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "refresh", handler.Name())
+	require.Equal(t, 20, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Basic event",
+			value:    "update",
+			expected: `@fir:update:ok="$fir.replace()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state",
+			value:    "load:done",
+			expected: `@fir:load:done="$fir.replace()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier",
+			value:    "change.debounce",
+			expected: `@fir:change:ok.debounce="$fir.replace()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events",
+			value:    "create:ok,update:done",
+			expected: `@fir:[create:ok,update:done]="$fir.replace()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with target (ignored)",
+			value:    "load->data",
+			expected: `@fir:load:ok="$fir.replace()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with action (ignored)",
+			value:    "submit=>doSubmit",
+			expected: `@fir:submit:ok="$fir.replace()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Empty value",
+			value:    "",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-refresh",
+				ActionName: "refresh",
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestRemoveActionHandler tests the RemoveActionHandler implementation
+func TestRemoveActionHandler(t *testing.T) {
+	handler := &RemoveActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "remove", handler.Name())
+	require.Equal(t, 30, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Basic event",
+			value:    "delete",
+			expected: `@fir:delete:ok.nohtml="$fir.removeEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state",
+			value:    "remove:ok",
+			expected: `@fir:remove:ok.nohtml="$fir.removeEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier",
+			value:    "clear.once",
+			expected: `@fir:clear:ok.nohtml.once="$fir.removeEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events",
+			value:    "delete:ok,clear:done",
+			expected: `@fir:[delete:ok,clear:done].nohtml="$fir.removeEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with target (ignored)",
+			value:    "delete->item",
+			expected: `@fir:delete:ok.nohtml="$fir.removeEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with action (ignored)",
+			value:    "remove=>doRemove",
+			expected: `@fir:remove:ok.nohtml="$fir.removeEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Empty value",
+			value:    "",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-remove",
+				ActionName: "remove",
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestAppendActionHandler tests the AppendActionHandler implementation
+func TestAppendActionHandler(t *testing.T) {
+	handler := &AppendActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "append", handler.Name())
+	require.Equal(t, 50, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		params   []string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Basic event with template",
+			params:   []string{"todo"},
+			value:    "create",
+			expected: `@fir:create:ok::todo="$fir.appendEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state and template",
+			params:   []string{"item"},
+			value:    "add:ok",
+			expected: `@fir:add:ok::item="$fir.appendEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier and template",
+			params:   []string{"list"},
+			value:    "insert.fast",
+			expected: `@fir:insert:ok::list.fast="$fir.appendEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events with template",
+			params:   []string{"container"},
+			value:    "create:ok,update:done",
+			expected: `@fir:[create:ok,update:done]::container="$fir.appendEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Missing template parameter",
+			params:   []string{},
+			value:    "create",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty template parameter",
+			params:   []string{""},
+			value:    "create",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty value",
+			params:   []string{"todo"},
+			value:    "",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-append:todo",
+				ActionName: "append",
+				Params:     tt.params,
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestPrependActionHandler tests the PrependActionHandler implementation
+func TestPrependActionHandler(t *testing.T) {
+	handler := &PrependActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "prepend", handler.Name())
+	require.Equal(t, 60, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		params   []string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Basic event with template",
+			params:   []string{"header"},
+			value:    "create",
+			expected: `@fir:create:ok::header="$fir.prependEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state and template",
+			params:   []string{"list"},
+			value:    "add:ok",
+			expected: `@fir:add:ok::list="$fir.prependEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier and template",
+			params:   []string{"nav"},
+			value:    "insert.immediate",
+			expected: `@fir:insert:ok::nav.immediate="$fir.prependEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events with template",
+			params:   []string{"menu"},
+			value:    "create:ok,update:done",
+			expected: `@fir:[create:ok,update:done]::menu="$fir.prependEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Missing template parameter",
+			params:   []string{},
+			value:    "create",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty template parameter",
+			params:   []string{""},
+			value:    "create",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty value",
+			params:   []string{"header"},
+			value:    "",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-prepend:header",
+				ActionName: "prepend",
+				Params:     tt.params,
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestRemoveParentActionHandler tests the RemoveParentActionHandler implementation
+func TestRemoveParentActionHandler(t *testing.T) {
+	handler := &RemoveParentActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "remove-parent", handler.Name())
+	require.Equal(t, 40, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Basic event",
+			value:    "delete",
+			expected: `@fir:delete:ok.nohtml="$fir.removeParentEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state",
+			value:    "close:ok",
+			expected: `@fir:close:ok.nohtml="$fir.removeParentEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier",
+			value:    "dismiss.once",
+			expected: `@fir:dismiss:ok.nohtml.once="$fir.removeParentEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events",
+			value:    "delete:ok,dismiss:done",
+			expected: `@fir:[delete:ok,dismiss:done].nohtml="$fir.removeParentEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with target and action (both ignored)",
+			value:    "delete->parent=>doDelete",
+			expected: `@fir:delete:ok.nohtml="$fir.removeParentEl()"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Empty value",
+			value:    "",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-remove-parent",
+				ActionName: "remove-parent",
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestDispatchActionHandler tests the DispatchActionHandler implementation
+func TestDispatchActionHandler(t *testing.T) {
+	handler := &DispatchActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "dispatch", handler.Name())
+	require.Equal(t, 33, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		params   []string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Single dispatch parameter",
+			params:   []string{"modal-close"},
+			value:    "click",
+			expected: `@fir:click:ok.nohtml="$dispatch('modal-close')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple dispatch parameters",
+			params:   []string{"toggle-sidebar", "update-nav"},
+			value:    "click",
+			expected: `@fir:click:ok.nohtml="$dispatch('toggle-sidebar','update-nav')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state",
+			params:   []string{"form-submit"},
+			value:    "submit:ok",
+			expected: `@fir:submit:ok.nohtml="$dispatch('form-submit')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier",
+			params:   []string{"menu-toggle"},
+			value:    "click.once",
+			expected: `@fir:click:ok.nohtml.once="$dispatch('menu-toggle')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events",
+			params:   []string{"notification"},
+			value:    "success:ok,error:error",
+			expected: `@fir:[success:ok,error:error].nohtml="$dispatch('notification')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with template target",
+			params:   []string{"form-data"},
+			value:    "submit:pending->form",
+			expected: `@fir:submit:pending::form.nohtml="$dispatch('form-data')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "No parameters",
+			params:   []string{},
+			value:    "click",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty parameter",
+			params:   []string{""},
+			value:    "click",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Parameter with whitespace only",
+			params:   []string{"  "},
+			value:    "click",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Mixed valid and empty parameters",
+			params:   []string{"valid", ""},
+			value:    "click",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-dispatch:[modal-close]",
+				ActionName: "dispatch",
+				Params:     tt.params,
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestActionPrefixHandler tests the ActionPrefixHandler implementation
+func TestActionPrefixHandler(t *testing.T) {
+	handler := &ActionPrefixHandler{}
+
+	// Test basic properties
+	require.Equal(t, "js", handler.Name())
+	require.Equal(t, 100, handler.Precedence())
+
+	// Test that it always returns empty result (used for collection only)
+	info := ActionInfo{
+		AttrName:   "x-fir-js:myAction",
+		ActionName: "js",
+		Value:      "click",
+	}
+
+	result, err := handler.Translate(info, nil)
+	require.NoError(t, err)
+	require.Empty(t, result)
+}

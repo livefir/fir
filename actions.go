@@ -9,18 +9,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-type ActionType int
-
-const (
-	TypeRefresh ActionType = iota
-	TypeRemove
-	TypeAppend       // Add new type
-	TypePrepend      // Add new type
-	TypeRemoveParent // Add new type
-	TypeActionPrefix // Represents x-fir-action-* attributes
-	TypeUnknown
-)
-
 // ActionInfo holds parsed data from an x-fir-* attribute.
 type ActionInfo struct {
 	AttrName   string   // Original full attribute name (e.g., "x-fir-refresh", "x-fir-action-doSave")
