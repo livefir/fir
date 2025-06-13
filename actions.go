@@ -151,6 +151,34 @@ func (h *ToggleDisabledActionHandler) Translate(info ActionInfo, actionsMap map[
 	return TranslateEventExpression(info.Value, "$fir.toggleDisabled()", "", "nohtml")
 }
 
+// ToggleClassActionHandler handles x-fir-toggleClass:class or x-fir-toggleClass:[class1,class2]
+type ToggleClassActionHandler struct{}
+
+func (h *ToggleClassActionHandler) Name() string    { return "toggleClass" }
+func (h *ToggleClassActionHandler) Precedence() int { return 33 }
+func (h *ToggleClassActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	var classNames []string
+
+	// Parse class names from the Params field
+	if len(info.Params) > 0 {
+		classNames = info.Params
+	}
+
+	if len(classNames) == 0 {
+		return "", fmt.Errorf("no class names specified for toggleClass action: '%s'", info.AttrName)
+	}
+
+	// Build the JavaScript function call
+	var jsArgs []string
+	for _, className := range classNames {
+		jsArgs = append(jsArgs, fmt.Sprintf("'%s'", className))
+	}
+	jsAction := fmt.Sprintf("$fir.toggleClass(%s)", strings.Join(jsArgs, ","))
+
+	// TranslateEventExpression with nohtml modifier since we're just toggling classes
+	return TranslateEventExpression(info.Value, jsAction, "", "nohtml")
+}
+
 // DispatchActionHandler handles x-fir-dispatch:[param1,param2,...]
 type DispatchActionHandler struct{}
 
@@ -268,9 +296,10 @@ func init() {
 	RegisterActionHandler(&RemoveParentActionHandler{})
 	RegisterActionHandler(&ResetActionHandler{}) // Register the reset handler
 	RegisterActionHandler(&ToggleDisabledActionHandler{})
-	RegisterActionHandler(&TriggerActionHandler{})  // Register the trigger handler
-	RegisterActionHandler(&DispatchActionHandler{}) // Register the dispatch handler
-	RegisterActionHandler(&ActionPrefixHandler{})   // Register the prefix handler
+	RegisterActionHandler(&ToggleClassActionHandler{}) // Register the toggleClass handler
+	RegisterActionHandler(&TriggerActionHandler{})     // Register the trigger handler
+	RegisterActionHandler(&DispatchActionHandler{})    // Register the dispatch handler
+	RegisterActionHandler(&ActionPrefixHandler{})      // Register the prefix handler
 }
 
 // Helper struct for processing within processRenderAttributes
@@ -362,6 +391,7 @@ func actionsConflict(action1, action2 collectedAction) bool {
 	coexistingActions := map[string]bool{
 		"reset":           true,
 		"toggle-disabled": true,
+		"toggleClass":     true,
 		"trigger":         true,
 		"js":              true,
 	}

@@ -279,7 +279,13 @@ func parseFiles(t *template.Template, funcs template.FuncMap, readFile func(stri
 
 			// Unescape the content before passing it to the template parser
 			// to revert the escaping done by html.Render in processRenderAttributes.
-			unescapedBytes := []byte(html.UnescapeString(string(b)))
+			unescapedContent := html.UnescapeString(string(b))
+
+			// Fix corrupted Go template syntax that html.Render may have mangled
+			// Pattern like {{="" if="" eq="" .field="" "value"="" }}="" gets fixed back to {{ if eq .field "value" }}
+			unescapedContent = fixCorruptedGoTemplateSyntax(unescapedContent)
+
+			unescapedBytes := []byte(unescapedContent)
 
 			// Pass the unescaped content to readAttributes
 			return readAttributes(fileInfo{name: name, content: unescapedBytes, blocks: blocks})
@@ -424,6 +430,17 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 				// Check for exact match first (e.g., "refresh")
 				handler, found = actionRegistry[actionName]
+				if !found {
+					// Try case-insensitive lookup for HTML compatibility
+					for regName, regHandler := range actionRegistry {
+						if strings.EqualFold(regName, actionName) {
+							handler = regHandler
+							found = true
+							break
+						}
+					}
+				}
+
 				if found {
 					// If this is a js handler, collect the JavaScript value
 					if actionName == "js" && len(params) > 0 {
@@ -435,8 +452,8 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				}
 
 				if !found {
-					logger.Warnf("No registered handler found for action name: %s (from key %s)", actionName, attr.Key)
-					continue // Skip if no handler is found
+					traverseErr = fmt.Errorf("no registered handler found for action name: '%s' (from key %s)", actionName, attr.Key)
+					return // Stop processing this node on error
 				}
 
 				// Store handler and parsed info
@@ -800,4 +817,30 @@ func hashID(content string) string {
 		panic(err)
 	}
 	return fmt.Sprintf("%x", xxhash.Sum(nil))
+}
+
+// fixCorruptedGoTemplateSyntax fixes Go template syntax that has been corrupted by HTML rendering
+// Patterns like {{="" if="" eq="" .field="" "value"="" }}="" get fixed back to {{ if eq .field "value" }}
+func fixCorruptedGoTemplateSyntax(content string) string {
+	// Regular expression to match corrupted Go template syntax
+	// Matches patterns like {{="" if="" eq="" .field="" "value"="" }}=""
+	corruptedTemplateRegex := regexp.MustCompile(`\{\{=""\s+([^}]*?)=""\s+\}\}=""`)
+
+	// Replace corrupted syntax with proper Go template syntax
+	content = corruptedTemplateRegex.ReplaceAllStringFunc(content, func(match string) string {
+		// Extract the inner content between {{="" and }}=""
+		inner := corruptedTemplateRegex.ReplaceAllString(match, "$1")
+		// Remove ="" from each part and reconstruct proper template syntax
+		parts := strings.Split(inner, `=""`)
+		var cleanParts []string
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				cleanParts = append(cleanParts, part)
+			}
+		}
+		return "{{ " + strings.Join(cleanParts, " ") + " }}"
+	})
+
+	return content
 }

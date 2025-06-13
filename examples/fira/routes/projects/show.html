@@ -27,7 +27,6 @@
                         method="post"
                         id="update"
                         action="/?event=update"
-                        x-fir-update:[pending,ok,error].nohtml="toggle"
                         @submit.prevent="$fir.submit()">
                         <input
                             type="hidden"
@@ -78,7 +77,7 @@
                             <div class="control">
                                 <button
                                     type="submit"
-                                    :class="loading && 'is-loading'"
+                                    x-fir-toggleClass:is-loading="update:pending,update:ok,update:error"
                                     class="button is-link">
                                     Update
                                 </button>

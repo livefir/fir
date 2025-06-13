@@ -369,6 +369,100 @@ func TestTriggerActionHandler(t *testing.T) {
 	}
 }
 
+// TestToggleClassActionHandler tests the ToggleClassActionHandler implementation
+func TestToggleClassActionHandler(t *testing.T) {
+	handler := &ToggleClassActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "toggleClass", handler.Name())
+	require.Equal(t, 33, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		params   []string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Single class",
+			params:   []string{"is-loading"},
+			value:    "submit",
+			expected: `@fir:submit:ok.nohtml="$fir.toggleClass('is-loading')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple classes",
+			params:   []string{"is-loading", "is-active"},
+			value:    "save",
+			expected: `@fir:save:ok.nohtml="$fir.toggleClass('is-loading','is-active')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state",
+			params:   []string{"is-disabled"},
+			value:    "save:pending",
+			expected: `@fir:save:pending.nohtml="$fir.toggleClass('is-disabled')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events",
+			params:   []string{"is-loading"},
+			value:    "save:pending,save:ok",
+			expected: `@fir:[save:pending,save:ok].nohtml="$fir.toggleClass('is-loading')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Complex multi-state scenario",
+			params:   []string{"is-loading"},
+			value:    "save:pending,save:ok,save:error",
+			expected: `@fir:[save:pending,save:ok,save:error].nohtml="$fir.toggleClass('is-loading')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier",
+			params:   []string{"is-loading"},
+			value:    "submit.debounce",
+			expected: `@fir:submit:ok.debounce.nohtml="$fir.toggleClass('is-loading')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with target (ignored)",
+			params:   []string{"is-loading"},
+			value:    "submit->myForm",
+			expected: `@fir:submit:ok.nohtml="$fir.toggleClass('is-loading')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Error: No class names",
+			params:   []string{},
+			value:    "submit",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				ActionName: "toggleClass",
+				Params:     tt.params,
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, map[string]string{})
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
 // TestActionsConflict tests the actionsConflict function
 func TestActionsConflict(t *testing.T) {
 	tests := []struct {

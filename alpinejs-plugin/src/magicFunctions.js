@@ -123,6 +123,40 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
         }
     }
 
+    const toggleClass = (...classNames) => {
+        return function (event) {
+            if (!classNames || classNames.length === 0) {
+                console.error(
+                    '$fir.toggleClass() requires at least one class name'
+                )
+                return
+            }
+
+            // Extract state from the event type
+            const eventParts = event.type.split(':')
+            const state = eventParts.length >= 3 ? eventParts[2] : ''
+
+            // Toggle classes based on the state
+            // Add classes on 'pending', remove on 'ok', 'error', 'done'
+            const shouldAddClasses = state === 'pending'
+
+            classNames.forEach((className) => {
+                if (typeof className !== 'string') {
+                    console.error(
+                        `Class name must be a string, got: ${typeof className}`
+                    )
+                    return
+                }
+
+                if (shouldAddClasses) {
+                    el.classList.add(className)
+                } else {
+                    el.classList.remove(className)
+                }
+            })
+        }
+    }
+
     // emit and submit use imported utils
     const emit = (id, params, target) => {
         return function (event) {
@@ -300,6 +334,7 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
         removeParentEl,
         reset,
         toggleDisabled,
+        toggleClass,
         emit,
         submit,
     }
