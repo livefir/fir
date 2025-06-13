@@ -513,6 +513,56 @@ func TestProcessRenderAttributes(t *testing.T) {
 			wantErr:      false,
 		},
 
+		// --- x-fir-redirect tests ---
+		{
+			name:         "Only x-fir-redirect (default to root)",
+			inputHTML:    `<button x-fir-redirect="delete:ok">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect with URL parameter",
+			inputHTML:    `<button x-fir-redirect:home="delete:ok">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/home&#39;)">Delete</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect with dashboard parameter",
+			inputHTML:    `<button x-fir-redirect:dashboard="delete:ok">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/dashboard&#39;)">Delete</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect multiple events",
+			inputHTML:    `<button x-fir-redirect="delete:ok, cancel:done">Action</button>`,
+			expectedHTML: `<button @fir:[delete:ok,cancel:done].nohtml="$fir.redirect(&#39;/&#39;)">Action</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect with state specified",
+			inputHTML:    `<button x-fir-redirect="submit:pending">Submit</button>`,
+			expectedHTML: `<button @fir:submit:pending.nohtml="$fir.redirect(&#39;/&#39;)">Submit</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect ignores target",
+			inputHTML:    `<button x-fir-redirect="delete->form">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect ignores action target",
+			inputHTML:    `<button x-fir-redirect="delete=>doDelete">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			wantErr:      false,
+		},
+		{
+			name:         "x-fir-redirect with modifier (nohtml is added to existing modifiers)",
+			inputHTML:    `<button x-fir-redirect="delete.prevent">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.nohtml.prevent="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			wantErr:      false,
+		},
+
 		// --- Precedence tests ---
 		{
 			name:         "Precedence: refresh > remove > remove-parent",

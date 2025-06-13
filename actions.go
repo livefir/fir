@@ -287,6 +287,34 @@ func (h *ActionPrefixHandler) Translate(info ActionInfo, actionsMap map[string]s
 	return "", nil
 }
 
+// RedirectActionHandler handles x-fir-redirect
+type RedirectActionHandler struct{}
+
+func (h *RedirectActionHandler) Name() string    { return "redirect" }
+func (h *RedirectActionHandler) Precedence() int { return 90 } // Higher precedence than js actions
+func (h *RedirectActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
+	// Extract URL from first parameter, default to '/' if not provided
+	var url = "'/'"
+	if len(info.Params) > 0 && strings.TrimSpace(info.Params[0]) != "" {
+		paramUrl := strings.TrimSpace(info.Params[0])
+
+		// Convert parameter to URL path
+		// If it doesn't start with '/', add it to make it a proper path
+		if !strings.HasPrefix(paramUrl, "/") {
+			paramUrl = "/" + paramUrl
+		}
+
+		// Ensure the URL is properly quoted for JavaScript
+		url = fmt.Sprintf("'%s'", paramUrl)
+	}
+
+	// Create the redirect function call with the URL
+	jsAction := fmt.Sprintf("$fir.redirect(%s)", url)
+
+	// Use TranslateEventExpression to translate the events, forcing nohtml modifier
+	return TranslateEventExpression(info.Value, jsAction, "", "nohtml")
+}
+
 // Register default handlers
 func init() {
 	RegisterActionHandler(&RefreshActionHandler{})
@@ -297,6 +325,7 @@ func init() {
 	RegisterActionHandler(&ResetActionHandler{}) // Register the reset handler
 	RegisterActionHandler(&ToggleDisabledActionHandler{})
 	RegisterActionHandler(&ToggleClassActionHandler{}) // Register the toggleClass handler
+	RegisterActionHandler(&RedirectActionHandler{})    // Register the redirect handler
 	RegisterActionHandler(&TriggerActionHandler{})     // Register the trigger handler
 	RegisterActionHandler(&DispatchActionHandler{})    // Register the dispatch handler
 	RegisterActionHandler(&ActionPrefixHandler{})      // Register the prefix handler

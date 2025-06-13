@@ -322,6 +322,21 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
         }
     }
 
+    const redirect = (url = '/') => {
+        return function (event) {
+            // Allow the URL to be passed either as parameter or via event detail
+            const targetUrl = event?.detail?.url || url
+
+            if (typeof targetUrl !== 'string') {
+                console.error('$fir.redirect() requires a valid URL string')
+                return
+            }
+
+            // Redirect to the specified URL
+            window.location.href = targetUrl
+        }
+    }
+
     // Return all the magic functions
     return {
         replace,
@@ -337,5 +352,6 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
         toggleClass,
         emit,
         submit,
+        redirect,
     }
 }

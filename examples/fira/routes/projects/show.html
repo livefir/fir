@@ -89,8 +89,7 @@
                         id="delete"
                         action="/?event=delete"
                         class="mt-2"
-                        x-fir-runjs:redirectHome="delete:ok"
-                        x-fir-js:redirectHome="window.location.href = '/'"
+                        x-fir-redirect="delete:ok"
                         @submit.prevent="$fir.submit()">
                         <input
                             type="hidden"
