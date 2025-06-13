@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
@@ -98,14 +99,30 @@ func TestFiraExampleE2E(t *testing.T) {
 	}
 
 	// Test creating a new project (which should use x-fir-refresh and x-fir-append)
-	// First, check if Fir JavaScript is properly loaded
+	// Wait for Fir JavaScript and WebSocket to be fully loaded
 	var firLoaded bool
 	var firObject string
 	var magicFunctions string
+
+	// Wait up to 10 seconds for Fir to be fully loaded and WebSocket connected
+	t.Log("Waiting for Fir JavaScript and WebSocket to be ready...")
+	if err := chromedp.Run(ctx,
+		chromedp.Sleep(2*time.Second), // Initial wait for scripts to load
+		chromedp.Poll(`
+			window.$fir !== undefined && 
+			window.$fir.ws !== undefined && 
+			window.$fir.ws.readyState === 1 &&
+			window.Alpine !== undefined
+		`, nil, chromedp.WithPollingTimeout(10*time.Second)),
+	); err != nil {
+		t.Logf("Warning: Fir/WebSocket not fully ready after timeout: %v", err)
+	}
+
+	// Now check the actual state
 	if err := chromedp.Run(ctx,
 		chromedp.Evaluate(`window.$fir !== undefined`, &firLoaded),
 		chromedp.Evaluate(`typeof window.$fir`, &firObject),
-		chromedp.Evaluate(`window.Alpine && window.Alpine.magic ? Object.keys(window.Alpine.magic) : 'no magic'`, &magicFunctions),
+		chromedp.Evaluate(`window.Alpine && window.Alpine.magic ? Object.keys(window.Alpine.magic).join(', ') : 'no magic'`, &magicFunctions),
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -166,10 +183,27 @@ func TestFiraExampleE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Wait a bit and log any new console messages
-	if err := chromedp.Run(ctx, chromedp.Sleep(2000)); err != nil {
+	// Wait for the WebSocket response and DOM updates
+	t.Log("Waiting for project creation response...")
+
+	// First, wait for any WebSocket activity and DOM changes
+	if err := chromedp.Run(ctx,
+		chromedp.Sleep(1*time.Second), // Initial wait for request to be sent
+		// Wait for either project to appear OR error message to appear
+		chromedp.Poll(`
+			document.body.innerHTML.includes('Test Project') || 
+			document.querySelector('.help.is-danger') !== null ||
+			document.querySelector('#projects').innerHTML !== document.querySelector('#projects').innerHTML
+		`, nil, chromedp.WithPollingTimeout(8*time.Second), chromedp.WithPollingInterval(500*time.Millisecond)),
+	); err != nil {
+		t.Logf("Warning: No DOM changes detected after form submission: %v", err)
+	}
+
+	// Additional wait to ensure all updates are complete
+	if err := chromedp.Run(ctx, chromedp.Sleep(1*time.Second)); err != nil {
 		t.Fatal(err)
 	}
+
 	t.Logf("Console messages after submission: %v", consoleMessages)
 
 	// Wait a moment for the project to be created and DOM to update
