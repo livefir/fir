@@ -480,10 +480,8 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				// Sort collected actions by precedence (lowest number first)
 				sortActionsByPrecedence(collectedActions)
 
-				// Process all non-conflicting actions, not just the highest precedence one
-				// Actions are only conflicting if they're both DOM manipulation actions
-				// that would interfere with each other (e.g., remove vs refresh)
-				var processedActions []collectedAction
+				// Process all actions and check for duplicate translated expressions
+				var processedTranslations []string
 
 				for _, action := range collectedActions {
 					// Skip the placeholder ActionPrefixHandler for translation purposes
@@ -491,32 +489,33 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 						continue
 					}
 
-					// Check if this action conflicts with any already processed actions
-					conflicts := false
-					for _, processed := range processedActions {
-						if actionsConflict(action, processed) {
-							conflicts = true
+					translated, err := action.Handler.Translate(action.Info, actionsMap)
+					if err != nil {
+						// Use more specific error message including node type/name if possible
+						traverseErr = fmt.Errorf("error translating action '%s' for node %s, expr '%s': %w",
+							action.Info.ActionName, n.Data, action.Info.Value, err)
+						return // Stop processing this node on error
+					}
+
+					// Skip if translation produced no output
+					if translated == "" {
+						continue
+					}
+
+					// Check for duplicate translations
+					isDuplicate := false
+					for _, processed := range processedTranslations {
+						if processed == translated {
+							isDuplicate = true
 							break
 						}
 					}
 
-					// If no conflicts, process this action
-					if !conflicts {
-						translated, err := action.Handler.Translate(action.Info, actionsMap)
-						if err != nil {
-							// Use more specific error message including node type/name if possible
-							traverseErr = fmt.Errorf("error translating action '%s' for node %s, expr '%s': %w",
-								action.Info.ActionName, n.Data, action.Info.Value, err)
-							return // Stop processing this node on error
-						}
-
-						// Add translated attributes if translation produced output
-						if translated != "" {
-							translatedAttrs := parseTranslatedString(translated) // Use helper from actions.go
-							finalAttrs = append(finalAttrs, translatedAttrs...)
-						}
-
-						processedActions = append(processedActions, action)
+					// If not duplicate, process this action
+					if !isDuplicate {
+						translatedAttrs := parseTranslatedString(translated) // Use helper from actions.go
+						finalAttrs = append(finalAttrs, translatedAttrs...)
+						processedTranslations = append(processedTranslations, translated)
 					}
 				}
 				// Note: Even if only ActionPrefixHandler was present, 'modified' is true,

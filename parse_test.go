@@ -563,35 +563,42 @@ func TestProcessRenderAttributes(t *testing.T) {
 			wantErr:      false,
 		},
 
-		// --- Precedence tests ---
+		// --- No longer precedence-based, all non-duplicate actions are processed ---
 		{
-			name:         "Precedence: refresh > remove > remove-parent",
+			name:         "Multiple actions with different expressions",
 			inputHTML:    `<div x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d">Refresh</div>`,
-			expectedHTML: `<div @fir:b:ok="$fir.replace()">Refresh</div>`, // Only refresh is processed
+			expectedHTML: `<div @fir:b:ok="$fir.replace()" @fir:c:ok.nohtml="$fir.removeEl()" @fir:d:ok.nohtml="$fir.removeParentEl()">Refresh</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
-			name:         "Precedence: remove > remove-parent",
+			name:         "Multiple actions with different expressions (2)",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()">Remove</div>`, // Only remove is processed
+			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()" @fir:d:ok.nohtml="$fir.removeParentEl()">Remove</div>`, // Both actions processed
 			wantErr:      false,
 		},
 		{
-			name:         "Precedence: remove > remove-parent > append > prepend",
+			name:         "Multiple actions with different expressions (3)",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()">Remove</div>`, // Only remove is processed
+			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()" @fir:d:ok.nohtml="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
-			name:         "Precedence: remove-parent > append > prepend",
+			name:         "Multiple actions with different expressions (4)",
 			inputHTML:    `<div x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove Parent</div>`,
-			expectedHTML: `<div @fir:d:ok.nohtml="$fir.removeParentEl()">Remove Parent</div>`, // Only remove-parent is processed
+			expectedHTML: `<div @fir:d:ok.nohtml="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove Parent</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
-			name:         "Precedence: append > prepend",
+			name:         "Multiple actions with different expressions (5)",
 			inputHTML:    `<div x-fir-append:t1="e" x-fir-prepend:t2="f">Append</div>`,
-			expectedHTML: `<div @fir:e:ok::t1="$fir.appendEl()">Append</div>`, // Only append is processed
+			expectedHTML: `<div @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Append</div>`, // Both actions processed
+			wantErr:      false,
+		},
+		// --- Duplicate translated expression filtering test ---
+		{
+			name:         "Duplicate translated expressions filtered out",
+			inputHTML:    `<div x-fir-refresh="update" x-fir-refresh="update">Content</div>`,
+			expectedHTML: `<div @fir:update:ok="$fir.replace()">Content</div>`, // Only one instance should remain
 			wantErr:      false,
 		},
 		// --- General tests ---
