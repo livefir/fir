@@ -21,33 +21,21 @@ const FirGenTemplatePrefix = "::fir-gen-templ-"
 const FirDefaultTemplatePrefix = "fir-"
 
 type FirEventState string
-type FirEventModifier string
 
 const (
 	FirAtPrefix  = "@fir"
 	FirXonPrefix = "x-on:fir"
 
-	StateOK        FirEventState    = "ok"
-	StateError     FirEventState    = "error"
-	StatePending   FirEventState    = "pending"
-	StateDone      FirEventState    = "done"
-	ModifierNoHTML FirEventModifier = ".nohtml"
+	StateOK      FirEventState = "ok"
+	StateError   FirEventState = "error"
+	StatePending FirEventState = "pending"
+	StateDone    FirEventState = "done"
 )
 
 // IsValid checks if the FirEventState is valid.
 func (s FirEventState) IsValid() bool {
 	switch s {
 	case StateOK, StateError, StatePending, StateDone:
-		return true
-	default:
-		return false
-	}
-}
-
-// IsValid checks if the FirEventModifier is valid.
-func (m FirEventModifier) IsValid() bool {
-	switch m {
-	case ModifierNoHTML:
 		return true
 	default:
 		return false
@@ -645,7 +633,7 @@ func extractTemplates(content []byte) ([]byte, map[string]string, error) {
 // where event is a an alphanumeric string
 // where state is a valid FirEventState. if state is not specified, it defaults to ok
 // where templateName is a valid go html template name
-// where modifier is a valid FirEventModifier, if modifier is not specified, it defaults to replace
+// where modifier is a valid modifier, if modifier is not specified, it defaults to replace
 // where "any string" is a valid go html template string
 var (
 	stateErrorRegex1 = regexp.MustCompile(fmt.Sprintf(`:%s=`, StateError))
@@ -704,11 +692,10 @@ func validateGeneratedTemplateNames(doc *html.Node, content []byte) ([]byte, err
 				if isFirEvent(attr.Key) && strings.Contains(attr.Key, FirGenTemplatePrefix) {
 					block := getHtmlContent(node)
 					generatedTemplateName := extractTemplateName(attr.Key)
-					hasNoHtmlModifier := strings.Contains(generatedTemplateName, string(ModifierNoHTML))
 					// if the content is a valid HTML template, replace the template name with fir-<random string>
 					// if the content is not a valid HTML template, remove the generated template name
 					if isHtmlTemplate(block) {
-						content = replaceGeneratedTemplateName(content, generatedTemplateName, block, hasNoHtmlModifier)
+						content = replaceGeneratedTemplateName(content, generatedTemplateName, block)
 					} else {
 						content = removeTemplateNamespace(content, generatedTemplateName)
 					}
@@ -771,17 +758,13 @@ func isHtmlTemplate(block string) bool {
 	return strings.Contains(block, "{{") && strings.Contains(block, "}}")
 }
 
-// replaceGeneratedTemplateName replaces the template name in the content with a new template name
-// and adds a ".nohtml" modifier if specified.
-func replaceGeneratedTemplateName(content []byte, generatedTemplateName, block string, hasNoHtmlModifier bool) []byte {
+// replaceGeneratedTemplateName replaces the template name in the content with a new template name.
+func replaceGeneratedTemplateName(content []byte, generatedTemplateName, block string) []byte {
 	if !bytes.Contains(content, []byte(generatedTemplateName)) {
 		return content
 	}
 
 	templateName := fmt.Sprintf("%s%s", FirDefaultTemplatePrefix, hashID(block))
-	if hasNoHtmlModifier {
-		templateName = fmt.Sprintf("%s.%s", templateName, ModifierNoHTML)
-	}
 
 	return bytes.Replace(content, []byte(generatedTemplateName), []byte(templateName), -1)
 }

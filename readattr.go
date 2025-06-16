@@ -43,21 +43,14 @@ func readAttributes(fi fileInfo) fileInfo {
 }
 
 // eventns might have modifiers like .prevent, .stop, .self, .once, .window, .document etc. remove them
-// but preserve .nohtml for server-side processing
 func removeModifiers(eventns string) string {
 	eventnsParts := strings.SplitN(eventns, ".", -1)
 	if len(eventnsParts) <= 1 {
 		return eventns
 	}
 
-	// Keep only the event part and .nohtml if present
+	// Keep only the event part
 	eventPart := eventnsParts[0]
-	for _, part := range eventnsParts[1:] {
-		if part == "nohtml" {
-			return eventPart + ".nohtml"
-		}
-	}
-
 	return eventPart
 }
 
@@ -95,12 +88,12 @@ func eventTemplatesFromAttr(attr html.Attribute) eventTemplates {
 			continue
 		}
 		// event name can only be followed by ok, error, pending, done
-		if !slices.Contains([]string{"ok", "error", "pending", "done", "pending.nohtml", "done.nohtml", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
+		if !slices.Contains([]string{"ok", "error", "pending", "done"}, eventIDParts[1]) {
 			logger.Errorf("%s", eventFormatError(eventns))
 			continue
 		}
 		// assert myevent:ok::myblock or myevent:error::myblock and skip if not
-		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error", "ok.nohtml", "error.nohtml"}, eventIDParts[1]) {
+		if len(eventnsParts) == 2 && !slices.Contains([]string{"ok", "error"}, eventIDParts[1]) {
 			continue
 		}
 		// template name is declared for event state i.e. myevent:ok::myblock

@@ -161,9 +161,7 @@ func writeAttributes(node *html.Node) {
 			}
 			if len(eventnsParts) > 1 {
 				modifierParts := eventnsParts[1:]
-				modifierParts = slices.DeleteFunc(modifierParts, func(s string) bool {
-					return s == "nohtml"
-				})
+				// All modifiers are preserved (no special handling needed)
 				modifiers = strings.Join(modifierParts, ".")
 			}
 

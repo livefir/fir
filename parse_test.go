@@ -330,25 +330,25 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Single dispatch event",
 			inputHTML:    `<button x-fir-dispatch:[switch-tab]="update-now:ok">Dispatch</button>`,
-			expectedHTML: `<button @fir:update-now:ok.nohtml="$dispatch('switch-tab')">Dispatch</button>`,
+			expectedHTML: `<button @fir:update-now:ok="$dispatch('switch-tab')">Dispatch</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple dispatch events",
 			inputHTML:    `<button x-fir-dispatch:[switch-tab,now]="update-now:ok">Dispatch Multiple</button>`,
-			expectedHTML: `<button @fir:update-now:ok.nohtml="$dispatch('switch-tab','now')">Dispatch Multiple</button>`,
+			expectedHTML: `<button @fir:update-now:ok="$dispatch('switch-tab','now')">Dispatch Multiple</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "Dispatch with different trigger event",
 			inputHTML:    `<div x-fir-dispatch:[modal-open]="click">Open Modal</div>`,
-			expectedHTML: `<div @fir:click:ok.nohtml="$dispatch('modal-open')">Open Modal</div>`,
+			expectedHTML: `<div @fir:click:ok="$dispatch('modal-open')">Open Modal</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "Dispatch with state and template",
 			inputHTML:    `<form x-fir-dispatch:[form-submit,validation]="submit:pending->form">Submit</form>`,
-			expectedHTML: `<form @fir:submit:pending::form.nohtml="$dispatch('form-submit','validation')">Submit</form>`,
+			expectedHTML: `<form @fir:submit:pending::form="$dispatch('form-submit','validation')">Submit</form>`,
 			wantErr:      false,
 		},
 
@@ -397,119 +397,119 @@ func TestProcessRenderAttributes(t *testing.T) {
 		// --- x-fir-remove tests ---
 		{
 			name:         "Only x-fir-remove",
-			inputHTML:    `<div x-fir-remove="delete:ok.nohtml">Item</div>`,
-			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeEl()">Item</div>`,
+			inputHTML:    `<div x-fir-remove="delete:ok">Item</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeEl()">Item</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-remove multiple events",
 			inputHTML:    `<div x-fir-remove="clear:ok, reset:done">Clear</div>`,
-			expectedHTML: `<div @fir:[clear:ok,reset:done].nohtml="$fir.removeEl()">Clear</div>`,
+			expectedHTML: `<div @fir:[clear:ok,reset:done]="$fir.removeEl()">Clear</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-remove ignores target",
 			inputHTML:    `<div x-fir-remove="delete=>doDelete">Delete</div>`,
-			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeEl()">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeEl()">Delete</div>`,
 			wantErr:      false,
 		},
 		// --- x-fir-remove-parent tests ---
 		{
 			name:         "Only x-fir-remove-parent",
-			inputHTML:    `<div x-fir-remove-parent="delete:ok.nohtml">Item</div>`,
-			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeParentEl()">Item</div>`,
+			inputHTML:    `<div x-fir-remove-parent="delete:ok">Item</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeParentEl()">Item</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-remove-parent multiple events",
 			inputHTML:    `<div x-fir-remove-parent="clear:ok, reset:done">Clear</div>`,
-			expectedHTML: `<div @fir:[clear:ok,reset:done].nohtml="$fir.removeParentEl()">Clear</div>`,
+			expectedHTML: `<div @fir:[clear:ok,reset:done]="$fir.removeParentEl()">Clear</div>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-remove-parent ignores target and action",
 			inputHTML:    `<div x-fir-remove-parent="delete->target=>doDelete">Delete</div>`,
-			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeParentEl()">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeParentEl()">Delete</div>`,
 			wantErr:      false,
 		},
 		// --- x-fir-reset tests ---
 		{
 			name:         "Only x-fir-reset",
 			inputHTML:    `<form x-fir-reset="create-chirp">Submit</form>`,
-			expectedHTML: `<form @fir:create-chirp:ok.nohtml="$el.reset()">Submit</form>`,
+			expectedHTML: `<form @fir:create-chirp:ok="$el.reset()">Submit</form>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-reset with state",
 			inputHTML:    `<form x-fir-reset="submit:ok">Form</form>`,
-			expectedHTML: `<form @fir:submit:ok.nohtml="$el.reset()">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok="$el.reset()">Form</form>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-reset multiple events",
 			inputHTML:    `<form x-fir-reset="create:ok, update:done">Form</form>`,
-			expectedHTML: `<form @fir:[create:ok,update:done].nohtml="$el.reset()">Form</form>`,
+			expectedHTML: `<form @fir:[create:ok,update:done]="$el.reset()">Form</form>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-reset ignores target",
 			inputHTML:    `<form x-fir-reset="submit->myForm">Form</form>`,
-			expectedHTML: `<form @fir:submit:ok.nohtml="$el.reset()">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok="$el.reset()">Form</form>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-reset ignores action target",
 			inputHTML:    `<form x-fir-reset="submit=>doSubmit">Form</form>`,
-			expectedHTML: `<form @fir:submit:ok.nohtml="$el.reset()">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok="$el.reset()">Form</form>`,
 			wantErr:      false,
 		},
 		{
-			name:         "x-fir-reset with modifier (nohtml is added to existing modifiers)",
+			name:         "x-fir-reset with existing modifiers",
 			inputHTML:    `<form x-fir-reset="submit.debounce">Form</form>`,
-			expectedHTML: `<form @fir:submit:ok.debounce.nohtml="$el.reset()">Form</form>`,
+			expectedHTML: `<form @fir:submit:ok.debounce="$el.reset()">Form</form>`,
 			wantErr:      false,
 		},
 		// --- x-fir-toggle-disabled tests ---
 		{
 			name:         "Only x-fir-toggle-disabled",
 			inputHTML:    `<button x-fir-toggle-disabled="submit">Submit</button>`,
-			expectedHTML: `<button @fir:submit:ok.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-toggle-disabled with state",
 			inputHTML:    `<button x-fir-toggle-disabled="submit:pending">Submit</button>`,
-			expectedHTML: `<button @fir:submit:pending.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:submit:pending="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-toggle-disabled multiple events",
 			inputHTML:    `<button x-fir-toggle-disabled="submit:pending, submit:ok">Submit</button>`,
-			expectedHTML: `<button @fir:[submit:pending,submit:ok].nohtml="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:[submit:pending,submit:ok]="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-toggle-disabled ignores target",
 			inputHTML:    `<button x-fir-toggle-disabled="submit->form">Submit</button>`,
-			expectedHTML: `<button @fir:submit:ok.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-toggle-disabled ignores action target",
 			inputHTML:    `<button x-fir-toggle-disabled="submit=>doSubmit">Submit</button>`,
-			expectedHTML: `<button @fir:submit:ok.nohtml="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 		{
-			name:         "x-fir-toggle-disabled with modifier (nohtml is added to existing modifiers)",
+			name:         "x-fir-toggle-disabled with existing modifiers",
 			inputHTML:    `<button x-fir-toggle-disabled="submit.prevent">Submit</button>`,
-			expectedHTML: `<button @fir:submit:ok.nohtml.prevent="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:submit:ok.prevent="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-toggle-disabled with complex events",
 			inputHTML:    `<button x-fir-toggle-disabled="submit:pending, submit:ok, submit:error">Submit</button>`,
-			expectedHTML: `<button @fir:[submit:pending,submit:ok,submit:error].nohtml="$fir.toggleDisabled()">Submit</button>`,
+			expectedHTML: `<button @fir:[submit:pending,submit:ok,submit:error]="$fir.toggleDisabled()">Submit</button>`,
 			wantErr:      false,
 		},
 
@@ -517,49 +517,49 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Only x-fir-redirect (default to root)",
 			inputHTML:    `<button x-fir-redirect="delete:ok">Delete</button>`,
-			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok="$fir.redirect(&#39;/&#39;)">Delete</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-redirect with URL parameter",
 			inputHTML:    `<button x-fir-redirect:home="delete:ok">Delete</button>`,
-			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/home&#39;)">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok="$fir.redirect(&#39;/home&#39;)">Delete</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-redirect with dashboard parameter",
 			inputHTML:    `<button x-fir-redirect:dashboard="delete:ok">Delete</button>`,
-			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/dashboard&#39;)">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok="$fir.redirect(&#39;/dashboard&#39;)">Delete</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-redirect multiple events",
 			inputHTML:    `<button x-fir-redirect="delete:ok, cancel:done">Action</button>`,
-			expectedHTML: `<button @fir:[delete:ok,cancel:done].nohtml="$fir.redirect(&#39;/&#39;)">Action</button>`,
+			expectedHTML: `<button @fir:[delete:ok,cancel:done]="$fir.redirect(&#39;/&#39;)">Action</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-redirect with state specified",
 			inputHTML:    `<button x-fir-redirect="submit:pending">Submit</button>`,
-			expectedHTML: `<button @fir:submit:pending.nohtml="$fir.redirect(&#39;/&#39;)">Submit</button>`,
+			expectedHTML: `<button @fir:submit:pending="$fir.redirect(&#39;/&#39;)">Submit</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-redirect ignores target",
 			inputHTML:    `<button x-fir-redirect="delete->form">Delete</button>`,
-			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok="$fir.redirect(&#39;/&#39;)">Delete</button>`,
 			wantErr:      false,
 		},
 		{
 			name:         "x-fir-redirect ignores action target",
 			inputHTML:    `<button x-fir-redirect="delete=>doDelete">Delete</button>`,
-			expectedHTML: `<button @fir:delete:ok.nohtml="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok="$fir.redirect(&#39;/&#39;)">Delete</button>`,
 			wantErr:      false,
 		},
 		{
-			name:         "x-fir-redirect with modifier (nohtml is added to existing modifiers)",
+			name:         "x-fir-redirect with existing modifiers",
 			inputHTML:    `<button x-fir-redirect="delete.prevent">Delete</button>`,
-			expectedHTML: `<button @fir:delete:ok.nohtml.prevent="$fir.redirect(&#39;/&#39;)">Delete</button>`,
+			expectedHTML: `<button @fir:delete:ok.prevent="$fir.redirect(&#39;/&#39;)">Delete</button>`,
 			wantErr:      false,
 		},
 
@@ -567,25 +567,25 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Multiple actions with different expressions",
 			inputHTML:    `<div x-fir-refresh="b" x-fir-remove="c" x-fir-remove-parent="d">Refresh</div>`,
-			expectedHTML: `<div @fir:b:ok="$fir.replace()" @fir:c:ok.nohtml="$fir.removeEl()" @fir:d:ok.nohtml="$fir.removeParentEl()">Refresh</div>`, // All actions processed
+			expectedHTML: `<div @fir:b:ok="$fir.replace()" @fir:c:ok="$fir.removeEl()" @fir:d:ok="$fir.removeParentEl()">Refresh</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions with different expressions (2)",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()" @fir:d:ok.nohtml="$fir.removeParentEl()">Remove</div>`, // Both actions processed
+			expectedHTML: `<div @fir:c:ok="$fir.removeEl()" @fir:d:ok="$fir.removeParentEl()">Remove</div>`, // Both actions processed
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions with different expressions (3)",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok.nohtml="$fir.removeEl()" @fir:d:ok.nohtml="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove</div>`, // All actions processed
+			expectedHTML: `<div @fir:c:ok="$fir.removeEl()" @fir:d:ok="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions with different expressions (4)",
 			inputHTML:    `<div x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove Parent</div>`,
-			expectedHTML: `<div @fir:d:ok.nohtml="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove Parent</div>`, // All actions processed
+			expectedHTML: `<div @fir:d:ok="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove Parent</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
@@ -617,7 +617,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Multiple elements",
 			inputHTML:    `<div x-fir-refresh="a">A</div><div x-fir-remove="b">B</div>`,
-			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok.nohtml="$fir.removeEl()">B</div>`,
+			expectedHTML: `<div @fir:a:ok="$fir.replace()">A</div><div @fir:b:ok="$fir.removeEl()">B</div>`,
 			wantErr:      false,
 		},
 		{
@@ -694,7 +694,7 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Alpine.js directive: x-fir-remove with attribute filter modifier",
 			inputHTML:    `<div x-fir-remove.child-list.attribute-filter:class,id="delete">Delete</div>`,
-			expectedHTML: `<div @fir:delete:ok.nohtml="$fir.removeEl()">Delete</div>`,
+			expectedHTML: `<div @fir:delete:ok="$fir.removeEl()">Delete</div>`,
 			wantErr:      false,
 		},
 	}

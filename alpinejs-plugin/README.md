@@ -109,10 +109,10 @@ See [api.md](api.md)
 
 ### Modifiers
 
-`.nohtml` modifier tells the server to not send the resultant html to the client. This is useful in cases like these:
+Fir supports standard Alpine.js modifiers like `.prevent`, `.stop`, `.once`, etc.
 
 ```html
- @fir:create:ok.nohtml="$el.reset()"
+ @fir:create:ok.prevent="$el.reset()"
 
- @fir:delete:ok.nohtml="$fir.removeEl()"
+ @fir:delete:ok.once="$fir.removeEl()"
 ```

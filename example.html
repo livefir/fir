@@ -28,7 +28,7 @@
                 method="post"
                 action="/?event=create"
                 @submit.prevent="$fir.submit()"
-                @fir:create:ok.nohtml="$refs.create.reset()"
+                @fir:create:ok="$refs.create.reset()"
                 style="margin-top:1rem;margin-bottom:1rem;">
                 <input type="text" name="text" placeholder="a new todo" />
                 <p @fir:create:error="$fir.replace()">

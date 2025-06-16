@@ -1906,7 +1906,7 @@ const Plugin = <span class="cstat-no" title="statement not covered" ><span class
                 method="post"
                 action="/?event=create-todo"
                 @submit.prevent="$fir.submit()"
-                @fir:create-todo:ok.nohtml="$el.reset()"
+                @fir:create-todo:ok="$el.reset()"
                 &gt;
                 &lt;input type="text" name="todo" /&gt;
                 &lt;button type="submit"&gt;Chirp&lt;/button&gt;

@@ -64,7 +64,7 @@ func (h *RemoveActionHandler) Name() string    { return "remove" }
 func (h *RemoveActionHandler) Precedence() int { return 30 }
 func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove")
-	return TranslateEventExpression(info.Value, "$fir.removeEl()", "", "nohtml")
+	return TranslateEventExpression(info.Value, "$fir.removeEl()", "")
 }
 
 // AppendActionHandler handles x-fir-append:target
@@ -114,7 +114,7 @@ func (h *RemoveParentActionHandler) Precedence() int { return 40 }
 func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove-parent")
 	// Assuming the JS function is $fir.removeParentEl()
-	return TranslateEventExpression(info.Value, "$fir.removeParentEl()", "", "nohtml")
+	return TranslateEventExpression(info.Value, "$fir.removeParentEl()", "")
 }
 
 // ResetActionHandler handles x-fir-reset
@@ -124,8 +124,8 @@ func (h *ResetActionHandler) Name() string    { return "reset" }
 func (h *ResetActionHandler) Precedence() int { return 35 }
 func (h *ResetActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action
-	// For reset, we use $el.reset() and force nohtml modifier
-	return TranslateEventExpression(info.Value, "$el.reset()", "", "nohtml")
+	// For reset, we use $el.reset()
+	return TranslateEventExpression(info.Value, "$el.reset()", "")
 }
 
 // ToggleDisabledActionHandler handles x-fir-toggle-disabled
@@ -134,9 +134,9 @@ type ToggleDisabledActionHandler struct{}
 func (h *ToggleDisabledActionHandler) Name() string    { return "toggle-disabled" }
 func (h *ToggleDisabledActionHandler) Precedence() int { return 34 }
 func (h *ToggleDisabledActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
-	// For toggle-disabled, we use $fir.toggleDisabled() and force nohtml modifier
+	// For toggle-disabled, we use $fir.toggleDisabled()
 	// The toggleDisabled function automatically handles enabling/disabling based on event state
-	return TranslateEventExpression(info.Value, "$fir.toggleDisabled()", "", "nohtml")
+	return TranslateEventExpression(info.Value, "$fir.toggleDisabled()", "")
 }
 
 // ToggleClassActionHandler handles x-fir-toggleClass:class or x-fir-toggleClass:[class1,class2]
@@ -163,8 +163,8 @@ func (h *ToggleClassActionHandler) Translate(info ActionInfo, actionsMap map[str
 	}
 	jsAction := fmt.Sprintf("$fir.toggleClass(%s)", strings.Join(jsArgs, ","))
 
-	// TranslateEventExpression with nohtml modifier since we're just toggling classes
-	return TranslateEventExpression(info.Value, jsAction, "", "nohtml")
+	// TranslateEventExpression since we're just toggling classes
+	return TranslateEventExpression(info.Value, jsAction, "")
 }
 
 // DispatchActionHandler handles x-fir-dispatch:[param1,param2,...]
@@ -194,8 +194,8 @@ func (h *DispatchActionHandler) Translate(info ActionInfo, actionsMap map[string
 		return "", fmt.Errorf("error parsing dispatch expression: %w", err)
 	}
 
-	// For dispatch, we use the built dispatch call and force nohtml modifier
-	return TranslateEventExpression(info.Value, dispatchCall, template, "nohtml")
+	// For dispatch, we use the built dispatch call
+	return TranslateEventExpression(info.Value, dispatchCall, template)
 }
 
 // buildDispatchCall creates the $dispatch() function call with quoted parameters
@@ -260,8 +260,8 @@ func (h *TriggerActionHandler) Translate(info ActionInfo, actionsMap map[string]
 		return "", fmt.Errorf("runjs action '%s' value cannot be empty", actionName)
 	}
 
-	// Use TranslateEventExpression to translate the events, forcing nohtml modifier
-	return TranslateEventExpression(info.Value, actionValue, "", "nohtml")
+	// Use TranslateEventExpression to translate the events
+	return TranslateEventExpression(info.Value, actionValue, "")
 }
 
 // ActionPrefixHandler handles x-fir-js:* (doesn't translate directly, just used for collection)
@@ -299,8 +299,8 @@ func (h *RedirectActionHandler) Translate(info ActionInfo, actionsMap map[string
 	// Create the redirect function call with the URL
 	jsAction := fmt.Sprintf("$fir.redirect(%s)", url)
 
-	// Use TranslateEventExpression to translate the events, forcing nohtml modifier
-	return TranslateEventExpression(info.Value, jsAction, "", "nohtml")
+	// Use TranslateEventExpression to translate the events
+	return TranslateEventExpression(info.Value, jsAction, "")
 }
 
 // Register default handlers

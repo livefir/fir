@@ -53,8 +53,8 @@ func (h *RedirectActionHandler) Translate(info ActionInfo, actionsMap map[string
     // Create the redirect function call with the URL
     jsAction := fmt.Sprintf("$fir.redirect(%s)", url)
     
-    // Use TranslateEventExpression to translate the events, forcing nohtml modifier
-    return TranslateEventExpression(info.Value, jsAction, "", "nohtml")
+    // Use TranslateEventExpression to translate the events
+    return TranslateEventExpression(info.Value, jsAction, "")
 }
 ```
 
@@ -95,13 +95,13 @@ Registered the new action handler in the `init()` function in `/actions.go`.
 The new action transforms as follows:
 
 1. `<button x-fir-redirect="delete:ok">Delete</button>`
-   → `<button @fir:delete:ok.nohtml="$fir.redirect('/')">Delete</button>`
+   → `<button @fir:delete:ok="$fir.redirect('/')">Delete</button>`
 
 2. `<button x-fir-redirect:"/home"="delete:ok">Delete</button>`
-   → `<button @fir:delete:ok.nohtml="$fir.redirect('/home')">Delete</button>`
+   → `<button @fir:delete:ok="$fir.redirect('/home')">Delete</button>`
 
 3. `<button x-fir-redirect="delete:ok, cancel:done">Action</button>`
-   → `<button @fir:[delete:ok,cancel:done].nohtml="$fir.redirect('/')">Action</button>`
+   → `<button @fir:[delete:ok,cancel:done]="$fir.redirect('/')">Action</button>`
 
 ## Applied Changes
 

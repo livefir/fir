@@ -73,23 +73,23 @@ func TestLexer(t *testing.T) {
 		// Group 3: Events with Modifiers
 		{
 			name:  "Event with Modifier",
-			input: "create.nohtml",
+			input: "create.debounce",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifiers:[.nohtml]}",
+				"EventExpression: {Name:create State: Modifiers:[.debounce]}",
 			},
 		},
 		{
 			name:  "Event with State and Modifier",
-			input: "create:ok.nohtml",
+			input: "create:ok.debounce",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifiers:[.nohtml]}",
+				"EventExpression: {Name:create State::ok Modifiers:[.debounce]}",
 			},
 		},
 		{
 			name:  "Event with Modifier and Template Target",
-			input: "create.nohtml->todo",
+			input: "create.debounce->todo",
 			expected: []string{
-				"EventExpression: {Name:create State: Modifiers:[.nohtml]}",
+				"EventExpression: {Name:create State: Modifiers:[.debounce]}",
 				"Template Target: todo",
 			},
 		},
@@ -112,27 +112,27 @@ func TestLexer(t *testing.T) {
 		// Group 5: Invalid Inputs
 		{
 			name:      "Invalid Modifier after Template",
-			input:     "create:ok->todo.nohtml",
+			input:     "create:ok->todo.debounce",
 			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Invalid State",
-			input:     "create:invalid.nohtml",
+			input:     "create:invalid.debounce",
 			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Invalid Target",
-			input:     "create.nohtml->123",
+			input:     "create.debounce->123",
 			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Empty Target",
-			input:     "create.nohtml->",
+			input:     "create.debounce->",
 			expectErr: true,
 		},
 		{
 			name:      "Event with Modifier and Multiple Actions",
-			input:     "create.nohtml=>replace=>append",
+			input:     "create.debounce=>replace=>append",
 			expectErr: true,
 		},
 		{
@@ -142,30 +142,30 @@ func TestLexer(t *testing.T) {
 		},
 		{
 			name:      "Event with Modifier and Multiple States",
-			input:     "create:ok:error.nohtml",
+			input:     "create:ok:error.debounce",
 			expectErr: true,
 		},
 
 		// Group 7: Modifiers with Complex Scenarios
 		{
 			name:      "Event with Modifier and Special Characters in Target",
-			input:     "create.nohtml->todo@123",
+			input:     "create.debounce->todo@123",
 			expectErr: true,
 		},
 		{
 			name:  "Event with Modifier and Valid State but No Targets",
-			input: "create:ok.nohtml",
+			input: "create:ok.debounce",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifiers:[.nohtml]}",
+				"EventExpression: {Name:create State::ok Modifiers:[.debounce]}",
 			},
 		},
 
 		// Group 8: Complex Mixed Inputs
 		{
 			name:  "Complex Input with Multiple Modifiers and Targets",
-			input: "create:ok.nohtml->todo,delete:error.nocache=>replace;update:pending->done=>archive",
+			input: "create:ok.debounce->todo,delete:error.nocache=>replace;update:pending->done=>archive",
 			expected: []string{
-				"EventExpression: {Name:create State::ok Modifiers:[.nohtml]}",
+				"EventExpression: {Name:create State::ok Modifiers:[.debounce]}",
 				"Template Target: todo",
 				"EventExpression: {Name:delete State::error Modifiers:[.nocache]}",
 				"Action Target: replace",
@@ -178,7 +178,7 @@ func TestLexer(t *testing.T) {
 		// Group 9: Edge Cases
 		{
 			name:      "Event with Only Modifier",
-			input:     ".nohtml",
+			input:     ".debounce",
 			expectErr: true,
 		},
 		{ // New test case for trailing semicolon
@@ -214,7 +214,7 @@ func TestLexer(t *testing.T) {
 		},
 		{
 			name:      "Event with Invalid Characters in Name",
-			input:     "cre@te:ok.nohtml",
+			input:     "cre@te:ok.debounce",
 			expectErr: true,
 		},
 		{

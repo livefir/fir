@@ -1,7 +1,18 @@
 
 # Event Template Binding Syntax
 
-The event template binding syntax in the provided code allows associating specific templates or actions with events triggered by the frontend. This syntax is used to define how events (like `ok`, `error`, `pending`, etc.) interact with templates or blocks of HTML. Here's an explanation of the syntax:
+The event template binding syntax in the provided    <div @fir:[create:ok,delete:error]="js">
+       <!-- Call `js` code for `create:ok` or `delete:error` -->
+   </div>
+   ```
+
+1. **Template and State Combinations**:
+
+   ```html
+   <div @fir:create:ok::template="js">
+       <!-- Call `js` code when the `create` event succeeds and render the specified template -->
+   </div>
+   ```ing specific templates or actions with events triggered by the frontend. This syntax is used to define how events (like `ok`, `error`, `pending`, etc.) interact with templates or blocks of HTML. Here's an explanation of the syntax:
 
 ## General Syntax
 
@@ -24,7 +35,7 @@ The event template binding syntax in the provided code allows associating specif
      - `error`: Event failed.
      - `pending`: Event is in progress.
      - `done`: Event is completed.
-   - States can also have a `.nohtml` modifier to indicate no HTML should be rendered.
+   - States can have modifiers to customize behavior.
 
 4. **`::<template-name>`** (Optional):
    - Specifies the name of the template or block to render when the event occurs.
@@ -87,7 +98,7 @@ The declarative syntax allows you to bind events to templates or actions in a mo
    </div>
    ```
 
-3. **State with `.nohtml` Modifier**:
+3. **Advanced Event Handling**:
 
    ```html
    <div @fir:create:ok="js">
@@ -95,11 +106,11 @@ The declarative syntax allows you to bind events to templates or actions in a mo
    </div>
    ```
 
-4. **State with `.nohtml` Modifier**:
+4. **Multiple Event Combinations**:
 
    ```html
-   <div @fir:create:ok.nohtml>
-       <!-- Handle `create:ok` without rendering any HTML -->
+   <div @fir:[create:ok,update:error]="js">
+       <!-- Handle multiple events with single action -->
    </div>
    ```
 

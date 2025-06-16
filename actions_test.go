@@ -24,37 +24,37 @@ func TestResetActionHandler(t *testing.T) {
 		{
 			name:     "Basic event",
 			value:    "create-chirp",
-			expected: `@fir:create-chirp:ok.nohtml="$el.reset()"`,
+			expected: `@fir:create-chirp:ok="$el.reset()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with state",
 			value:    "submit:ok",
-			expected: `@fir:submit:ok.nohtml="$el.reset()"`,
+			expected: `@fir:submit:ok="$el.reset()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with modifier",
 			value:    "submit.debounce",
-			expected: `@fir:submit:ok.debounce.nohtml="$el.reset()"`,
+			expected: `@fir:submit:ok.debounce="$el.reset()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple events",
 			value:    "create:ok,update:done",
-			expected: `@fir:[create:ok,update:done].nohtml="$el.reset()"`,
+			expected: `@fir:[create:ok,update:done]="$el.reset()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with target (ignored)",
 			value:    "submit->myForm",
-			expected: `@fir:submit:ok.nohtml="$el.reset()"`,
+			expected: `@fir:submit:ok="$el.reset()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with action target (ignored)",
 			value:    "submit=>doSubmit",
-			expected: `@fir:submit:ok.nohtml="$el.reset()"`,
+			expected: `@fir:submit:ok="$el.reset()"`,
 			wantErr:  false,
 		},
 	}
@@ -96,43 +96,43 @@ func TestToggleDisabledActionHandler(t *testing.T) {
 		{
 			name:     "Basic event",
 			value:    "submit",
-			expected: `@fir:submit:ok.nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:submit:ok="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with state",
 			value:    "save:pending",
-			expected: `@fir:save:pending.nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:save:pending="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with modifier",
 			value:    "submit.debounce",
-			expected: `@fir:submit:ok.debounce.nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:submit:ok.debounce="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple events",
 			value:    "save:pending,save:ok",
-			expected: `@fir:[save:pending,save:ok].nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:[save:pending,save:ok]="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with target (ignored)",
 			value:    "submit->myForm",
-			expected: `@fir:submit:ok.nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:submit:ok="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with action target (ignored)",
 			value:    "submit=>doSubmit",
-			expected: `@fir:submit:ok.nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:submit:ok="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Complex multi-state scenario",
 			value:    "save:pending,save:ok,save:error",
-			expected: `@fir:[save:pending,save:ok,save:error].nohtml="$fir.toggleDisabled()"`,
+			expected: `@fir:[save:pending,save:ok,save:error]="$fir.toggleDisabled()"`,
 			wantErr:  false,
 		},
 	}
@@ -182,7 +182,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"resetForm": "$fir.resetForm()",
 			},
-			expected: `@fir:submit:ok.nohtml="$fir.resetForm()"`,
+			expected: `@fir:submit:ok="$fir.resetForm()"`,
 			wantErr:  false,
 		},
 		{
@@ -195,7 +195,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"resetForm": "$fir.resetForm()",
 			},
-			expected: `@fir:[inc:ok,dec:ok].nohtml="$fir.resetForm()"`,
+			expected: `@fir:[inc:ok,dec:ok]="$fir.resetForm()"`,
 			wantErr:  false,
 		},
 		{
@@ -208,11 +208,11 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"clearData": "$fir.clearData()",
 			},
-			expected: `@fir:[save:ok,load:error].nohtml="$fir.clearData()"`,
+			expected: `@fir:[save:ok,load:error]="$fir.clearData()"`,
 			wantErr:  false,
 		},
 		{
-			name: "Trigger with events having modifiers (nohtml is added)",
+			name: "Trigger with events having modifiers",
 			info: ActionInfo{
 				ActionName: "trigger",
 				Params:     []string{"updateForm"},
@@ -221,7 +221,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"updateForm": "$fir.updateForm()",
 			},
-			expected: `@fir:submit:ok.debounce.nohtml="$fir.updateForm()"`,
+			expected: `@fir:submit:ok.debounce="$fir.updateForm()"`,
 			wantErr:  false,
 		},
 		{
@@ -234,7 +234,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"processData": "$fir.processData()",
 			},
-			expected: `@fir:[create:ok,delete:error].debounce.nohtml.throttle="$fir.processData()"`,
+			expected: `@fir:[create:ok,delete:error].debounce.throttle="$fir.processData()"`,
 			wantErr:  false,
 		},
 		{
@@ -247,7 +247,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"validateAndSubmit": "validate() && $fir.submit()",
 			},
-			expected: `@fir:submit:ok.nohtml="validate() && $fir.submit()"`,
+			expected: `@fir:submit:ok="validate() && $fir.submit()"`,
 			wantErr:  false,
 		},
 		{
@@ -260,7 +260,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"resetForm": "$fir.resetForm()",
 			},
-			expected: `@fir:submit:ok.nohtml="$fir.resetForm()"`,
+			expected: `@fir:submit:ok="$fir.resetForm()"`,
 			wantErr:  false,
 		},
 		{
@@ -273,7 +273,7 @@ func TestTriggerActionHandler(t *testing.T) {
 			actionsMap: map[string]string{
 				"resetForm": "$fir.resetForm()",
 			},
-			expected: `@fir:submit:ok.nohtml="$fir.resetForm()"`,
+			expected: `@fir:submit:ok="$fir.resetForm()"`,
 			wantErr:  false,
 		},
 		// Error cases
@@ -389,49 +389,49 @@ func TestToggleClassActionHandler(t *testing.T) {
 			name:     "Single class",
 			params:   []string{"is-loading"},
 			value:    "submit",
-			expected: `@fir:submit:ok.nohtml="$fir.toggleClass('is-loading')"`,
+			expected: `@fir:submit:ok="$fir.toggleClass('is-loading')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple classes",
 			params:   []string{"is-loading", "is-active"},
 			value:    "save",
-			expected: `@fir:save:ok.nohtml="$fir.toggleClass('is-loading','is-active')"`,
+			expected: `@fir:save:ok="$fir.toggleClass('is-loading','is-active')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with state",
 			params:   []string{"is-disabled"},
 			value:    "save:pending",
-			expected: `@fir:save:pending.nohtml="$fir.toggleClass('is-disabled')"`,
+			expected: `@fir:save:pending="$fir.toggleClass('is-disabled')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple events",
 			params:   []string{"is-loading"},
 			value:    "save:pending,save:ok",
-			expected: `@fir:[save:pending,save:ok].nohtml="$fir.toggleClass('is-loading')"`,
+			expected: `@fir:[save:pending,save:ok]="$fir.toggleClass('is-loading')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Complex multi-state scenario",
 			params:   []string{"is-loading"},
 			value:    "save:pending,save:ok,save:error",
-			expected: `@fir:[save:pending,save:ok,save:error].nohtml="$fir.toggleClass('is-loading')"`,
+			expected: `@fir:[save:pending,save:ok,save:error]="$fir.toggleClass('is-loading')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with modifier",
 			params:   []string{"is-loading"},
 			value:    "submit.debounce",
-			expected: `@fir:submit:ok.debounce.nohtml="$fir.toggleClass('is-loading')"`,
+			expected: `@fir:submit:ok.debounce="$fir.toggleClass('is-loading')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with target (ignored)",
 			params:   []string{"is-loading"},
 			value:    "submit->myForm",
-			expected: `@fir:submit:ok.nohtml="$fir.toggleClass('is-loading')"`,
+			expected: `@fir:submit:ok="$fir.toggleClass('is-loading')"`,
 			wantErr:  false,
 		},
 		{
@@ -1002,37 +1002,37 @@ func TestRemoveActionHandler(t *testing.T) {
 		{
 			name:     "Basic event",
 			value:    "delete",
-			expected: `@fir:delete:ok.nohtml="$fir.removeEl()"`,
+			expected: `@fir:delete:ok="$fir.removeEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with state",
 			value:    "remove:ok",
-			expected: `@fir:remove:ok.nohtml="$fir.removeEl()"`,
+			expected: `@fir:remove:ok="$fir.removeEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with modifier",
 			value:    "clear.once",
-			expected: `@fir:clear:ok.nohtml.once="$fir.removeEl()"`,
+			expected: `@fir:clear:ok.once="$fir.removeEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple events",
 			value:    "delete:ok,clear:done",
-			expected: `@fir:[delete:ok,clear:done].nohtml="$fir.removeEl()"`,
+			expected: `@fir:[delete:ok,clear:done]="$fir.removeEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with target (ignored)",
 			value:    "delete->item",
-			expected: `@fir:delete:ok.nohtml="$fir.removeEl()"`,
+			expected: `@fir:delete:ok="$fir.removeEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with action (ignored)",
 			value:    "remove=>doRemove",
-			expected: `@fir:remove:ok.nohtml="$fir.removeEl()"`,
+			expected: `@fir:remove:ok="$fir.removeEl()"`,
 			wantErr:  false,
 		},
 		{
@@ -1257,31 +1257,31 @@ func TestRemoveParentActionHandler(t *testing.T) {
 		{
 			name:     "Basic event",
 			value:    "delete",
-			expected: `@fir:delete:ok.nohtml="$fir.removeParentEl()"`,
+			expected: `@fir:delete:ok="$fir.removeParentEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with state",
 			value:    "close:ok",
-			expected: `@fir:close:ok.nohtml="$fir.removeParentEl()"`,
+			expected: `@fir:close:ok="$fir.removeParentEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with modifier",
 			value:    "dismiss.once",
-			expected: `@fir:dismiss:ok.nohtml.once="$fir.removeParentEl()"`,
+			expected: `@fir:dismiss:ok.once="$fir.removeParentEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple events",
 			value:    "delete:ok,dismiss:done",
-			expected: `@fir:[delete:ok,dismiss:done].nohtml="$fir.removeParentEl()"`,
+			expected: `@fir:[delete:ok,dismiss:done]="$fir.removeParentEl()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with target and action (both ignored)",
 			value:    "delete->parent=>doDelete",
-			expected: `@fir:delete:ok.nohtml="$fir.removeParentEl()"`,
+			expected: `@fir:delete:ok="$fir.removeParentEl()"`,
 			wantErr:  false,
 		},
 		{
@@ -1332,42 +1332,42 @@ func TestDispatchActionHandler(t *testing.T) {
 			name:     "Single dispatch parameter",
 			params:   []string{"modal-close"},
 			value:    "click",
-			expected: `@fir:click:ok.nohtml="$dispatch('modal-close')"`,
+			expected: `@fir:click:ok="$dispatch('modal-close')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple dispatch parameters",
 			params:   []string{"toggle-sidebar", "update-nav"},
 			value:    "click",
-			expected: `@fir:click:ok.nohtml="$dispatch('toggle-sidebar','update-nav')"`,
+			expected: `@fir:click:ok="$dispatch('toggle-sidebar','update-nav')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with state",
 			params:   []string{"form-submit"},
 			value:    "submit:ok",
-			expected: `@fir:submit:ok.nohtml="$dispatch('form-submit')"`,
+			expected: `@fir:submit:ok="$dispatch('form-submit')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with modifier",
 			params:   []string{"menu-toggle"},
 			value:    "click.once",
-			expected: `@fir:click:ok.nohtml.once="$dispatch('menu-toggle')"`,
+			expected: `@fir:click:ok.once="$dispatch('menu-toggle')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple events",
 			params:   []string{"notification"},
 			value:    "success:ok,error:error",
-			expected: `@fir:[success:ok,error:error].nohtml="$dispatch('notification')"`,
+			expected: `@fir:[success:ok,error:error]="$dispatch('notification')"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Event with template target",
 			params:   []string{"form-data"},
 			value:    "submit:pending->form",
-			expected: `@fir:submit:pending::form.nohtml="$dispatch('form-data')"`,
+			expected: `@fir:submit:pending::form="$dispatch('form-data')"`,
 			wantErr:  false,
 		},
 		{

@@ -134,7 +134,7 @@ Example:
 #### Enhanced Version
 
 - Prevents page reloads using Alpine.js and Fir's `$fir.submit()` magic function.
-- Resets the form on success using `@fir:create-chirp:ok.nohtml="$el.reset()"`.
+- Resets the form on success using `@fir:create-chirp:ok="$el.reset()"`.
 - Example:
 
 ```html
@@ -142,7 +142,7 @@ Example:
     method="post"
     action="?event=create-chirp"
     @submit.prevent="$fir.submit()"
-    @fir:create-chirp:ok.nohtml="$el.reset()">
+    @fir:create-chirp:ok="$el.reset()">
     <textarea name="body" placeholder="a new chirp" rows="4" cols="100"></textarea>
     <p @fir:create-chirp:error="$fir.replace()">{{ fir.Error "create-chirp.body" }}</p>
     <button type="submit">Chirp</button>
@@ -169,12 +169,12 @@ Example:
 
 - Real-time updates are enabled using Alpine.js and Fir's magic functions:
   - `@fir:like-chirp:ok="$fir.replace()"` updates the like count.
-  - `@fir:delete-chirp:ok.nohtml="$fir.removeEl()"` removes the chirp.
+  - `@fir:delete-chirp:ok="$fir.removeEl()"` removes the chirp.
 
 Example:
 
 ```html
-<section fir-key="{{ .ID }}" @fir:delete-chirp:ok.nohtml="$fir.removeEl()">
+<section fir-key="{{ .ID }}" @fir:delete-chirp:ok="$fir.removeEl()">
     <form method="post" @submit.prevent="$fir.submit()">
         <blockquote>
             {{ .Body }}

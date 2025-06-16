@@ -77,20 +77,20 @@ func TestTranslateRenderExpression(t *testing.T) {
 		// --- Modifiers (Updated for Defaults) ---
 		{
 			name:     "Single Event with Modifier, No Target (default state, default action)",
-			input:    "create.nohtml",
-			expected: `@fir:create:ok.nohtml="$fir.replace()"`,
+			input:    "create",
+			expected: `@fir:create:ok="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Single Event with State and Modifier, No Target (default action)",
-			input:    "create:ok.nohtml",
-			expected: `@fir:create:ok.nohtml="$fir.replace()"`,
+			input:    "create:ok",
+			expected: `@fir:create:ok="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Single Event with Modifier and Template Target (default state, default action)",
-			input:    "create.nohtml->todo",
-			expected: `@fir:create:ok::todo.nohtml="$fir.replace()"`,
+			input:    "create->todo",
+			expected: `@fir:create:ok::todo="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
@@ -107,32 +107,32 @@ func TestTranslateRenderExpression(t *testing.T) {
 		},
 		{
 			name:     "Grouped Events with Different Modifiers, Template and Action Target",
-			input:    "create:ok.debounce,update:error.nohtml->template=>myaction",
-			expected: `@fir:[create:ok,update:error]::template.debounce.nohtml="myaction"`, // No map, action name used directly
+			input:    "create:ok.debounce,update:error->template=>myaction",
+			expected: `@fir:[create:ok,update:error]::template.debounce="myaction"`, // No map, action name used directly
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Events with Different Modifiers, No Target (default action)",
-			input:    "create:ok.debounce,update:error.nohtml",
-			expected: `@fir:[create:ok,update:error].debounce.nohtml="$fir.replace()"`,
+			input:    "create:ok.debounce,update:error",
+			expected: `@fir:[create:ok,update:error].debounce="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Events with Different Modifiers, Template Target Only (default action)",
-			input:    "create:ok.debounce,update:error.nohtml->template",
-			expected: `@fir:[create:ok,update:error]::template.debounce.nohtml="$fir.replace()"`,
+			input:    "create:ok.debounce,update:error->template",
+			expected: `@fir:[create:ok,update:error]::template.debounce="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Events with Different Modifiers, Action Target Only",
-			input:    "create:ok.debounce,update:error.nohtml=>myaction",
-			expected: `@fir:[create:ok,update:error].debounce.nohtml="myaction"`, // No map, action name used directly
+			input:    "create:ok.debounce,update:error=>myaction",
+			expected: `@fir:[create:ok,update:error].debounce="myaction"`, // No map, action name used directly
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Events, no state, Template Target Only (default state, default action)",
-			input:    "create.debounce,update.nohtml->template",
-			expected: `@fir:[create:ok,update:ok]::template.debounce.nohtml="$fir.replace()"`,
+			input:    "create.debounce,update->template",
+			expected: `@fir:[create:ok,update:ok]::template.debounce="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
@@ -144,58 +144,58 @@ func TestTranslateRenderExpression(t *testing.T) {
 		// --- Grouped Bindings (Comma) / Separate Expressions (Semicolon) (Updated for Defaults) ---
 		{
 			name:     "Grouped Bindings (comma) with Modifiers and Targets - generates SINGLE line",
-			input:    "create:ok.debounce,delete:error.nohtml->todo=>replace",
-			expected: `@fir:[create:ok,delete:error]::todo.debounce.nohtml="replace"`, // No map, action name used directly
+			input:    "create:ok.debounce,delete:error->todo=>replace",
+			expected: `@fir:[create:ok,delete:error]::todo.debounce="replace"`, // No map, action name used directly
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Bindings (comma) No Target - generates SINGLE line (default action)",
-			input:    "create:ok.debounce,delete:error.nohtml",
-			expected: `@fir:[create:ok,delete:error].debounce.nohtml="$fir.replace()"`,
+			input:    "create:ok.debounce,delete:error",
+			expected: `@fir:[create:ok,delete:error].debounce="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Bindings (comma), no state, No Target (default state, default action)",
-			input:    "create.debounce,delete.nohtml",
-			expected: `@fir:[create:ok,delete:ok].debounce.nohtml="$fir.replace()"`,
+			input:    "create.debounce,delete",
+			expected: `@fir:[create:ok,delete:ok].debounce="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Bindings (comma), Template Only (default action)",
-			input:    "create:ok.debounce,delete:error.nohtml->todo",
-			expected: `@fir:[create:ok,delete:error]::todo.debounce.nohtml="$fir.replace()"`,
+			input:    "create:ok.debounce,delete:error->todo",
+			expected: `@fir:[create:ok,delete:error]::todo.debounce="$fir.replace()"`,
 			wantErr:  false,
 		},
 		{
 			name:     "Grouped Bindings (comma), Action Only",
-			input:    "create:ok.debounce,delete:error.nohtml=>replace",
-			expected: `@fir:[create:ok,delete:error].debounce.nohtml="replace"`, // No map, action name used directly
+			input:    "create:ok.debounce,delete:error=>replace",
+			expected: `@fir:[create:ok,delete:error].debounce="replace"`, // No map, action name used directly
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple Expressions (semicolon) with Modifiers (default action)",
-			input:    "create:ok.debounce->todo;delete:error.nohtml=>replace",
-			expected: "@fir:create:ok::todo.debounce=\"$fir.replace()\"\n@fir:delete:error.nohtml=\"replace\"", // No map, action name used directly
+			input:    "create:ok.debounce->todo;delete:error=>replace",
+			expected: "@fir:create:ok::todo.debounce=\"$fir.replace()\"\n@fir:delete:error=\"replace\"", // No map, action name used directly
 			wantErr:  false,
 		},
 		{
 			name:     "Multiple Expressions (semicolon), no state (default state, default action)",
-			input:    "create.debounce->todo;delete.nohtml=>replace",
-			expected: "@fir:create:ok::todo.debounce=\"$fir.replace()\"\n@fir:delete:ok.nohtml=\"replace\"", // No map, action name used directly
+			input:    "create.debounce->todo;delete=>replace",
+			expected: "@fir:create:ok::todo.debounce=\"$fir.replace()\"\n@fir:delete:ok=\"replace\"", // No map, action name used directly
 			wantErr:  false,
 		},
 		{
 			name: "Complex Mix (comma and semicolon) with Modifiers",
 			// Removed .mod from replace
-			input: "create:ok.nohtml,delete:error->todo=>replace;update:pending.debounce->done=>archive",
+			input: "create:ok,delete:error->todo=>replace;update:pending.debounce->done=>archive",
 			// Removed .mod from replace in expected output
-			expected: "@fir:[create:ok,delete:error]::todo.nohtml=\"replace\"\n@fir:update:pending::done.debounce=\"archive\"",
+			expected: "@fir:[create:ok,delete:error]::todo=\"replace\"\n@fir:update:pending::done.debounce=\"archive\"",
 			wantErr:  false,
 		},
 		{
 			name:     "Complex Mix (comma and semicolon), no state/action (default state, default action)",
-			input:    "create.nohtml,delete->todo;update.debounce->done",
-			expected: "@fir:[create:ok,delete:ok]::todo.nohtml=\"$fir.replace()\"\n@fir:update:ok::done.debounce=\"$fir.replace()\"",
+			input:    "create,delete->todo;update.debounce->done",
+			expected: "@fir:[create:ok,delete:ok]::todo=\"$fir.replace()\"\n@fir:update:ok::done.debounce=\"$fir.replace()\"",
 			wantErr:  false,
 		},
 
@@ -252,10 +252,10 @@ func TestTranslateRenderExpression(t *testing.T) {
 		{
 			name: "Complex mix, actions in map",
 			// Removed .mod from replace
-			input: "create:ok.nohtml,delete:error->todo=>replace;update:pending.debounce->done=>archive",
+			input: "create:ok,delete:error->todo=>replace;update:pending.debounce->done=>archive",
 			// Removed .mod from replace key in map and expected output
 			actions:  map[string]string{"replace": "doReplace()", "archive": "doArchive()"},
-			expected: "@fir:[create:ok,delete:error]::todo.nohtml=\"doReplace()\"\n@fir:update:pending::done.debounce=\"doArchive()\"",
+			expected: "@fir:[create:ok,delete:error]::todo=\"doReplace()\"\n@fir:update:pending::done.debounce=\"doArchive()\"",
 			wantErr:  false,
 		},
 		{
@@ -269,17 +269,17 @@ func TestTranslateRenderExpression(t *testing.T) {
 		// --- Error Cases Inspired by lexer_test.go ---
 		{
 			name:    "Invalid State",
-			input:   "create:invalid.nohtml",
+			input:   "create:invalid",
 			wantErr: true,
 		},
 		{
 			name:    "Invalid Target Name (numeric)",
-			input:   "create.nohtml->123",
+			input:   "create->123",
 			wantErr: true,
 		},
 		{
 			name:    "Event with Only Modifier",
-			input:   ".nohtml",
+			input:   "",
 			wantErr: true,
 		},
 		{
@@ -395,17 +395,17 @@ func TestTranslateEventExpression(t *testing.T) {
 		},
 		{
 			name:       "refresh: multiple expressions (semicolon) with targets (ignored)",
-			input:      "create:ok.debounce->todo;delete:error.nohtml=>replace",
+			input:      "create:ok.debounce->todo;delete:error=>replace",
 			actionType: "refresh",
-			expected:   "@fir:create:ok.debounce=\"$fir.replace()\"\n@fir:delete:error.nohtml=\"$fir.replace()\"",
+			expected:   "@fir:create:ok.debounce=\"$fir.replace()\"\n@fir:delete:error=\"$fir.replace()\"",
 			wantErr:    false,
 		},
 		{
 			name:          "refresh: multiple expressions (semicolon), with templateValue",
-			input:         "create:ok.debounce->todo;delete:error.nohtml=>replace",
+			input:         "create:ok.debounce->todo;delete:error=>replace",
 			actionType:    "refresh",
 			templateValue: "commonTmpl",
-			expected:      "@fir:create:ok::commonTmpl.debounce=\"$fir.replace()\"\n@fir:delete:error::commonTmpl.nohtml=\"$fir.replace()\"",
+			expected:      "@fir:create:ok::commonTmpl.debounce=\"$fir.replace()\"\n@fir:delete:error::commonTmpl=\"$fir.replace()\"",
 			wantErr:       false,
 		},
 		{
@@ -500,7 +500,7 @@ func TestTranslateEventExpression(t *testing.T) {
 		// --- Error Cases (actionType doesn't matter here) ---
 		{
 			name:       "error: Invalid State",
-			input:      "create:invalid.nohtml",
+			input:      "create:invalid",
 			actionType: "refresh", // actionType is irrelevant for parse errors
 			wantErr:    true,
 		},

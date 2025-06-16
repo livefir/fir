@@ -3,7 +3,6 @@ package fir
 import (
 	"fmt"
 	"html/template"
-	"strings"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
@@ -60,12 +59,6 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
 	var templateNames []string
 	for k := range ctx.route.getEventTemplates()[eventIDWithState] {
-		templateNames = append(templateNames, k)
-	}
-
-	eventIDWithStateNoHTML := fmt.Sprintf("%s:%s.nohtml", *pubsubEvent.ID, pubsubEvent.State)
-
-	for k := range ctx.route.getEventTemplates()[eventIDWithStateNoHTML] {
 		templateNames = append(templateNames, k)
 	}
 
@@ -199,11 +192,6 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 
 	if pubsubEvent.State == eventstate.OK && templateData == nil {
-		value = ""
-	}
-
-	if strings.HasSuffix(*eventType, ".nohtml") {
-		*eventType = strings.TrimSuffix(*eventType, ".nohtml")
 		value = ""
 	}
 
