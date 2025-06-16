@@ -73,14 +73,10 @@ type AppendActionHandler struct{}
 func (h *AppendActionHandler) Name() string    { return "append" } // Base name
 func (h *AppendActionHandler) Precedence() int { return 50 }
 func (h *AppendActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
-	// Expect the templateValue to be the first parameter
-	if len(info.Params) == 0 {
-		return "", fmt.Errorf("missing target template name parameter for append action: '%s'", info.AttrName)
-	}
-	templateValue := info.Params[0]
-	if templateValue == "" {
-		// This check might be redundant if the parser ensures non-empty params, but good for safety.
-		return "", fmt.Errorf("empty target template name parameter for append action: '%s'", info.AttrName)
+	// Use the first parameter as template if provided, otherwise use empty string to allow extracted template
+	templateValue := ""
+	if len(info.Params) > 0 && info.Params[0] != "" {
+		templateValue = info.Params[0]
 	}
 
 	// TranslateEventExpression needs the value, the JS action, and the templateValue
@@ -93,13 +89,10 @@ type PrependActionHandler struct{}
 func (h *PrependActionHandler) Name() string    { return "prepend" } // Base name
 func (h *PrependActionHandler) Precedence() int { return 60 }
 func (h *PrependActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
-	// Expect the templateValue to be the first parameter
-	if len(info.Params) == 0 {
-		return "", fmt.Errorf("missing target template name parameter for prepend action: '%s'", info.AttrName)
-	}
-	templateValue := info.Params[0]
-	if templateValue == "" {
-		return "", fmt.Errorf("empty target template name parameter for prepend action: '%s'", info.AttrName)
+	// Use the first parameter as template if provided, otherwise use empty string to allow extracted template
+	templateValue := ""
+	if len(info.Params) > 0 && info.Params[0] != "" {
+		templateValue = info.Params[0]
 	}
 
 	// TranslateEventExpression needs the value, the JS action, and the templateValue
