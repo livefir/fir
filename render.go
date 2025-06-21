@@ -3,6 +3,7 @@ package fir
 import (
 	"fmt"
 	"html/template"
+	"time"
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
@@ -21,34 +22,50 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
+		renderLogger := logger.WithRoute(ctx.route.id)
+		if ctx.event.ID != "" {
+			renderLogger = renderLogger.With("event_id", ctx.event.ID)
+		}
+
+		templateStart := time.Now()
 		tmpl := ctx.route.getTemplate()
 		if errorRouteTemplate {
+			renderLogger.Debug("using error template for rendering")
 			tmpl = ctx.route.getErrorTemplate()
 		}
 		var errs map[string]any
 		errMap, ok := data["errors"]
 		if ok {
 			errs = errMap.(map[string]any)
+			renderLogger.Debug("rendering with validation errors", "error_count", len(errs))
 		}
 
 		tmpl = tmpl.Funcs(newFirFuncMap(ctx, errs))
+
+		renderLogger.Debug("executing template", "template_preparation_ms", time.Since(templateStart).Milliseconds())
+		executeStart := time.Now()
 		err := tmpl.Execute(buf, data)
 		if err != nil {
-			logger.Errorf("error executing template: %v", err)
+			renderLogger.Error("error executing template", "error", err, "execution_ms", time.Since(executeStart).Milliseconds())
 			return err
 		}
+		renderLogger.Debug("template executed successfully", "execution_ms", time.Since(executeStart).Milliseconds(), "response_size_bytes", buf.Len())
 
+		sessionStart := time.Now()
 		err = encodeSession(ctx.route.routeOpt, ctx.response, ctx.request)
 		if err != nil {
-			logger.Errorf("error encoding session: %v", err)
+			renderLogger.Error("error encoding session", "error", err)
 			return err
 		}
+		renderLogger.Debug("session encoded", "session_ms", time.Since(sessionStart).Milliseconds())
 
+		writeStart := time.Now()
 		_, err = ctx.response.Write(addAttributes(buf.Bytes()))
 		if err != nil {
-			logger.Errorf("error writing response: %v", err)
+			renderLogger.Error("error writing response", "error", err)
 			return err
 		}
+		renderLogger.Debug("response written", "write_ms", time.Since(writeStart).Milliseconds(), "total_render_ms", time.Since(templateStart).Milliseconds())
 		return nil
 	}
 }

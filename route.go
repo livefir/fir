@@ -272,11 +272,20 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
 
 func publishEvents(ctx context.Context, eventCtx RouteContext, channel string) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
+		pubsubLogger := logger.WithRoute(eventCtx.route.id).With(
+			"event_id", eventCtx.event.ID,
+			"pubsub_event_id", *pubsubEvent.ID,
+			"channel", channel,
+		)
+		pubsubLogger.Debug("publishing event to channel")
+
 		err := eventCtx.route.pubsub.Publish(ctx, channel, pubsubEvent)
 		if err != nil {
+			pubsubLogger.Error("error publishing event", "error", err)
 			logger.Errorf("error publishing patch: %v", err)
 			return err
 		}
+		pubsubLogger.Debug("event published successfully")
 		return nil
 	}
 }
@@ -343,11 +352,24 @@ func (rt *route) getEventTemplates() eventTemplates {
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timing := servertiming.FromContext(r.Context())
 	defer timing.NewMetric("route").Start().Stop()
+
+	// Add debug logging for all requests
+	routeLogger := logger.WithRoute(rt.id)
+	routeLogger.Debug("handling request",
+		"method", r.Method,
+		"path", r.URL.Path,
+		"user_agent", r.Header.Get("User-Agent"),
+		"is_websocket", websocket.IsWebSocketUpgrade(r),
+		"is_event", r.Header.Get("X-FIR-MODE") == "event",
+	)
+
 	if r.URL.Path == "/favicon.ico" {
+		routeLogger.Debug("serving favicon.ico - returning 404")
 		http.NotFound(w, r)
 		return
 	}
 	if r.Method == http.MethodHead {
+		routeLogger.Debug("handling HEAD request")
 		w.Header().Add("X-FIR-WEBSOCKET-ENABLED", strconv.FormatBool(!rt.disableWebsocket))
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -356,11 +378,14 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if websocket.IsWebSocketUpgrade(r) {
 		// onWebsocket: upgrade to websocket
 		if rt.disableWebsocket {
+			routeLogger.Warn("websocket upgrade attempted but websockets are disabled")
 			http.Error(w, "websocket is disabled", http.StatusForbidden)
 			return
 		}
+		routeLogger.Debug("upgrading to websocket connection")
 	} else {
 		if rt.pathParamsFunc != nil {
+			routeLogger.Debug("extracting path parameters")
 			r = r.WithContext(context.WithValue(r.Context(), PathParamsKey, rt.pathParamsFunc(r)))
 		}
 	}
@@ -369,22 +394,29 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		onWebsocket(w, r, rt.cntrl)
 	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
 		// onEvents
+		routeLogger.Debug("handling event request")
 		var event Event
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		err := decoder.Decode(&event)
 		if err != nil {
+			routeLogger.Error("failed to decode event JSON", "error", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		if decoder.More() {
+			routeLogger.Error("extra fields found in event JSON")
 			http.Error(w, "unknown fields in request body", http.StatusBadRequest)
 			return
 		}
 		if event.ID == "" {
+			routeLogger.Error("event missing required ID field")
 			http.Error(w, "event id is missing", http.StatusBadRequest)
 			return
 		}
+
+		eventLogger := routeLogger.With("event_id", event.ID, "element_key", event.ElementKey)
+		eventLogger.Debug("processing event")
 
 		eventCtx := RouteContext{
 			event:    event,
@@ -395,6 +427,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
 		if !ok {
+			eventLogger.Error("event handler not found")
 			http.Error(w, "event id is not registered", http.StatusBadRequest)
 			return
 		}
@@ -408,6 +441,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// postForm
 		if r.Method == http.MethodPost {
+			routeLogger.Debug("handling form POST request")
 			formAction := ""
 			values := r.URL.Query()
 			if len(values) == 1 {
@@ -417,22 +451,26 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if formAction == "" && len(rt.onEvents) > 1 {
+				routeLogger.Error("form action missing with multiple event handlers available")
 				http.Error(w, "form action[?event=myaction] is missing and default onEvent can't be selected since there is more than 1", http.StatusBadRequest)
 				return
 			} else if formAction == "" && len(rt.onEvents) == 1 {
 				for k := range rt.onEvents {
 					formAction = k
 				}
+				routeLogger.Debug("using single available event handler for form", "action", formAction)
 			}
 
 			err := r.ParseForm()
 			if err != nil {
+				routeLogger.Error("failed to parse form data", "error", err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			urlValues := r.PostForm
 			params, err := json.Marshal(urlValues)
 			if err != nil {
+				routeLogger.Error("failed to marshal form parameters", "error", err)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -441,6 +479,9 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				Params: params,
 				IsForm: true,
 			}
+
+			formLogger := routeLogger.With("event_id", formAction, "form_fields", len(urlValues))
+			formLogger.Debug("processing form submission")
 
 			eventCtx := RouteContext{
 				event:     event,
@@ -452,6 +493,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			onEventFunc, ok := rt.onEvents[event.ID]
 			if !ok {
+				formLogger.Error("form event handler not found")
 				http.Error(w, fmt.Sprintf("onEvent handler for %s not found", event.ID), http.StatusBadRequest)
 				return
 			}
@@ -460,6 +502,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		} else if r.Method == http.MethodGet {
 			// onLoad
+			routeLogger.Debug("handling GET request - calling onLoad")
 			event := Event{ID: rt.routeOpt.id}
 			eventCtx := RouteContext{
 				event:    event,
@@ -470,6 +513,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 		} else {
+			routeLogger.Warn("unsupported HTTP method", "method", r.Method)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	}

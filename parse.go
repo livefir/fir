@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/cespare/xxhash/v2"
@@ -104,8 +105,12 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 }
 
 func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string) (*template.Template, eventTemplates, error) {
+	parseLogger := logger.WithTemplate(content)
+	parseLogger.Debug("parsing layout and content", "layout", layout, "content_name", layoutContentName)
+
 	layoutTemplate, evt, err := layoutSetContentEmpty(opt, layout)
 	if err != nil {
+		parseLogger.Error("failed to parse layout template", "error", err, "layout", layout)
 		return nil, evt, err
 	}
 
@@ -120,25 +125,39 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 	pageContentPath := filepath.Join(opt.publicDir, content)
 
 	if !opt.existFile(pageContentPath) {
+		parseLogger.Debug("parsing inline/string content")
 		pageTemplate, currEvt, err := parseString(layoutTemplate, opt.getFuncMap(), content)
 		if err != nil {
+			parseLogger.Error("failed to parse string content", "error", err)
 			panic(err)
 		}
 		evt = deepMergeEventTemplates(evt, currEvt)
 		if err := checkPageContent(pageTemplate, layoutContentName); err != nil {
+			parseLogger.Error("content validation failed", "error", err)
 			return nil, nil, err
 		}
+		parseLogger.Debug("string content parsed successfully")
 		return pageTemplate, evt, nil
 	} else {
+		parseLogger.Debug("parsing file-based content", "path", pageContentPath)
+		parseStart := time.Now()
 		pageFiles := getPartials(opt, findOrExit(pageContentPath, opt.extensions, opt.embedfs))
+		parseLogger.Debug("found template files", "count", len(pageFiles))
+
 		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.getFuncMap(), opt.readFile, pageFiles...)
 		if err != nil {
+			parseLogger.Error("failed to parse template files", "error", err, "files", pageFiles)
 			panic(err)
 		}
 		evt = deepMergeEventTemplates(evt, currEvt)
 		if err := checkPageContent(pageTemplate, layoutContentName); err != nil {
+			parseLogger.Error("content validation failed", "error", err)
 			return nil, nil, err
 		}
+		parseLogger.Debug("file-based content parsed successfully",
+			"parse_ms", time.Since(parseStart).Milliseconds(),
+			"template_count", len(pageTemplate.Templates()),
+		)
 		return pageTemplate, evt, nil
 	}
 

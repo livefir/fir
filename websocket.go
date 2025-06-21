@@ -71,36 +71,42 @@ func RedirectUnauthorisedWebSocket(w http.ResponseWriter, r *http.Request, redir
 }
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
+	wsLogger := logger.Logger().With("client_ip", r.RemoteAddr, "user_agent", r.Header.Get("User-Agent"))
+	wsLogger.Debug("websocket connection attempt")
 
 	cookie, err := r.Cookie(cntrl.cookieName)
 	if err != nil {
-		logger.Errorf("cookie err: %v", err)
+		wsLogger.Error("failed to get session cookie", "error", err, "cookie_name", cntrl.cookieName)
 		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 	if cookie.Value == "" {
-		logger.Errorf("cookie err: empty")
+		wsLogger.Error("session cookie is empty")
 		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
 	if err != nil {
-		logger.Errorf("decode session err: %v", err)
+		wsLogger.Error("failed to decode session", "error", err)
 		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 
 	if sessionID == "" {
-		logger.Errorf("err: sessionID is empty, routeID is: %s", routeID)
+		wsLogger.Error("session ID is empty", "route_id", routeID)
 		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
 
 	if routeID == "" {
-		logger.Errorf("routeID: is empty")
+		wsLogger.Error("route ID is empty", "session_id", sessionID)
 		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
+
+	// Add session and route context to logger
+	wsLogger = wsLogger.With("session_id", sessionID, "route_id", routeID)
+	wsLogger.Debug("session decoded successfully")
 
 	user := getUserFromRequestContext(r)
 
@@ -108,14 +114,21 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	if user == "" {
 		connectedUser = sessionID
 	}
+	wsLogger = wsLogger.With("user", connectedUser)
+
 	if cntrl.onSocketConnect != nil {
+		wsLogger.Debug("calling onSocketConnect handler")
 		err := cntrl.onSocketConnect(connectedUser)
 		if err != nil {
+			wsLogger.Error("onSocketConnect handler failed", "error", err)
 			return
 		}
 	}
 	if cntrl.onSocketDisconnect != nil {
-		defer cntrl.onSocketDisconnect(connectedUser)
+		defer func() {
+			wsLogger.Debug("calling onSocketDisconnect handler")
+			cntrl.onSocketDisconnect(connectedUser)
+		}()
 	}
 
 	send := make(chan []byte, 100)
@@ -169,6 +182,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 				withEventLogger.Info("received server event")
 				onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
 				if !ok {
+					withEventLogger.Error("event handler not found",
+						"available_events", func() []string {
+							keys := make([]string, 0, len(route.onEvents))
+							for k := range route.onEvents {
+								keys = append(keys, k)
+							}
+							return keys
+						}())
 					logger.Errorf("err: event %v, event.id not found", event)
 					continue
 				}
@@ -295,6 +316,8 @@ loop:
 			continue
 		}
 
+		logger.Infof("WEBSOCKET DEBUG: received event ID: %s", event.ID)
+
 		// logger.Infof("received event: %+v took %v ", event, time.Since(start))
 
 		if event.ID == "heartbeat" && conn != nil {
@@ -358,16 +381,35 @@ loop:
 		withEventLogger.Debug("received user event")
 		onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
 		if !ok {
+			withEventLogger.Error("event handler not found")
 			logger.Errorf("err: event %v, event.id not found", event)
 			continue
 		}
 
+		withEventLogger.Debug("executing event handler")
 		go func() {
+			eventStart := time.Now()
 			channel := *eventRoute.channelFunc(eventCtx.request, eventRoute.id)
+			withEventLogger.Debug("got channel for event", "channel", channel)
+
+			// Execute the event handler and log the result
+			handlerResult := onEventFunc(eventCtx)
+			withEventLogger.Debug("event handler completed",
+				"duration_ms", time.Since(eventStart).Milliseconds(),
+				"has_error", handlerResult != nil,
+			)
+
+			if handlerResult != nil {
+				withEventLogger.Error("event handler returned error", "error", handlerResult)
+			}
+
 			// errors are only sent to current local connection and not published
-			errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(ctx, eventCtx, channel))
+			errorEvent := handleOnEventResult(handlerResult, eventCtx, publishEvents(ctx, eventCtx, channel))
 			if errorEvent != nil {
+				withEventLogger.Debug("sending error event to client")
 				renderAndWriteEventWS(send, channel, eventCtx, *errorEvent)
+			} else {
+				withEventLogger.Debug("event processing completed successfully")
 			}
 		}()
 
@@ -402,18 +444,62 @@ loop:
 }
 
 func renderAndWriteEventWS(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
+	wsLogger := logger.WithRoute(ctx.route.id).With(
+		"event_id", ctx.event.ID,
+		"pubsub_event_id", *pubsubEvent.ID,
+		"channel", channel,
+	)
+	wsLogger.Debug("rendering and writing event to websocket")
+
+	renderStart := time.Now()
 	events := renderDOMEvents(ctx, pubsubEvent)
+	wsLogger.Debug("DOM events rendered",
+		"event_count", len(events),
+		"render_ms", time.Since(renderStart).Milliseconds(),
+	)
+
+	if len(events) == 0 {
+		wsLogger.Warn("no DOM events generated for pubsub event")
+	} else {
+		for i, event := range events {
+			var eventType, target, htmlLength string
+			if event.Type != nil {
+				eventType = *event.Type
+			}
+			if event.Target != nil {
+				target = *event.Target
+			}
+			if event.Detail != nil && event.Detail.HTML != "" {
+				htmlLength = fmt.Sprintf("%d", len(event.Detail.HTML))
+			}
+			wsLogger.Debug("generated DOM event",
+				"index", i,
+				"type", eventType,
+				"target", target,
+				"html_length", htmlLength,
+				"has_detail", event.Detail != nil,
+			)
+		}
+	}
+
 	eventsData, err := json.Marshal(events)
 	if err != nil {
+		wsLogger.Error("error marshaling events for websocket", "error", err, "events", events)
 		logger.Errorf("error: marshaling events %+v, err %v", events, err)
 		return err
 	}
 	if len(eventsData) == 0 {
 		err := fmt.Errorf("error: message is empty, channel %s, events %+v", channel, pubsubEvent)
+		wsLogger.Error("empty message generated", "error", err)
 		logger.Errorf("%v", err)
 		return err
 	}
+	wsLogger.Debug("sending events to websocket",
+		"payload_size_bytes", len(eventsData),
+		"payload_preview", string(eventsData[:min(200, len(eventsData))]),
+	)
 	send <- eventsData
+	wsLogger.Debug("events sent to websocket successfully")
 	return err
 }
 
