@@ -1,9 +1,14 @@
-package fir
+package todo
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 	"time"
 
+	"github.com/livefir/fir"
 	"github.com/timshannon/bolthold"
 )
 
@@ -14,7 +19,7 @@ type Todo struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func insertTodo(ctx RouteContext, db *bolthold.Store) (*Todo, error) {
+func insertTodo(ctx fir.RouteContext, db *bolthold.Store) (*Todo, error) {
 	todo := new(Todo)
 	if err := ctx.Bind(todo); err != nil {
 		return nil, err
@@ -36,8 +41,8 @@ type queryReq struct {
 	Limit  int    `json:"limit" schema:"limit"`
 }
 
-func load(db *bolthold.Store) OnEventFunc {
-	return func(ctx RouteContext) error {
+func load(db *bolthold.Store) fir.OnEventFunc {
+	return func(ctx fir.RouteContext) error {
 		var req queryReq
 		if err := ctx.Bind(&req); err != nil {
 			return err
@@ -50,8 +55,8 @@ func load(db *bolthold.Store) OnEventFunc {
 	}
 }
 
-func createTodo(db *bolthold.Store) OnEventFunc {
-	return func(ctx RouteContext) error {
+func createTodo(db *bolthold.Store) fir.OnEventFunc {
+	return func(ctx fir.RouteContext) error {
 		todo, err := insertTodo(ctx, db)
 		if err != nil {
 			return err
@@ -60,12 +65,12 @@ func createTodo(db *bolthold.Store) OnEventFunc {
 	}
 }
 
-func updateTodo(db *bolthold.Store) OnEventFunc {
+func updateTodo(db *bolthold.Store) fir.OnEventFunc {
 	type updateReq struct {
 		TodoID uint64 `json:"todoID"`
 		Text   string `json:"text"`
 	}
-	return func(ctx RouteContext) error {
+	return func(ctx fir.RouteContext) error {
 		req := new(updateReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
@@ -82,11 +87,11 @@ func updateTodo(db *bolthold.Store) OnEventFunc {
 	}
 }
 
-func toggleDone(db *bolthold.Store) OnEventFunc {
+func toggleDone(db *bolthold.Store) fir.OnEventFunc {
 	type doneReq struct {
 		TodoID uint64 `json:"todoID"`
 	}
-	return func(ctx RouteContext) error {
+	return func(ctx fir.RouteContext) error {
 		req := new(doneReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
@@ -103,11 +108,11 @@ func toggleDone(db *bolthold.Store) OnEventFunc {
 	}
 }
 
-func deleteTodo(db *bolthold.Store) OnEventFunc {
+func deleteTodo(db *bolthold.Store) fir.OnEventFunc {
 	type deleteReq struct {
 		TodoID uint64 `json:"todoID"`
 	}
-	return func(ctx RouteContext) error {
+	return func(ctx fir.RouteContext) error {
 		req := new(deleteReq)
 		if err := ctx.Bind(req); err != nil {
 			return err
@@ -120,15 +125,39 @@ func deleteTodo(db *bolthold.Store) OnEventFunc {
 	}
 }
 
-func todosRoute(db *bolthold.Store) RouteFunc {
-	return func() RouteOptions {
-		return RouteOptions{
-			ID("todos"),
-			Content("example.html"),
-			OnLoad(load(db)),
-			OnEvent("create", createTodo(db)),
-			OnEvent("delete", deleteTodo(db)),
-			OnEvent("toggle-done", toggleDone(db)),
+func Index(db *bolthold.Store) fir.RouteFunc {
+	return func() fir.RouteOptions {
+		return fir.RouteOptions{
+			fir.ID("todos"),
+			fir.Content("todo.html"),
+			fir.OnLoad(load(db)),
+			fir.OnEvent("create", createTodo(db)),
+			fir.OnEvent("delete", deleteTodo(db)),
+			fir.OnEvent("toggle-done", toggleDone(db)),
 		}
 	}
+}
+
+func db() *bolthold.Store {
+	dbfile, err := os.CreateTemp("", "todos")
+	if err != nil {
+		panic(err)
+	}
+	db, err := bolthold.Open(dbfile.Name(), 0666, nil)
+	if err != nil {
+		panic(fmt.Errorf("failed to open database: %w", err))
+	}
+	return db
+}
+
+func NewRoute() fir.RouteOptions {
+	return Index(db())()
+}
+
+func Run(port int) error {
+
+	c := fir.NewController("fir-todo", fir.DevelopmentMode(true))
+	http.Handle("/", c.RouteFunc(Index(db())))
+	log.Printf("Todo example listening on http://localhost:%d", port)
+	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }

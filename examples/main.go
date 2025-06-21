@@ -20,6 +20,7 @@ import (
 	rangecounter "github.com/livefir/fir/examples/range"
 	"github.com/livefir/fir/examples/routing"
 	"github.com/livefir/fir/examples/search"
+	"github.com/livefir/fir/examples/todo"
 )
 
 func main() {
@@ -39,6 +40,7 @@ func main() {
 		10: {"Range Counter", rangecounter.Run},
 		11: {"Routing", routing.Run},
 		12: {"Search", search.Run},
+		13: {"Todo", todo.Run},
 	}
 
 	fmt.Println("Available Fir Examples:")

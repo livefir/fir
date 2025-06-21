@@ -10,52 +10,10 @@ import (
 	"time"
 )
 
-// getLogLevel returns the log level from environment variable or defaults to INFO
-// If development mode is enabled, it will return DEBUG level unless explicitly overridden
-func getLogLevel() slog.Level {
-	switch os.Getenv("FIR_LOG_LEVEL") {
-	case "DEBUG":
-		return slog.LevelDebug
-	case "INFO":
-		return slog.LevelInfo
-	case "WARN":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
-		// Check if development mode is enabled globally
-		if isDevelopmentMode() {
-			return slog.LevelDebug
-		}
-		return slog.LevelInfo
-	}
-}
-
-var developmentMode bool
-
-// SetDevelopmentMode enables or disables development mode logging
-func SetDevelopmentMode(enabled bool) {
-	developmentMode = enabled
-	// Recreate the logger with the new log level
-	jsonLogger = slog.New(slog.NewJSONHandler(
-		os.Stdout,
-		&slog.HandlerOptions{
-			AddSource:   true,
-			Level:       getLogLevel(),
-			ReplaceAttr: replace,
-		}))
-}
-
-// isDevelopmentMode returns true if development mode is enabled
-func isDevelopmentMode() bool {
-	return developmentMode
-}
-
 var jsonLogger = slog.New(slog.NewJSONHandler(
 	os.Stdout,
 	&slog.HandlerOptions{
 		AddSource:   true,
-		Level:       getLogLevel(),
 		ReplaceAttr: replace,
 	}))
 
@@ -103,33 +61,4 @@ func Errorf(format string, args ...any) {
 
 func Warnf(format string, args ...any) {
 	logRecord(slog.LevelWarn, fmt.Sprintf(format, args...))
-}
-
-// Context-aware logging functions for better tracing
-func WithContext(ctx context.Context) *slog.Logger {
-	return jsonLogger.With()
-}
-
-func WithSession(sessionID string) *slog.Logger {
-	return jsonLogger.With("session_id", sessionID)
-}
-
-func WithRoute(routeID string) *slog.Logger {
-	return jsonLogger.With("route_id", routeID)
-}
-
-func WithRequest(sessionID, routeID, eventID string) *slog.Logger {
-	return jsonLogger.With(
-		"session_id", sessionID,
-		"route_id", routeID,
-		"event_id", eventID,
-	)
-}
-
-func WithTemplate(templateName string) *slog.Logger {
-	return jsonLogger.With("template", templateName)
-}
-
-func WithAction(actionName string) *slog.Logger {
-	return jsonLogger.With("action", actionName)
 }

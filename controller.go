@@ -259,8 +259,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 		c.debugLog = true
 		c.enableWatch = true
 		c.disableTemplateCache = true
-		// Enable debug logging in development mode
-		logger.SetDevelopmentMode(true)
 	}
 
 	if c.enableWatch {
