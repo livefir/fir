@@ -2,7 +2,14 @@
 
 ## 1. Overview
 
-This document outlines a plan to build a UI debugging tool for the `fir` framework. The goal is to improve the developer experience by providing insights into the event-driven communication between the server and the client.
+This document outlines a plan to build a UI debugging tool for the `fir` framework. The goal is to imp### Task Progress
+
+* [ ] **Milestone 0: Prerequisite Refactors (Internal)**
+  * [x] **0.1:** Decompose the monolithic `route.ServeHTTP` method.
+  * [ ] **0.2:** Introduce a `Renderer` interface.
+  * [ ] **0.3:** Refactor WebSocket connection logic into a `Connection` struct.
+  * [ ] **0.4:** Ensure `fir:` attribute parsing logic is self-contained.
+  * [ ] **0.5:** Replace `map[string]OnEventFunc` with `EventRegistry`. developer experience by providing insights into the event-driven communication between the server and the client.
 
 The tool will have two main components:
 
@@ -166,3 +173,12 @@ This is a parallel effort to improve the general debuggability of the core libra
 * [ ] **Milestone 6: Advanced Diagnostic Panels**
 
 This section breaks down the development of the debugging tool into a series of manageable, commit-friendly milestones. Each sub-milestone is designed to be a single, atomic commit.
+
+### Testing Requirements
+
+**Important**: After each milestone, ensure comprehensive testing by running:
+
+* `go test ./...` - Standard test suite
+* `DOCKER=1 go test ./...` - Full test suite including Docker-dependent tests (Redis pubsub, etc.)
+
+The Docker-enabled tests provide additional coverage for features like Redis-based pubsub functionality that require containerized services.

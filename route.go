@@ -343,135 +343,26 @@ func (rt *route) getEventTemplates() eventTemplates {
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timing := servertiming.FromContext(r.Context())
 	defer timing.NewMetric("route").Start().Stop()
-	if r.URL.Path == "/favicon.ico" {
-		http.NotFound(w, r)
-		return
-	}
-	if r.Method == http.MethodHead {
-		w.Header().Add("X-FIR-WEBSOCKET-ENABLED", strconv.FormatBool(!rt.disableWebsocket))
-		w.WriteHeader(http.StatusNoContent)
+
+	// Handle special requests
+	if !rt.handleSpecialRequests(w, r) {
 		return
 	}
 
+	// Setup path parameters if needed
+	r = rt.setupPathParameters(r)
+
+	// Route to appropriate handler based on request type
 	if websocket.IsWebSocketUpgrade(r) {
-		// onWebsocket: upgrade to websocket
-		if rt.disableWebsocket {
-			http.Error(w, "websocket is disabled", http.StatusForbidden)
-			return
-		}
+		rt.handleWebSocketUpgrade(w, r)
+	} else if rt.isJSONEventRequest(r) {
+		rt.handleJSONEvent(w, r)
+	} else if r.Method == http.MethodPost {
+		rt.handleFormPost(w, r)
+	} else if r.Method == http.MethodGet {
+		rt.handleGetRequest(w, r)
 	} else {
-		if rt.pathParamsFunc != nil {
-			r = r.WithContext(context.WithValue(r.Context(), PathParamsKey, rt.pathParamsFunc(r)))
-		}
-	}
-
-	if websocket.IsWebSocketUpgrade(r) {
-		onWebsocket(w, r, rt.cntrl)
-	} else if r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost {
-		// onEvents
-		var event Event
-		decoder := json.NewDecoder(r.Body)
-		decoder.DisallowUnknownFields()
-		err := decoder.Decode(&event)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if decoder.More() {
-			http.Error(w, "unknown fields in request body", http.StatusBadRequest)
-			return
-		}
-		if event.ID == "" {
-			http.Error(w, "event id is missing", http.StatusBadRequest)
-			return
-		}
-
-		eventCtx := RouteContext{
-			event:    event,
-			request:  r,
-			response: w,
-			route:    rt,
-		}
-
-		onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
-		if !ok {
-			http.Error(w, "event id is not registered", http.StatusBadRequest)
-			return
-		}
-
-		// error event is not published
-		errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, writeAndPublishEvents(eventCtx))
-		if errorEvent != nil {
-			writeEventHTTP(eventCtx, *errorEvent)
-		}
-
-	} else {
-		// postForm
-		if r.Method == http.MethodPost {
-			formAction := ""
-			values := r.URL.Query()
-			if len(values) == 1 {
-				event := values.Get("event")
-				if event != "" {
-					formAction = event
-				}
-			}
-			if formAction == "" && len(rt.onEvents) > 1 {
-				http.Error(w, "form action[?event=myaction] is missing and default onEvent can't be selected since there is more than 1", http.StatusBadRequest)
-				return
-			} else if formAction == "" && len(rt.onEvents) == 1 {
-				for k := range rt.onEvents {
-					formAction = k
-				}
-			}
-
-			err := r.ParseForm()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			urlValues := r.PostForm
-			params, err := json.Marshal(urlValues)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			event := Event{
-				ID:     formAction,
-				Params: params,
-				IsForm: true,
-			}
-
-			eventCtx := RouteContext{
-				event:     event,
-				request:   r,
-				response:  w,
-				route:     rt,
-				urlValues: urlValues,
-			}
-
-			onEventFunc, ok := rt.onEvents[event.ID]
-			if !ok {
-				http.Error(w, fmt.Sprintf("onEvent handler for %s not found", event.ID), http.StatusBadRequest)
-				return
-			}
-
-			handlePostFormResult(onEventFunc(eventCtx), eventCtx)
-
-		} else if r.Method == http.MethodGet {
-			// onLoad
-			event := Event{ID: rt.routeOpt.id}
-			eventCtx := RouteContext{
-				event:    event,
-				request:  r,
-				response: w,
-				route:    rt,
-				isOnLoad: true,
-			}
-			handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
-		} else {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -846,4 +737,160 @@ func findProjectRoot(startPath string) string {
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// handleSpecialRequests handles favicon and HEAD requests
+// Returns false if the request should be terminated early
+func (rt *route) handleSpecialRequests(w http.ResponseWriter, r *http.Request) bool {
+	if r.URL.Path == "/favicon.ico" {
+		http.NotFound(w, r)
+		return false
+	}
+	if r.Method == http.MethodHead {
+		w.Header().Add("X-FIR-WEBSOCKET-ENABLED", strconv.FormatBool(!rt.disableWebsocket))
+		w.WriteHeader(http.StatusNoContent)
+		return false
+	}
+	return true
+}
+
+// setupPathParameters sets up path parameters in the request context if needed
+func (rt *route) setupPathParameters(r *http.Request) *http.Request {
+	if !websocket.IsWebSocketUpgrade(r) && rt.pathParamsFunc != nil {
+		return r.WithContext(context.WithValue(r.Context(), PathParamsKey, rt.pathParamsFunc(r)))
+	}
+	return r
+}
+
+// isJSONEventRequest checks if the request is a JSON event request
+func (rt *route) isJSONEventRequest(r *http.Request) bool {
+	return r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost
+}
+
+// handleWebSocketUpgrade handles WebSocket upgrade requests
+func (rt *route) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) {
+	if rt.disableWebsocket {
+		http.Error(w, "websocket is disabled", http.StatusForbidden)
+		return
+	}
+	onWebsocket(w, r, rt.cntrl)
+}
+
+// handleJSONEvent handles JSON event requests
+func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
+	var event Event
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&event)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if decoder.More() {
+		http.Error(w, "unknown fields in request body", http.StatusBadRequest)
+		return
+	}
+	if event.ID == "" {
+		http.Error(w, "event id is missing", http.StatusBadRequest)
+		return
+	}
+
+	eventCtx := RouteContext{
+		event:    event,
+		request:  r,
+		response: w,
+		route:    rt,
+	}
+
+	onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
+	if !ok {
+		http.Error(w, "event id is not registered", http.StatusBadRequest)
+		return
+	}
+
+	// error event is not published
+	errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, writeAndPublishEvents(eventCtx))
+	if errorEvent != nil {
+		writeEventHTTP(eventCtx, *errorEvent)
+	}
+}
+
+// handleFormPost handles form POST requests
+func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
+	formAction := rt.determineFormAction(r)
+	if formAction == "" {
+		if len(rt.onEvents) > 1 {
+			http.Error(w, "form action[?event=myaction] is missing and default onEvent can't be selected since there is more than 1", http.StatusBadRequest)
+			return
+		}
+		// Use the single event handler if only one exists
+		for k := range rt.onEvents {
+			formAction = k
+		}
+	}
+
+	event, err := rt.parseFormEvent(r, formAction)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	eventCtx := RouteContext{
+		event:     event,
+		request:   r,
+		response:  w,
+		route:     rt,
+		urlValues: r.PostForm,
+	}
+
+	onEventFunc, ok := rt.onEvents[event.ID]
+	if !ok {
+		http.Error(w, fmt.Sprintf("onEvent handler for %s not found", event.ID), http.StatusBadRequest)
+		return
+	}
+
+	handlePostFormResult(onEventFunc(eventCtx), eventCtx)
+}
+
+// determineFormAction extracts the form action from query parameters
+func (rt *route) determineFormAction(r *http.Request) string {
+	values := r.URL.Query()
+	if len(values) == 1 {
+		if event := values.Get("event"); event != "" {
+			return event
+		}
+	}
+	return ""
+}
+
+// parseFormEvent parses form data into an Event struct
+func (rt *route) parseFormEvent(r *http.Request, formAction string) (Event, error) {
+	err := r.ParseForm()
+	if err != nil {
+		return Event{}, err
+	}
+
+	params, err := json.Marshal(r.PostForm)
+	if err != nil {
+		return Event{}, err
+	}
+
+	return Event{
+		ID:     formAction,
+		Params: params,
+		IsForm: true,
+	}, nil
+}
+
+// handleGetRequest handles GET requests (onLoad)
+func (rt *route) handleGetRequest(w http.ResponseWriter, r *http.Request) {
+	event := Event{ID: rt.routeOpt.id}
+	eventCtx := RouteContext{
+		event:    event,
+		request:  r,
+		response: w,
+		route:    rt,
+		isOnLoad: true,
+	}
+	handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
 }
