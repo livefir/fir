@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/livefir/fir/internal/logger"
 )
 
 // Assume Expressions, Binding, Eventexpression, Target structs are defined correctly
@@ -162,14 +160,6 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 // It accepts an actionValue to be used in the attribute, an optional templateValue,
 // and optional additionalModifiers to merge with parsed ones.
 func TranslateEventExpression(input string, actionValue string, templateValue string, additionalModifiers ...string) (string, error) {
-	translateLogger := logger.WithAction("translate_event")
-	translateLogger.Debug("translating event expression",
-		"input", input,
-		"action", actionValue,
-		"template", templateValue,
-		"additional_modifiers", additionalModifiers,
-	)
-
 	var template string
 	if templateValue != "" {
 		template = templateValue
@@ -177,17 +167,13 @@ func TranslateEventExpression(input string, actionValue string, templateValue st
 
 	parser, err := getRenderExpressionParser()
 	if err != nil {
-		translateLogger.Error("error creating parser", "error", err)
 		return "", fmt.Errorf("error creating parser: %w", err)
 	}
 
 	parsed, err := parseRenderExpression(parser, input)
 	if err != nil {
-		translateLogger.Error("error parsing render expression", "error", err, "input", input)
 		return "", fmt.Errorf("error parsing render expression: %w", err)
 	}
-
-	translateLogger.Debug("parsed expression", "expression_count", len(parsed.Expressions))
 
 	var results []string
 
