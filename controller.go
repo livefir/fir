@@ -53,6 +53,7 @@ type opt struct {
 	cache                 *cache.Cache
 	funcMap               template.FuncMap
 	dropDuplicateInterval time.Duration
+	renderer              Renderer
 }
 
 // ControllerOption is an option for the controller.
@@ -199,6 +200,13 @@ func EnableWatch(rootDir string, extensions ...string) ControllerOption {
 func DevelopmentMode(enable bool) ControllerOption {
 	return func(o *opt) {
 		o.developmentMode = enable
+	}
+}
+
+// WithRenderer is an option to set a custom renderer for the controller's routes.
+func WithRenderer(renderer Renderer) ControllerOption {
+	return func(o *opt) {
+		o.renderer = renderer
 	}
 }
 

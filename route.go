@@ -250,6 +250,7 @@ type route struct {
 	template       *template.Template
 	errorTemplate  *template.Template
 	eventTemplates eventTemplates
+	renderer       Renderer
 
 	cntrl *controller
 	routeOpt
@@ -258,10 +259,18 @@ type route struct {
 
 func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
 	routeOpt.opt = cntrl.opt
+
+	// Use the controller's renderer if specified, otherwise use the default
+	renderer := cntrl.opt.renderer
+	if renderer == nil {
+		renderer = NewTemplateRenderer()
+	}
+
 	rt := &route{
 		routeOpt:       *routeOpt,
 		cntrl:          cntrl,
 		eventTemplates: make(eventTemplates),
+		renderer:       renderer,
 	}
 	err := rt.parseTemplates()
 	if err != nil {
@@ -299,7 +308,7 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 }
 
 func writeEventHTTP(ctx RouteContext, event pubsub.Event) error {
-	events := renderDOMEvents(ctx, event)
+	events := ctx.route.renderer.RenderDOMEvents(ctx, event)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
 		logger.Errorf("error marshaling patch: %v", err)
@@ -489,7 +498,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx, false)(routeData{"errors": errs})
+		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, false)
 		return
 	}
 
@@ -510,7 +519,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 		onLoadData["errors"] = errs
-		renderRoute(ctx, false)(onLoadData)
+		ctx.route.renderer.RenderRoute(ctx, onLoadData, false)
 
 	case *routeDataWithState:
 		onLoadData := *errVal.routeData
@@ -528,7 +537,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 		onLoadData["errors"] = errs
-		renderRoute(ctx, false)(onLoadData)
+		ctx.route.renderer.RenderRoute(ctx, onLoadData, false)
 
 	case firErrors.Status:
 		errs := make(map[string]any)
@@ -546,7 +555,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx, true)(routeData{"errors": errs})
+		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, true)
 	case firErrors.Fields:
 		errs := make(map[string]any)
 		if onFormErr != nil {
@@ -563,7 +572,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		renderRoute(ctx, false)(routeData{"errors": errs})
+		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, false)
 	default:
 		var errs map[string]any
 		if onFormErr != nil {
@@ -586,7 +595,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			errs = map[string]any{
 				"onload": err.Error()}
 		}
-		renderRoute(ctx, false)(routeData{"errors": errs})
+		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, false)
 	}
 
 }

@@ -161,7 +161,7 @@ This is a parallel effort to improve the general debuggability of the core libra
 
 * [ ] **Milestone 0: Prerequisite Refactors (Internal)**
   * [x] **0.1:** Decompose the monolithic `route.ServeHTTP` method.
-  * [ ] **0.2:** Introduce a `Renderer` interface.
+  * [x] **0.2:** Introduce a `Renderer` interface.
   * [ ] **0.3:** Refactor WebSocket connection logic into a `Connection` struct.
   * [ ] **0.4:** Ensure `fir:` attribute parsing logic is self-contained.
   * [ ] **0.5:** Replace `map[string]OnEventFunc` with `EventRegistry`.

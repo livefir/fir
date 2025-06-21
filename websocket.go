@@ -402,7 +402,7 @@ loop:
 }
 
 func renderAndWriteEventWS(send chan []byte, channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
-	events := renderDOMEvents(ctx, pubsubEvent)
+	events := ctx.route.renderer.RenderDOMEvents(ctx, pubsubEvent)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
 		logger.Errorf("error: marshaling events %+v, err %v", events, err)
