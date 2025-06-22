@@ -217,7 +217,9 @@ type routeOpt struct {
 	funcMapMutex           *sync.RWMutex
 	eventSender            chan Event
 	onLoad                 OnEventFunc
-	onEvents               map[string]OnEventFunc
+	// TODO: onEvents can be removed in a future version since events are now managed by EventRegistry
+	// Keeping for backward compatibility during transition
+	onEvents map[string]OnEventFunc
 	opt
 }
 
@@ -272,6 +274,25 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
 		eventTemplates: make(eventTemplates),
 		renderer:       renderer,
 	}
+
+	// Register events in the controller's EventRegistry
+	if routeOpt.onEvents != nil {
+		for eventID, handler := range routeOpt.onEvents {
+			err := cntrl.eventRegistry.Register(routeOpt.id, eventID, handler)
+			if err != nil {
+				return nil, fmt.Errorf("failed to register event %s for route %s: %v", eventID, routeOpt.id, err)
+			}
+		}
+	}
+
+	// Register onLoad handler if present
+	if routeOpt.onLoad != nil {
+		err := cntrl.eventRegistry.Register(routeOpt.id, "load", routeOpt.onLoad)
+		if err != nil {
+			return nil, fmt.Errorf("failed to register onLoad for route %s: %v", routeOpt.id, err)
+		}
+	}
+
 	err := rt.parseTemplates()
 	if err != nil {
 		return nil, err
@@ -787,9 +808,15 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 		route:    rt,
 	}
 
-	onEventFunc, ok := rt.onEvents[strings.ToLower(event.ID)]
+	handlerInterface, ok := rt.cntrl.eventRegistry.Get(rt.id, strings.ToLower(event.ID))
 	if !ok {
 		http.Error(w, "event id is not registered", http.StatusBadRequest)
+		return
+	}
+
+	onEventFunc, ok := handlerInterface.(OnEventFunc)
+	if !ok {
+		http.Error(w, "invalid event handler type", http.StatusInternalServerError)
 		return
 	}
 
@@ -828,9 +855,15 @@ func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
 		urlValues: r.PostForm,
 	}
 
-	onEventFunc, ok := rt.onEvents[event.ID]
+	handlerInterface, ok := rt.cntrl.eventRegistry.Get(rt.id, event.ID)
 	if !ok {
 		http.Error(w, fmt.Sprintf("onEvent handler for %s not found", event.ID), http.StatusBadRequest)
+		return
+	}
+
+	onEventFunc, ok := handlerInterface.(OnEventFunc)
+	if !ok {
+		http.Error(w, "invalid event handler type", http.StatusInternalServerError)
 		return
 	}
 

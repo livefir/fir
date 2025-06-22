@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/livefir/fir/internal/event"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
@@ -26,6 +27,8 @@ import (
 type Controller interface {
 	Route(route Route) http.HandlerFunc
 	RouteFunc(options RouteFunc) http.HandlerFunc
+	// GetEventRegistry returns the event registry for debug introspection
+	GetEventRegistry() event.EventRegistry
 }
 
 type opt struct {
@@ -258,9 +261,10 @@ func NewController(name string, options ...ControllerOption) Controller {
 	}
 
 	c := &controller{
-		opt:    *o,
-		name:   name,
-		routes: make(map[string]*route),
+		opt:           *o,
+		name:          name,
+		routes:        make(map[string]*route),
+		eventRegistry: event.NewEventRegistry(),
 	}
 	if c.developmentMode {
 		fmt.Println("controller starting in developer mode")
@@ -290,8 +294,9 @@ func NewController(name string, options ...ControllerOption) Controller {
 }
 
 type controller struct {
-	name   string
-	routes map[string]*route
+	name          string
+	routes        map[string]*route
+	eventRegistry event.EventRegistry
 	opt
 }
 
@@ -352,4 +357,10 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 	c.routes[r.id] = r
 
 	return servertiming.Middleware(r, nil).ServeHTTP
+}
+
+// GetEventRegistry returns the event registry for debug introspection
+// This method is primarily intended for debug tools and static analysis
+func (c *controller) GetEventRegistry() event.EventRegistry {
+	return c.eventRegistry
 }

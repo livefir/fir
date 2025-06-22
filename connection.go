@@ -201,9 +201,15 @@ func (c *Connection) handleServerEvent(route *route, event Event) {
 		)
 	withEventLogger.Info("received server event")
 
-	onEventFunc, ok := route.onEvents[strings.ToLower(event.ID)]
+	handlerInterface, ok := route.cntrl.eventRegistry.Get(route.id, strings.ToLower(event.ID))
 	if !ok {
 		logger.Errorf("err: event %v, event.id not found", event)
+		return
+	}
+
+	onEventFunc, ok := handlerInterface.(OnEventFunc)
+	if !ok {
+		logger.Errorf("invalid event handler type for event %v", event)
 		return
 	}
 
@@ -224,7 +230,8 @@ func (c *Connection) SendConnectedEvent() {
 	}
 
 	for _, rt := range c.controller.routes {
-		if rt.onEvents[EventSocketConnected] == nil {
+		_, hasConnectedHandler := c.controller.eventRegistry.Get(rt.id, EventSocketConnected)
+		if !hasConnectedHandler {
 			continue
 		}
 
@@ -266,7 +273,8 @@ func (c *Connection) SendDisconnectedEvent() {
 	}
 
 	for _, rt := range c.controller.routes {
-		if rt.onEvents[EventSocketDisconnected] == nil {
+		_, hasDisconnectedHandler := c.controller.eventRegistry.Get(rt.id, EventSocketDisconnected)
+		if !hasDisconnectedHandler {
 			continue
 		}
 
@@ -405,9 +413,15 @@ func (c *Connection) processEvent(event Event, eventRouteID string) {
 		)
 	withEventLogger.Debug("received user event")
 
-	onEventFunc, ok := eventRoute.onEvents[strings.ToLower(event.ID)]
+	handlerInterface, ok := eventRoute.cntrl.eventRegistry.Get(eventRoute.id, strings.ToLower(event.ID))
 	if !ok {
 		logger.Errorf("err: event %v, event.id not found", event)
+		return
+	}
+
+	onEventFunc, ok := handlerInterface.(OnEventFunc)
+	if !ok {
+		logger.Errorf("invalid event handler type for event %v", event)
 		return
 	}
 

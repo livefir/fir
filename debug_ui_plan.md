@@ -157,21 +157,306 @@ This is a parallel effort to improve the general debuggability of the core libra
   * [x] **0.2:** Introduce a `Renderer` interface.
   * [x] **0.3:** Refactor WebSocket connection logic into a `Connection` struct.
   * [x] **0.4:** Ensure `fir:` attribute parsing logic is self-contained.
-  * [ ] **0.5:** Replace `map[string]OnEventFunc` with `EventRegistry`.
+  * [x] **0.5:** Replace `map[string]OnEventFunc` with `EventRegistry`.
+    * [x] **0.5.1:** Analyze current event handling architecture and identify touch points
+    * [x] **0.5.2:** Create `internal/event/registry.go` with `EventRegistry` interface and implementation
+    * [x] **0.5.3:** Update `Controller` to use `EventRegistry` instead of `map[string]OnEventFunc`
+    * [x] **0.5.4:** Migrate route event registration to use `EventRegistry`
+    * [x] **0.5.5:** Add introspection API for debug tools and clean up old event handling code
+
 * [ ] **Milestone 1: Foundational Logging & Configuration**
+  * [ ] **1.1:** Analyze current logging patterns and create centralized logger design
+    * [ ] **1.1.1:** Audit existing logging calls across the codebase
+    * [ ] **1.1.2:** Design `internal/logger` package with structured logging support (slog)
+    * [ ] **1.1.3:** Create configurable logger with debug levels and formatting options
+  * [ ] **1.2:** Implement centralized logger and migrate existing logging
+    * [ ] **1.2.1:** Create `internal/logger/logger.go` with slog-based implementation
+    * [ ] **1.2.2:** Replace all existing log calls to use centralized logger
+    * [ ] **1.2.3:** Add debug-specific log points for request lifecycle
+  * [ ] **1.3:** Add controller debug configuration
+    * [ ] **1.3.1:** Create `WithDebug()` controller option
+    * [ ] **1.3.2:** Implement debug mode detection and logger configuration
+    * [ ] **1.3.3:** Add performance-focused log points (event timing, patch metrics)
+
 * [ ] **Milestone 2: Static Mismatch Analyzer**
+  * [ ] **2.1:** Create analyzer package foundation
+    * [ ] **2.1.1:** Create `internal/debug/analyzer.go` with basic structure
+    * [ ] **2.1.2:** Implement event source identification using `EventRegistry`
+    * [ ] **2.1.3:** Create route-to-events mapping functionality
+  * [ ] **2.2:** Implement client listener extraction
+    * [ ] **2.2.1:** Create template parsing utilities to find `fir:` attributes
+    * [ ] **2.2.2:** Extract event IDs from `x-on:fir:*` and `@fir:*` listeners
+    * [ ] **2.2.3:** Build client listener map per route/template
+  * [ ] **2.3:** Implement comparison and reporting
+    * [ ] **2.3.1:** Create mismatch detection algorithm (server events vs client listeners)
+    * [ ] **2.3.2:** Generate structured warnings for orphaned events
+    * [ ] **2.3.3:** Integrate analyzer into controller startup (development mode only)
+
 * [ ] **Milestone 3: Live Capture Backend & Debug UI Scaffold**
+  * [ ] **3.1:** Create debug instrumentation infrastructure
+    * [ ] **3.1.1:** Create `internal/debug/capture.go` for event data capture
+    * [ ] **3.1.2:** Instrument controller's request handling to capture events
+    * [ ] **3.1.3:** Design event data structures for debug UI consumption
+  * [ ] **3.2:** Implement WebSocket hub for debug UI
+    * [ ] **3.2.1:** Create `internal/debug/hub.go` with WebSocket broadcasting
+    * [ ] **3.2.2:** Implement client connection management and message routing
+    * [ ] **3.2.3:** Add graceful cleanup and error handling
+  * [ ] **3.3:** Create debug UI scaffold and assets
+    * [ ] **3.3.1:** Create basic HTML/CSS/JS assets in `internal/debug/assets/`
+    * [ ] **3.3.2:** Implement `internal/debug/assets.go` with embed directives
+    * [ ] **3.3.3:** Add automatic `/fir/debug` route handling in controller
+  * [ ] **3.4:** Integrate debug mode with controller
+    * [ ] **3.4.1:** Update controller to serve debug UI when debug mode enabled
+    * [ ] **3.4.2:** Connect instrumentation to WebSocket hub
+    * [ ] **3.4.3:** Test basic debug UI loading and WebSocket connection
+
 * [ ] **Milestone 4: The "Events" Inspector Panel**
+  * [ ] **4.1:** Implement events capture and storage
+    * [ ] **4.1.1:** Design event data structure (request context, client event, server response)
+    * [ ] **4.1.2:** Implement in-memory event storage with size limits
+    * [ ] **4.1.3:** Capture timing metrics (handler duration, render duration)
+  * [ ] **4.2:** Create events UI components
+    * [ ] **4.2.1:** Build chronological events list with filtering
+    * [ ] **4.2.2:** Implement event detail view with request/response breakdown
+    * [ ] **4.2.3:** Add transport type indicators (WebSocket vs HTTP)
+  * [ ] **4.3:** Implement real-time event streaming
+    * [ ] **4.3.1:** Stream new events to UI via WebSocket
+    * [ ] **4.3.2:** Update UI dynamically with performance metrics
+    * [ ] **4.3.3:** Add event search and filtering capabilities
+
 * [ ] **Milestone 5: Advanced Inspector Panels**
+  * [ ] **5.1:** Implement State Inspector
+    * [ ] **5.1.1:** Design client-side state capture mechanism
+    * [ ] **5.1.2:** Create real-time state viewer with JSON formatting
+    * [ ] **5.1.3:** Add state change tracking and diff visualization
+  * [ ] **5.2:** Implement Routes Inspector
+    * [ ] **5.2.1:** Use `EventRegistry` to build comprehensive route overview
+    * [ ] **5.2.2:** Display route patterns, templates, and associated events
+    * [ ] **5.2.3:** Add route-specific event filtering and navigation
+  * [ ] **5.3:** Implement Performance Profiler
+    * [ ] **5.3.1:** Collect detailed timing metrics for each request phase
+    * [ ] **5.3.2:** Create performance visualization charts and breakdowns
+    * [ ] **5.3.3:** Add performance comparison and trending capabilities
+
 * [ ] **Milestone 6: Advanced Diagnostic Panels**
+  * [ ] **6.1:** Implement Error Reporting Panel
+    * [ ] **6.1.1:** Capture runtime errors, panics, and template execution errors
+    * [ ] **6.1.2:** Display errors with full stack traces and context
+    * [ ] **6.1.3:** Add error filtering, search, and resolution tracking
+  * [ ] **6.2:** Implement Analysis Panel
+    * [ ] **6.2.1:** Display static mismatch analysis results in UI
+    * [ ] **6.2.2:** Add real-time analysis updates with file watching
+    * [ ] **6.2.3:** Provide actionable suggestions for fixing mismatches
+  * [ ] **6.3:** Add Development Workflow Integration
+    * [ ] **6.3.1:** Implement file watching for templates and Go files
+    * [ ] **6.3.2:** Add hot reload integration for template changes
+    * [ ] **6.3.3:** Create development-friendly features (clear history, export logs, etc.)
 
-This section breaks down the development of the debugging tool into a series of manageable, commit-friendly milestones. Each sub-milestone is designed to be a single, atomic commit.
+This section breaks down the development of the debugging tool into a series of manageable, commit-friendly milestones. Each sub-milestone is designed to be a single, atomic commit that can be completed in 1-3 hours.
 
-### Testing Requirements
+### Sub-Milestone Validation
 
-**Important**: After each milestone, ensure comprehensive testing by running:
+**Important**: After each sub-milestone, ensure quality by running:
+
+* `go build .` - Verify compilation succeeds
+* `go test ./...` - Run standard test suite  
+* `staticcheck ./...` - Check for lint issues
+* Manual testing of affected functionality
+
+### Full Milestone Testing
+
+**Important**: After completing each full milestone (0.5, 1, 2, etc.), ensure comprehensive testing by running:
 
 * `go test ./...` - Standard test suite
 * `DOCKER=1 go test ./...` - Full test suite including Docker-dependent tests (Redis pubsub, etc.)
 
 The Docker-enabled tests provide additional coverage for features like Redis-based pubsub functionality that require containerized services.
+
+## 12. Process Improvements and Best Practices
+
+*Based on learnings from Milestone 0.4 implementation, the following process improvements have been identified to ensure smooth execution of future milestones:*
+
+### 12.1. Milestone Decomposition Strategy
+
+**Break Down Large Milestones**: Large milestones should be broken down into smaller, well-defined sub-milestones of 1-3 hours each. This provides:
+
+* Better progress tracking and review points
+* Reduced risk of scope creep
+* Easier rollback if issues arise
+* More manageable code review units
+
+**Example**: Instead of "0.4: Ensure `fir:` attribute parsing logic is self-contained", break it down into:
+
+* 0.4.1: Analyze current parsing/grammar duplication
+* 0.4.2: Create consolidated `internal/firattr` package
+* 0.4.3: Move parser and translation logic to `firattr`
+* 0.4.4: Update consumers to use new API
+* 0.4.5: Clean up unused code and run static analysis
+
+### 12.2. Implementation Planning
+
+**Write Implementation Details Before Coding**: Before starting any milestone, write down:
+
+* Specific files that need to be modified
+* Key functions/types that need to be moved or refactored
+* Potential blockers and architectural constraints
+* Expected test impact and validation strategy
+
+**Document Architectural Boundaries**: Clearly identify what can and cannot be moved/refactored and why. This prevents wasted effort and provides valuable context for future work.
+
+### 12.3. Quality Assurance Process
+
+**Continuous Validation**: After each major change:
+
+* Run `go build .` to ensure compilation
+* Run `go test ./...` to verify functionality
+* Run static analysis tools (e.g., `staticcheck`) to catch lint issues
+* Fix issues immediately rather than accumulating technical debt
+
+**Clean Up Immediately**: Remove unused code, wrapper functions, and imports immediately after refactoring rather than leaving them for later cleanup.
+
+### 12.4. Git and Change Management
+
+**Atomic Commits**: Structure commits to be atomic and reviewable:
+
+* One logical change per commit
+* Use `git commit --amend` to include related cleanup in the same commit
+* Write descriptive commit messages that explain both what and why
+
+**Test-Driven Validation**: Before considering a milestone complete:
+
+* All existing tests must pass
+* Static analysis must be clean
+* Build must succeed without warnings
+* Any new functionality should have appropriate test coverage
+
+### 12.5. Communication and Documentation
+
+**Capture Learnings**: Document key insights, blockers, and architectural decisions discovered during implementation. This knowledge is valuable for:
+
+* Future milestones in the same project
+* Similar refactoring efforts in other projects
+* Onboarding new team members
+
+**Regular Check-ins**: For complex milestones, consider intermediate check-ins to validate approach and catch issues early.
+
+### 12.6. Risk Mitigation
+
+**Incremental Refactoring**: For large refactors, prefer incremental changes that maintain functionality at each step over big-bang rewrites.
+
+**Validation Points**: Establish clear validation criteria for each sub-milestone to ensure quality and prevent regressions.
+
+**Rollback Strategy**: Always maintain a clean git history that allows easy rollback to the last known good state.
+
+### 12.7. Future Milestone Planning
+
+These improvements should be applied to the remaining milestones (0.5 through 6) by:
+
+1. Breaking down each milestone into smaller sub-milestones
+2. Writing detailed implementation plans before starting
+3. Establishing clear validation criteria for each step
+4. Planning for continuous testing and cleanup
+
+*These process improvements ensure that future milestones maintain high code quality while progressing efficiently toward the debug UI goals.*
+
+## Milestone Completion Notes
+
+### Milestone 0.5 - EventRegistry (COMPLETED)
+
+**Completion Date**: December 2024  
+**Duration**: Full implementation cycle  
+**Files Modified**:
+
+* Created: `internal/event/registry.go` (EventRegistry interface and implementation)
+* Created: `internal/event/registry_test.go` (comprehensive unit and concurrency tests)
+* Created: `event_registry_integration_test.go` (integration tests)
+* Modified: `controller.go` (added EventRegistry instantiation and GetEventRegistry method)
+* Modified: `route.go` (integrated event registration and lookup with registry)
+* Modified: `connection.go` (updated to use registry for event execution)
+
+**Key Achievements**:
+
+* ✅ Thread-safe EventRegistry implementation with RWMutex protection
+* ✅ Route-scoped event namespacing (events registered per route ID)
+* ✅ Complete introspection API (`GetAllEvents()`, `GetRouteEvents()`) for debug tools
+* ✅ Backward compatibility maintained (legacy `onEvents` map preserved with TODO)
+* ✅ All existing tests pass without modification
+* ✅ No performance regression - event handling optimized with better data structures
+* ✅ Comprehensive test coverage (unit, integration, concurrency, edge cases)
+* ✅ Clean code quality verified with staticcheck
+
+**Technical Details**:
+
+* EventRegistry uses `interface{}` for handler type to avoid circular imports
+* Type assertion to `OnEventFunc` performed at execution time
+* Registry supports efficient event lookup with `map[routeID]map[eventID]handler` structure
+* Full isolation between routes - events in one route don't interfere with others
+* Safe concurrent registration and execution operations
+
+**Next Steps**: Ready to proceed to Milestone 1 (Foundational Logging & Configuration)
+
+### Next Milestone Implementation Plan: 0.5 - EventRegistry
+
+**Before starting Milestone 0.5, here is the detailed implementation plan:**
+
+#### Files to Modify/Create
+
+* **New**: `internal/event/registry.go` - Core EventRegistry implementation
+* **Modify**: `controller.go` - Replace map[string]OnEventFunc with EventRegistry
+* **Modify**: `route.go` - Update event registration to use EventRegistry
+* **New**: `internal/event/registry_test.go` - Comprehensive tests for EventRegistry
+* **Modify**: Any files that directly access controller's event map
+
+#### Architecture Overview
+
+```go
+// EventRegistry interface for loose coupling
+type EventRegistry interface {
+    Register(routeID, eventID string, handler OnEventFunc) error
+    Get(routeID, eventID string) (OnEventFunc, bool)
+    GetRouteEvents(routeID string) map[string]OnEventFunc
+    GetAllEvents() map[string]map[string]OnEventFunc  // For debug introspection
+    Remove(routeID, eventID string) bool
+}
+
+// Implementation will be thread-safe with RWMutex
+// Will support route-scoped event namespacing
+// Will provide introspection API for debug tools
+```
+
+#### Key Functions to Implement
+
+1. `NewEventRegistry() EventRegistry` - Constructor
+2. `Register(routeID, eventID string, handler OnEventFunc) error` - Event registration
+3. `Get(routeID, eventID string) (OnEventFunc, bool)` - Event lookup for execution
+4. `GetAllEvents() map[string]map[string]OnEventFunc` - Debug introspection
+5. Migration functions in controller.go to replace direct map access
+
+#### Potential Blockers
+
+* **Event ID conflicts**: Need to decide on route-scoped vs global event namespacing
+* **Backward compatibility**: Ensure existing OnEvent calls continue to work
+* **Thread safety**: Event registration vs execution concurrency needs careful handling
+* **Memory management**: Consider event handler lifecycle and cleanup
+
+#### Test Strategy
+
+* Unit tests for all EventRegistry methods
+* Concurrent access tests for thread safety
+* Integration tests with existing route/controller functionality
+* Performance benchmarks to ensure no regression
+
+#### Expected Impact
+
+* **Breaking changes**: None - should be transparent to existing code
+* **Performance**: Minimal overhead, possibly slight improvement due to better data structure
+* **Dependencies**: No new external dependencies required
+* **Debug capability**: Enables introspection for static analysis and debug UI
+
+#### Success Criteria
+
+* All existing tests pass without modification
+* EventRegistry provides all functionality of current map-based approach
+* Debug tools can enumerate all registered events
+* No performance regression in event handling
+* Thread-safe operation under concurrent load
