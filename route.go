@@ -718,30 +718,6 @@ func resolveTemplatePath(path string, callerDepth int) (string, bool) {
 	return resolvedPath, isValidFilePath
 }
 
-// findProjectRoot walks up the directory tree from the given file path
-// looking for a go.mod file to determine the project root
-func findProjectRoot(startPath string) string {
-	dir := filepath.Dir(startPath)
-	for {
-		// Check if go.mod exists in current directory
-		goModPath := filepath.Join(dir, "go.mod")
-		if _, err := filepath.Abs(goModPath); err == nil {
-			if fileExists(goModPath) {
-				return dir
-			}
-		}
-
-		// Move up one directory
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached the root directory, stop
-			break
-		}
-		dir = parent
-	}
-	return ""
-}
-
 // fileExists checks if a file exists
 func fileExists(path string) bool {
 	_, err := os.Stat(path)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/icholy/replace"
+	"github.com/livefir/fir/internal/firattr"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/sourcegraph/conc/pool"
 	"github.com/teris-io/shortid"
@@ -415,8 +416,8 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 				attrsToRemove[i] = struct{}{} // Mark original attribute for removal
 
-				// Use parseActionExpression from lexer.go to parse the base key
-				actionName, params, err := parseActionExpression(baseAttrKey)
+				// Use firattr.ParseActionExpression to parse the base key
+				actionName, params, err := firattr.ParseActionExpression(baseAttrKey)
 				if err != nil {
 					// Instead of logging and continuing, return the error
 					traverseErr = fmt.Errorf("attribute key '%s' has invalid format: %w", attr.Key, err)
@@ -566,7 +567,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 	}
 
 	// Render children if rendering body/doc, or the node itself if it's the root fragment
-	startNode := renderNode.FirstChild
+	var startNode *html.Node
 	if renderNode == doc {
 		startNode = doc.FirstChild // Render from the first actual node in the fragment
 	} else if renderNode != nil && renderNode.Data == "body" {
@@ -699,12 +700,12 @@ func validateGeneratedTemplateNames(doc *html.Node, content []byte) ([]byte, err
 	replacer = func(node *html.Node) {
 		if node.Type == html.ElementNode {
 			for _, attr := range node.Attr {
-				if isFirEvent(attr.Key) && strings.Contains(attr.Key, FirGenTemplatePrefix) {
+				if firattr.IsFirEvent(attr.Key) && strings.Contains(attr.Key, FirGenTemplatePrefix) {
 					block := getHtmlContent(node)
-					generatedTemplateName := extractTemplateName(attr.Key)
+					generatedTemplateName := firattr.ExtractTemplateName(attr.Key)
 					// if the content is a valid HTML template, replace the template name with fir-<random string>
 					// if the content is not a valid HTML template, remove the generated template name
-					if isHtmlTemplate(block) {
+					if firattr.IsHTMLTemplate(block) {
 						content = replaceGeneratedTemplateName(content, generatedTemplateName, block)
 					} else {
 						content = removeTemplateNamespace(content, generatedTemplateName)
@@ -728,9 +729,9 @@ func extractTemplateBlocks(doc *html.Node, blocks map[string]string) {
 	extractor = func(node *html.Node) {
 		if node.Type == html.ElementNode {
 			for _, attr := range node.Attr {
-				if isFirEvent(attr.Key) && strings.Contains(attr.Key, "::"+FirDefaultTemplatePrefix) {
-					if block := getHtmlContent(node); isHtmlTemplate(block) {
-						blocks[extractTemplateName(attr.Key)] = block
+				if firattr.IsFirEvent(attr.Key) && strings.Contains(attr.Key, "::"+FirDefaultTemplatePrefix) {
+					if block := getHtmlContent(node); firattr.IsHTMLTemplate(block) {
+						blocks[firattr.ExtractTemplateName(attr.Key)] = block
 					}
 				}
 			}
@@ -754,18 +755,6 @@ func getHtmlContent(node *html.Node) string {
 		}
 	}
 	return block.String()
-}
-
-func isFirEvent(key string) bool {
-	return strings.HasPrefix(key, FirAtPrefix) || strings.HasPrefix(key, FirXonPrefix)
-}
-
-func extractTemplateName(key string) string {
-	return strings.Split(key, "::")[1]
-}
-
-func isHtmlTemplate(block string) bool {
-	return strings.Contains(block, "{{") && strings.Contains(block, "}}")
 }
 
 // replaceGeneratedTemplateName replaces the template name in the content with a new template name.

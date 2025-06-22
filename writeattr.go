@@ -7,117 +7,9 @@ import (
 
 	"slices"
 
-	"github.com/valyala/bytebufferpool"
+	"github.com/livefir/fir/internal/firattr"
 	"golang.org/x/net/html"
 )
-
-func htmlNodeToBytes(n *html.Node) []byte {
-	return []byte(htmlNodetoString(n))
-}
-
-func htmlNodetoString(n *html.Node) string {
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
-	err := html.Render(buf, n)
-	if err != nil {
-		panic(fmt.Sprintf("failed to render HTML: %v", err))
-	}
-	return html.UnescapeString(buf.String())
-}
-
-// Recursive function to set the "fir-key" attribute to all nested children
-func setKeyToChildren(node *html.Node, key string) {
-	if node == nil || node.Type != html.ElementNode {
-		return
-	}
-
-	if key == "" {
-		for _, attr := range node.Attr {
-			if attr.Key == "fir-key" {
-				key = attr.Val
-				break
-			}
-		}
-	} else {
-		for _, attr := range node.Attr {
-			if attr.Key == "fir-key" {
-				if key != attr.Val {
-					setKeyToChildren(node, attr.Val)
-				}
-				break
-			}
-		}
-	}
-
-	if key == "" {
-		return
-	}
-
-	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		setKeyToChildren(child, key)
-
-		if child.Type == html.ElementNode {
-			hasPrefixAttribute := false
-			for _, attr := range child.Attr {
-				if strings.HasPrefix(attr.Key, "@") || strings.HasPrefix(attr.Key, "x-on") {
-					hasPrefixAttribute = true
-					break
-				}
-			}
-
-			if !hasPrefixAttribute {
-				continue
-			}
-
-			hasKeyAttribute := false
-			for _, attr := range child.Attr {
-				if attr.Key == "fir-key" {
-					hasKeyAttribute = true
-					break
-				}
-			}
-
-			if !hasKeyAttribute {
-				child.Attr = append(child.Attr, html.Attribute{Key: "fir-key", Val: key})
-			}
-		}
-	}
-}
-
-func removeAttr(n *html.Node, attr string) {
-	for i, a := range n.Attr {
-		if a.Key == attr {
-			n.Attr = append(n.Attr[:i], n.Attr[i+1:]...)
-			break
-		}
-	}
-
-}
-
-func hasAttr(n *html.Node, attr string) bool {
-	for _, a := range n.Attr {
-		if a.Key == attr {
-			return true
-		}
-	}
-
-	return false
-}
-
-func setAttr(n *html.Node, key, val string) {
-	n.Attr = append(n.Attr, html.Attribute{Key: key, Val: val})
-}
-
-func getAttr(n *html.Node, key string) string {
-
-	for _, a := range n.Attr {
-		if a.Key == key {
-			return a.Val
-		}
-	}
-
-	return ""
-}
 
 func addAttributes(content []byte) []byte {
 	// First, process x-fir-* attributes and convert them to @fir: attributes
@@ -134,12 +26,12 @@ func addAttributes(content []byte) []byte {
 		panic(err)
 	}
 	writeAttributes(doc)
-	return htmlNodeToBytes(doc)
+	return firattr.HTMLNodeToBytes(doc)
 }
 
 func writeAttributes(node *html.Node) {
 	if node.Type == html.ElementNode {
-		setKeyToChildren(node, "")
+		firattr.SetKeyToChildren(node, "")
 
 		attrMap := make(map[string]string)
 		for _, attr := range node.Attr {
@@ -166,10 +58,10 @@ func writeAttributes(node *html.Node) {
 			}
 
 			// eventns might have a filter:[e1:ok,e2:ok] containing multiple event:state separated by comma
-			eventnsList, filterExists := getEventNsList(eventns)
+			eventnsList, filterExists := firattr.GetEventNsList(eventns)
 			// if filter exists remove the current attribute from the node
 			if filterExists {
-				removeAttr(node, attrKey)
+				firattr.RemoveAttr(node, attrKey)
 			}
 
 			for _, eventns := range eventnsList {
@@ -187,20 +79,20 @@ func writeAttributes(node *html.Node) {
 				if len(modifiers) == 0 {
 					eventnsWithModifiers = eventns
 				}
-				atFirOk := hasAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers))
-				xOnFirOk := hasAttr(node, fmt.Sprintf("x-on:fir:%s", eventnsWithModifiers))
+				atFirOk := firattr.HasAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers))
+				xOnFirOk := firattr.HasAttr(node, fmt.Sprintf("x-on:fir:%s", eventnsWithModifiers))
 				// if the node already has @fir:x attribute, then skip
 				if !atFirOk && !xOnFirOk {
-					setAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers), attrVal)
+					firattr.SetAttr(node, fmt.Sprintf("@fir:%s", eventnsWithModifiers), attrVal)
 				}
 
 				// set class fir-myevent-ok--myblock
-				key := getAttr(node, "fir-key")
-				targetClass := fmt.Sprintf("fir-%s", getClassNameWithKey(eventns, &key))
-				classes := strings.Fields(getAttr(node, "class"))
+				key := firattr.GetAttr(node, "fir-key")
+				targetClass := fmt.Sprintf("fir-%s", firattr.GetClassNameWithKey(eventns, &key))
+				classes := strings.Fields(firattr.GetAttr(node, "class"))
 				if !slices.Contains(classes, targetClass) {
 					classes = append(classes, targetClass)
-					removeAttr(node, "class")
+					firattr.RemoveAttr(node, "class")
 					node.Attr = append(node.Attr, html.Attribute{Key: "class", Val: strings.Join(classes, " ")})
 				}
 			}

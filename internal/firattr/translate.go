@@ -1,14 +1,10 @@
-package fir
+package firattr
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 )
-
-// Assume Expressions, Binding, Eventexpression, Target structs are defined correctly
-// matching the grammar, including Target using "=>" for Action.
-// Assume Eventexpression has a Modifier field, e.g., Modifier string `@("." @Ident)?`
 
 // Helper function to get state or default to ":ok"
 func getStateOrDefault(state string) string {
@@ -36,11 +32,7 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 		}
 	}
 
-	parser, err := getRenderExpressionParser()
-	if err != nil {
-		return "", fmt.Errorf("failed to create parser: %w", err)
-	}
-	parsed, err := parseRenderExpression(parser, input)
+	parsed, err := ParseRenderExpression(input)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse input: %w", err)
 	}
@@ -165,12 +157,7 @@ func TranslateEventExpression(input string, actionValue string, templateValue st
 		template = templateValue
 	}
 
-	parser, err := getRenderExpressionParser()
-	if err != nil {
-		return "", fmt.Errorf("error creating parser: %w", err)
-	}
-
-	parsed, err := parseRenderExpression(parser, input)
+	parsed, err := ParseRenderExpression(input)
 	if err != nil {
 		return "", fmt.Errorf("error parsing render expression: %w", err)
 	}
@@ -239,12 +226,3 @@ func TranslateEventExpression(input string, actionValue string, templateValue st
 
 	return strings.Join(results, "\n"), nil
 }
-
-// Assume parseRenderExpression, struct definitions, and getRenderExpressionParser are correctly defined.
-// func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) { ... }
-// type Expressions struct { Expressions []*Expression `@(@@ (";" @@)*)? ';' ?` } // Example grammar
-// type Expression struct { Bindings []*Binding `@@ ("," @@)*` }
-// type Binding struct { Eventexpressions []*Eventexpression `@@+` Target *Target `@@?` }
-// type Eventexpression struct { Name string `@Ident`; State string `(":" @("ok" | "error" | "pending" | "done"))?`; Modifier string `("." @Ident)?` }
-// type Target struct { Template string `("->" @Ident)?`; Action string `("=>" @Ident)?` }
-// func getRenderExpressionParser() (*participle.Parser[Expressions], error) { ... }

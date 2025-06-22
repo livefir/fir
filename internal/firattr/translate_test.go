@@ -1,4 +1,4 @@
-package fir
+package firattr
 
 import (
 	"testing"

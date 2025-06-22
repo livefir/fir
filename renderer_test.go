@@ -30,15 +30,11 @@ func (mr *MockRenderer) RenderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Eve
 func TestRendererInterface(t *testing.T) {
 	// Test that the default TemplateRenderer implements the interface
 	var renderer Renderer = NewTemplateRenderer()
-	if renderer == nil {
-		t.Fatal("NewTemplateRenderer should return a valid Renderer")
-	}
+	_ = renderer // Verify it implements the interface
 
 	// Test that our mock implements the interface
 	var mockRenderer Renderer = &MockRenderer{}
-	if mockRenderer == nil {
-		t.Fatal("MockRenderer should implement Renderer interface")
-	}
+	_ = mockRenderer // Verify it implements the interface
 }
 
 func TestCustomRenderer(t *testing.T) {

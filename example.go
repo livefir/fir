@@ -60,28 +60,6 @@ func createTodo(db *bolthold.Store) OnEventFunc {
 	}
 }
 
-func updateTodo(db *bolthold.Store) OnEventFunc {
-	type updateReq struct {
-		TodoID uint64 `json:"todoID"`
-		Text   string `json:"text"`
-	}
-	return func(ctx RouteContext) error {
-		req := new(updateReq)
-		if err := ctx.Bind(req); err != nil {
-			return err
-		}
-		var todo Todo
-		if err := db.Get(req.TodoID, &todo); err != nil {
-			return err
-		}
-		todo.Text = req.Text
-		if err := db.Update(req.TodoID, &todo); err != nil {
-			return err
-		}
-		return ctx.Data(todo)
-	}
-}
-
 func toggleDone(db *bolthold.Store) OnEventFunc {
 	type doneReq struct {
 		TodoID uint64 `json:"todoID"`

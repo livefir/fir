@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"time"
 
 	"github.com/livefir/fir"
 )
@@ -23,11 +22,8 @@ func NewRoute(contentFile string) fir.RouteOptions {
 
 // newRoute is the internal implementation that creates the route options.
 func newRoute(contentFile string) fir.RouteOptions {
-	// Seed random number generator for generating unique keys for new inputs.
-	// It's good practice to seed once, ideally in main, but for this example structure,
-	// seeding here ensures it's done if this route is used.
-	// For more complex apps, consider a global init.
-	rand.Seed(time.Now().UnixNano())
+	// Note: As of Go 1.20, global random number generator is automatically seeded
+	// and rand.Seed() is deprecated. No need to manually seed anymore.
 
 	return fir.RouteOptions{
 		fir.ID("formbuilder"),

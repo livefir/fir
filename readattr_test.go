@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/livefir/fir/internal/firattr"
 	"github.com/yosssi/gohtml"
 	"golang.org/x/net/html"
 )
@@ -181,7 +182,7 @@ func Test_query(t *testing.T) {
 			}
 
 			if err := areNodesDeepEqual(gotNode, wantNode); err != nil {
-				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(htmlNodeToBytes(gotNode))), gohtml.Format(string(htmlNodeToBytes(wantNode))))
+				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(firattr.HTMLNodeToBytes(gotNode))), gohtml.Format(string(firattr.HTMLNodeToBytes(wantNode))))
 			}
 		})
 	}
@@ -230,7 +231,7 @@ func TestGetEventFilter(t *testing.T) {
 			expectedBefore: "SomeText",
 			expectedValues: nil,
 			expectedAfter:  "moreText",
-			err:            ErrorEventFilterFormat,
+			err:            firattr.ErrorEventFilterFormat,
 		},
 		{
 			input:          "fir:event:ok::tmpl",
@@ -243,12 +244,12 @@ func TestGetEventFilter(t *testing.T) {
 			expectedBefore: "",
 			expectedValues: nil,
 			expectedAfter:  "",
-			err:            ErrorEventFilterFormat,
+			err:            firattr.ErrorEventFilterFormat,
 		},
 	}
 
 	for _, test := range tests {
-		ef, err := getEventFilter(test.input)
+		ef, err := firattr.GetEventFilter(test.input)
 		if err != test.err {
 			t.Fatalf("Failed to parse event filter for input: %s, error: = %v", test.input, err)
 		}
@@ -307,10 +308,10 @@ func areNodesDeepEqual(node1, node2 *html.Node) error {
 	}
 
 	if c1 != nil && c1.DataAtom.String() != "" {
-		return fmt.Errorf("node1 has extra child: atom: %v, val: %v\n", c1.DataAtom, string(htmlNodeToBytes(c1)))
+		return fmt.Errorf("node1 has extra child: atom: %v, val: %v\n", c1.DataAtom, string(firattr.HTMLNodeToBytes(c1)))
 	}
 	if c2 != nil && c2.DataAtom.String() != "" {
-		return fmt.Errorf("node2 has extra child: atom: %v, val: %v\n", c2.DataAtom, string(htmlNodeToBytes(c2)))
+		return fmt.Errorf("node2 has extra child: atom: %v, val: %v\n", c2.DataAtom, string(firattr.HTMLNodeToBytes(c2)))
 	}
 
 	return nil

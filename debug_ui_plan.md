@@ -2,14 +2,7 @@
 
 ## 1. Overview
 
-This document outlines a plan to build a UI debugging tool for the `fir` framework. The goal is to imp### Task Progress
-
-* [ ] **Milestone 0: Prerequisite Refactors (Internal)**
-  * [x] **0.1:** Decompose the monolithic `route.ServeHTTP` method.
-  * [ ] **0.2:** Introduce a `Renderer` interface.
-  * [ ] **0.3:** Refactor WebSocket connection logic into a `Connection` struct.
-  * [ ] **0.4:** Ensure `fir:` attribute parsing logic is self-contained.
-  * [ ] **0.5:** Replace `map[string]OnEventFunc` with `EventRegistry`. developer experience by providing insights into the event-driven communication between the server and the client.
+This document outlines a plan to build a UI debugging tool for the `fir` framework.
 
 The tool will have two main components:
 
@@ -163,7 +156,7 @@ This is a parallel effort to improve the general debuggability of the core libra
   * [x] **0.1:** Decompose the monolithic `route.ServeHTTP` method.
   * [x] **0.2:** Introduce a `Renderer` interface.
   * [x] **0.3:** Refactor WebSocket connection logic into a `Connection` struct.
-  * [ ] **0.4:** Ensure `fir:` attribute parsing logic is self-contained.
+  * [x] **0.4:** Ensure `fir:` attribute parsing logic is self-contained.
   * [ ] **0.5:** Replace `map[string]OnEventFunc` with `EventRegistry`.
 * [ ] **Milestone 1: Foundational Logging & Configuration**
 * [ ] **Milestone 2: Static Mismatch Analyzer**

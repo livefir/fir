@@ -6,6 +6,7 @@ import (
 
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
+	"github.com/livefir/fir/internal/firattr"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
@@ -96,7 +97,7 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 			State:  pubsubEvent.State,
 			Type:   eventType,
 			Key:    pubsubEvent.ElementKey,
-			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
+			Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
 			Detail: pubsubEvent.Detail,
 		})
 	}
@@ -163,7 +164,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 			State:  pubsubEvent.State,
 			Type:   eventType,
 			Key:    pubsubEvent.ElementKey,
-			Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
+			Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
 			Detail: detail,
 		}
 	}
@@ -207,7 +208,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		State:  pubsubEvent.State,
 		Type:   eventType,
 		Key:    pubsubEvent.ElementKey,
-		Target: targetOrClassName(pubsubEvent.Target, getClassName(*eventType)),
+		Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
 		Detail: detail,
 	}
 

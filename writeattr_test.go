@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/livefir/fir/internal/firattr"
 	"github.com/yosssi/gohtml"
 	"golang.org/x/net/html"
 )
@@ -273,7 +274,7 @@ func Test_addAttributes(t *testing.T) {
 			}
 
 			if err := areNodesDeepEqual(got, want); err != nil {
-				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(htmlNodeToBytes(got))), gohtml.Format(string(htmlNodeToBytes(want))))
+				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(firattr.HTMLNodeToBytes(got))), gohtml.Format(string(firattr.HTMLNodeToBytes(want))))
 			}
 		})
 	}

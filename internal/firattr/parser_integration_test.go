@@ -1,4 +1,4 @@
-package fir
+package firattr
 
 import (
 	"fmt"
@@ -9,10 +9,6 @@ import (
 )
 
 func TestLexer(t *testing.T) {
-	parser, err := getRenderExpressionParser()
-	if err != nil {
-		t.Fatalf("Failed to create parser: %v", err)
-	}
 
 	tests := []struct {
 		name      string
@@ -331,7 +327,7 @@ func TestLexer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parsed, err := parseRenderExpression(parser, tt.input)
+			parsed, err := ParseRenderExpression(tt.input)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatalf("Expected an error but got none")
@@ -579,7 +575,7 @@ func TestParseActionExpression(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actionName, params, err := parseActionExpression(tt.input)
+			actionName, params, err := ParseActionExpression(tt.input)
 
 			if tt.wantErr {
 				require.Error(t, err, "Expected an error but got none")
@@ -649,7 +645,7 @@ func TestParseActionExpressionMutationObserver(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actionName, params, err := parseActionExpression(tt.input)
+			actionName, params, err := ParseActionExpression(tt.input)
 
 			if tt.wantErr {
 				require.Error(t, err, "Expected an error but got none")
