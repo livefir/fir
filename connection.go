@@ -193,13 +193,22 @@ func (c *Connection) handleServerEvent(route *route, event Event) {
 		route:    route,
 	}
 
-	withEventLogger := logger.Logger().
-		With(
-			"route_id", route.id,
-			"event_id", event.ID,
-			"session_id", c.sessionID,
-		)
+	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
+		"route_id":   route.id,
+		"event_id":   event.ID,
+		"session_id": c.sessionID,
+		"transport":  "websocket",
+	})
+
+	startTime := time.Now()
 	withEventLogger.Info("received server event")
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("processing server event",
+			"params", event.Params,
+			"timestamp", startTime.Format(time.RFC3339),
+		)
+	}
 
 	handlerInterface, ok := route.cntrl.eventRegistry.Get(route.id, strings.ToLower(event.ID))
 	if !ok {
@@ -216,7 +225,31 @@ func (c *Connection) handleServerEvent(route *route, event Event) {
 	// Update request context with user
 	eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, c.user))
 	channel := *route.channelFunc(eventCtx.request, route.id)
-	errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(c.ctx, eventCtx, channel))
+
+	// Time the event handler execution
+	handlerStartTime := time.Now()
+	result := onEventFunc(eventCtx)
+	handlerDuration := time.Since(handlerStartTime)
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("event handler completed",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+		)
+	}
+
+	renderStartTime := time.Now()
+	errorEvent := handleOnEventResult(result, eventCtx, publishEvents(c.ctx, eventCtx, channel))
+	renderDuration := time.Since(renderStartTime)
+	totalDuration := time.Since(startTime)
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("server event processing complete",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+			"render_duration_ms", renderDuration.Milliseconds(),
+			"total_duration_ms", totalDuration.Milliseconds(),
+		)
+	}
+
 	if errorEvent != nil {
 		c.renderAndWriteEvent(channel, eventCtx, *errorEvent)
 	}
@@ -404,14 +437,23 @@ func (c *Connection) processEvent(event Event, eventRouteID string) {
 		route:    eventRoute,
 	}
 
-	withEventLogger := logger.Logger().
-		With(
-			"route_id", eventRoute.id,
-			"event_id", event.ID,
-			"session_id", c.sessionID,
-			"element_key", event.ElementKey,
-		)
+	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
+		"route_id":    eventRoute.id,
+		"event_id":    event.ID,
+		"session_id":  c.sessionID,
+		"element_key": event.ElementKey,
+		"transport":   "websocket",
+	})
+
+	startTime := time.Now()
 	withEventLogger.Debug("received user event")
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("processing user event",
+			"params", event.Params,
+			"timestamp", startTime.Format(time.RFC3339),
+		)
+	}
 
 	handlerInterface, ok := eventRoute.cntrl.eventRegistry.Get(eventRoute.id, strings.ToLower(event.ID))
 	if !ok {
@@ -426,7 +468,31 @@ func (c *Connection) processEvent(event Event, eventRouteID string) {
 	}
 
 	channel := *eventRoute.channelFunc(eventCtx.request, eventRoute.id)
-	errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, publishEvents(c.ctx, eventCtx, channel))
+
+	// Time the event handler execution
+	handlerStartTime := time.Now()
+	result := onEventFunc(eventCtx)
+	handlerDuration := time.Since(handlerStartTime)
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("event handler completed",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+		)
+	}
+
+	renderStartTime := time.Now()
+	errorEvent := handleOnEventResult(result, eventCtx, publishEvents(c.ctx, eventCtx, channel))
+	renderDuration := time.Since(renderStartTime)
+	totalDuration := time.Since(startTime)
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("user event processing complete",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+			"render_duration_ms", renderDuration.Milliseconds(),
+			"total_duration_ms", totalDuration.Milliseconds(),
+		)
+	}
+
 	if errorEvent != nil {
 		c.renderAndWriteEvent(channel, eventCtx, *errorEvent)
 	}

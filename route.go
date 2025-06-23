@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/go-json"
 
@@ -784,6 +785,14 @@ func (rt *route) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) 
 
 // handleJSONEvent handles JSON event requests
 func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+	var bodySize int64
+
+	// Read body size for metrics
+	if r.ContentLength > 0 {
+		bodySize = r.ContentLength
+	}
+
 	var event Event
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -808,6 +817,23 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 		route:    rt,
 	}
 
+	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
+		"route_id":    rt.id,
+		"event_id":    event.ID,
+		"transport":   "http",
+		"remote_addr": r.RemoteAddr,
+		"body_size":   bodySize,
+	})
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("received http event",
+			"params", event.Params,
+			"method", r.Method,
+			"user_agent", r.UserAgent(),
+			"timestamp", startTime.Format(time.RFC3339),
+		)
+	}
+
 	handlerInterface, ok := rt.cntrl.eventRegistry.Get(rt.id, strings.ToLower(event.ID))
 	if !ok {
 		http.Error(w, "event id is not registered", http.StatusBadRequest)
@@ -820,8 +846,31 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Time the event handler execution
+	handlerStartTime := time.Now()
+	result := onEventFunc(eventCtx)
+	handlerDuration := time.Since(handlerStartTime)
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("event handler completed",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+		)
+	}
+
+	renderStartTime := time.Now()
 	// error event is not published
-	errorEvent := handleOnEventResult(onEventFunc(eventCtx), eventCtx, writeAndPublishEvents(eventCtx))
+	errorEvent := handleOnEventResult(result, eventCtx, writeAndPublishEvents(eventCtx))
+	renderDuration := time.Since(renderStartTime)
+	totalDuration := time.Since(startTime)
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("http event processing complete",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+			"render_duration_ms", renderDuration.Milliseconds(),
+			"total_duration_ms", totalDuration.Milliseconds(),
+		)
+	}
+
 	if errorEvent != nil {
 		writeEventHTTP(eventCtx, *errorEvent)
 	}

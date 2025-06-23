@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -210,6 +211,26 @@ func DevelopmentMode(enable bool) ControllerOption {
 func WithRenderer(renderer Renderer) ControllerOption {
 	return func(o *opt) {
 		o.renderer = renderer
+	}
+}
+
+// WithDebug enables comprehensive debug mode with enhanced logging.
+// This option configures the global logger for debug output and enables
+// debug-specific instrumentation for the debug UI.
+func WithDebug(enable bool) ControllerOption {
+	return func(o *opt) {
+		o.debugLog = enable
+		if enable {
+			// Configure global logger for debug mode
+			config := logger.Config{
+				Level:       logger.LevelDebug,
+				Format:      "json",
+				EnableDebug: true,
+				Output:      os.Stdout,
+			}
+			debugLogger := logger.NewLogger(config)
+			logger.SetGlobalLogger(debugLogger)
+		}
 	}
 }
 

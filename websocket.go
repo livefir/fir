@@ -50,6 +50,14 @@ func RedirectUnauthorisedWebSocket(w http.ResponseWriter, r *http.Request, redir
 		logger.Errorf("upgrade err: %v", err)
 		return false
 	}
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		logger.GetGlobalLogger().Debug("websocket connection redirect",
+			"remote_addr", r.RemoteAddr,
+			"redirect_url", redirect,
+		)
+	}
+
 	err = conn.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(4001, redirect), time.Now().Add(writeWait))
@@ -63,6 +71,16 @@ func RedirectUnauthorisedWebSocket(w http.ResponseWriter, r *http.Request, redir
 }
 
 func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
+	startTime := time.Now()
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		logger.GetGlobalLogger().Debug("websocket connection attempt",
+			"remote_addr", r.RemoteAddr,
+			"user_agent", r.UserAgent(),
+			"timestamp", startTime.Format(time.RFC3339),
+		)
+	}
+
 	// Create new connection
 	conn, err := NewConnection(w, r, cntrl)
 	if err != nil {
@@ -75,6 +93,14 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		return
 	}
 
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		logger.GetGlobalLogger().Debug("websocket connection established",
+			"remote_addr", r.RemoteAddr,
+			"session_id", conn.sessionID,
+			"upgrade_duration_ms", time.Since(startTime).Milliseconds(),
+		)
+	}
+
 	// Start pubsub listeners
 	if err := conn.StartPubSubListeners(); err != nil {
 		return
@@ -83,11 +109,24 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 	// Send connected event
 	conn.SendConnectedEvent()
 
+	logger.GetGlobalLogger().Info("websocket connected",
+		"remote_addr", r.RemoteAddr,
+		"session_id", conn.sessionID,
+	)
+
 	// Start write pump
 	conn.StartWritePump()
 
 	// Start read loop (blocks until connection closes)
 	conn.ReadLoop()
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		logger.GetGlobalLogger().Debug("websocket connection closed",
+			"remote_addr", r.RemoteAddr,
+			"session_id", conn.sessionID,
+			"total_duration_ms", time.Since(startTime).Milliseconds(),
+		)
+	}
 }
 
 func eqBytesHash(a, b []byte) bool {
