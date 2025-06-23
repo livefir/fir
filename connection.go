@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -29,6 +30,8 @@ type Connection struct {
 	lastEvent     Event
 	ctx           context.Context
 	cancel        context.CancelFunc
+	mu            sync.Mutex
+	closed        bool
 }
 
 // NewConnection creates a new WebSocket connection
@@ -580,11 +583,27 @@ func (c *Connection) writePump() {
 
 // Close closes the connection and cleans up resources
 func (c *Connection) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	// Check if already closed
+	if c.closed {
+		return
+	}
+	
+	// Mark as closed
+	c.closed = true
+	
 	// Cancel context to stop all goroutines
 	c.cancel()
 
-	// Close write pump
-	close(c.writePumpDone)
+	// Close write pump channel safely
+	select {
+	case <-c.writePumpDone:
+		// Channel already closed
+	default:
+		close(c.writePumpDone)
+	}
 
 	// Close WebSocket connection
 	if c.conn != nil {
