@@ -585,15 +585,15 @@ func (c *Connection) writePump() {
 func (c *Connection) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Check if already closed
 	if c.closed {
 		return
 	}
-	
+
 	// Mark as closed
 	c.closed = true
-	
+
 	// Cancel context to stop all goroutines
 	c.cancel()
 
