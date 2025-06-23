@@ -25,13 +25,14 @@ The tool will have two main components:
 * **Build Validation**: Ensure `go build .` succeeds without package conflicts or compilation errors  
 * **Static Analysis**: All code must pass `go vet ./...` and `staticcheck ./...` without issues
 * **Example Code Quality**: Any example files must compile correctly and not break the build process
+* **Package Conflicts**: Never create `package main` files in the root directory - use `examples/` subdirectories
 * **Backward Compatibility**: Existing tests must continue to pass without modification
 
 **Testing Protocol:**
 
 1. Run `go test ./...` for core functionality
 2. Run `DOCKER=1 go test ./...` for comprehensive validation
-3. Run `go build .` to check for build issues
+3. Run `go build .` to check for build issues ⚠️ **Critical: Watch for package conflicts!**
 4. Run `go vet ./...` and `staticcheck ./...` for code quality
 5. Verify no broken example files or package conflicts
 
