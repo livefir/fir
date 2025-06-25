@@ -198,19 +198,20 @@ This is a parallel effort to improve the general debuggability of the core libra
     * [x] **1.3.2:** Implement debug mode detection and logger configuration
     * [x] **1.3.3:** Add performance-focused log points (event timing, patch metrics)
 
-* [ ] **Milestone 2: Static Mismatch Analyzer**
-  * [ ] **2.1:** Create analyzer package foundation
-    * [ ] **2.1.1:** Create `internal/debug/analyzer.go` with basic structure
-    * [ ] **2.1.2:** Implement event source identification using `EventRegistry`
-    * [ ] **2.1.3:** Create route-to-events mapping functionality
-  * [ ] **2.2:** Implement client listener extraction
-    * [ ] **2.2.1:** Create template parsing utilities to find `fir:` attributes
-    * [ ] **2.2.2:** Extract event IDs from `x-on:fir:*` and `@fir:*` listeners
-    * [ ] **2.2.3:** Build client listener map per route/template
-  * [ ] **2.3:** Implement comparison and reporting
-    * [ ] **2.3.1:** Create mismatch detection algorithm (server events vs client listeners)
-    * [ ] **2.3.2:** Generate structured warnings for orphaned events
-    * [ ] **2.3.3:** Integrate analyzer into controller startup (development mode only)
+* [ ] **Milestone 2: Static Mismatch Analyzer (Revised After Failed Attempt)**
+  * [ ] **2.1:** Create simple standalone analyzer (Phase 1)
+    * [ ] **2.1.1:** Create `internal/debug/analyzer.go` with basic self-contained structure
+    * [ ] **2.1.2:** Implement simple template parsing using string/regex to find `@fir:*` and `x-on:fir:*`
+    * [ ] **2.1.3:** Use EventRegistry introspection to get server events per route
+    * [ ] **2.1.4:** Create comprehensive unit tests with real template examples
+  * [ ] **2.2:** Implement mismatch detection
+    * [ ] **2.2.1:** Build basic string matching algorithm (server events vs client listeners)
+    * [ ] **2.2.2:** Generate structured warnings for orphaned events
+    * [ ] **2.2.3:** Test analyzer thoroughly with various template patterns
+  * [ ] **2.3:** Integration with controller (Phase 2)
+    * [ ] **2.3.1:** Add analyzer call to controller startup (development mode only)
+    * [ ] **2.3.2:** Test integration with real application examples
+    * [ ] **2.3.3:** Ensure analyzer doesn't break existing functionality or performance
 
 * [ ] **Milestone 3: Live Capture Backend & Debug UI Scaffold**
   * [ ] **3.1:** Create debug instrumentation infrastructure
@@ -494,3 +495,109 @@ These improvements should be applied to the remaining milestones (0.5 through 6)
 ### Next Steps
 
 Ready to proceed to **Milestone 2: Static Mismatch Analyzer** which will build upon this logging foundation to create developer tooling for detecting event mismatches between server and client code.
+
+---
+
+## Milestone 2 Attempt 1 - Failed Refactor (December 2024)
+
+**Status:** REVERTED - Returned to Milestone 1 commit `9f18e7be4d019da9fd14e79ddddd0b94b1334ddd`
+
+### What Was Attempted
+
+A comprehensive refactor of the static analyzer to fully reuse existing parsing infrastructure:
+
+1. **New Internal Packages Created:**
+   * `internal/route/types.go` - Shared route types and interfaces
+   * `internal/parse/template_parser.go` - Template parsing utilities using firattr
+
+2. **Analyzer Refactor:**
+   * Moved `internal/debug/analyzer.go` to use new parsing infrastructure
+   * Attempted to leverage existing `firattr` parser for extracting listeners/senders
+   * Added method for analyzing event templates directly (for tests)
+
+3. **Controller Integration:**
+   * Updated controller to use new route types for static analysis
+   * Updated route.go to implement RouteInfo interface
+
+4. **Pre-commit Script Enhancement:**
+   * Added Docker availability checks
+   * Added timeouts to prevent hanging on problematic tests
+   * Skip Docker-dependent tests when Docker unavailable
+
+### What Went Wrong - Key Learnings
+
+#### 1. **Over-Engineering the Solution**
+- **Issue**: Created complex abstraction layers (`internal/route`, `internal/parse`) before understanding the actual requirements
+- **Lesson**: Start simple, add abstraction only when proven necessary
+- **Better Approach**: Build the analyzer first with direct dependencies, then refactor for reuse if needed
+
+#### 2. **Insufficient Understanding of Existing Infrastructure**
+- **Issue**: Didn't fully understand how `firattr` parser worked or how to integrate it properly
+- **Lesson**: Spend more time studying existing code before attempting to reuse it
+- **Better Approach**: Create simple proof-of-concept first to validate integration approach
+
+#### 3. **Too Many Changes at Once**
+- **Issue**: Modified multiple core files (`controller.go`, `route.go`) while adding new packages
+- **Lesson**: Make incremental changes that can be tested independently
+- **Better Approach**: Build analyzer as standalone first, then integrate step by step
+
+#### 4. **Premature Optimization**
+- **Issue**: Focused on "no ad-hoc parsing" before proving the analyzer worked at all
+- **Lesson**: Get basic functionality working first, optimize for reuse later
+- **Better Approach**: Build working analyzer with simple string parsing, then enhance
+
+#### 5. **Complex Testing Dependencies**
+- **Issue**: Tests became complex due to new abstractions and interfaces
+- **Lesson**: Keep tests simple and focused on actual functionality
+- **Better Approach**: Test analyzer functionality directly without complex mocking
+
+### Specific Technical Issues Encountered
+
+1. **Parser Integration Complexity**: The `firattr` parser is designed for runtime parsing, not static analysis
+2. **Interface Proliferation**: Created too many interfaces (`RouteInfo`, `TemplateParser`) without clear benefit
+3. **Circular Dependencies**: New internal packages created import complexity
+4. **Test Brittleness**: Tests became fragile due to complex setup requirements
+
+### Revised Approach for Milestone 2
+
+Based on these learnings, here's the simplified plan for the next attempt:
+
+#### Phase 1: Simple Analyzer (No Reuse Focus)
+1. Create basic `internal/debug/analyzer.go` that works with current controller structure
+2. Use simple string/regex parsing to extract `@fir:*` and `x-on:fir:*` from templates
+3. Use EventRegistry introspection to get server events
+4. Build working mismatch detection with basic string matching
+5. Add comprehensive unit tests for the analyzer logic
+
+#### Phase 2: Integration
+1. Add analyzer to controller startup (development mode only)
+2. Test with real application examples
+3. Ensure analyzer doesn't break existing functionality
+
+#### Phase 3: Enhancement (Optional)
+1. Only after Phase 1-2 are solid, consider reusing existing parsing if beneficial
+2. Add more sophisticated template parsing if simple approach proves insufficient
+
+### Key Principles for Next Attempt
+
+1. **Start Simple**: Build working solution first, optimize later
+2. **One Change at a Time**: Don't modify core files until analyzer is proven
+3. **Test-Driven**: Write tests for analyzer logic independent of integration
+4. **Incremental**: Each step should be testable and reviewable independently
+5. **Prove Value First**: Demonstrate analyzer catches real mismatches before optimizing
+
+### Files to Focus On (Next Attempt)
+
+**Primary (New Files):**
+* `internal/debug/analyzer.go` - Simple, self-contained analyzer
+* `internal/debug/analyzer_test.go` - Unit tests with real template examples
+
+**Secondary (Later Integration):**
+* `controller.go` - Add startup analysis call (when analyzer is proven)
+
+**Avoid Until Later:**
+* New internal packages or complex abstractions
+* Modifications to `route.go`, `parse.go`, or other core files
+* Complex interfaces or generic solutions
+
+This approach prioritizes working functionality over architectural purity, making it much more likely to succeed.
