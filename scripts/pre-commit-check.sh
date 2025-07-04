@@ -172,39 +172,22 @@ main() {
         ((FAILED_TESTS++))
     fi
     
-    # 2. Docker Environment Tests (includes core tests)
-    header "🐳 Docker Environment Tests"
+    # 2. Tests
+    header "🧪 Tests"
     
-    # Check if Docker is available and running
-    if ! command -v docker >/dev/null 2>&1; then
-        warning "Docker is not installed - skipping Docker tests"
-        log "Install Docker to run full test suite: https://docs.docker.com/get-docker/"
-        
-        # Run basic tests without Docker (excluding e2e tests that may hang)
-        header "🧪 Basic Tests (without Docker)"
-        if ! run_test "Basic Tests" \
-                      "timeout 300 bash -c 'go test \$(go list ./... | grep -v /examples/e2e)'" \
-                      "All basic tests passed" \
-                      "Basic tests failed"; then
-            ((FAILED_TESTS++))
-        fi
-    elif ! docker info >/dev/null 2>&1; then
-        warning "Docker is not running - skipping Docker tests"
-        log "Start Docker daemon to run full test suite: sudo systemctl start docker (Linux) or start Docker Desktop (Mac/Windows)"
-        
-        # Run basic tests without Docker (excluding e2e tests that may hang)
-        header "🧪 Basic Tests (without Docker)"
-        if ! run_test "Basic Tests" \
-                      "timeout 300 bash -c 'go test \$(go list ./... | grep -v /examples/e2e)'" \
-                      "All basic tests passed" \
-                      "Basic tests failed"; then
+    # Check if Docker is running and use appropriate test command
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+        if ! run_test "Tests with Docker" \
+                      "DOCKER=1 go test ./..." \
+                      "All tests passed" \
+                      "Tests failed"; then
             ((FAILED_TESTS++))
         fi
     else
-        if ! run_test "Docker Tests" \
-                      "timeout 600 bash -c 'DOCKER=1 go test ./...'" \
-                      "All Docker environment tests passed" \
-                      "Docker environment tests failed or timed out"; then
+        if ! run_test "Tests" \
+                      "go test ./..." \
+                      "All tests passed" \
+                      "Tests failed"; then
             ((FAILED_TESTS++))
         fi
     fi
@@ -354,14 +337,9 @@ main() {
         success "🎉 ALL QUALITY GATES PASSED!"
         success "✅ Code is ready for commit"
         
-        # Clean up log file if successful
-        echo ""
-        read -p "Remove log file $LOG_FILE? (Y/n): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            rm "$LOG_FILE"
-            success "Log file cleaned up"
-        fi
+        # Clean up log file automatically if successful
+        rm "$LOG_FILE"
+        success "Log file cleaned up"
         
         exit 0
     else
