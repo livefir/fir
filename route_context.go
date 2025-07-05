@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 
-	"github.com/goccy/go-json"
-
 	"github.com/fatih/structs"
+	"github.com/goccy/go-json"
+	"github.com/gorilla/schema"
 
 	firErrors "github.com/livefir/fir/internal/errors"
 )
@@ -35,12 +36,14 @@ func init() {
 // RouteContext is the context for a route handler.
 // Its methods are used to return data or patch operations to the client.
 type RouteContext struct {
-	event     Event
-	request   *http.Request
-	response  http.ResponseWriter
-	urlValues url.Values
-	route     *route
-	isOnLoad  bool
+	event          Event
+	request        *http.Request
+	response       http.ResponseWriter
+	urlValues      url.Values
+	route          *route
+	formDecoder    *schema.Decoder // Form decoder for WebSocketServices mode when route is nil
+	routeInterface RouteInterface  // RouteInterface for WebSocketServices mode when route is nil
+	isOnLoad       bool
 }
 
 func (c RouteContext) Event() Event {
@@ -114,7 +117,15 @@ func (c RouteContext) BindPathParams(v any) error {
 }
 
 func (c RouteContext) BindQueryParams(v any) error {
-	return c.route.formDecoder.Decode(v, c.request.URL.Query())
+	var decoder *schema.Decoder
+	if c.route != nil {
+		decoder = c.route.formDecoder
+	} else if c.formDecoder != nil {
+		decoder = c.formDecoder
+	} else {
+		return errors.New("no form decoder available")
+	}
+	return decoder.Decode(v, c.request.URL.Query())
 }
 
 func (c RouteContext) BindEventParams(v any) error {
@@ -129,7 +140,18 @@ func (c RouteContext) BindEventParams(v any) error {
 			}
 			c.urlValues = urlValues
 		}
-		return c.route.formDecoder.Decode(v, c.urlValues)
+		// Handle both WebSocketServices mode and legacy mode
+		var decoder *schema.Decoder
+		if c.route != nil {
+			// Legacy mode
+			decoder = c.route.formDecoder
+		} else if c.formDecoder != nil {
+			// WebSocketServices mode
+			decoder = c.formDecoder
+		} else {
+			return fmt.Errorf("no form decoder available")
+		}
+		return decoder.Decode(v, c.urlValues)
 	}
 
 	return json.NewDecoder(bytes.NewReader(c.event.Params)).Decode(v)

@@ -28,6 +28,7 @@
 Fir is a Go toolkit for building reactive web interfaces that combines Go's `html/template` with Alpine.js for DOM manipulation. It enables Go developers to create interactive web applications without mastering complex JavaScript frameworks.
 
 **Key Requirements:**
+
 - Server-side HTML rendering using Go templates
 - Real-time DOM updates without full page reloads
 - WebSocket-based communication with HTTP fallback
@@ -952,12 +953,14 @@ graph TB
 **Consequences:** Minimal JavaScript footprint, familiar syntax
 
 ### ADR-005: Go html/template Integration
+
 **Status:** Accepted  
 **Context:** Need type-safe templating with Go integration  
 **Decision:** Use Go's built-in html/template package  
 **Consequences:** Type safety, XSS protection, familiar to Go developers
 
 ### ADR-006: Pluggable Pub/Sub Adapters
+
 **Status:** Accepted  
 **Context:** Different deployment scenarios need different messaging  
 **Decision:** Abstract pub/sub interface with Redis and in-memory implementations  
@@ -996,6 +999,7 @@ Quality
 ### 10.2 Quality Scenarios
 
 **Performance Scenario P1:**
+
 - **Source:** User clicks button
 - **Stimulus:** DOM update event
 - **Environment:** Production with 500 concurrent users
@@ -1003,6 +1007,7 @@ Quality
 - **Measure:** < 100ms from click to visual update
 
 **Reliability Scenario R1:**
+
 - **Source:** Network interruption
 - **Stimulus:** WebSocket connection lost
 - **Environment:** Production system
@@ -1010,6 +1015,7 @@ Quality
 - **Measure:** < 5 seconds to resume functionality
 
 **Usability Scenario U1:**
+
 - **Source:** New Go developer
 - **Stimulus:** Wants to create reactive form
 - **Environment:** Documentation and examples
@@ -1017,8 +1023,6 @@ Quality
 - **Measure:** < 30 minutes from start to working code
 
 ---
-
-## 11. Risks and Technical Debt
 
 ## 11. Risks and Technical Debt
 

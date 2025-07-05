@@ -2,6 +2,7 @@ package fir
 
 import (
 	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/pubsub"
 )
 
@@ -30,4 +31,9 @@ func (tr *TemplateRenderer) RenderRoute(ctx RouteContext, data routeData, useErr
 // RenderDOMEvents implements the Renderer interface for DOM event rendering
 func (tr *TemplateRenderer) RenderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	return renderDOMEvents(ctx, pubsubEvent)
+}
+
+// RenderDOMEventsWithRoute renders DOM events using a RouteInterface for WebSocketServices mode
+func (tr *TemplateRenderer) RenderDOMEventsWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, routeIface routeservices.RouteInterface) []dom.Event {
+	return renderDOMEventsWithRoute(ctx, pubsubEvent, routeIface)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/routeservices"
 	"github.com/minio/sha256-simd"
 )
 
@@ -70,7 +71,7 @@ func RedirectUnauthorisedWebSocket(w http.ResponseWriter, r *http.Request, redir
 	return true
 }
 
-func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
+func onWebsocket(w http.ResponseWriter, r *http.Request, wsServices routeservices.WebSocketServices) {
 	startTime := time.Now()
 
 	if logger.GetGlobalLogger().IsDebugEnabled() {
@@ -81,8 +82,8 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		)
 	}
 
-	// Create new connection
-	conn, err := NewConnection(w, r, cntrl)
+	// Create new connection using WebSocketServices
+	conn, err := NewConnectionWithServices(w, r, wsServices)
 	if err != nil {
 		return
 	}

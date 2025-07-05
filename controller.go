@@ -18,6 +18,7 @@ import (
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/livefir/fir/internal/event"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -287,16 +288,6 @@ func NewController(name string, options ...ControllerOption) Controller {
 		routes:        make(map[string]*route),
 		eventRegistry: event.NewEventRegistry(),
 	}
-	if c.developmentMode {
-		fmt.Println("controller starting in developer mode")
-		c.debugLog = true
-		c.enableWatch = true
-		c.disableTemplateCache = true
-	}
-
-	if c.enableWatch {
-		go watchTemplates(c)
-	}
 
 	if c.embedfs != nil {
 		c.readFile = readFileFS(*c.embedfs)
@@ -311,6 +302,20 @@ func NewController(name string, options ...ControllerOption) Controller {
 	c.funcMap["md"] = md
 	c.opt.channelFunc = c.defaultChannelFunc
 
+	// Initialize RouteServices once for reuse (after channelFunc is set)
+	c.routeServices = c.createRouteServices()
+
+	if c.developmentMode {
+		fmt.Println("controller starting in developer mode")
+		c.debugLog = true
+		c.enableWatch = true
+		c.disableTemplateCache = true
+	}
+
+	if c.enableWatch {
+		go watchTemplates(c)
+	}
+
 	return c
 }
 
@@ -318,6 +323,7 @@ type controller struct {
 	name          string
 	routes        map[string]*route
 	eventRegistry event.EventRegistry
+	routeServices *routeservices.RouteServices // Cached RouteServices instance
 	opt
 }
 
@@ -334,54 +340,292 @@ func (c *controller) defaults() *routeOpt {
 			return nil
 		},
 		funcMapMutex: &sync.RWMutex{},
+		opt:          c.opt, // Set the embedded opt struct
 	}
 	return defaultRouteOpt
 }
 
 // Route returns an http.HandlerFunc that renders the route
 func (c *controller) Route(route Route) http.HandlerFunc {
-	defaultRouteOpt := c.defaults()
-	for _, option := range route.Options() {
-		option(defaultRouteOpt)
-	}
-
-	// create new route
-	r, err := newRoute(c, defaultRouteOpt)
-	if err != nil {
-		// Return a handler that serves the error with a non-zero exit code
-		return func(w http.ResponseWriter, req *http.Request) {
-			logger.Errorf("route creation failed: %v", err)
-			http.Error(w, fmt.Sprintf("route creation failed: %v", err), http.StatusInternalServerError)
-		}
-	}
-	// register route in the controller
-	c.routes[r.id] = r
-	return servertiming.Middleware(r, nil).ServeHTTP
+	return c.createRouteHandler(route.Options())
 }
 
 // RouteFunc returns an http.HandlerFunc that renders the route
 func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
-	defaultRouteOpt := c.defaults()
-	for _, option := range opts() {
-		option(defaultRouteOpt)
-	}
-	// create new route
-	r, err := newRoute(c, defaultRouteOpt)
-	if err != nil {
-		// Return a handler that serves the error with a non-zero exit code
-		return func(w http.ResponseWriter, req *http.Request) {
-			logger.Errorf("route creation failed: %v", err)
-			http.Error(w, fmt.Sprintf("route creation failed: %v", err), http.StatusInternalServerError)
-		}
-	}
-	// register route in the controller
-	c.routes[r.id] = r
-
-	return servertiming.Middleware(r, nil).ServeHTTP
+	return c.createRouteHandler(opts())
 }
 
 // GetEventRegistry returns the event registry for debug introspection
 // This method is primarily intended for debug tools and static analysis
 func (c *controller) GetEventRegistry() event.EventRegistry {
 	return c.eventRegistry
+}
+
+// createRouteServices creates a RouteServices instance from the controller's configuration
+func (c *controller) createRouteServices() *routeservices.RouteServices {
+	options := &routeservices.Options{
+		OnSocketConnect:       c.opt.onSocketConnect,
+		OnSocketDisconnect:    c.opt.onSocketDisconnect,
+		WebsocketUpgrader:     c.opt.websocketUpgrader,
+		DisableTemplateCache:  c.opt.disableTemplateCache,
+		DisableWebsocket:      c.opt.disableWebsocket,
+		EnableWatch:           c.opt.enableWatch,
+		WatchExts:             c.opt.watchExts,
+		PublicDir:             c.opt.publicDir,
+		DevelopmentMode:       c.opt.developmentMode,
+		ReadFile:              c.opt.readFile,
+		ExistFile:             c.opt.existFile,
+		AppName:               c.opt.appName,
+		FormDecoder:           c.opt.formDecoder,
+		CookieName:            c.opt.cookieName,
+		SecureCookie:          c.opt.secureCookie,
+		Cache:                 c.opt.cache,
+		FuncMap:               c.opt.funcMap,
+		DropDuplicateInterval: c.opt.dropDuplicateInterval,
+		DebugLog:              c.opt.debugLog,
+	}
+
+	// Ensure we have a renderer - use default if none specified
+	renderer := c.opt.renderer
+	if renderer == nil {
+		renderer = NewTemplateRenderer()
+	}
+
+	services := routeservices.NewRouteServices(c.eventRegistry, c.opt.pubsub, renderer, options)
+	services.SetChannelFunc(c.opt.channelFunc)
+
+	// Set WebSocketServices - controller implements WebSocketServices interface
+	services.SetWebSocketServices(c)
+
+	// Convert PathParams function signature
+	if c.opt.pathParamsFunc != nil {
+		services.SetPathParamsFunc(func(r *http.Request) map[string]string {
+			pathParams := c.opt.pathParamsFunc(r)
+			result := make(map[string]string)
+			for k, v := range pathParams {
+				result[k] = fmt.Sprintf("%v", v)
+			}
+			return result
+		})
+	}
+
+	return services
+}
+
+// GetRouteServices returns the RouteServices instance for this controller
+// This allows external code to access the services if needed for testing or debugging
+func (c *controller) GetRouteServices() *routeservices.RouteServices {
+	return c.routeServices
+}
+
+// UpdateRouteServices allows updating the RouteServices configuration
+// This is useful for runtime configuration changes
+func (c *controller) UpdateRouteServices() {
+	c.routeServices = c.createRouteServices()
+}
+
+// RouteFactory encapsulates route creation logic and provides validation
+type RouteFactory struct {
+	controller *controller
+}
+
+// NewRouteFactory creates a new route factory for the controller
+func (c *controller) NewRouteFactory() *RouteFactory {
+	return &RouteFactory{controller: c}
+}
+
+// createRouteHandler is the main factory method that creates route handlers
+// This method abstracts the route creation logic from the public Route/RouteFunc methods
+func (c *controller) createRouteHandler(options RouteOptions) http.HandlerFunc {
+	routeOpt, err := c.buildRouteOptions(options)
+	if err != nil {
+		return c.createErrorHandler("route option validation failed", err)
+	}
+
+	route, err := c.createAndValidateRoute(routeOpt)
+	if err != nil {
+		return c.createErrorHandler("route creation failed", err)
+	}
+
+	c.registerRoute(route)
+	return c.wrapRouteHandler(route)
+}
+
+// buildRouteOptions creates and validates route options from the provided options
+func (c *controller) buildRouteOptions(options RouteOptions) (*routeOpt, error) {
+	defaultRouteOpt := c.defaults()
+
+	// Apply all route options
+	for _, option := range options {
+		option(defaultRouteOpt)
+	}
+
+	// Validate the route options
+	if err := c.validateRouteOptions(defaultRouteOpt); err != nil {
+		return nil, fmt.Errorf("route validation failed: %v", err)
+	}
+
+	return defaultRouteOpt, nil
+}
+
+// createAndValidateRoute creates a new route and validates its creation
+func (c *controller) createAndValidateRoute(routeOpt *routeOpt) (*route, error) {
+	route, err := newRoute(c.routeServices, routeOpt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create route: %v", err)
+	}
+
+	// Additional post-creation validation if needed
+	if err := c.validateCreatedRoute(route); err != nil {
+		return nil, fmt.Errorf("route post-creation validation failed: %v", err)
+	}
+
+	return route, nil
+}
+
+// validateRouteOptions validates route configuration before creation
+func (c *controller) validateRouteOptions(routeOpt *routeOpt) error {
+	if routeOpt.id == "" {
+		return fmt.Errorf("route ID cannot be empty")
+	}
+
+	// Check for duplicate route IDs
+	if _, exists := c.routes[routeOpt.id]; exists {
+		return fmt.Errorf("route with ID '%s' already exists", routeOpt.id)
+	}
+
+	// Validate content is provided
+	if routeOpt.content == "" && routeOpt.layout == "" {
+		return fmt.Errorf("route must have either content or layout specified")
+	}
+
+	// Validate template extensions
+	if len(routeOpt.extensions) == 0 {
+		logger.Warnf("route '%s' has no template extensions specified, using defaults", routeOpt.id)
+	}
+
+	return nil
+}
+
+// validateCreatedRoute performs post-creation validation on the route
+func (c *controller) validateCreatedRoute(route *route) error {
+	if route == nil {
+		return fmt.Errorf("route is nil")
+	}
+
+	if route.services == nil {
+		return fmt.Errorf("route services are not initialized")
+	}
+
+	if route.renderer == nil {
+		return fmt.Errorf("route renderer is not initialized")
+	}
+
+	return nil
+}
+
+// registerRoute registers the route in the controller's route map
+func (c *controller) registerRoute(route *route) {
+	c.routes[route.id] = route
+	logger.Debugf("registered route with ID: %s", route.id)
+}
+
+// wrapRouteHandler wraps the route with middleware and returns the final handler
+func (c *controller) wrapRouteHandler(route *route) http.HandlerFunc {
+	return servertiming.Middleware(route, nil).ServeHTTP
+}
+
+// createErrorHandler creates a handler that serves errors with proper HTTP status
+func (c *controller) createErrorHandler(message string, err error) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		fullMessage := fmt.Sprintf("%s: %v", message, err)
+		logger.Errorf("%s", fullMessage)
+		http.Error(w, fullMessage, http.StatusInternalServerError)
+	}
+}
+
+// RouteCreationOptions provides options for advanced route creation
+type RouteCreationOptions struct {
+	ValidateBeforeCreation bool
+	SkipDuplicateCheck     bool
+	EnableDebugLogging     bool
+}
+
+// CreateRouteWithOptions creates a route with advanced options (for future extensibility)
+func (c *controller) CreateRouteWithOptions(options RouteOptions, creationOpts RouteCreationOptions) (http.HandlerFunc, error) {
+	if creationOpts.EnableDebugLogging {
+		logger.Debugf("creating route with advanced options: %+v", creationOpts)
+	}
+
+	routeOpt, err := c.buildRouteOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
+	// Skip duplicate check if requested
+	if creationOpts.SkipDuplicateCheck {
+		if _, exists := c.routes[routeOpt.id]; exists {
+			logger.Warnf("duplicate route ID '%s' detected but skipping check as requested", routeOpt.id)
+		}
+	}
+
+	route, err := c.createAndValidateRoute(routeOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	c.registerRoute(route)
+	return c.wrapRouteHandler(route), nil
+}
+
+// WebSocketServices interface implementation
+// These methods enable the controller to act as a WebSocketServices provider
+
+// GetWebSocketUpgrader returns the WebSocket upgrader configuration
+func (c *controller) GetWebSocketUpgrader() *websocket.Upgrader {
+	return &c.opt.websocketUpgrader
+}
+
+// GetRoutes returns the routes map as RouteInterface map
+func (c *controller) GetRoutes() map[string]routeservices.RouteInterface {
+	routes := make(map[string]routeservices.RouteInterface)
+	for id, route := range c.routes {
+		routes[id] = route
+	}
+	return routes
+}
+
+// DecodeSession decodes a session ID and returns user/session ID and route ID
+func (c *controller) DecodeSession(sessionID string) (userOrSessionID, routeID string, err error) {
+	return decodeSession(*c.opt.secureCookie, c.opt.cookieName, sessionID)
+}
+
+// GetCookieName returns the session cookie name
+func (c *controller) GetCookieName() string {
+	return c.opt.cookieName
+}
+
+// GetDropDuplicateInterval returns the event deduplication interval
+func (c *controller) GetDropDuplicateInterval() time.Duration {
+	return c.opt.dropDuplicateInterval
+}
+
+// IsWebSocketDisabled returns whether WebSocket is disabled
+func (c *controller) IsWebSocketDisabled() bool {
+	return c.opt.disableWebsocket
+}
+
+// OnSocketConnect handles socket connection events
+func (c *controller) OnSocketConnect(userOrSessionID string) error {
+	if c.opt.onSocketConnect != nil {
+		return c.opt.onSocketConnect(userOrSessionID)
+	}
+	return nil
+}
+
+// OnSocketDisconnect handles socket disconnection events
+func (c *controller) OnSocketDisconnect(userOrSessionID string) {
+	if c.opt.onSocketDisconnect != nil {
+		c.opt.onSocketDisconnect(userOrSessionID)
+	}
 }

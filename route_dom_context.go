@@ -20,19 +20,33 @@ func newFirFuncMap(ctx RouteContext, errs map[string]any) template.FuncMap {
 func newRouteDOMContext(ctx RouteContext, errs map[string]any) *RouteDOMContext {
 	var urlPath string
 	var name string
+	var developmentMode bool
+
 	if ctx.request != nil {
 		urlPath = ctx.request.URL.Path
 	}
+
 	if ctx.route != nil {
+		// Legacy mode
 		name = ctx.route.appName
+		developmentMode = ctx.route.developmentMode
+	} else if ctx.routeInterface != nil {
+		// WebSocketServices mode
+		name = ctx.routeInterface.GetAppName()
+		developmentMode = ctx.routeInterface.DevelopmentMode()
+	} else {
+		// Fallback - this shouldn't happen but handle gracefully
+		name = ""
+		developmentMode = false
 	}
+
 	if errs == nil {
 		errs = make(map[string]any)
 	}
 	return &RouteDOMContext{
 		URLPath:     urlPath,
 		Name:        name,
-		Development: ctx.route.developmentMode,
+		Development: developmentMode,
 		errors:      errs,
 	}
 }

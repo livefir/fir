@@ -78,70 +78,55 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	// filter out empty events
 	var events []dom.Event
 	for _, event := range result {
-		if event.Type == nil {
-			continue
+		if !isEmptyEvent(event) {
+			events = append(events, event)
 		}
-		events = append(events, event)
 	}
-
-	unsetErrorEvents := getUnsetErrorEvents(ctx.route.cache, pubsubEvent.SessionID, events)
-	events = append(events, unsetErrorEvents...)
-
-	if len(events) == 0 {
-		// if no events are generated, create a default event with the pubsub event data
-		// this is useful for events that don't have a template
-		eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
-		eventType := fir(eventIDWithState)
-		events = append(events, dom.Event{
-			ID:     *pubsubEvent.ID,
-			State:  pubsubEvent.State,
-			Type:   eventType,
-			Key:    pubsubEvent.ElementKey,
-			Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
-			Detail: pubsubEvent.Detail,
-		})
-	}
-
-	return uniques(events)
+	return events
 }
 
-func uniques(events []dom.Event) []dom.Event {
-	var uniques []dom.Event
+// renderDOMEventsWithRoute renders DOM events using a RouteInterface for WebSocketServices mode
+func renderDOMEventsWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, routeIface RouteInterface) []dom.Event {
+	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
 
-loop:
-	for _, event := range events {
-		for i, unique := range uniques {
-			// nil check
-			var eventType, uniqueEventType, eventTarget, uniqueEventTarget, eventKey, uniqueEventKey string
-			if event.Type != nil {
-				eventType = *event.Type
-			}
-			if unique.Type != nil {
-				uniqueEventType = *unique.Type
-			}
-			if event.Target != nil {
-				eventTarget = *event.Target
-			}
-			if unique.Target != nil {
-				uniqueEventTarget = *unique.Target
-			}
-			if event.Key != nil {
-				eventKey = *event.Key
-			}
-			if unique.Key != nil {
-				uniqueEventKey = *unique.Key
-			}
-			if eventType == uniqueEventType && eventTarget == uniqueEventTarget && eventKey == uniqueEventKey {
-				uniques[i] = event
-				continue loop
-			}
-
-		}
-		uniques = append(uniques, event)
-
+	// Get event templates from RouteInterface
+	eventTemplatesIface := routeIface.GetEventTemplates()
+	if eventTemplatesIface == nil {
+		return []dom.Event{}
 	}
-	return uniques
 
+	// Type assert to eventTemplates
+	eventTemplates, ok := eventTemplatesIface.(eventTemplates)
+	if !ok {
+		logger.Errorf("failed to type assert event templates")
+		return []dom.Event{}
+	}
+
+	var templateNames []string
+	for k := range eventTemplates[eventIDWithState] {
+		templateNames = append(templateNames, k)
+	}
+
+	resultPool := pool.NewWithResults[dom.Event]()
+	for _, templateName := range templateNames {
+		templateName := templateName
+		resultPool.Go(func() dom.Event {
+			ev := buildDOMEventFromTemplateWithRoute(ctx, pubsubEvent, eventIDWithState, templateName, routeIface)
+			if ev == nil {
+				return dom.Event{}
+			}
+			return *ev
+		})
+	}
+	result := resultPool.Wait()
+	// filter out empty events
+	var events []dom.Event
+	for _, event := range result {
+		if !isEmptyEvent(event) {
+			events = append(events, event)
+		}
+	}
+	return events
 }
 
 func targetOrClassName(target *string, className string) *string {
@@ -196,22 +181,100 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		value = ""
 	}
 
-	detail := &dom.Detail{
-		HTML: value,
-	}
+	detail := &dom.Detail{}
 	if pubsubEvent.Detail != nil {
 		detail.State = pubsubEvent.Detail.State
+		detail.Data = pubsubEvent.Detail.Data
 	}
-
+	detail.HTML = value
 	return &dom.Event{
-		ID:     eventIDWithState,
+		ID:     *pubsubEvent.ID,
 		State:  pubsubEvent.State,
 		Type:   eventType,
 		Key:    pubsubEvent.ElementKey,
 		Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
 		Detail: detail,
 	}
+}
 
+// buildDOMEventFromTemplateWithRoute builds a DOM event using a RouteInterface for WebSocketServices mode
+func buildDOMEventFromTemplateWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, eventIDWithState, templateName string, routeIface RouteInterface) *dom.Event {
+	if templateName == "-" {
+		eventType := fir(eventIDWithState)
+		detail := &dom.Detail{}
+		if pubsubEvent.Detail != nil {
+			detail.State = pubsubEvent.Detail.State
+		}
+		return &dom.Event{
+			ID:     *pubsubEvent.ID,
+			State:  pubsubEvent.State,
+			Type:   eventType,
+			Key:    pubsubEvent.ElementKey,
+			Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
+			Detail: detail,
+		}
+	}
+
+	eventType := fir(eventIDWithState, templateName)
+	var templateData any
+	if pubsubEvent.Detail != nil {
+		templateData = pubsubEvent.Detail.Data
+	}
+
+	// Get template from RouteInterface
+	templateIface := routeIface.GetTemplate()
+	if templateIface == nil {
+		logger.Errorf("template not found for route: %s", routeIface.ID())
+		return nil
+	}
+
+	// Type assert to *template.Template
+	routeTemplate, ok := templateIface.(*template.Template)
+	if !ok {
+		logger.Errorf("template is not of type *template.Template for route: %s", routeIface.ID())
+		return nil
+	}
+
+	routeTemplate = routeTemplate.Funcs(newFirFuncMap(ctx, nil))
+	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
+		errs, ok := pubsubEvent.Detail.Data.(map[string]any)
+		if !ok {
+			logger.Errorf("error: %s", "pubsubEvent.Detail is not a map[string]any")
+			return nil
+		}
+		templateData = nil
+		routeTemplate = routeTemplate.Funcs(newFirFuncMap(ctx, errs))
+	}
+
+	value, err := buildTemplateValue(routeTemplate, templateName, templateData)
+	if err != nil {
+		logger.Errorf("error for eventType: %v, err: %v", *eventType, err)
+		return nil
+	}
+	if pubsubEvent.State == eventstate.Error && value == "" {
+		return nil
+	}
+
+	if pubsubEvent.State == eventstate.OK && templateData == nil {
+		value = ""
+	}
+
+	detail := &dom.Detail{
+		HTML: value,
+	}
+	if pubsubEvent.Detail != nil {
+		detail.State = pubsubEvent.Detail.State
+		detail.Data = pubsubEvent.Detail.Data
+	}
+
+	return &dom.Event{
+		ID:     *pubsubEvent.ID,
+		State:  pubsubEvent.State,
+		Type:   eventType,
+		Key:    pubsubEvent.ElementKey,
+		Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
+		Detail: detail,
+	}
 }
 
 func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event) []dom.Event {
@@ -294,4 +357,8 @@ func buildTemplateValue(t *template.Template, templateName string, data any) (st
 	}
 
 	return string(rd), nil
+}
+
+func isEmptyEvent(event dom.Event) bool {
+	return event.Type == nil && event.Target == nil && event.Key == nil
 }

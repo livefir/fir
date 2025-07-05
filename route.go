@@ -15,11 +15,13 @@ import (
 
 	"github.com/goccy/go-json"
 
+	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 )
@@ -255,31 +257,44 @@ type route struct {
 	eventTemplates eventTemplates
 	renderer       Renderer
 
-	cntrl *controller
+	services *routeservices.RouteServices
+
+	// Commonly accessed configuration fields
+	disableTemplateCache bool
+	disableWebsocket     bool
+	pathParamsFunc       func(r *http.Request) map[string]string
+
 	routeOpt
 	sync.RWMutex
 }
 
-func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
-	routeOpt.opt = cntrl.opt
-
-	// Use the controller's renderer if specified, otherwise use the default
-	renderer := cntrl.opt.renderer
-	if renderer == nil {
+func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route, error) {
+	// Use the services' renderer if specified, otherwise use the default
+	var renderer Renderer
+	if services.Renderer != nil {
+		var ok bool
+		renderer, ok = services.Renderer.(Renderer)
+		if !ok {
+			return nil, fmt.Errorf("services.Renderer is not a valid Renderer type")
+		}
+	} else {
 		renderer = NewTemplateRenderer()
 	}
 
 	rt := &route{
-		routeOpt:       *routeOpt,
-		cntrl:          cntrl,
-		eventTemplates: make(eventTemplates),
-		renderer:       renderer,
+		routeOpt:             *routeOpt,
+		services:             services,
+		eventTemplates:       make(eventTemplates),
+		renderer:             renderer,
+		disableTemplateCache: services.Options.DisableTemplateCache,
+		disableWebsocket:     services.Options.DisableWebsocket,
+		pathParamsFunc:       services.PathParamsFunc,
 	}
 
-	// Register events in the controller's EventRegistry
+	// Register events in the services' EventRegistry
 	if routeOpt.onEvents != nil {
 		for eventID, handler := range routeOpt.onEvents {
-			err := cntrl.eventRegistry.Register(routeOpt.id, eventID, handler)
+			err := services.EventRegistry.Register(routeOpt.id, eventID, handler)
 			if err != nil {
 				return nil, fmt.Errorf("failed to register event %s for route %s: %v", eventID, routeOpt.id, err)
 			}
@@ -288,7 +303,7 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
 
 	// Register onLoad handler if present
 	if routeOpt.onLoad != nil {
-		err := cntrl.eventRegistry.Register(routeOpt.id, "load", routeOpt.onLoad)
+		err := services.EventRegistry.Register(routeOpt.id, "load", routeOpt.onLoad)
 		if err != nil {
 			return nil, fmt.Errorf("failed to register onLoad for route %s: %v", routeOpt.id, err)
 		}
@@ -303,7 +318,18 @@ func newRoute(cntrl *controller, routeOpt *routeOpt) (*route, error) {
 
 func publishEvents(ctx context.Context, eventCtx RouteContext, channel string) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
-		err := eventCtx.route.pubsub.Publish(ctx, channel, pubsubEvent)
+		err := eventCtx.route.services.PubSub.Publish(ctx, channel, pubsubEvent)
+		if err != nil {
+			logger.Errorf("error publishing patch: %v", err)
+			return err
+		}
+		return nil
+	}
+}
+
+func publishEventsWithServices(ctx context.Context, pubsubAdapter pubsub.Adapter, channel string) eventPublisher {
+	return func(pubsubEvent pubsub.Event) error {
+		err := pubsubAdapter.Publish(ctx, channel, pubsubEvent)
 		if err != nil {
 			logger.Errorf("error publishing patch: %v", err)
 			return err
@@ -314,13 +340,13 @@ func publishEvents(ctx context.Context, eventCtx RouteContext, channel string) e
 
 func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
-		channel := ctx.route.channelFunc(ctx.request, ctx.route.id)
+		channel := ctx.route.services.ChannelFunc(ctx.request, ctx.route.id)
 		if channel == nil {
 			logger.Errorf("error: channel is empty")
 			http.Error(ctx.response, "channel is empty", http.StatusUnauthorized)
 			return nil
 		}
-		err := ctx.route.pubsub.Publish(ctx.request.Context(), *channel, pubsubEvent)
+		err := ctx.route.services.PubSub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
 			logger.Debugf("error publishing patch: %v", err)
 		}
@@ -780,7 +806,15 @@ func (rt *route) handleWebSocketUpgrade(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "websocket is disabled", http.StatusForbidden)
 		return
 	}
-	onWebsocket(w, r, rt.cntrl)
+
+	// Use WebSocketServices directly from RouteServices
+	if rt.services.HasWebSocketServices() {
+		wsServices := rt.services.GetWebSocketServices()
+		onWebsocket(w, r, wsServices)
+	} else {
+		logger.Errorf("ERROR: WebSocketServices not configured for route")
+		http.Error(w, "WebSocket services not available", http.StatusInternalServerError)
+	}
 }
 
 // handleJSONEvent handles JSON event requests
@@ -834,7 +868,7 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	handlerInterface, ok := rt.cntrl.eventRegistry.Get(rt.id, strings.ToLower(event.ID))
+	handlerInterface, ok := rt.services.EventRegistry.Get(rt.id, strings.ToLower(event.ID))
 	if !ok {
 		http.Error(w, "event id is not registered", http.StatusBadRequest)
 		return
@@ -904,7 +938,7 @@ func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
 		urlValues: r.PostForm,
 	}
 
-	handlerInterface, ok := rt.cntrl.eventRegistry.Get(rt.id, event.ID)
+	handlerInterface, ok := rt.services.EventRegistry.Get(rt.id, event.ID)
 	if !ok {
 		http.Error(w, fmt.Sprintf("onEvent handler for %s not found", event.ID), http.StatusBadRequest)
 		return
@@ -960,4 +994,68 @@ func (rt *route) handleGetRequest(w http.ResponseWriter, r *http.Request) {
 		isOnLoad: true,
 	}
 	handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
+}
+
+// RouteInterface implementation methods
+// These methods enable the route to be used as a RouteInterface in WebSocketServices
+
+// ID returns the route ID
+func (rt *route) ID() string {
+	return rt.id
+}
+
+// Options returns the route options
+func (rt *route) Options() interface{} {
+	// Return the route options - we can return the routeOpt embedded struct
+	return rt.routeOpt
+}
+
+// ChannelFunc returns the channel function
+func (rt *route) ChannelFunc() func(r *http.Request, viewID string) *string {
+	return rt.channelFunc
+}
+
+// PubSub returns the pubsub adapter
+func (rt *route) PubSub() pubsub.Adapter {
+	return rt.pubsub
+}
+
+// DevelopmentMode returns whether development mode is enabled
+func (rt *route) DevelopmentMode() bool {
+	return rt.developmentMode
+}
+
+// EventSender returns the event sender channel
+func (rt *route) EventSender() interface{} {
+	return rt.eventSender
+}
+
+// Services returns the route services
+func (rt *route) Services() *routeservices.RouteServices {
+	return rt.services
+}
+
+// FormDecoder returns the form decoder
+func (rt *route) FormDecoder() *schema.Decoder {
+	return rt.formDecoder
+}
+
+// GetRenderer returns the renderer
+func (rt *route) GetRenderer() interface{} {
+	return rt.renderer
+}
+
+// GetEventTemplates returns the event templates
+func (rt *route) GetEventTemplates() interface{} {
+	return rt.eventTemplates
+}
+
+// GetTemplate returns the route template
+func (rt *route) GetTemplate() interface{} {
+	return rt.getTemplate()
+}
+
+// GetAppName returns the app name
+func (rt *route) GetAppName() string {
+	return rt.appName
 }
