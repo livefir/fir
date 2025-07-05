@@ -690,48 +690,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 
 }
 
-// parseTemplatesLegacy is the renamed original parseTemplates method
-func (rt *route) parseTemplatesLegacy() error {
-	var err error
-	if rt.getTemplate() == nil || (rt.getTemplate() != nil && rt.disableTemplateCache) {
-		var successEventTemplates eventTemplates
-		var rtTemplate *template.Template
-		rtTemplate, successEventTemplates, err = parseTemplate(rt.routeOpt)
-		if err != nil {
-			logger.Errorf("error parsing template: %v", err)
-			return err
-		}
-		rtTemplate.Option("missingkey=zero")
-		rt.setTemplate(rtTemplate)
 
-		// Store success event templates temporarily
-		rt.setEventTemplates(successEventTemplates)
-
-		var errorEventTemplates eventTemplates
-		var rtErrorTemplate *template.Template
-		rtErrorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
-		if err != nil {
-			return err
-		}
-		rtErrorTemplate.Option("missingkey=zero")
-		rt.setErrorTemplate(rtErrorTemplate)
-
-		rtEventTemplates := deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
-		for eventID, templates := range rt.getEventTemplates() {
-			var templatesStr string
-			for k := range templates {
-				if k == "-" {
-					continue
-				}
-				templatesStr += k + " "
-			}
-			fmt.Println("eventID: ", eventID, " templates: ", templatesStr)
-		}
-		rt.setEventTemplates(rtEventTemplates)
-
-	}
-	return nil
-}
 
 // resolveTemplatePath resolves template paths with automatic relative path resolution.
 // This function detects the caller's file location and resolves relative paths accordingly,
@@ -1123,15 +1082,55 @@ func (rt *route) buildTemplateConfig() interface{} {
 }
 
 // parseTemplatesWithEngine attempts to use the new template engine if available,
-// otherwise falls back to the legacy parseTemplates method
+// parseTemplatesWithEngine attempts to use the new template engine if available,
+// otherwise uses the standard template parsing
 func (rt *route) parseTemplatesWithEngine() error {
 	// If we have a template engine, use it
 	if rt.templateEngine != nil {
 		return rt.parseTemplatesUsingEngine()
 	}
 
-	// Fall back to legacy parsing
-	return rt.parseTemplatesLegacy()
+	// Fall back to standard parsing using existing parse functions
+	return rt.parseTemplatesStandard()
+}
+
+// parseTemplatesStandard uses the existing parse functions directly
+func (rt *route) parseTemplatesStandard() error {
+	rt.Lock()
+	defer rt.Unlock()
+
+	// Skip if template is already loaded and caching is enabled
+	if rt.getTemplate() != nil && !rt.disableTemplateCache {
+		return nil
+	}
+
+	var err error
+	var successEventTemplates eventTemplates
+	var rtTemplate *template.Template
+	rtTemplate, successEventTemplates, err = parseTemplate(rt.routeOpt)
+	if err != nil {
+		logger.Errorf("error parsing template: %v", err)
+		return err
+	}
+	rtTemplate.Option("missingkey=zero")
+	rt.setTemplate(rtTemplate)
+
+	// Store success event templates temporarily
+	rt.setEventTemplates(successEventTemplates)
+
+	var errorEventTemplates eventTemplates
+	var rtErrorTemplate *template.Template
+	rtErrorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
+	if err != nil {
+		return err
+	}
+	rtErrorTemplate.Option("missingkey=zero")
+	rt.setErrorTemplate(rtErrorTemplate)
+
+	rtEventTemplates := deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
+	rt.setEventTemplates(rtEventTemplates)
+
+	return nil
 }
 
 // parseTemplatesUsingEngine uses the new template engine to parse templates
@@ -1150,8 +1149,8 @@ func (rt *route) parseTemplatesUsingEngine() error {
 		LoadErrorTemplate(config interface{}) (interface{}, error)
 	})
 	if !ok {
-		// Template engine doesn't support our interface, fall back to legacy
-		return rt.parseTemplatesLegacy()
+		// Template engine doesn't support our interface, fall back to standard parsing
+		return rt.parseTemplatesStandard()
 	}
 
 	// Build template config from route options
@@ -1165,10 +1164,11 @@ func (rt *route) parseTemplatesUsingEngine() error {
 
 	// Convert and store the template
 	if goTmpl, ok := tmpl.(*template.Template); ok {
+		goTmpl.Option("missingkey=zero")
 		rt.setTemplate(goTmpl)
 	} else {
-		// Template engine returned non-Go template, fall back for now
-		return rt.parseTemplatesLegacy()
+		// Template engine returned non-Go template, fall back to standard parsing
+		return rt.parseTemplatesStandard()
 	}
 
 	// Load error template using engine
@@ -1179,14 +1179,15 @@ func (rt *route) parseTemplatesUsingEngine() error {
 
 	// Convert and store the error template
 	if goErrorTmpl, ok := errorTmpl.(*template.Template); ok {
+		goErrorTmpl.Option("missingkey=zero")
 		rt.setErrorTemplate(goErrorTmpl)
 	} else {
-		// Error template engine returned non-Go template, fall back for now
-		return rt.parseTemplatesLegacy()
+		// Error template engine returned non-Go template, fall back to standard parsing
+		return rt.parseTemplatesStandard()
 	}
 
 	// TODO: Handle event templates through template engine
-	// For now, we'll extract them from the main template using legacy logic
+	// For now, we'll extract them from the main template using standard logic
 	if mainTmpl := rt.getTemplate(); mainTmpl != nil {
 		eventTemplates := make(eventTemplates)
 		// Parse event templates from the main template content
