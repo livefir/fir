@@ -10,10 +10,13 @@ __debug_bin
 *.txt
 
 # Compiled example binaries
-examples/**/*/
-examples/*/*
-!examples/**/*.go
-!examples/**/*.html
-!examples/**/*.md
-!examples/**/*.json
-!examples/**/README.md
+examples/*/main
+examples/*/app
+examples/*/*app*
+examples/*/custom_template_engine
+examples/*/autocomplete
+examples/*/chirper
+examples/*/count
+examples/*/counterticker
+examples/*/countertickerredis
+examples/*/defaultroute
