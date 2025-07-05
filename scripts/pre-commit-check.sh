@@ -119,8 +119,9 @@ cleanup_temp_files() {
     find . -name "cpu.prof" -type f -delete 2>/dev/null || true
     find . -name "mem.prof" -type f -delete 2>/dev/null || true
     
-    # Remove log files EXCEPT the current one being used
-    find . -maxdepth 1 -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -delete 2>/dev/null || true
+    # Remove pre-commit log files from anywhere in the project, except the current one
+    # This handles cases where the script might have been run from subdirectories
+    find . -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -delete 2>/dev/null || true
     
     # Remove database files that might be created during tests
     find . -name "*.db" -type f -delete 2>/dev/null || true
