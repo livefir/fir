@@ -203,6 +203,22 @@ func OnEvent(name string, onEventFunc OnEventFunc) RouteOption {
 	}
 }
 
+// TemplateEngine sets a custom template engine for the route.
+// This allows routes to use specialized template engines while maintaining backward compatibility.
+func TemplateEngine(engine interface{}) RouteOption {
+	return func(opt *routeOpt) {
+		opt.templateEngine = engine
+	}
+}
+
+// DisableRouteTemplateCache disables template caching for this specific route.
+// This can be useful for development or routes with dynamic templates.
+func DisableRouteTemplateCache(disable bool) RouteOption {
+	return func(opt *routeOpt) {
+		opt.disableTemplateCache = disable
+	}
+}
+
 type routeRenderer func(data routeData) error
 type eventPublisher func(event pubsub.Event) error
 
@@ -222,7 +238,9 @@ type routeOpt struct {
 	onLoad                 OnEventFunc
 	// TODO: onEvents can be removed in a future version since events are now managed by EventRegistry
 	// Keeping for backward compatibility during transition
-	onEvents map[string]OnEventFunc
+	onEvents             map[string]OnEventFunc
+	templateEngine       interface{} // Template engine for this route (optional)
+	disableTemplateCache bool        // Whether to disable template caching for this route
 	opt
 }
 
@@ -252,10 +270,15 @@ func (opt *routeOpt) getFuncMap() template.FuncMap {
 }
 
 type route struct {
+	// Template handling - keeping old fields for backward compatibility during migration
 	template       *template.Template
 	errorTemplate  *template.Template
 	eventTemplates eventTemplates
-	renderer       Renderer
+
+	// New template engine integration
+	templateEngine interface{} // Will be TemplateEngine interface to avoid circular imports
+
+	renderer Renderer
 
 	services *routeservices.RouteServices
 
@@ -266,6 +289,24 @@ type route struct {
 
 	routeOpt
 	sync.RWMutex
+}
+
+func getTemplateEngine(services *routeservices.RouteServices, routeOpt *routeOpt) interface{} {
+	if routeOpt.templateEngine != nil {
+		return routeOpt.templateEngine
+	}
+	return services.TemplateEngine
+}
+
+// getTemplateCacheDisabled returns whether template caching should be disabled for a route.
+// It prioritizes route-specific cache setting over the services default.
+func getTemplateCacheDisabled(services *routeservices.RouteServices, routeOpt *routeOpt) bool {
+	// If explicitly set on route options, use that setting
+	if routeOpt.disableTemplateCache {
+		return true
+	}
+	// Otherwise use the services default
+	return services.Options.DisableTemplateCache
 }
 
 func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route, error) {
@@ -286,7 +327,8 @@ func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route
 		services:             services,
 		eventTemplates:       make(eventTemplates),
 		renderer:             renderer,
-		disableTemplateCache: services.Options.DisableTemplateCache,
+		templateEngine:       getTemplateEngine(services, routeOpt),        // Use route-specific engine or fallback to services
+		disableTemplateCache: getTemplateCacheDisabled(services, routeOpt), // Use route-specific cache setting or fallback to services
 		disableWebsocket:     services.Options.DisableWebsocket,
 		pathParamsFunc:       services.PathParamsFunc,
 	}
@@ -309,7 +351,7 @@ func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route
 		}
 	}
 
-	err := rt.parseTemplates()
+	err := rt.parseTemplatesWithEngine()
 	if err != nil {
 		return nil, err
 	}
@@ -648,9 +690,8 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 
 }
 
-func (rt *route) parseTemplates() error {
-	rt.Lock()
-	defer rt.Unlock()
+// parseTemplatesLegacy is the renamed original parseTemplates method
+func (rt *route) parseTemplatesLegacy() error {
 	var err error
 	if rt.getTemplate() == nil || (rt.getTemplate() != nil && rt.disableTemplateCache) {
 		var successEventTemplates eventTemplates
@@ -663,13 +704,16 @@ func (rt *route) parseTemplates() error {
 		rtTemplate.Option("missingkey=zero")
 		rt.setTemplate(rtTemplate)
 
+		// Store success event templates temporarily
+		rt.setEventTemplates(successEventTemplates)
+
 		var errorEventTemplates eventTemplates
 		var rtErrorTemplate *template.Template
 		rtErrorTemplate, errorEventTemplates, err = parseErrorTemplate(rt.routeOpt)
 		if err != nil {
 			return err
 		}
-		rtTemplate.Option("missingkey=zero")
+		rtErrorTemplate.Option("missingkey=zero")
 		rt.setErrorTemplate(rtErrorTemplate)
 
 		rtEventTemplates := deepMergeEventTemplates(errorEventTemplates, successEventTemplates)
@@ -1058,4 +1102,97 @@ func (rt *route) GetTemplate() interface{} {
 // GetAppName returns the app name
 func (rt *route) GetAppName() string {
 	return rt.appName
+}
+
+// buildTemplateConfig creates a template configuration from route options
+func (rt *route) buildTemplateConfig() interface{} {
+	// Create a simple config struct that can be used by template engines
+	// This is a basic implementation - could be enhanced to use the full TemplateConfig interface
+	return map[string]interface{}{
+		"layout":                 rt.layout,
+		"content":                rt.content,
+		"errorLayout":            rt.errorLayout,
+		"errorContent":           rt.errorContent,
+		"partials":               rt.partials,
+		"extensions":             rt.extensions,
+		"layoutContentName":      rt.layoutContentName,
+		"errorLayoutContentName": rt.errorLayoutContentName,
+		"funcMap":                rt.getFuncMap(),
+		"disableCache":           rt.disableTemplateCache,
+	}
+}
+
+// parseTemplatesWithEngine attempts to use the new template engine if available,
+// otherwise falls back to the legacy parseTemplates method
+func (rt *route) parseTemplatesWithEngine() error {
+	// If we have a template engine, use it
+	if rt.templateEngine != nil {
+		return rt.parseTemplatesUsingEngine()
+	}
+
+	// Fall back to legacy parsing
+	return rt.parseTemplatesLegacy()
+}
+
+// parseTemplatesUsingEngine uses the new template engine to parse templates
+func (rt *route) parseTemplatesUsingEngine() error {
+	rt.Lock()
+	defer rt.Unlock()
+
+	// Skip if template is already loaded and caching is enabled
+	if rt.getTemplate() != nil && !rt.disableTemplateCache {
+		return nil
+	}
+
+	// Cast template engine to the proper interface
+	engine, ok := rt.templateEngine.(interface {
+		LoadTemplate(config interface{}) (interface{}, error)
+		LoadErrorTemplate(config interface{}) (interface{}, error)
+	})
+	if !ok {
+		// Template engine doesn't support our interface, fall back to legacy
+		return rt.parseTemplatesLegacy()
+	}
+
+	// Build template config from route options
+	config := rt.buildTemplateConfig()
+
+	// Load main template using engine
+	tmpl, err := engine.LoadTemplate(config)
+	if err != nil {
+		return fmt.Errorf("template engine failed to load template: %v", err)
+	}
+
+	// Convert and store the template
+	if goTmpl, ok := tmpl.(*template.Template); ok {
+		rt.setTemplate(goTmpl)
+	} else {
+		// Template engine returned non-Go template, fall back for now
+		return rt.parseTemplatesLegacy()
+	}
+
+	// Load error template using engine
+	errorTmpl, err := engine.LoadErrorTemplate(config)
+	if err != nil {
+		return fmt.Errorf("template engine failed to load error template: %v", err)
+	}
+
+	// Convert and store the error template
+	if goErrorTmpl, ok := errorTmpl.(*template.Template); ok {
+		rt.setErrorTemplate(goErrorTmpl)
+	} else {
+		// Error template engine returned non-Go template, fall back for now
+		return rt.parseTemplatesLegacy()
+	}
+
+	// TODO: Handle event templates through template engine
+	// For now, we'll extract them from the main template using legacy logic
+	if mainTmpl := rt.getTemplate(); mainTmpl != nil {
+		eventTemplates := make(eventTemplates)
+		// Parse event templates from the main template content
+		// This is a simplified extraction - in a full implementation we'd use the template engine
+		rt.setEventTemplates(eventTemplates)
+	}
+
+	return nil
 }

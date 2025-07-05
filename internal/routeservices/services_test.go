@@ -26,6 +26,17 @@ func (m *mockRenderer) RenderDOMEvents(ctx interface{}, event interface{}) inter
 	return nil
 }
 
+// mockTemplateEngine implements the template engine interface for testing
+type mockTemplateEngine struct{}
+
+func (m *mockTemplateEngine) LoadTemplate(config interface{}) (interface{}, error) {
+	return nil, nil
+}
+
+func (m *mockTemplateEngine) Render(template interface{}, data interface{}, w interface{}) error {
+	return nil
+}
+
 func TestNewRouteServices(t *testing.T) {
 	// Setup test dependencies
 	eventRegistry := event.NewEventRegistry()
@@ -299,11 +310,14 @@ func TestUpdateOptions(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
+	mockTemplateEngine := &mockTemplateEngine{}
+
 	original := &RouteServices{
-		EventRegistry: event.NewEventRegistry(),
-		PubSub:        pubsub.NewInmem(),
-		Renderer:      &mockRenderer{},
-		Options:       &Options{AppName: "original"},
+		EventRegistry:  event.NewEventRegistry(),
+		PubSub:         pubsub.NewInmem(),
+		Renderer:       &mockRenderer{},
+		TemplateEngine: mockTemplateEngine,
+		Options:        &Options{AppName: "original"},
 	}
 
 	original.SetChannelFunc(func(r *http.Request, routeID string) *string {
@@ -328,6 +342,10 @@ func TestClone(t *testing.T) {
 
 	if clone.Renderer != original.Renderer {
 		t.Error("Renderer should be the same reference")
+	}
+
+	if clone.TemplateEngine != original.TemplateEngine {
+		t.Error("TemplateEngine should be the same reference")
 	}
 
 	if clone.Options != original.Options {

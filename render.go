@@ -18,7 +18,7 @@ import (
 
 func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	return func(data routeData) error {
-		ctx.route.parseTemplates()
+		ctx.route.parseTemplatesWithEngine()
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 

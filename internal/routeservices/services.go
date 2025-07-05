@@ -28,6 +28,10 @@ type RouteServices struct {
 	// This will be cast to the actual Renderer interface when used
 	Renderer interface{}
 
+	// Template engine - Using interface{} to avoid circular imports
+	// This will be cast to the actual TemplateEngine interface when used
+	TemplateEngine interface{}
+
 	// Request routing and parameters
 	ChannelFunc    func(r *http.Request, routeID string) *string
 	PathParamsFunc func(r *http.Request) map[string]string
@@ -83,12 +87,35 @@ func NewRouteServices(eventRegistry event.EventRegistry, pubsub pubsub.Adapter, 
 	}
 }
 
+// NewRouteServicesWithTemplateEngine creates a new RouteServices instance with template engine
+func NewRouteServicesWithTemplateEngine(eventRegistry event.EventRegistry, pubsub pubsub.Adapter, renderer interface{}, templateEngine interface{}, options *Options) *RouteServices {
+	return &RouteServices{
+		EventRegistry:  eventRegistry,
+		PubSub:         pubsub,
+		Renderer:       renderer,
+		TemplateEngine: templateEngine,
+		Options:        options,
+	}
+}
+
 // NewRouteServicesWithWebSocket creates a new RouteServices instance including WebSocket services
 func NewRouteServicesWithWebSocket(eventRegistry event.EventRegistry, pubsub pubsub.Adapter, renderer interface{}, options *Options, wsServices WebSocketServices) *RouteServices {
 	return &RouteServices{
 		EventRegistry:     eventRegistry,
 		PubSub:            pubsub,
 		Renderer:          renderer,
+		Options:           options,
+		WebSocketServices: wsServices,
+	}
+}
+
+// NewRouteServicesWithWebSocketAndTemplateEngine creates a new RouteServices instance with WebSocket services and template engine
+func NewRouteServicesWithWebSocketAndTemplateEngine(eventRegistry event.EventRegistry, pubsub pubsub.Adapter, renderer interface{}, templateEngine interface{}, options *Options, wsServices WebSocketServices) *RouteServices {
+	return &RouteServices{
+		EventRegistry:     eventRegistry,
+		PubSub:            pubsub,
+		Renderer:          renderer,
+		TemplateEngine:    templateEngine,
 		Options:           options,
 		WebSocketServices: wsServices,
 	}
@@ -147,6 +174,7 @@ func (rs *RouteServices) Clone() *RouteServices {
 		EventRegistry:     rs.EventRegistry,
 		PubSub:            rs.PubSub,
 		Renderer:          rs.Renderer,
+		TemplateEngine:    rs.TemplateEngine, // Include template engine in clone
 		ChannelFunc:       rs.ChannelFunc,
 		PathParamsFunc:    rs.PathParamsFunc,
 		Options:           rs.Options,

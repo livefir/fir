@@ -391,7 +391,11 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 		renderer = NewTemplateRenderer()
 	}
 
-	services := routeservices.NewRouteServices(c.eventRegistry, c.opt.pubsub, renderer, options)
+	// TODO: Create template engine factory for Milestone 5
+	// For now, pass nil to maintain backward compatibility
+	templateEngine := c.createTemplateEngineFactory()
+
+	services := routeservices.NewRouteServicesWithTemplateEngine(c.eventRegistry, c.opt.pubsub, renderer, templateEngine, options)
 	services.SetChannelFunc(c.opt.channelFunc)
 
 	// Set WebSocketServices - controller implements WebSocketServices interface
@@ -628,4 +632,16 @@ func (c *controller) OnSocketDisconnect(userOrSessionID string) {
 	if c.opt.onSocketDisconnect != nil {
 		c.opt.onSocketDisconnect(userOrSessionID)
 	}
+}
+
+// createTemplateEngineFactory creates a template engine factory with default configuration
+func (c *controller) createTemplateEngineFactory() interface{} {
+	// Since we can't import templateengine here directly due to circular imports,
+	// we'll create the template engine using a factory pattern.
+	// This approach allows us to avoid circular imports while enabling template engine usage.
+
+	// For now, we'll continue returning nil to maintain backward compatibility.
+	// Template engines can be explicitly provided via route options.
+	// In a future version, we'll enable a default template engine here.
+	return nil
 }
