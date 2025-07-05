@@ -118,7 +118,9 @@ cleanup_temp_files() {
     find . -name "profile.out" -type f -delete 2>/dev/null || true
     find . -name "cpu.prof" -type f -delete 2>/dev/null || true
     find . -name "mem.prof" -type f -delete 2>/dev/null || true
-    find . -name "*.log" -path "./pre-commit-check-*.log" -prune -o -name "*.log" -type f -delete 2>/dev/null || true
+    
+    # Remove log files EXCEPT the current one being used
+    find . -maxdepth 1 -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -delete 2>/dev/null || true
     
     # Remove database files that might be created during tests
     find . -name "*.db" -type f -delete 2>/dev/null || true
@@ -338,8 +340,11 @@ main() {
         success "✅ Code is ready for commit"
         
         # Clean up log file automatically if successful
-        rm "$LOG_FILE"
+        rm "$LOG_FILE" 2>/dev/null || true
         success "Log file cleaned up"
+        
+        # Mark script as successful to prevent cleanup on exit
+        SCRIPT_SUCCESS="true"
         
         exit 0
     else
@@ -363,6 +368,12 @@ cleanup() {
     
     # Clean up any remaining temporary files
     cleanup_temp_files 2>/dev/null || true
+    
+    # Clean up the current log file if the script exits unexpectedly
+    # (but not if it's a successful exit where we already cleaned it)
+    if [ -f "$LOG_FILE" ] && [ "${SCRIPT_SUCCESS:-}" != "true" ]; then
+        rm "$LOG_FILE" 2>/dev/null || true
+    fi
 }
 trap cleanup EXIT
 
