@@ -8,3 +8,12 @@ __debug_bin
 *.log
 *.test
 *.txt
+
+# Compiled example binaries
+examples/**/*/
+examples/*/*
+!examples/**/*.go
+!examples/**/*.html
+!examples/**/*.md
+!examples/**/*.json
+!examples/**/README.md
