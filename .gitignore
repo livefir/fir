@@ -10,10 +10,10 @@ __debug_bin
 *.txt
 
 # Compiled example binaries
+examples/custom_template_engine/custom_template_engine
 examples/*/main
 examples/*/app
 examples/*/*app*
-examples/*/custom_template_engine
 examples/*/autocomplete
 examples/*/chirper
 examples/*/count
