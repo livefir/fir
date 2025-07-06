@@ -340,7 +340,7 @@ func TestHandleHTTPRequest(t *testing.T) {
 	handlerCalled := false
 	HandleHTTPRequest(recorder, req, nil, func(pair *RequestResponsePair) error {
 		handlerCalled = true
-		
+
 		// Verify request was parsed correctly
 		if pair.Request.Method != "GET" {
 			t.Errorf("Expected method GET, got %s", pair.Request.Method)

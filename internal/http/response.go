@@ -43,14 +43,14 @@ type ResponseWriter interface {
 
 // ResponseAdapter adapts ResponseModel to http.ResponseWriter
 type ResponseAdapter struct {
-	writer http.ResponseWriter
+	writer  http.ResponseWriter
 	written bool
 }
 
 // NewResponseAdapter creates a new ResponseAdapter
 func NewResponseAdapter(w http.ResponseWriter) *ResponseAdapter {
 	return &ResponseAdapter{
-		writer: w,
+		writer:  w,
 		written: false,
 	}
 }
@@ -77,12 +77,12 @@ func (a *ResponseAdapter) WriteResponse(resp ResponseModel) error {
 		if resp.StatusCode > 0 {
 			a.writer.WriteHeader(resp.StatusCode)
 		}
-		
+
 		eventsJSON, err := json.Marshal(resp.Events)
 		if err != nil {
 			return fmt.Errorf("failed to marshal events: %w", err)
 		}
-		
+
 		_, err = a.writer.Write(eventsJSON)
 		a.written = true
 		return err
@@ -134,7 +134,7 @@ func (a *ResponseAdapter) WriteJSON(data interface{}) error {
 	}
 
 	a.writer.Header().Set("Content-Type", "application/json")
-	
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)

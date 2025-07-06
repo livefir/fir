@@ -34,7 +34,7 @@ type RequestResponsePair struct {
 // NewRequestResponsePair creates a new RequestResponsePair from HTTP primitives
 func NewRequestResponsePair(w http.ResponseWriter, r *http.Request, pathParamExtractor func(*http.Request) map[string]string) (*RequestResponsePair, error) {
 	adapter := NewStandardHTTPAdapter(w, r, pathParamExtractor)
-	
+
 	request, err := adapter.ParseRequest(r)
 	if err != nil {
 		return nil, err
