@@ -29,9 +29,12 @@ type RouteServices struct {
 	PubSub pubsub.Adapter
 
 	// Rendering services - new service layer for template rendering
-	RenderService    services.RenderService
-	TemplateService  services.TemplateService
-	ResponseBuilder  services.ResponseBuilder
+	RenderService   services.RenderService
+	TemplateService services.TemplateService
+	ResponseBuilder services.ResponseBuilder
+
+	// Request handling - new handler chain for request processing
+	HandlerChain interface{} // Using interface{} to avoid circular imports
 
 	// Legacy rendering - Using interface{} to avoid circular imports
 	// This will be cast to the actual Renderer interface when used
@@ -140,6 +143,31 @@ func NewRouteServicesWithWebSocketAndTemplateEngine(eventRegistry event.EventReg
 		TemplateEngine:    templateEngine,
 		Options:           options,
 		WebSocketServices: wsServices,
+	}
+}
+
+// NewRouteServicesWithHandlerChain creates a new RouteServices instance with handler chain and all new services
+func NewRouteServicesWithHandlerChain(
+	eventRegistry event.EventRegistry, 
+	eventService services.EventService,
+	pubsub pubsub.Adapter, 
+	renderer interface{}, 
+	renderService services.RenderService, 
+	templateService services.TemplateService, 
+	responseBuilder services.ResponseBuilder,
+	handlerChain interface{},
+	options *Options,
+) *RouteServices {
+	return &RouteServices{
+		EventRegistry:   eventRegistry,
+		EventService:    eventService,
+		PubSub:          pubsub,
+		Renderer:        renderer,
+		RenderService:   renderService,
+		TemplateService: templateService,
+		ResponseBuilder: responseBuilder,
+		HandlerChain:    handlerChain,
+		Options:         options,
 	}
 }
 
