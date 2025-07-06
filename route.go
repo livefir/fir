@@ -690,8 +690,6 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 
 }
 
-
-
 // resolveTemplatePath resolves template paths with automatic relative path resolution.
 // This function detects the caller's file location and resolves relative paths accordingly,
 // ensuring the final path is correctly resolved relative to the working directory.
@@ -1081,8 +1079,7 @@ func (rt *route) buildTemplateConfig() interface{} {
 	}
 }
 
-// parseTemplatesWithEngine attempts to use the new template engine if available,
-// parseTemplatesWithEngine attempts to use the new template engine if available,
+// parseTemplatesWithEngine uses a custom template engine if available,
 // otherwise uses the standard template parsing
 func (rt *route) parseTemplatesWithEngine() error {
 	// If we have a template engine, use it
@@ -1090,7 +1087,7 @@ func (rt *route) parseTemplatesWithEngine() error {
 		return rt.parseTemplatesUsingEngine()
 	}
 
-	// Fall back to standard parsing using existing parse functions
+	// Use standard parsing using existing parse functions
 	return rt.parseTemplatesStandard()
 }
 
@@ -1149,8 +1146,7 @@ func (rt *route) parseTemplatesUsingEngine() error {
 		LoadErrorTemplate(config interface{}) (interface{}, error)
 	})
 	if !ok {
-		// Template engine doesn't support our interface, fall back to standard parsing
-		return rt.parseTemplatesStandard()
+		return fmt.Errorf("template engine does not implement required interface with LoadTemplate and LoadErrorTemplate methods")
 	}
 
 	// Build template config from route options
@@ -1163,13 +1159,12 @@ func (rt *route) parseTemplatesUsingEngine() error {
 	}
 
 	// Convert and store the template
-	if goTmpl, ok := tmpl.(*template.Template); ok {
-		goTmpl.Option("missingkey=zero")
-		rt.setTemplate(goTmpl)
-	} else {
-		// Template engine returned non-Go template, fall back to standard parsing
-		return rt.parseTemplatesStandard()
+	goTmpl, ok := tmpl.(*template.Template)
+	if !ok {
+		return fmt.Errorf("template engine returned unsupported template type, expected *template.Template")
 	}
+	goTmpl.Option("missingkey=zero")
+	rt.setTemplate(goTmpl)
 
 	// Load error template using engine
 	errorTmpl, err := engine.LoadErrorTemplate(config)
@@ -1178,13 +1173,12 @@ func (rt *route) parseTemplatesUsingEngine() error {
 	}
 
 	// Convert and store the error template
-	if goErrorTmpl, ok := errorTmpl.(*template.Template); ok {
-		goErrorTmpl.Option("missingkey=zero")
-		rt.setErrorTemplate(goErrorTmpl)
-	} else {
-		// Error template engine returned non-Go template, fall back to standard parsing
-		return rt.parseTemplatesStandard()
+	goErrorTmpl, ok := errorTmpl.(*template.Template)
+	if !ok {
+		return fmt.Errorf("template engine returned unsupported error template type, expected *template.Template")
 	}
+	goErrorTmpl.Option("missingkey=zero")
+	rt.setErrorTemplate(goErrorTmpl)
 
 	// TODO: Handle event templates through template engine
 	// For now, we'll extract them from the main template using standard logic
