@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/event"
+	"github.com/livefir/fir/internal/services"
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 )
@@ -20,6 +21,9 @@ import (
 type RouteServices struct {
 	// Event management
 	EventRegistry event.EventRegistry
+
+	// New event service layer for improved testability and maintainability
+	EventService services.EventService
 
 	// Pub/Sub system
 	PubSub pubsub.Adapter

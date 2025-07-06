@@ -85,7 +85,7 @@ func (l *DefaultEventLogger) LogEventSuccess(ctx context.Context, req EventReque
 	if l.debug {
 		eventsCount := len(resp.Events)
 		pubsubCount := len(resp.PubSubEvents)
-		fmt.Printf("[EVENT_SUCCESS] ID: %s, Status: %d, Events: %d, PubSub: %d\n", 
+		fmt.Printf("[EVENT_SUCCESS] ID: %s, Status: %d, Events: %d, PubSub: %d\n",
 			req.ID, resp.StatusCode, eventsCount, pubsubCount)
 	}
 }

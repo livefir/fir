@@ -43,7 +43,7 @@ func TestDefaultEventService_ProcessEvent(t *testing.T) {
 	validator := NewDefaultEventValidator()
 	publisher := &mockEventPublisher{}
 	logger := NewDefaultEventLogger(false) // Disable debug for tests
-	
+
 	service := NewDefaultEventService(registry, validator, publisher, logger)
 
 	// Register a test handler
@@ -96,7 +96,7 @@ func TestDefaultEventService_ProcessEvent_HandlerNotFound(t *testing.T) {
 	validator := NewDefaultEventValidator()
 	publisher := &mockEventPublisher{}
 	logger := NewDefaultEventLogger(false)
-	
+
 	service := NewDefaultEventService(registry, validator, publisher, logger)
 
 	req := EventRequest{
@@ -131,7 +131,7 @@ func TestDefaultEventService_ProcessEvent_ValidationError(t *testing.T) {
 	validator := NewDefaultEventValidator()
 	publisher := &mockEventPublisher{}
 	logger := NewDefaultEventLogger(false)
-	
+
 	service := NewDefaultEventService(registry, validator, publisher, logger)
 
 	// Register a handler
@@ -173,7 +173,7 @@ func TestDefaultEventService_ProcessEvent_HandlerError(t *testing.T) {
 	validator := NewDefaultEventValidator()
 	publisher := &mockEventPublisher{}
 	logger := NewDefaultEventLogger(false)
-	
+
 	service := NewDefaultEventService(registry, validator, publisher, logger)
 
 	// Register a handler that returns an error
@@ -257,7 +257,7 @@ func TestInMemoryEventRegistry_GetHandler(t *testing.T) {
 
 	// Register and get handler
 	registry.RegisterHandler("test-event", handler)
-	
+
 	retrievedHandler, exists := registry.GetHandler("test-event")
 	if !exists {
 		t.Error("Expected true for registered event")
@@ -322,7 +322,7 @@ func TestEventServiceMetrics(t *testing.T) {
 	validator := NewDefaultEventValidator()
 	publisher := &mockEventPublisher{}
 	logger := NewDefaultEventLogger(false)
-	
+
 	service := NewDefaultEventService(registry, validator, publisher, logger)
 
 	// Register a successful handler

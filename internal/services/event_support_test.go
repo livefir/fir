@@ -127,7 +127,7 @@ func TestDefaultEventValidator_ValidateParams(t *testing.T) {
 
 func TestDefaultEventValidator_SetRequiredFields(t *testing.T) {
 	validator := NewDefaultEventValidator()
-	
+
 	fields := []string{"field1", "field2"}
 	validator.SetRequiredFields("test-event", fields)
 
@@ -154,14 +154,14 @@ func TestDefaultEventLogger(t *testing.T) {
 
 	// These methods should not panic and should work with debug mode
 	logger.LogEventStart(context.Background(), req)
-	
+
 	resp := &EventResponse{
 		StatusCode:   200,
 		Events:       make([]firHttp.DOMEvent, 1),
 		PubSubEvents: make([]pubsub.Event, 2),
 	}
 	logger.LogEventSuccess(context.Background(), req, resp)
-	
+
 	logger.LogEventError(context.Background(), req, fmt.Errorf("test error"))
 
 	// Test with debug disabled

@@ -22,6 +22,7 @@ import (
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/internal/routeservices"
+	"github.com/livefir/fir/internal/services"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 )
@@ -911,7 +912,118 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleFormPost handles form POST requests
+// handleJSONEventWithService handles JSON event requests using the new event service
+func (rt *route) handleJSONEventWithService(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+	var bodySize int64
+
+	// Read body size for metrics
+	if r.ContentLength > 0 {
+		bodySize = r.ContentLength
+	}
+
+	var event Event
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&event)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if decoder.More() {
+		http.Error(w, "unknown fields in request body", http.StatusBadRequest)
+		return
+	}
+	if event.ID == "" {
+		http.Error(w, "event id is missing", http.StatusBadRequest)
+		return
+	}
+
+	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
+		"route_id":    rt.id,
+		"event_id":    event.ID,
+		"transport":   "http",
+		"remote_addr": r.RemoteAddr,
+		"body_size":   bodySize,
+	})
+
+	if logger.GetGlobalLogger().IsDebugEnabled() {
+		withEventLogger.Debug("received http event (service layer)",
+			"params", event.Params,
+			"method", r.Method,
+			"user_agent", r.UserAgent(),
+			"timestamp", startTime.Format(time.RFC3339),
+		)
+	}
+
+	// Use the new event service if available
+	if rt.services.EventService != nil {
+		processor := NewRouteEventProcessor(rt.services.EventService, rt)
+
+		handlerStartTime := time.Now()
+		response, err := processor.ProcessEvent(r.Context(), event, r, w)
+		handlerDuration := time.Since(handlerStartTime)
+
+		if logger.GetGlobalLogger().IsDebugEnabled() {
+			withEventLogger.Debug("event service processing completed",
+				"handler_duration_ms", handlerDuration.Milliseconds(),
+			)
+		}
+
+		if err != nil {
+			withEventLogger.Error("event service processing failed", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Write the response
+		rt.writeEventServiceResponse(w, response, withEventLogger, startTime, handlerDuration)
+		return
+	}
+
+	// Fallback to legacy event handling
+	rt.handleJSONEvent(w, r)
+}
+
+// writeEventServiceResponse writes the event service response to the HTTP response
+func (rt *route) writeEventServiceResponse(w http.ResponseWriter, response *services.EventResponse, logger *logger.Logger, startTime time.Time, handlerDuration time.Duration) {
+	renderStartTime := time.Now()
+
+	// Set status code
+	w.WriteHeader(response.StatusCode)
+
+	// Set headers
+	for key, value := range response.Headers {
+		w.Header().Set(key, value)
+	}
+
+	// Write body
+	if len(response.Body) > 0 {
+		w.Write(response.Body)
+	}
+
+	// Publish PubSub events
+	for _, pubsubEvent := range response.PubSubEvents {
+		channel := rt.services.ChannelFunc(nil, rt.id) // TODO: pass proper request
+		channelStr := ""
+		if channel != nil {
+			channelStr = *channel
+		}
+		rt.services.PubSub.Publish(context.Background(), channelStr, pubsubEvent)
+	}
+
+	renderDuration := time.Since(renderStartTime)
+	totalDuration := time.Since(startTime)
+
+	if logger.IsDebugEnabled() {
+		logger.Debug("http event processing complete (service layer)",
+			"handler_duration_ms", handlerDuration.Milliseconds(),
+			"render_duration_ms", renderDuration.Milliseconds(),
+			"total_duration_ms", totalDuration.Milliseconds(),
+		)
+	}
+}
+
 func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
 	formAction := rt.determineFormAction(r)
 	if formAction == "" {

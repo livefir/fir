@@ -181,19 +181,23 @@ This plan implements a systematic decoupling of request handling from route impl
 - [x] Mock all dependencies for isolated testing
 - [x] Achieved comprehensive test coverage (100%+ for core components)
 
-#### 2.6 Integration Tasks 🚧 PENDING
-- [ ] Integrate EventService into existing route handling flow
-- [ ] Update RouteContext to use new event service
-- [ ] Ensure backward compatibility with existing event handlers
-- [ ] Add migration helpers for legacy event handlers
+#### 2.6 Integration Tasks ✅ COMPLETED
+- [x] Integrate EventService into existing route handling flow
+- [x] Update RouteContext to use new event service
+- [x] Ensure backward compatibility with existing event handlers
+- [x] Add migration helpers for legacy event handlers
+- [x] Create RouteEventProcessor and LegacyEventHandler wrappers
+- [x] Add handleJSONEventWithService method to route
+- [x] Update RouteServices to include EventService
+- [x] Implement seamless fallback to legacy event handling
 
-### Acceptance Criteria
+### Acceptance Criteria ✅ ALL COMPLETED
 - [x] Event processing fully extracted from HTTP handlers
-- [ ] All current event handling behavior preserved (integration pending)
+- [x] All current event handling behavior preserved
 - [x] Service layer has 90%+ test coverage
 - [x] Services can be tested without HTTP infrastructure
 - [x] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
-- [ ] Ready for commit via `./scripts/commit.sh` (full validation) - integration pending
+- [x] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 

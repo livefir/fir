@@ -95,10 +95,10 @@ type EventService interface {
 
 // EventMetrics contains event processing metrics
 type EventMetrics struct {
-	TotalEvents    int64
+	TotalEvents      int64
 	SuccessfulEvents int64
-	FailedEvents   int64
-	AverageLatency float64
+	FailedEvents     int64
+	AverageLatency   float64
 }
 
 // EventError represents an event processing error
