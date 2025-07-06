@@ -201,17 +201,18 @@ This plan implements a systematic decoupling of request handling from route impl
 
 ---
 
-## 📋 MILESTONE 3: Template and Rendering Service Layer
+## 📋 MILESTONE 3: Template and Rendering Service Layer ✅ COMPLETED
 
 **Goal**: Decouple template processing and response rendering from routes
 
 **Duration**: 2-3 days  
 **Risk**: Medium - Affects template engine integration  
+**Status**: ✅ COMPLETED  
 
 ### Tasks
 
-#### 3.1 Create Rendering Interfaces
-- [ ] Create `internal/services/render_interfaces.go`:
+#### 3.1 Create Rendering Interfaces ✅ COMPLETED
+- [x] Create `internal/services/render_interfaces.go`:
   ```go
   type RenderService interface {
       RenderTemplate(ctx RenderContext) (*RenderResult, error)
@@ -232,8 +233,8 @@ This plan implements a systematic decoupling of request handling from route impl
   }
   ```
 
-#### 3.2 Implement Template Service
-- [ ] Create `internal/services/template_service.go`:
+#### 3.2 Implement Template Service ✅ COMPLETED
+- [x] Create `internal/services/template_service.go`:
   ```go
   type TemplateService struct {
       engine    TemplateEngine
@@ -245,14 +246,14 @@ This plan implements a systematic decoupling of request handling from route impl
   func (s *TemplateService) RenderTemplate(tmpl *template.Template, data interface{}) ([]byte, error)
   ```
 
-#### 3.3 Extract Rendering Logic
-- [ ] Move template parsing from route to service
-- [ ] Move template rendering from route to service
-- [ ] Move event template extraction to service
-- [ ] Maintain backward compatibility with current renderer interface
+#### 3.3 Extract Rendering Logic ✅ COMPLETED
+- [x] Move template parsing from route to service
+- [x] Move template rendering from route to service
+- [x] Move event template extraction to service
+- [x] Maintain backward compatibility with current renderer interface
 
-#### 3.4 Create Response Building Service
-- [ ] Create `internal/services/response_builder.go`:
+#### 3.4 Create Response Building Service ✅ COMPLETED
+- [x] Create `internal/services/response_builder.go`:
   ```go
   type ResponseBuilder interface {
       BuildEventResponse(result *EventResponse, request *RequestModel) (*ResponseModel, error)
@@ -261,20 +262,27 @@ This plan implements a systematic decoupling of request handling from route impl
   }
   ```
 
-#### 3.5 Unit Tests
-- [ ] Test template loading with various configurations
-- [ ] Test rendering with different data types and templates
-- [ ] Test error template rendering
-- [ ] Test response building for all response types
-- [ ] Mock template engines for testing
+#### 3.5 Unit Tests ✅ COMPLETED
+- [x] Test template loading with various configurations
+- [x] Test rendering with different data types and templates
+- [x] Test error template rendering
+- [x] Test response building for all response types
+- [x] Mock template engines for testing
 
-### Acceptance Criteria
-- [ ] Template processing extracted from route struct
-- [ ] All rendering logic moved to services
-- [ ] Template caching behavior preserved
-- [ ] Custom template engines still supported
-- [ ] Service layer has 90%+ test coverage
-- [ ] `pre-commit-check.sh` passes
+#### 3.6 Integration Services ✅ COMPLETED
+- [x] Create `internal/services/legacy_adapter.go` for backwards compatibility
+- [x] Create `internal/services/factory.go` for service creation
+- [x] Update RouteServices to include new rendering services
+
+### Acceptance Criteria ✅ ALL COMPLETED
+
+- [x] Template processing extracted from route struct
+- [x] All rendering logic moved to services
+- [x] Template caching behavior preserved
+- [x] Custom template engines still supported
+- [x] Service layer has 90%+ test coverage
+- [x] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
+- [x] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 
@@ -367,7 +375,8 @@ This plan implements a systematic decoupling of request handling from route impl
 - [ ] Each handler can be unit tested independently
 - [ ] All current request handling behavior preserved
 - [ ] Handler interfaces support extensibility
-- [ ] `pre-commit-check.sh` passes
+- [ ] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
+- [ ] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 
@@ -446,7 +455,8 @@ This plan implements a systematic decoupling of request handling from route impl
 - [ ] No breaking changes to public API
 - [ ] All existing functionality preserved
 - [ ] All examples and e2e tests pass
-- [ ] `pre-commit-check.sh` passes
+- [ ] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
+- [ ] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 
@@ -496,7 +506,8 @@ This plan implements a systematic decoupling of request handling from route impl
 - [ ] Developer documentation complete with examples
 - [ ] No performance regression from changes
 - [ ] All tests pass including e2e test suite
-- [ ] `pre-commit-check.sh` passes
+- [ ] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
+- [ ] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 

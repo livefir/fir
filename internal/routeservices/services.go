@@ -28,7 +28,12 @@ type RouteServices struct {
 	// Pub/Sub system
 	PubSub pubsub.Adapter
 
-	// Rendering - Using interface{} to avoid circular imports
+	// Rendering services - new service layer for template rendering
+	RenderService    services.RenderService
+	TemplateService  services.TemplateService
+	ResponseBuilder  services.ResponseBuilder
+
+	// Legacy rendering - Using interface{} to avoid circular imports
 	// This will be cast to the actual Renderer interface when used
 	Renderer interface{}
 
@@ -88,6 +93,19 @@ func NewRouteServices(eventRegistry event.EventRegistry, pubsub pubsub.Adapter, 
 		PubSub:        pubsub,
 		Renderer:      renderer,
 		Options:       options,
+	}
+}
+
+// NewRouteServicesWithRenderServices creates a new RouteServices instance with new render services
+func NewRouteServicesWithRenderServices(eventRegistry event.EventRegistry, pubsub pubsub.Adapter, renderer interface{}, renderService services.RenderService, templateService services.TemplateService, responseBuilder services.ResponseBuilder, options *Options) *RouteServices {
+	return &RouteServices{
+		EventRegistry:   eventRegistry,
+		PubSub:          pubsub,
+		Renderer:        renderer,
+		RenderService:   renderService,
+		TemplateService: templateService,
+		ResponseBuilder: responseBuilder,
+		Options:         options,
 	}
 }
 
@@ -176,9 +194,13 @@ func (rs *RouteServices) ValidateWebSocketServices() error {
 func (rs *RouteServices) Clone() *RouteServices {
 	return &RouteServices{
 		EventRegistry:     rs.EventRegistry,
+		EventService:      rs.EventService,
 		PubSub:            rs.PubSub,
+		RenderService:     rs.RenderService,
+		TemplateService:   rs.TemplateService,
+		ResponseBuilder:   rs.ResponseBuilder,
 		Renderer:          rs.Renderer,
-		TemplateEngine:    rs.TemplateEngine, // Include template engine in clone
+		TemplateEngine:    rs.TemplateEngine,
 		ChannelFunc:       rs.ChannelFunc,
 		PathParamsFunc:    rs.PathParamsFunc,
 		Options:           rs.Options,
