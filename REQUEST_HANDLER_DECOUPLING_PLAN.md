@@ -445,10 +445,11 @@ This plan implements a systematic decoupling of request handling from route impl
 - [ ] Document migration guide for custom implementations
 
 #### 6.3 Add Developer Documentation
-- [ ] Create `docs/TESTING_GUIDE.md` with unit testing examples
-- [ ] Create `docs/REQUEST_HANDLING.md` explaining new flow
-- [ ] Add code examples for extending handlers
-- [ ] Document service interfaces and their purposes
+- [ ] Create `internal/docs/TESTING_GUIDE.md` with unit testing examples
+- [ ] Create `internal/docs/REQUEST_HANDLING.md` explaining new flow
+- [ ] Create `internal/docs/SERVICE_LAYER.md` documenting service interfaces
+- [ ] Create `internal/docs/HANDLER_EXTENSION.md` with examples for extending handlers
+- [ ] Add code examples and best practices for each component
 
 #### 6.4 Performance Optimization
 - [ ] Profile new request handling flow
