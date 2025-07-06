@@ -95,7 +95,8 @@ This plan implements a systematic decoupling of request handling from route impl
 - [ ] Request models support all current request types
 - [ ] Response writing handles all current response scenarios
 - [ ] No changes to existing route behavior
-- [ ] `pre-commit-check.sh` passes
+- [ ] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
+- [ ] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 
@@ -170,7 +171,8 @@ This plan implements a systematic decoupling of request handling from route impl
 - [ ] All current event handling behavior preserved
 - [ ] Service layer has 90%+ test coverage
 - [ ] Services can be tested without HTTP infrastructure
-- [ ] `pre-commit-check.sh` passes
+- [ ] `./scripts/pre-commit-check.sh --fast` passes (quick validation)
+- [ ] Ready for commit via `./scripts/commit.sh` (full validation)
 
 ---
 
@@ -511,12 +513,32 @@ This plan implements a systematic decoupling of request handling from route impl
    - **Rollback**: Keep old context creation methods as utilities
 
 ### Testing Strategy
-- Run `pre-commit-check.sh` after each milestone
-- Commit after each successful milestone completion
+
+- Run `./scripts/pre-commit-check.sh --fast` for quick milestone validation (10-11s)
+- Commit after each successful milestone using `./scripts/commit.sh` (full validation ~58s)
 - Run full e2e test suite before finalizing each milestone
 - Test examples manually after major changes
 
+### Development Workflow
+
+1. **Development iterations**: Use `./scripts/pre-commit-check.sh --fast` for rapid feedback
+   - Excludes slow e2e tests for 75.8% speedup (11s vs 48s)
+   - Includes core tests, static analysis, and build validation
+   - Perfect for frequent testing during implementation
+
+2. **Milestone validation**: Use `./scripts/commit.sh` for comprehensive validation
+   - Runs full test suite including e2e tests
+   - Includes coverage analysis and example compilation
+   - Creates validated commits only after all quality gates pass
+
+3. **Quality gates**: Both workflows include:
+   - Build compilation (`go build ./...`)
+   - Static analysis (`go vet`, `staticcheck`)
+   - Go modules validation
+   - Alpine.js plugin testing (if changes detected)
+
 ### Backward Compatibility
+
 - All public APIs remain unchanged
 - Existing route options continue to work
 - Custom template engines continue to work
@@ -538,7 +560,8 @@ This plan implements a systematic decoupling of request handling from route impl
 | 5. Route Refactoring | 2-3 days | Milestone 4 | High |
 | 6. Cleanup & Documentation | 1-2 days | Milestone 5 | Low |
 
-**Checkpoints**: 
+**Checkpoints**:
+
 - Commit after each milestone passes `pre-commit-check.sh`
 - Full e2e test validation before Milestone 5
 - Architecture review before Milestone 6
