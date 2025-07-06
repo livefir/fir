@@ -2,47 +2,66 @@
 
 # Fir Framework Pre-Commit Quality Gates
 # This script validates that all quality gates pass before committing changes
-# Usage: ./scripts/pre-commit-check.sh [--help]
+# Usage: ./scripts/pre-commit-check.sh [--help] [--fast]
 
 set -e  # Exit on any error
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
+RED='\033[0;31m    # 4. Static Analysis - StaticCheck (if available, skip in fast mode)
+    if [ "$FAST_MODE" != true ]; then
+        header "🔍 Static Analysis - StaticCheck"
+        if command -v staticcheck >/dev/null 2>&1; then
+            if ! run_test "StaticCheck" \
+                          "staticcheck ./..." \
+                          "StaticCheck analysis passed" \
+                          "StaticCheck found issues"; then
+                ((FAILED_TESTS++))
+            fi
+        else
+            warning "StaticCheck not installed - install with: go install honnef.co/go/tools/cmd/staticcheck@latest"
+        fi
+    else
+        log "Skipping StaticCheck in fast mode"
+    fi3[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
 LOG_FILE="pre-commit-check-$(date +%Y%m%d-%H%M%S).log"
+FAST_MODE=false
 
 # Functions
 show_help() {
     echo "Fir Framework Pre-Commit Quality Gates"
     echo ""
     echo "USAGE:"
-    echo "  ./scripts/pre-commit-check.sh [--help]"
+    echo "  ./scripts/pre-commit-check.sh [--help] [--fast]"
     echo ""
     echo "OPTIONS:"
     echo "  --help      Show this help message"
+    echo "  --fast      Enable fast mode - skips coverage analysis and example builds"
     echo ""
     echo "DESCRIPTION:"
     echo "  This script runs comprehensive validation including:"
     echo "  - Build compilation (go build ./...)"
-    echo "  - Docker environment tests (DOCKER=1 go test ./...) - if Docker is available"
-    echo "  - Basic tests (go test ./...) - if Docker is not available"
+    echo "  - Parallel tests with smart caching (go test -parallel N -count=1 ./...)"
+    echo "  - Docker environment tests (DOCKER=1) - if Docker is available"
     echo "  - Static analysis (go vet, staticcheck)"
     echo "  - Go modules validation"
     echo "  - Alpine.js plugin testing (if changes detected)"
-    echo "  - Example compilation check"
+    echo "  - Example compilation check (skipped in --fast mode)"
+    echo "  - Test coverage analysis (skipped in --fast mode)"
     echo "  - Cleanup of temporary files"
     echo ""
+    echo "  Tests run in parallel using 75% of available CPU cores for faster execution."
     echo "  Docker tests are automatically skipped if Docker is not installed or running."
     echo "  Returns exit code 0 if all quality gates pass, non-zero otherwise."
     echo ""
     echo "EXAMPLES:"
-    echo "  ./scripts/pre-commit-check.sh"
-    echo "  ./scripts/pre-commit-check.sh --help"
+    echo "  ./scripts/pre-commit-check.sh           # Full validation"
+    echo "  ./scripts/pre-commit-check.sh --fast    # Fast validation (core tests only)"
+    echo "  ./scripts/pre-commit-check.sh --help    # Show this help"
     echo ""
     echo "  # Use in other scripts:"
     echo "  if ./scripts/pre-commit-check.sh; then"
@@ -58,6 +77,10 @@ while [[ $# -gt 0 ]]; do
         --help|-h)
             show_help
             exit 0
+            ;;
+        --fast|-f)
+            FAST_MODE=true
+            shift
             ;;
         *)
             echo "Unknown option: $1"
@@ -149,7 +172,15 @@ cleanup_temp_files() {
 
 # Main execution
 main() {
-    header "🚀 Fir Framework Pre-Commit Quality Gates"
+    # Record start time for performance tracking
+    START_TIME=$(date +%s)
+    
+    if [ "$FAST_MODE" = true ]; then
+        header "🚀 Fir Framework Pre-Commit Quality Gates (FAST MODE)"
+        log "Fast mode enabled - skipping coverage analysis and example builds"
+    else
+        header "🚀 Fir Framework Pre-Commit Quality Gates"
+    fi
     
     log "Starting comprehensive validation..."
     log "Log file: $LOG_FILE"
@@ -175,23 +206,65 @@ main() {
         ((FAILED_TESTS++))
     fi
     
-    # 2. Tests
+    # 2. Tests (with optional coverage)
     header "🧪 Tests"
     
-    # Check if Docker is running and use appropriate test command
-    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-        if ! run_test "Tests with Docker" \
-                      "DOCKER=1 go test ./..." \
-                      "All tests passed" \
-                      "Tests failed"; then
-            ((FAILED_TESTS++))
+    # Determine number of parallel processes
+    CPU_COUNT=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    
+    if [ "$FAST_MODE" = true ]; then
+        # In fast mode, enable caching and use moderate parallelism
+        PARALLEL_JOBS=$((CPU_COUNT / 2))
+        if [ $PARALLEL_JOBS -lt 2 ]; then
+            PARALLEL_JOBS=2
         fi
+        TEST_FLAGS="-parallel $PARALLEL_JOBS -short"
+        log "Fast mode: Using $PARALLEL_JOBS parallel processes with caching enabled and -short flag"
+        COVERAGE_ANALYSIS=false
     else
-        if ! run_test "Tests" \
-                      "go test ./..." \
-                      "All tests passed" \
-                      "Tests failed"; then
-            ((FAILED_TESTS++))
+        # In normal mode, use moderate parallelism and include coverage
+        PARALLEL_JOBS=$((CPU_COUNT / 2))
+        if [ $PARALLEL_JOBS -lt 2 ]; then
+            PARALLEL_JOBS=2
+        fi
+        TEST_FLAGS="-parallel $PARALLEL_JOBS -count=1 -coverprofile=coverage.out"
+        log "Using $PARALLEL_JOBS parallel test processes with coverage (out of $CPU_COUNT CPUs)"
+        COVERAGE_ANALYSIS=true
+    fi
+    
+    # Optimize test command based on environment
+    if [ "$FAST_MODE" = true ]; then
+        # In fast mode, skip slow e2e tests and use simple command with caching
+        TEST_LABEL="Tests (Fast Mode - excluding e2e)"
+        TEST_CMD="go test $TEST_FLAGS \$(go list ./... | grep -v \"examples/e2e\")"
+        log "Fast mode: Excluding slow e2e tests for maximum speed"
+    else
+        # Check if Docker is running and use appropriate test command
+        if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            TEST_LABEL="Tests with Docker (Parallel & Optimized)"
+            TEST_CMD="DOCKER=1 go test $TEST_FLAGS ./..."
+        else
+            TEST_LABEL="Tests (Parallel & Optimized)"
+            TEST_CMD="go test $TEST_FLAGS ./..."
+        fi
+    fi
+    
+    if ! run_test "$TEST_LABEL" \
+                  "$TEST_CMD" \
+                  "All tests passed" \
+                  "Tests failed"; then
+        ((FAILED_TESTS++))
+    else
+        # Process coverage results if enabled
+        if [ "$COVERAGE_ANALYSIS" = true ] && [ -f coverage.out ]; then
+            log "Processing coverage results..."
+            COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+            if [ -n "$COVERAGE" ] && (( $(echo "$COVERAGE < 50" | bc -l) )); then
+                warning "Test coverage is below 50% ($COVERAGE%)"
+            else
+                success "Test coverage: $COVERAGE%"
+            fi
+            rm -f coverage.out
         fi
     fi
     
@@ -239,23 +312,7 @@ main() {
         rm go.mod.backup go.sum.backup
     fi
     
-    # 6. Test Coverage Check (Optional)
-    header "📊 Test Coverage Analysis"
-    if run_test "Coverage Analysis" \
-               "go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out" \
-               "Coverage analysis completed" \
-               "Coverage analysis failed"; then
-        # Extract overall coverage percentage
-        COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
-        if (( $(echo "$COVERAGE < 50" | bc -l) )); then
-            warning "Test coverage is below 50% ($COVERAGE%)"
-        else
-            success "Test coverage: $COVERAGE%"
-        fi
-        rm -f coverage.out
-    fi
-    
-    # 7. Alpine.js Plugin Testing (if plugin directory exists and has changes)
+    # 6. Alpine.js Plugin Testing (if plugin directory exists and has changes)
     header "🌲 Alpine.js Plugin Testing"
     if [ -d "alpinejs-plugin" ]; then
         # Check if there are any changes in the plugin directory (committed or staged)
@@ -306,39 +363,66 @@ main() {
         log "Alpine.js plugin directory not found - skipping plugin tests"
     fi
     
-    # 8. Example Compilation Check
-    header "📚 Example Compilation Check"
-    if [ -d "examples" ]; then
-        EXAMPLE_FAILED=0
-        for example_dir in examples/*/; do
-            if [ -f "$example_dir/main.go" ]; then
-                example_name=$(basename "$example_dir")
-                if ! run_test "Example: $example_name" \
-                              "cd $example_dir && go build ." \
-                              "Example $example_name builds successfully" \
-                              "Example $example_name failed to build"; then
-                    ((EXAMPLE_FAILED++))
+    # 7. Example Compilation Check (skip in fast mode)
+    if [ "$FAST_MODE" != true ]; then
+        header "📚 Example Compilation Check"
+        if [ -d "examples" ]; then
+            EXAMPLE_FAILED=0
+            for example_dir in examples/*/; do
+                if [ -f "$example_dir/main.go" ]; then
+                    example_name=$(basename "$example_dir")
+                    if ! run_test "Example: $example_name" \
+                                  "cd $example_dir && go build ." \
+                                  "Example $example_name builds successfully" \
+                                  "Example $example_name failed to build"; then
+                        ((EXAMPLE_FAILED++))
+                    fi
                 fi
+            done
+            
+            if [ $EXAMPLE_FAILED -eq 0 ]; then
+                success "All examples compile successfully"
+            else
+                error "$EXAMPLE_FAILED examples failed to compile"
+                ((FAILED_TESTS++))
             fi
-        done
-        
-        if [ $EXAMPLE_FAILED -eq 0 ]; then
-            success "All examples compile successfully"
-        else
-            error "$EXAMPLE_FAILED examples failed to compile"
-            ((FAILED_TESTS++))
         fi
+    else
+        log "Skipping example compilation check in fast mode"
     fi
     
     # Final Results
     header "📋 Quality Gate Results"
     
+    # Calculate execution time
+    END_TIME=$(date +%s)
+    EXECUTION_TIME=$((END_TIME - START_TIME))
+    MINUTES=$((EXECUTION_TIME / 60))
+    SECONDS=$((EXECUTION_TIME % 60))
+    
+    if [ $MINUTES -gt 0 ]; then
+        TIME_DISPLAY="${MINUTES}m ${SECONDS}s"
+    else
+        TIME_DISPLAY="${SECONDS}s"
+    fi
+    
     # Final cleanup of any temp files created during testing
     cleanup_temp_files
     
     if [ $FAILED_TESTS -eq 0 ]; then
-        success "🎉 ALL QUALITY GATES PASSED!"
+        success "🎉 ALL QUALITY GATES PASSED! (${TIME_DISPLAY})"
         success "✅ Code is ready for commit"
+        
+        # Performance feedback
+        if [ "$FAST_MODE" = true ]; then
+            log "Fast mode completed in ${TIME_DISPLAY}"
+            log "Note: e2e tests were skipped for speed. Run full validation before committing critical changes."
+        else
+            log "Full validation completed in ${TIME_DISPLAY}"
+            if [ $EXECUTION_TIME -gt 30 ]; then
+                log "💡 Tip: Use --fast flag for quicker validation during development"
+            fi
+        fi
         
         # Clean up log file automatically if successful
         rm "$LOG_FILE" 2>/dev/null || true
@@ -349,7 +433,7 @@ main() {
         
         exit 0
     else
-        error "❌ $FAILED_TESTS quality gate(s) failed"
+        error "❌ $FAILED_TESTS quality gate(s) failed (${TIME_DISPLAY})"
         error "Code is NOT ready for commit"
         echo ""
         echo "Please fix the failing tests and run the validation script again."
