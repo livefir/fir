@@ -49,7 +49,7 @@ show_help() {
     echo "  - Docker environment tests (DOCKER=1) - if Docker is available"
     echo "  - Static analysis (go vet, staticcheck)"
     echo "  - Go modules validation"
-    echo "  - Alpine.js plugin testing (if changes detected)"
+    echo "  - Alpine.js plugin testing (if changes detected, with smart dependency caching)"
     echo "  - Example compilation check (skipped in --fast mode)"
     echo "  - Test coverage analysis (skipped in --fast mode)"
     echo "  - Cleanup of temporary files"
@@ -159,12 +159,12 @@ cleanup_temp_files() {
     # Remove any backup files
     find . -name "*.backup" -type f -delete 2>/dev/null || true
     
-    # Remove Node.js/Alpine.js plugin artifacts
+    # Remove Node.js/Alpine.js plugin artifacts (but preserve node_modules)
     if [ -d "alpinejs-plugin" ]; then
-        rm -rf alpinejs-plugin/node_modules 2>/dev/null || true
-        rm -f alpinejs-plugin/package-lock.json 2>/dev/null || true
+        # Only remove test/build artifacts, not dependencies
         rm -rf alpinejs-plugin/coverage 2>/dev/null || true
         rm -rf alpinejs-plugin/.nyc_output 2>/dev/null || true
+        # Note: Preserving node_modules and package-lock.json for faster builds
     fi
     
     success "Temporary files cleaned up"
@@ -329,15 +329,47 @@ main() {
             else
                 cd alpinejs-plugin
                 
-                # Install dependencies
-                if ! run_test "Alpine.js Plugin Dependencies" \
-                              "npm install" \
-                              "Dependencies installed successfully" \
-                              "Failed to install dependencies"; then
-                    ((FAILED_TESTS++))
-                    cd ..
+                # Check if dependencies need to be installed or updated
+                NEED_INSTALL=false
+                if [ ! -d "node_modules" ] || [ ! -f "package-lock.json" ]; then
+                    log "Node modules not found - installing dependencies..."
+                    NEED_INSTALL=true
+                elif [ "package.json" -nt "node_modules" ]; then
+                    log "package.json is newer than node_modules - updating dependencies..."
+                    NEED_INSTALL=true
                 else
-                    # Run plugin tests
+                    log "Dependencies are up to date - skipping npm install"
+                fi
+                
+                # Install dependencies only if needed
+                if [ "$NEED_INSTALL" = true ]; then
+                    if ! run_test "Alpine.js Plugin Dependencies" \
+                                  "npm install" \
+                                  "Dependencies installed successfully" \
+                                  "Failed to install dependencies"; then
+                        ((FAILED_TESTS++))
+                        cd ..
+                    else
+                        # Run plugin tests
+                        if ! run_test "Alpine.js Plugin Tests" \
+                                      "npm test" \
+                                      "All Alpine.js plugin tests passed" \
+                                      "Alpine.js plugin tests failed"; then
+                            ((FAILED_TESTS++))
+                        fi
+                        
+                        # Run plugin build
+                        if ! run_test "Alpine.js Plugin Build" \
+                                      "npm run build" \
+                                      "Plugin build completed successfully" \
+                                      "Plugin build failed"; then
+                            ((FAILED_TESTS++))
+                        fi
+                        
+                        cd ..
+                    fi
+                else
+                    # Dependencies are up to date, run tests directly
                     if ! run_test "Alpine.js Plugin Tests" \
                                   "npm test" \
                                   "All Alpine.js plugin tests passed" \
