@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script defer src="http://localhost:8000/cdn.js"></script>
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body>
+        <div x-data id="content">
+            <p>
+                {{ fir.Error "onload" }}
+            </p>
+            <p @fir:create:error="$fir.replace()">
+                {{ fir.Error "create" }}
+            </p>
+
+            <div
+                @fir:create:pending="console.log('create todo start')"
+                @fir:create:ok="console.log('create todo done')"></div>
+
+            <form
+                id="create"
+                x-ref="create"
+                method="post"
+                action="/?event=create"
+                @submit.prevent="$fir.submit()"
+                @fir:create:ok="$refs.create.reset()"
+                style="margin-top:1rem;margin-bottom:1rem;">
+                <input type="text" name="text" placeholder="a new todo" />
+                <p @fir:create:error="$fir.replace()">
+                    {{ fir.Error "create.text" }}
+                </p>
+
+                <button type="submit">new</button>
+            </form>
+            <div @fir:create:ok::todo="$fir.appendEl()">
+                {{ range .todos }}
+                    {{ block "todo" . }}
+                        <div
+                            fir-key="{{ .ID }}"
+                            @fir:delete:ok="$fir.removeEl()"
+                            style="display: flex;margin-top:1rem;margin-bottom:1rem;">
+                            <div id="todo-{{ .ID }}" style="margin-right:1rem">
+                                {{ .Text }}
+                            </div>
+                            <div
+                                @fir:toggle-done:ok="$fir.replace()"
+                                style="margin-right:1rem">
+                                Done:
+                                {{ .Done }}
+
+                            </div>
+                            <form
+                                method="post"
+                                @submit.prevent="$fir.submit()"
+                                style="margin-right:1rem">
+                                <input
+                                    type="hidden"
+                                    name="todoID"
+                                    value="{{ .ID }}" />
+                                <button
+                                    formaction="/?event=toggle-done"
+                                    type="submit">
+                                    Toggle Done
+                                </button>
+                                <button
+                                    formaction="/?event=delete"
+                                    type="submit">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    {{ end }}
+                {{ end }}
+            </div>
+        </div>
+    </body>
+</html>
