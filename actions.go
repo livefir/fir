@@ -2,11 +2,10 @@ package fir
 
 import (
 	"fmt"
-	"sort" // Import sort
+	"sort"
 	"strings"
 
 	"github.com/livefir/fir/internal/firattr"
-	"github.com/livefir/fir/internal/logger"
 	"golang.org/x/net/html"
 )
 
@@ -330,8 +329,6 @@ func parseTranslatedString(translated string) []html.Attribute {
 			val := strings.TrimPrefix(parts[1], `"`)
 			val = strings.TrimSuffix(val, `"`)
 			attrs = append(attrs, html.Attribute{Key: key, Val: val})
-		} else {
-			logger.Warnf("Skipping malformed translated attribute line: %s", line)
 		}
 	}
 	return attrs
@@ -346,128 +343,3 @@ func sortActionsByPrecedence(actions []collectedAction) {
 
 // actionsConflict determines if two actions would conflict with each other
 // Actions conflict if they are mutually exclusive DOM operations
-func actionsConflict(action1, action2 collectedAction) bool {
-	// Get action names
-	name1 := action1.Info.ActionName
-	name2 := action2.Info.ActionName
-
-	// Actions that replace/remove elements conflict with other DOM manipulation actions
-	conflictingActions := map[string][]string{
-		"refresh":       {"remove", "remove-parent"},
-		"remove":        {"refresh", "remove-parent", "append", "prepend"},
-		"remove-parent": {"refresh", "remove", "append", "prepend"},
-		"append":        {"remove", "remove-parent", "prepend"},
-		"prepend":       {"remove", "remove-parent", "append"},
-	}
-
-	// Check if action1 conflicts with action2
-	if conflicts, exists := conflictingActions[name1]; exists {
-		for _, conflicting := range conflicts {
-			if name2 == conflicting {
-				return true
-			}
-		}
-	}
-
-	// Check if action2 conflicts with action1
-	if conflicts, exists := conflictingActions[name2]; exists {
-		for _, conflicting := range conflicts {
-			if name1 == conflicting {
-				return true
-			}
-		}
-	}
-
-	// Actions that target different events don't conflict
-	// e.g., x-fir-refresh="query:ok" and x-fir-append="create:ok" can coexist
-	// Parse the event expressions to check if they handle the same events
-	events1 := parseEventExpression(action1.Info.Value)
-	events2 := parseEventExpression(action2.Info.Value)
-
-	// If they don't share any events, they don't conflict
-	if !hasCommonEvents(events1, events2) {
-		return false
-	}
-
-	// Only mutually exclusive DOM manipulation actions conflict when they share events
-	// Actions like reset, toggle-disabled, trigger can coexist with each other
-	// and with DOM manipulation actions as long as they don't interfere
-
-	// Define actions that can coexist even on same events
-	coexistingActions := map[string]bool{
-		"reset":           true,
-		"toggle-disabled": true,
-		"toggleClass":     true,
-		"trigger":         true,
-		"js":              true,
-	}
-
-	// If both actions can coexist, they don't conflict
-	if coexistingActions[name1] && coexistingActions[name2] {
-		return false
-	}
-
-	// If one is coexisting and the other is not in conflict list, they don't conflict
-	if coexistingActions[name1] || coexistingActions[name2] {
-		return false
-	}
-
-	// If they share events and are mutually exclusive actions, they conflict
-	return true
-}
-
-// parseEventExpression extracts event expressions from an event expression string
-func parseEventExpression(expr string) []string {
-	// Handle expressions like "create:ok", "query:ok", "create:ok,update:error"
-	events := make([]string, 0)
-
-	// Handle empty or whitespace-only expressions
-	if strings.TrimSpace(expr) == "" {
-		return events
-	}
-
-	parts := strings.Split(expr, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-
-		// Skip empty parts
-		if part == "" {
-			continue
-		}
-
-		// Remove modifiers, targets, and action targets
-		// Handle .modifier, ->target, =>action
-		cleanPart := part
-		if dotIndex := strings.Index(cleanPart, "."); dotIndex != -1 {
-			cleanPart = cleanPart[:dotIndex]
-		}
-		if arrowIndex := strings.Index(cleanPart, "->"); arrowIndex != -1 {
-			cleanPart = cleanPart[:arrowIndex]
-		}
-		if actionIndex := strings.Index(cleanPart, "=>"); actionIndex != -1 {
-			cleanPart = cleanPart[:actionIndex]
-		}
-
-		cleanPart = strings.TrimSpace(cleanPart)
-
-		// If no colon, add default :ok state
-		if !strings.Contains(cleanPart, ":") {
-			cleanPart = cleanPart + ":ok"
-		}
-
-		events = append(events, cleanPart)
-	}
-	return events
-}
-
-// hasCommonEvents checks if two event lists share any common events
-func hasCommonEvents(events1, events2 []string) bool {
-	for _, event1 := range events1 {
-		for _, event2 := range events2 {
-			if event1 == event2 {
-				return true
-			}
-		}
-	}
-	return false
-}

@@ -158,6 +158,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	if pubsubEvent.Detail != nil {
 		templateData = pubsubEvent.Detail.Data
 	}
+
 	routeTemplate := ctx.route.getTemplate().Funcs(newFirFuncMap(ctx, nil))
 	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
 		errs, ok := pubsubEvent.Detail.Data.(map[string]any)
@@ -259,14 +260,12 @@ func buildDOMEventFromTemplateWithRoute(ctx RouteContext, pubsubEvent pubsub.Eve
 		value = ""
 	}
 
-	detail := &dom.Detail{
-		HTML: value,
-	}
+	detail := &dom.Detail{}
 	if pubsubEvent.Detail != nil {
 		detail.State = pubsubEvent.Detail.State
 		detail.Data = pubsubEvent.Detail.Data
 	}
-
+	detail.HTML = value
 	return &dom.Event{
 		ID:     *pubsubEvent.ID,
 		State:  pubsubEvent.State,

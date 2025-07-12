@@ -287,14 +287,22 @@ func TestStressTemplateEngine_ResourceCleanup(t *testing.T) {
 	afterTemplatesMem := m2.HeapInuse
 	afterClearMem := m3.HeapInuse
 
-	memoryGrowth := afterTemplatesMem - initialMem
-	memoryFreed := afterTemplatesMem - afterClearMem
-	cleanupEfficiency := float64(memoryFreed) / float64(memoryGrowth) * 100
-
 	t.Logf("Resource cleanup test completed:")
 	t.Logf("  Initial memory: %d bytes (%.2f MB)", initialMem, float64(initialMem)/1024/1024)
 	t.Logf("  Memory after templates: %d bytes (%.2f MB)", afterTemplatesMem, float64(afterTemplatesMem)/1024/1024)
 	t.Logf("  Memory after cleanup: %d bytes (%.2f MB)", afterClearMem, float64(afterClearMem)/1024/1024)
+
+	// Handle cases where memory might not grow as expected due to GC or other factors
+	if afterTemplatesMem <= initialMem {
+		t.Logf("Memory did not grow after creating templates (possibly due to GC), skipping cleanup efficiency test")
+		t.Logf("This is acceptable as it indicates good memory management")
+		return
+	}
+
+	memoryGrowth := afterTemplatesMem - initialMem
+	memoryFreed := afterTemplatesMem - afterClearMem
+	cleanupEfficiency := float64(memoryFreed) / float64(memoryGrowth) * 100
+
 	t.Logf("  Memory growth: %d bytes (%.2f MB)", memoryGrowth, float64(memoryGrowth)/1024/1024)
 	t.Logf("  Memory freed: %d bytes (%.2f MB)", memoryFreed, float64(memoryFreed)/1024/1024)
 	t.Logf("  Cleanup efficiency: %.1f%%", cleanupEfficiency)

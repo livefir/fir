@@ -36,14 +36,16 @@ func init() {
 // RouteContext is the context for a route handler.
 // Its methods are used to return data or patch operations to the client.
 type RouteContext struct {
-	event          Event
-	request        *http.Request
-	response       http.ResponseWriter
-	urlValues      url.Values
-	route          *route
-	formDecoder    *schema.Decoder // Form decoder for WebSocketServices mode when route is nil
-	routeInterface RouteInterface  // RouteInterface for WebSocketServices mode when route is nil
-	isOnLoad       bool
+	event            Event
+	request          *http.Request
+	response         http.ResponseWriter
+	urlValues        url.Values
+	route            *route
+	formDecoder      *schema.Decoder // Form decoder for WebSocketServices mode when route is nil
+	routeInterface   RouteInterface  // RouteInterface for WebSocketServices mode when route is nil
+	isOnLoad         bool
+	accumulatedData  *map[string]any // Pointer to accumulated data from KV/Data calls
+	accumulatedState *map[string]any // Pointer to accumulated state data from StateKV/State calls
 }
 
 func (c RouteContext) Event() Event {
@@ -179,21 +181,50 @@ func (c RouteContext) Redirect(url string, status int) error {
 	return nil
 }
 
-// KV is a wrapper for ctx.Data(map[string]any{key: data})
+// KV stores a key-value pair in the accumulated data
 func (c RouteContext) KV(key string, data any) error {
-	return buildData(false, map[string]any{key: data})
+	if c.accumulatedData == nil {
+		newMap := make(map[string]any)
+		c.accumulatedData = &newMap
+	}
+	(*c.accumulatedData)[key] = data
+	return nil
 }
 
-// KV is a wrapper for ctx.State(map[string]any{key: data})
+// StateKV stores a key-value pair in the accumulated state data
 func (c RouteContext) StateKV(key string, data any) error {
-	return buildData(true, map[string]any{key: data})
+	if c.accumulatedState == nil {
+		newMap := make(map[string]any)
+		c.accumulatedState = &newMap
+	}
+	(*c.accumulatedState)[key] = data
+	return nil
 }
 
 // State data is only passed to event receiver without a bound template
 // it can be acccessed in the event receiver via $event.detail
 // e.g. @fir:myevent:ok="console.log('$event.detail.mykey')"
 func (c RouteContext) State(dataset ...any) error {
-	return buildData(true, dataset...)
+	if c.accumulatedState == nil {
+		newMap := make(map[string]any)
+		c.accumulatedState = &newMap
+	}
+	for _, data := range dataset {
+		if data == nil {
+			continue
+		}
+		// Convert data to map and merge
+		dataError := buildData(true, data)
+		if dataError != nil {
+			switch stateData := dataError.(type) {
+			case *stateData:
+				for k, v := range *stateData {
+					(*c.accumulatedState)[k] = v
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // Data sets the data to be hydrated into the route's template or an event's associated template/block action
@@ -205,7 +236,26 @@ func (c RouteContext) State(dataset ...any) error {
 // The function will return nil if no data is passed
 // The function accepts variadic arguments so that you can pass multiple structs or maps which will be merged
 func (c RouteContext) Data(dataset ...any) error {
-	return buildData(false, dataset...)
+	if c.accumulatedData == nil {
+		newMap := make(map[string]any)
+		c.accumulatedData = &newMap
+	}
+	for _, data := range dataset {
+		if data == nil {
+			continue
+		}
+		// Convert data to map and merge
+		dataError := buildData(false, data)
+		if dataError != nil {
+			switch routeData := dataError.(type) {
+			case *routeData:
+				for k, v := range *routeData {
+					(*c.accumulatedData)[k] = v
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // FieldError sets the error message for the given field and can be looked up by {{fir.Error "myevent.field"}}
@@ -241,4 +291,64 @@ func getUserFromRequestContext(r *http.Request) string {
 		return ""
 	}
 	return user
+}
+
+// GetSessionID extracts the session ID from the request cookie
+func (c RouteContext) GetSessionID() string {
+	if c.route == nil {
+		return ""
+	}
+
+	cookie, err := c.request.Cookie(c.route.cookieName)
+	if err != nil {
+		return ""
+	}
+
+	sessionID, _, err := decodeSession(*c.route.secureCookie, c.route.cookieName, cookie.Value)
+	if err != nil {
+		return ""
+	}
+
+	return sessionID
+}
+
+// GetAccumulatedData returns the accumulated data as an error for the data flow
+func (c RouteContext) GetAccumulatedData() error {
+	dataLen := 0
+	stateLen := 0
+
+	if c.accumulatedData != nil {
+		dataLen = len(*c.accumulatedData)
+	}
+	if c.accumulatedState != nil {
+		stateLen = len(*c.accumulatedState)
+	}
+
+	if dataLen == 0 && stateLen == 0 {
+		return nil
+	}
+
+	// If we have both data and state, return routeDataWithState
+	if dataLen > 0 && stateLen > 0 {
+		routeData := routeData(*c.accumulatedData)
+		stateData := stateData(*c.accumulatedState)
+		return &routeDataWithState{
+			routeData: &routeData,
+			stateData: &stateData,
+		}
+	}
+
+	// If we only have state data, return stateData
+	if stateLen > 0 {
+		stateData := stateData(*c.accumulatedState)
+		return &stateData
+	}
+
+	// If we only have regular data, return routeData
+	if dataLen > 0 {
+		routeData := routeData(*c.accumulatedData)
+		return &routeData
+	}
+
+	return nil
 }

@@ -359,17 +359,6 @@ func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route
 	return rt, nil
 }
 
-func publishEvents(ctx context.Context, eventCtx RouteContext, channel string) eventPublisher {
-	return func(pubsubEvent pubsub.Event) error {
-		err := eventCtx.route.services.PubSub.Publish(ctx, channel, pubsubEvent)
-		if err != nil {
-			logger.Errorf("error publishing patch: %v", err)
-			return err
-		}
-		return nil
-	}
-}
-
 func publishEventsWithServices(ctx context.Context, pubsubAdapter pubsub.Adapter, channel string) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
 		err := pubsubAdapter.Publish(ctx, channel, pubsubEvent)
@@ -565,11 +554,48 @@ func handlePostFormResult(err error, ctx RouteContext) {
 		return
 	}
 
-	switch err.(type) {
-	case *routeData, *stateData, *routeDataWithState:
-		http.Redirect(ctx.response, ctx.request, ctx.request.URL.Path, http.StatusFound)
+	switch errVal := err.(type) {
+	case *routeData:
+		// Render template with the data
+		ctx.route.renderer.RenderRoute(ctx, *errVal, false)
+	case *stateData:
+		// For state data, render the template
+		ctx.route.renderer.RenderRoute(ctx, routeData(*errVal), false)
+	case *routeDataWithState:
+		// Render template with route data
+		ctx.route.renderer.RenderRoute(ctx, *errVal.routeData, false)
 	default:
-		handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
+		// Get onLoad handler from EventRegistry
+		handlerInterface, ok := ctx.route.services.EventRegistry.Get(ctx.route.id, "load")
+		if ok {
+			if onLoadFunc, ok := handlerInterface.(OnEventFunc); ok {
+				// Create a new context for onLoad with initialized pointers
+				onLoadCtx := RouteContext{
+					event:            ctx.event,
+					request:          ctx.request,
+					response:         ctx.response,
+					route:            ctx.route,
+					urlValues:        ctx.urlValues,
+					isOnLoad:         true,
+					accumulatedData:  &map[string]any{},
+					accumulatedState: &map[string]any{},
+				}
+				onLoadErr := onLoadFunc(onLoadCtx)
+				accumulatedDataErr := onLoadCtx.GetAccumulatedData()
+
+				// Use accumulated data if available, otherwise use handler error
+				var onLoadResult error
+				if accumulatedDataErr != nil {
+					onLoadResult = accumulatedDataErr
+				} else {
+					onLoadResult = onLoadErr
+				}
+				handleOnLoadResult(onLoadResult, err, ctx)
+			}
+		} else {
+			// Fallback to legacy onLoad
+			handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
+		}
 	}
 }
 
@@ -847,10 +873,12 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventCtx := RouteContext{
-		event:    event,
-		request:  r,
-		response: w,
-		route:    rt,
+		event:            event,
+		request:          r,
+		response:         w,
+		route:            rt,
+		accumulatedData:  &map[string]any{},
+		accumulatedState: &map[string]any{},
 	}
 
 	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
@@ -884,7 +912,19 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Time the event handler execution
 	handlerStartTime := time.Now()
-	result := onEventFunc(eventCtx)
+	handlerErr := onEventFunc(eventCtx)
+
+	// Get accumulated data from the context
+	accumulatedDataErr := eventCtx.GetAccumulatedData()
+
+	// Use accumulated data if available, otherwise use handler error
+	var result error
+	if accumulatedDataErr != nil {
+		result = accumulatedDataErr
+	} else {
+		result = handlerErr
+	}
+
 	handlerDuration := time.Since(handlerStartTime)
 
 	if logger.GetGlobalLogger().IsDebugEnabled() {
@@ -1044,11 +1084,13 @@ func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventCtx := RouteContext{
-		event:     event,
-		request:   r,
-		response:  w,
-		route:     rt,
-		urlValues: r.PostForm,
+		event:            event,
+		request:          r,
+		response:         w,
+		route:            rt,
+		urlValues:        r.PostForm,
+		accumulatedData:  &map[string]any{},
+		accumulatedState: &map[string]any{},
 	}
 
 	handlerInterface, ok := rt.services.EventRegistry.Get(rt.id, event.ID)
@@ -1063,16 +1105,28 @@ func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handlePostFormResult(onEventFunc(eventCtx), eventCtx)
+	// Call the event handler
+	handlerErr := onEventFunc(eventCtx)
+
+	// Get accumulated data from the context
+	accumulatedDataErr := eventCtx.GetAccumulatedData()
+
+	// Use accumulated data if available, otherwise use handler error
+	var resultErr error
+	if accumulatedDataErr != nil {
+		resultErr = accumulatedDataErr
+	} else {
+		resultErr = handlerErr
+	}
+
+	handlePostFormResult(resultErr, eventCtx)
 }
 
 // determineFormAction extracts the form action from query parameters
 func (rt *route) determineFormAction(r *http.Request) string {
 	values := r.URL.Query()
-	if len(values) == 1 {
-		if event := values.Get("event"); event != "" {
-			return event
-		}
+	if event := values.Get("event"); event != "" {
+		return event
 	}
 	return ""
 }
@@ -1100,13 +1154,36 @@ func (rt *route) parseFormEvent(r *http.Request, formAction string) (Event, erro
 func (rt *route) handleGetRequest(w http.ResponseWriter, r *http.Request) {
 	event := Event{ID: rt.routeOpt.id}
 	eventCtx := RouteContext{
-		event:    event,
-		request:  r,
-		response: w,
-		route:    rt,
-		isOnLoad: true,
+		event:            event,
+		request:          r,
+		response:         w,
+		route:            rt,
+		isOnLoad:         true,
+		accumulatedData:  &map[string]any{},
+		accumulatedState: &map[string]any{},
 	}
-	handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
+
+	// Get onLoad handler from EventRegistry
+	handlerInterface, ok := rt.services.EventRegistry.Get(rt.id, "load")
+	if ok {
+		if onLoadFunc, ok := handlerInterface.(OnEventFunc); ok {
+			// Call onLoad handler and get accumulated data
+			onLoadErr := onLoadFunc(eventCtx)
+			accumulatedDataErr := eventCtx.GetAccumulatedData()
+
+			// Use accumulated data if available, otherwise use handler error
+			var onLoadResult error
+			if accumulatedDataErr != nil {
+				onLoadResult = accumulatedDataErr
+			} else {
+				onLoadResult = onLoadErr
+			}
+			handleOnLoadResult(onLoadResult, nil, eventCtx)
+		}
+	} else {
+		// Fallback to legacy onLoad
+		handleOnLoadResult(rt.onLoad(eventCtx), nil, eventCtx)
+	}
 }
 
 // RouteInterface implementation methods

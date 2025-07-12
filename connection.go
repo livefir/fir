@@ -12,6 +12,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/gorilla/websocket"
 	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/pubsub"
@@ -23,8 +24,7 @@ type RouteInterface = routeservices.RouteInterface
 // Connection represents a WebSocket connection with its associated state and behavior
 type Connection struct {
 	conn          *websocket.Conn
-	wsServices    routeservices.WebSocketServices // WebSocketServices interface (replaces controller)
-	controller    *controller                     // Legacy controller (will be removed)
+	wsServices    routeservices.WebSocketServices // WebSocketServices interface
 	request       *http.Request
 	response      http.ResponseWriter
 	sessionID     string
@@ -37,73 +37,6 @@ type Connection struct {
 	cancel        context.CancelFunc
 	mu            sync.Mutex
 	closed        bool
-}
-
-// NewConnection creates a new WebSocket connection
-func NewConnection(w http.ResponseWriter, r *http.Request, cntrl *controller) (*Connection, error) {
-	// Validate session and extract connection info
-	cookie, err := r.Cookie(cntrl.cookieName)
-	if err != nil {
-		logger.Errorf("cookie err: %v", err)
-		RedirectUnauthorisedWebSocket(w, r, "/")
-		return nil, err
-	}
-	if cookie.Value == "" {
-		logger.Errorf("cookie err: empty")
-		RedirectUnauthorisedWebSocket(w, r, "/")
-		return nil, fmt.Errorf("empty cookie")
-	}
-
-	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
-	if err != nil {
-		logger.Errorf("decode session err: %v", err)
-		RedirectUnauthorisedWebSocket(w, r, "/")
-		return nil, err
-	}
-
-	if sessionID == "" {
-		logger.Errorf("err: sessionID is empty, routeID is: %s", routeID)
-		RedirectUnauthorisedWebSocket(w, r, "/")
-		return nil, fmt.Errorf("empty sessionID")
-	}
-
-	if routeID == "" {
-		logger.Errorf("routeID: is empty")
-		RedirectUnauthorisedWebSocket(w, r, "/")
-		return nil, fmt.Errorf("empty routeID")
-	}
-
-	user := getUserFromRequestContext(r)
-	connectedUser := user
-	if user == "" {
-		connectedUser = sessionID
-	}
-
-	// Call socket connect handler if exists
-	if cntrl.onSocketConnect != nil {
-		err := cntrl.onSocketConnect(connectedUser)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	conn := &Connection{
-		controller:    cntrl,
-		request:       r,
-		response:      w,
-		sessionID:     sessionID,
-		routeID:       routeID,
-		user:          user,
-		send:          make(chan []byte, 100),
-		writePumpDone: make(chan struct{}),
-		lastEvent:     Event{SessionID: &sessionID},
-		ctx:           ctx,
-		cancel:        cancel,
-	}
-
-	return conn, nil
 }
 
 // NewConnectionWithServices creates a new WebSocket connection using WebSocketServices
@@ -145,7 +78,6 @@ func NewConnectionWithServices(w http.ResponseWriter, r *http.Request, wsService
 	return &Connection{
 		conn:          nil, // Will be set during Upgrade
 		wsServices:    wsServices,
-		controller:    nil, // No controller when using WebSocketServices
 		request:       r,
 		response:      w,
 		sessionID:     sessionID,
@@ -160,14 +92,13 @@ func NewConnectionWithServices(w http.ResponseWriter, r *http.Request, wsService
 
 // Upgrade upgrades the HTTP connection to WebSocket
 func (c *Connection) Upgrade() error {
-	var upgrader *websocket.Upgrader
+	if c.wsServices == nil {
+		return fmt.Errorf("WebSocketServices is required")
+	}
 
-	if c.wsServices != nil {
-		upgrader = c.wsServices.GetWebSocketUpgrader()
-	} else if c.controller != nil {
-		upgrader = &c.controller.websocketUpgrader
-	} else {
-		return fmt.Errorf("no WebSocketServices or controller available for upgrade")
+	upgrader := c.wsServices.GetWebSocketUpgrader()
+	if upgrader == nil {
+		return fmt.Errorf("WebSocket upgrader not available")
 	}
 
 	conn, err := upgrader.Upgrade(c.response, c.request, nil)
@@ -200,15 +131,10 @@ func (c *Connection) configureConnection() {
 
 // StartPubSubListeners starts listening for pubsub events for all routes
 func (c *Connection) StartPubSubListeners() error {
-	// Use WebSocketServices if available, fallback to controller
-	if c.wsServices != nil {
-		return c.startPubSubListenersWithServices()
-	} else if c.controller != nil {
-		return c.startPubSubListenersWithController()
-	} else {
-		logger.Errorf("no WebSocketServices or controller available")
-		return fmt.Errorf("no WebSocketServices or controller available")
+	if c.wsServices == nil {
+		return fmt.Errorf("WebSocketServices is required")
 	}
+	return c.startPubSubListenersWithServices()
 }
 
 // startPubSubListenersWithServices uses WebSocketServices interface
@@ -233,6 +159,15 @@ func (c *Connection) startPubSubListenersWithServices() error {
 		go func(routeIface RouteInterface, sub pubsub.Subscription) {
 			defer sub.Close()
 			for pubsubEvent := range sub.C() {
+				// Skip events that are generated by server events to avoid duplicates
+				// Server events are handled by the dedicated handleServerEventWithServices path
+				if pubsubEvent.ID != nil && routeIface.EventSender() != nil {
+					// Check if this event ID has a server event handler
+					if _, hasHandler := c.wsServices.GetEventRegistry().Get(routeIface.ID(), strings.ToLower(*pubsubEvent.ID)); hasHandler {
+						continue // Skip this event as it's handled by server event path
+					}
+				}
+
 				// Create a route context for WebSocketServices mode
 				routeCtx := RouteContext{
 					request:        c.request,
@@ -275,140 +210,20 @@ func (c *Connection) startPubSubListenersWithServices() error {
 	return nil
 }
 
-// startPubSubListenersWithController uses legacy controller approach
-func (c *Connection) startPubSubListenersWithController() error {
-	for _, rt := range c.controller.routes {
-		routeChannel := rt.channelFunc(c.request, rt.id)
-		if routeChannel == nil {
-			logger.Errorf("error: channel is empty")
-			http.Error(c.response, "channel is empty", http.StatusUnauthorized)
-			return fmt.Errorf("channel is empty")
-		}
-
-		// Subscribe to pubsub events
-		subscription, err := rt.pubsub.Subscribe(c.ctx, *routeChannel)
-		if err != nil {
-			http.Error(c.response, err.Error(), http.StatusInternalServerError)
-			return err
-		}
-
-		go func(r *route, sub pubsub.Subscription) {
-			defer sub.Close()
-			for pubsubEvent := range sub.C() {
-				routeCtx := RouteContext{
-					request:  c.request,
-					response: c.response,
-					route:    r,
-				}
-				go c.renderAndWriteEvent(*routeChannel, routeCtx, pubsubEvent)
-			}
-		}(rt, subscription)
-
-		// Handle server events
-		go func(r *route) {
-			for event := range r.eventSender {
-				c.handleServerEvent(r, event)
-			}
-		}(rt)
-
-		// Handle development mode reload events
-		if rt.developmentMode {
-			reloadSubscriber, err := rt.pubsub.Subscribe(c.ctx, devReloadChannel)
-			if err != nil {
-				http.Error(c.response, err.Error(), http.StatusInternalServerError)
-				return err
-			}
-
-			go func(sub pubsub.Subscription) {
-				defer sub.Close()
-				for pubsubEvent := range sub.C() {
-					go c.writeEvent(pubsubEvent)
-				}
-			}(reloadSubscriber)
-		}
-	}
-
-	return nil
-}
-
-// handleServerEvent processes server-sent events
-func (c *Connection) handleServerEvent(route *route, event Event) {
-	eventCtx := RouteContext{
-		event:    event,
-		request:  c.request,
-		response: c.response,
-		route:    route,
-	}
-
-	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
-		"route_id":   route.id,
-		"event_id":   event.ID,
-		"session_id": c.sessionID,
-		"transport":  "websocket",
-	})
-
-	startTime := time.Now()
-	withEventLogger.Info("received server event")
-
-	if logger.GetGlobalLogger().IsDebugEnabled() {
-		withEventLogger.Debug("processing server event",
-			"params", event.Params,
-			"timestamp", startTime.Format(time.RFC3339),
-		)
-	}
-
-	handlerInterface, ok := route.services.EventRegistry.Get(route.id, strings.ToLower(event.ID))
-	if !ok {
-		logger.Errorf("err: event %v, event.id not found", event)
-		return
-	}
-
-	onEventFunc, ok := handlerInterface.(OnEventFunc)
-	if !ok {
-		logger.Errorf("invalid event handler type for event %v", event)
-		return
-	}
-
-	// Update request context with user
-	eventCtx.request = eventCtx.request.WithContext(context.WithValue(context.Background(), UserKey, c.user))
-	channel := *route.channelFunc(eventCtx.request, route.id)
-
-	// Time the event handler execution
-	handlerStartTime := time.Now()
-	result := onEventFunc(eventCtx)
-	handlerDuration := time.Since(handlerStartTime)
-
-	if logger.GetGlobalLogger().IsDebugEnabled() {
-		withEventLogger.Debug("event handler completed",
-			"handler_duration_ms", handlerDuration.Milliseconds(),
-		)
-	}
-
-	renderStartTime := time.Now()
-	errorEvent := handleOnEventResult(result, eventCtx, publishEvents(c.ctx, eventCtx, channel))
-	renderDuration := time.Since(renderStartTime)
-	totalDuration := time.Since(startTime)
-
-	if logger.GetGlobalLogger().IsDebugEnabled() {
-		withEventLogger.Debug("server event processing complete",
-			"handler_duration_ms", handlerDuration.Milliseconds(),
-			"render_duration_ms", renderDuration.Milliseconds(),
-			"total_duration_ms", totalDuration.Milliseconds(),
-		)
-	}
-
-	if errorEvent != nil {
-		c.renderAndWriteEvent(channel, eventCtx, *errorEvent)
-	}
-}
-
 // handleServerEventWithServices processes server events using WebSocketServices
 func (c *Connection) handleServerEventWithServices(routeInterface RouteInterface, event Event) {
+	// Initialize accumulated data maps
+	accumulatedData := make(map[string]any)
+	accumulatedState := make(map[string]any)
+
 	eventCtx := RouteContext{
-		event:    event,
-		request:  c.request,
-		response: c.response,
-		route:    nil, // No legacy route in WebSocketServices mode
+		event:            event,
+		request:          c.request,
+		response:         c.response,
+		route:            nil,                          // No legacy route in WebSocketServices mode
+		formDecoder:      routeInterface.FormDecoder(), // Provide form decoder for binding
+		accumulatedData:  &accumulatedData,
+		accumulatedState: &accumulatedState,
 	}
 
 	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
@@ -456,7 +271,7 @@ func (c *Connection) handleServerEventWithServices(routeInterface RouteInterface
 	}
 
 	renderStartTime := time.Now()
-	errorEvent := handleOnEventResult(result, eventCtx, publishEvents(c.ctx, eventCtx, channel))
+	errorEvent := handleOnEventResult(result, eventCtx, publishEventsWithServices(c.ctx, routeInterface.PubSub(), channel))
 	renderDuration := time.Since(renderStartTime)
 	totalDuration := time.Since(startTime)
 
@@ -470,91 +285,41 @@ func (c *Connection) handleServerEventWithServices(routeInterface RouteInterface
 
 	if errorEvent != nil {
 		c.renderAndWriteEvent(channel, eventCtx, *errorEvent)
-	}
-}
-
-// SendConnectedEvent sends socket connected events to all routes
-func (c *Connection) SendConnectedEvent() {
-	// Skip if no controller available (WebSocketServices mode doesn't need this yet)
-	if c.controller == nil {
-		return
-	}
-
-	connectedUser := c.user
-	if c.user == "" {
-		connectedUser = c.sessionID
-	}
-
-	for _, rt := range c.controller.routes {
-		_, hasConnectedHandler := c.controller.eventRegistry.Get(rt.id, EventSocketConnected)
-		if !hasConnectedHandler {
-			continue
+	} else if result == nil {
+		// On successful event processing, render and send the updated template
+		target := ""
+		if eventCtx.event.Target != nil {
+			target = *eventCtx.event.Target
 		}
 
-		connectedParams := SocketStatus{
-			Connected: true,
-			User:      connectedUser,
-		}
-		paramBytes, err := json.Marshal(connectedParams)
-		if err != nil {
-			logger.Errorf("error: marshaling connectedParams %+v, err %v", connectedParams, err)
-			continue
-		}
-
-		connectedEvent := Event{
-			ID:        EventSocketConnected,
-			SessionID: &c.sessionID,
-			Params:    paramBytes,
-			Timestamp: time.Now().UTC().UnixMilli(),
-		}
-
-		go func(ev Event, r *route) {
-			for {
-				select {
-				case r.eventSender <- ev:
-					return
-				default:
-					time.Sleep(10 * time.Millisecond)
-				}
+		// Get the accumulated data from the RouteContext
+		accumulatedDataErr := eventCtx.GetAccumulatedData()
+		var detail *dom.Detail
+		if accumulatedDataErr != nil {
+			switch data := accumulatedDataErr.(type) {
+			case *routeData:
+				detail = &dom.Detail{Data: *data}
+			case *routeDataWithState:
+				detail = &dom.Detail{Data: *data.routeData}
+			case *stateData:
+				detail = &dom.Detail{Data: map[string]any{}}
+			default:
+				detail = &dom.Detail{Data: map[string]any{}}
 			}
-		}(connectedEvent, rt)
-	}
-}
-
-// SendDisconnectedEvent sends socket disconnected events to all routes
-func (c *Connection) SendDisconnectedEvent() {
-	// Skip if no controller available (WebSocketServices mode doesn't need this yet)
-	if c.controller == nil {
-		return
-	}
-
-	connectedUser := c.user
-	if c.user == "" {
-		connectedUser = c.sessionID
-	}
-
-	for _, rt := range c.controller.routes {
-		_, hasDisconnectedHandler := c.controller.eventRegistry.Get(rt.id, EventSocketDisconnected)
-		if !hasDisconnectedHandler {
-			continue
+		} else {
+			detail = &dom.Detail{Data: map[string]any{}}
 		}
 
-		connectedParams := SocketStatus{
-			Connected: false,
-			User:      connectedUser,
-		}
-		paramBytes, err := json.Marshal(connectedParams)
-		if err != nil {
-			logger.Errorf("error: marshaling connectedParams %+v, err %v", connectedParams, err)
-			continue
+		successEvent := pubsub.Event{
+			ID:         &eventCtx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: eventCtx.event.ElementKey,
+			SessionID:  eventCtx.event.SessionID,
+			Detail:     detail,
 		}
 
-		rt.eventSender <- Event{
-			ID:        EventSocketDisconnected,
-			SessionID: &c.sessionID,
-			Params:    paramBytes,
-			Timestamp: time.Now().UTC().UnixMilli(),
-		}
+		c.renderAndWriteEvent(channel, eventCtx, successEvent)
 	}
 }
 
@@ -622,16 +387,11 @@ func (c *Connection) handleMessage(message []byte) error {
 	c.lastEvent = event
 
 	// Validate session authorization
-	var eventSessionID, eventRouteID string
-
-	if c.wsServices != nil {
-		eventSessionID, eventRouteID, err = c.wsServices.DecodeSession(*event.SessionID)
-	} else if c.controller != nil {
-		eventSessionID, eventRouteID, err = decodeSession(*c.controller.secureCookie, c.controller.cookieName, *event.SessionID)
-	} else {
-		return fmt.Errorf("no WebSocketServices or controller available for session decoding")
+	if c.wsServices == nil {
+		return fmt.Errorf("WebSocketServices is required for session decoding")
 	}
 
+	eventSessionID, eventRouteID, err := c.wsServices.DecodeSession(*event.SessionID)
 	if err != nil {
 		logger.Errorf("err: %v, decoding session, closing connection", err)
 		return err
@@ -657,13 +417,10 @@ func (c *Connection) isDuplicateEvent(event Event) bool {
 		eventTime := toUnixTime(event.Timestamp)
 
 		var dropInterval time.Duration
+		// Use default interval if wsServices is not available
+		dropInterval = 100 * time.Millisecond
 		if c.wsServices != nil {
 			dropInterval = c.wsServices.GetDropDuplicateInterval()
-		} else if c.controller != nil {
-			dropInterval = c.controller.dropDuplicateInterval
-		} else {
-			// Default interval if neither is available
-			dropInterval = 100 * time.Millisecond
 		}
 
 		if lastEventTime.Add(dropInterval).After(eventTime) {
@@ -675,13 +432,11 @@ func (c *Connection) isDuplicateEvent(event Event) bool {
 
 // processEvent processes a validated event
 func (c *Connection) processEvent(event Event, eventRouteID string) {
-	if c.wsServices != nil {
-		c.processEventWithServices(event, eventRouteID)
-	} else if c.controller != nil {
-		c.processEventWithController(event, eventRouteID)
-	} else {
-		logger.Errorf("no WebSocketServices or controller available for event processing")
+	if c.wsServices == nil {
+		logger.Errorf("WebSocketServices is required for event processing")
+		return
 	}
+	c.processEventWithServices(event, eventRouteID)
 }
 
 // processEventWithServices processes events using WebSocketServices
@@ -693,15 +448,21 @@ func (c *Connection) processEventWithServices(event Event, eventRouteID string) 
 		return
 	}
 
+	// Initialize accumulated data maps
+	accumulatedData := make(map[string]any)
+	accumulatedState := make(map[string]any)
+
 	eventRegistry := c.wsServices.GetEventRegistry()
 
 	eventCtx := RouteContext{
-		event:          event,
-		request:        c.request,
-		response:       c.response,
-		route:          nil,                          // No legacy route object in WebSocketServices mode
-		formDecoder:    routeInterface.FormDecoder(), // Provide form decoder for binding
-		routeInterface: routeInterface,               // Provide RouteInterface for WebSocketServices mode
+		event:            event,
+		request:          c.request,
+		response:         c.response,
+		route:            nil,                          // No legacy route object in WebSocketServices mode
+		formDecoder:      routeInterface.FormDecoder(), // Provide form decoder for binding
+		routeInterface:   routeInterface,               // Provide RouteInterface for WebSocketServices mode
+		accumulatedData:  &accumulatedData,             // Initialize accumulated data
+		accumulatedState: &accumulatedState,            // Initialize accumulated state
 	}
 
 	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
@@ -764,117 +525,72 @@ func (c *Connection) processEventWithServices(event Event, eventRouteID string) 
 
 	if errorEvent != nil {
 		c.renderAndWriteEvent(channel, eventCtx, *errorEvent)
-	}
-}
+	} else if result == nil {
+		// On successful event processing, render and send the updated template
+		target := ""
+		if eventCtx.event.Target != nil {
+			target = *eventCtx.event.Target
+		}
 
-// processEventWithController processes events using legacy controller
-func (c *Connection) processEventWithController(event Event, eventRouteID string) {
+		// Get the accumulated data from the RouteContext
+		accumulatedDataErr := eventCtx.GetAccumulatedData()
+		var detail *dom.Detail
+		if accumulatedDataErr != nil {
+			switch data := accumulatedDataErr.(type) {
+			case *routeData:
+				detail = &dom.Detail{Data: *data}
+			case *routeDataWithState:
+				detail = &dom.Detail{Data: *data.routeData}
+			case *stateData:
+				detail = &dom.Detail{Data: map[string]any{}}
+			default:
+				detail = &dom.Detail{Data: map[string]any{}}
+			}
+		} else {
+			detail = &dom.Detail{Data: map[string]any{}}
+		}
 
-	eventRoute := c.controller.routes[eventRouteID]
-
-	eventCtx := RouteContext{
-		event:    event,
-		request:  c.request,
-		response: c.response,
-		route:    eventRoute,
-	}
-
-	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{
-		"route_id":    eventRoute.id,
-		"event_id":    event.ID,
-		"session_id":  c.sessionID,
-		"element_key": event.ElementKey,
-		"transport":   "websocket",
-	})
-
-	startTime := time.Now()
-	withEventLogger.Debug("received user event")
-
-	if logger.GetGlobalLogger().IsDebugEnabled() {
-		withEventLogger.Debug("processing user event",
-			"params", event.Params,
-			"timestamp", startTime.Format(time.RFC3339),
-		)
-	}
-
-	handlerInterface, ok := eventRoute.services.EventRegistry.Get(eventRoute.id, strings.ToLower(event.ID))
-	if !ok {
-		logger.Errorf("err: event %v, event.id not found", event)
-		return
-	}
-
-	onEventFunc, ok := handlerInterface.(OnEventFunc)
-	if !ok {
-		logger.Errorf("invalid event handler type for event %v", event)
-		return
-	}
-
-	channel := *eventRoute.channelFunc(eventCtx.request, eventRoute.id)
-
-	// Time the event handler execution
-	handlerStartTime := time.Now()
-	result := onEventFunc(eventCtx)
-	handlerDuration := time.Since(handlerStartTime)
-
-	if logger.GetGlobalLogger().IsDebugEnabled() {
-		withEventLogger.Debug("event handler completed",
-			"handler_duration_ms", handlerDuration.Milliseconds(),
-		)
-	}
-
-	renderStartTime := time.Now()
-	errorEvent := handleOnEventResult(result, eventCtx, publishEvents(c.ctx, eventCtx, channel))
-	renderDuration := time.Since(renderStartTime)
-	totalDuration := time.Since(startTime)
-
-	if logger.GetGlobalLogger().IsDebugEnabled() {
-		withEventLogger.Debug("user event processing complete",
-			"handler_duration_ms", handlerDuration.Milliseconds(),
-			"render_duration_ms", renderDuration.Milliseconds(),
-			"total_duration_ms", totalDuration.Milliseconds(),
-		)
-	}
-
-	if errorEvent != nil {
-		c.renderAndWriteEvent(channel, eventCtx, *errorEvent)
+		successEvent := pubsub.Event{
+			ID:         &eventCtx.event.ID,
+			State:      eventstate.OK,
+			Target:     &target,
+			ElementKey: eventCtx.event.ElementKey,
+			SessionID:  eventCtx.event.SessionID,
+			Detail:     detail,
+		}
+		c.renderAndWriteEvent(channel, eventCtx, successEvent)
 	}
 }
 
 // renderAndWriteEvent renders and writes an event to the WebSocket
 func (c *Connection) renderAndWriteEvent(channel string, ctx RouteContext, pubsubEvent pubsub.Event) error {
-	var events []dom.Event
-	var err error
+	if c.wsServices == nil {
+		return fmt.Errorf("WebSocketServices is required")
+	}
 
-	// Handle both WebSocketServices mode and legacy mode
-	if c.wsServices != nil {
-		// WebSocketServices mode: use renderer from routes map
-		routes := c.wsServices.GetRoutes()
-		routeIface, exists := routes[c.routeID]
-		if !exists {
-			return fmt.Errorf("route not found for routeID: %s", c.routeID)
-		}
-		rendererIface := routeIface.GetRenderer()
-		if rendererIface == nil {
-			return fmt.Errorf("renderer not found for route: %s", c.routeID)
-		}
-		// Type assert to Renderer
-		renderer, ok := rendererIface.(Renderer)
-		if !ok {
-			return fmt.Errorf("renderer is not of type Renderer for route: %s", c.routeID)
-		}
-		// Use the renderer with route interface
-		if tr, ok := renderer.(*TemplateRenderer); ok {
-			events = tr.RenderDOMEventsWithRoute(ctx, pubsubEvent, routeIface)
-		} else {
-			// Fallback to regular method if not TemplateRenderer
-			events = renderer.RenderDOMEvents(ctx, pubsubEvent)
-		}
+	// WebSocketServices mode: use renderer from routes map
+	routes := c.wsServices.GetRoutes()
+	routeIface, exists := routes[c.routeID]
+	if !exists {
+		return fmt.Errorf("route not found for routeID: %s", c.routeID)
+	}
+	rendererIface := routeIface.GetRenderer()
+	if rendererIface == nil {
+		return fmt.Errorf("renderer not found for route: %s", c.routeID)
+	}
+
+	var events []dom.Event
+	// Type assert to Renderer
+	renderer, ok := rendererIface.(Renderer)
+	if !ok {
+		return fmt.Errorf("renderer is not of type Renderer for route: %s", c.routeID)
+	}
+	// Use the renderer with route interface
+	if tr, ok := renderer.(*TemplateRenderer); ok {
+		events = tr.RenderDOMEventsWithRoute(ctx, pubsubEvent, routeIface)
 	} else {
-		// Legacy mode: use renderer from route
-		if ctx.route == nil || ctx.route.renderer == nil {
-			return fmt.Errorf("legacy route or renderer is nil")
-		}
-		events = ctx.route.renderer.RenderDOMEvents(ctx, pubsubEvent)
+		// Fallback to regular method if not TemplateRenderer
+		events = renderer.RenderDOMEvents(ctx, pubsubEvent)
 	}
 
 	eventsData, err := json.Marshal(events)
@@ -983,9 +699,6 @@ func (c *Connection) Close() {
 		c.conn.Close()
 	}
 
-	// Send disconnected event
-	c.SendDisconnectedEvent()
-
 	// Call socket disconnect handler if exists
 	if c.wsServices != nil {
 		connectedUser := c.user
@@ -993,11 +706,5 @@ func (c *Connection) Close() {
 			connectedUser = c.sessionID
 		}
 		c.wsServices.OnSocketDisconnect(connectedUser)
-	} else if c.controller != nil && c.controller.onSocketDisconnect != nil {
-		connectedUser := c.user
-		if c.user == "" {
-			connectedUser = c.sessionID
-		}
-		c.controller.onSocketDisconnect(connectedUser)
 	}
 }

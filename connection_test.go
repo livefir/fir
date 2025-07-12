@@ -6,16 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/pubsub"
 )
 
 func TestNewConnectionWithoutCookie(t *testing.T) {
-	// Setup controller with necessary components
-	controller := &controller{
-		name: "test",
-		opt: opt{
-			cookieName: "test_cookie",
-		},
+	// Setup mock WebSocketServices
+	wsServices := &routeservices.MockWebSocketServices{
+		CookieName: "test_cookie",
 	}
 
 	// Create a test HTTP request without cookie
@@ -23,19 +21,21 @@ func TestNewConnectionWithoutCookie(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Test with missing cookie - should fail
-	_, err := NewConnection(w, req, controller)
+	_, err := NewConnectionWithServices(w, req, wsServices)
 	if err == nil {
 		t.Error("Expected error when cookie is missing, got nil")
 	}
 }
 
 func TestConnectionLifecycle(t *testing.T) {
+	// Setup mock WebSocketServices
+	wsServices := &routeservices.MockWebSocketServices{
+		CookieName: "test_cookie",
+	}
+
 	// Test the connection lifecycle methods
 	conn := &Connection{
-		controller: &controller{
-			name:   "test",
-			routes: make(map[string]*route),
-		},
+		wsServices:    wsServices,
 		sessionID:     "test_session",
 		routeID:       "test_route",
 		user:          "test_user",
@@ -46,12 +46,6 @@ func TestConnectionLifecycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	conn.ctx = ctx
 	conn.cancel = cancel
-
-	// Test SendConnectedEvent - should not panic with empty routes
-	conn.SendConnectedEvent()
-
-	// Test SendDisconnectedEvent - should not panic with empty routes
-	conn.SendDisconnectedEvent()
 
 	// Test Close - should not panic
 	conn.Close()
@@ -66,17 +60,14 @@ func TestConnectionLifecycle(t *testing.T) {
 }
 
 func TestConnectionIsDuplicateEvent(t *testing.T) {
-	controller := &controller{
-		name: "test",
-		opt: opt{
-			dropDuplicateInterval: 250 * time.Millisecond,
-		},
+	wsServices := &routeservices.MockWebSocketServices{
+		DropDuplicateInterval: 250 * time.Millisecond,
 	}
 
 	sessionID := "test_session"
 	elementKey := "test_key"
 	conn := &Connection{
-		controller: controller,
+		wsServices: wsServices,
 		lastEvent: Event{
 			ID:         "test_event",
 			SessionID:  &sessionID,

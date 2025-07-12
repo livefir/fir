@@ -107,8 +107,15 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, wsServices routeservice
 		return
 	}
 
-	// Send connected event
-	conn.SendConnectedEvent()
+	// Call socket connect handler if exists
+	connectedUser := conn.user
+	if conn.user == "" {
+		connectedUser = conn.sessionID
+	}
+	if err := wsServices.OnSocketConnect(connectedUser); err != nil {
+		logger.Errorf("socket connect handler error: %v", err)
+		return
+	}
 
 	logger.GetGlobalLogger().Info("websocket connected",
 		"remote_addr", r.RemoteAddr,
