@@ -161,11 +161,11 @@ graph LR
 
 ## 5. Building Block View
 
-### 5.1 Whitebox Overall System
+### 5.1 Whitebox Overall System (Current Architecture)
 
 ```mermaid
 graph TB
-    subgraph "Fir Framework"
+    subgraph "Fir Framework - New Service Layer Architecture"
         Controller[Controller]
         Route[Route]
         Connection[Connection]
@@ -174,6 +174,27 @@ graph TB
         TemplateEngine[Template Engine]
         PubSub[Pub/Sub Adapter]
         RouteServices[Route Services]
+        
+        subgraph "Service Layer"
+            EventService[Event Service]
+            RenderService[Render Service]
+            TemplateService[Template Service]
+            ResponseBuilder[Response Builder]
+        end
+        
+        subgraph "Handler Chain"
+            HandlerChain[Handler Chain]
+            JSONEventHandler[JSON Event Handler]
+            FormHandler[Form Handler]
+            GetHandler[GET Handler]
+            WebSocketHandler[WebSocket Handler]
+        end
+        
+        subgraph "HTTP Abstraction"
+            HTTPAdapter[HTTP Adapter]
+            RequestModel[Request Model]
+            ResponseModel[Response Model]
+        end
     end
     
     subgraph "Template Engine Subsystem"
@@ -192,12 +213,25 @@ graph TB
     
     Controller --> RouteServices
     RouteServices --> Route
-    RouteServices --> TemplateEngine
-    Controller --> EventRegistry
-    Route --> Renderer
-    Renderer --> TemplateEngine
-    Route --> Connection
-    Connection --> PubSub
+    RouteServices --> HandlerChain
+    Route --> HandlerChain
+    HandlerChain --> JSONEventHandler
+    HandlerChain --> FormHandler
+    HandlerChain --> GetHandler
+    HandlerChain --> WebSocketHandler
+    
+    JSONEventHandler --> EventService
+    FormHandler --> EventService
+    GetHandler --> RenderService
+    WebSocketHandler --> EventService
+    
+    EventService --> ResponseBuilder
+    RenderService --> TemplateService
+    RenderService --> ResponseBuilder
+    
+    HTTPAdapter --> RequestModel
+    HTTPAdapter --> ResponseModel
+    HandlerChain --> HTTPAdapter
     
     TemplateEngine --> TE_Interface
     TE_Interface --> TE_GoEngine
@@ -210,19 +244,42 @@ graph TB
     WebSocket <--> Connection
 ```
 
-**Component Responsibilities:**
+**Updated Component Responsibilities:**
 
 | Component | Responsibility |
 |-----------|---------------|
-| **Controller** | Main framework entry point, route management, WebSocket handling |
-| **Route Services** | Dependency injection container for routes with template engine, renderer, and other services |
-| **Route** | HTTP request handling, event processing, delegates template rendering |
-| **Template Engine** | Template parsing, caching, rendering, and event template management |
-| **Connection** | WebSocket connection management, message handling |
-| **Event Registry** | Event handler registration and lookup |
-| **Renderer** | Template execution orchestration and DOM event generation |
-| **Pub/Sub Adapter** | Message broadcasting (Redis/in-memory) |
-| **Alpine.js Plugin** | Client-side DOM manipulation and event handling |
+| **Controller** | Main framework entry point, route management, creates route services |
+| **Route Services** | Dependency injection container providing all services to routes |
+| **Route** | HTTP request orchestration, delegates to handler chain with fallback |
+| **Handler Chain** | Request routing and processing through specialized handlers |
+| **Event Service** | Event processing, validation, registry lookup, error handling |
+| **Render Service** | Template rendering orchestration and DOM event generation |
+| **Template Service** | Template parsing, caching, and execution |
+| **Response Builder** | HTTP response construction from service layer results |
+| **HTTP Adapter** | Request/response model conversion between HTTP and service layers |
+| **Request Handlers** | Specialized handlers for different request types (JSON, Form, GET, WebSocket) |
+
+### 5.1.1 Legacy Architecture (Maintained for Compatibility)
+
+The previous monolithic route architecture is maintained as a fallback mechanism:
+
+```mermaid
+graph TB
+    subgraph "Legacy Route (Fallback)"
+        ServeHTTP[ServeHTTP]
+        handleJSONEvent[handleJSONEvent]
+        handleFormPost[handleFormPost] 
+        handleGetRequest[handleGetRequest]
+        handleWebSocketUpgrade[handleWebSocketUpgrade]
+    end
+    
+    ServeHTTP --> handleJSONEvent
+    ServeHTTP --> handleFormPost
+    ServeHTTP --> handleGetRequest
+    ServeHTTP --> handleWebSocketUpgrade
+```
+
+This ensures zero regression during the architectural transition.
 
 ### 5.2 Level 2 - Controller Subsystem
 
