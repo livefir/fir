@@ -203,19 +203,19 @@ func TestActionRegistry(t *testing.T) {
 // TestSortActionsByPrecedence tests the precedence sorting
 func TestSortActionsByPrecedence(t *testing.T) {
 	actions := []collectedAction{
-		{Handler: &PrependActionHandler{}, Info: ActionInfo{ActionName: "prepend"}},   // precedence 60
-		{Handler: &RefreshActionHandler{}, Info: ActionInfo{ActionName: "refresh"}},   // precedence 20
-		{Handler: &AppendActionHandler{}, Info: ActionInfo{ActionName: "append"}},     // precedence 50
-		{Handler: &RemoveActionHandler{}, Info: ActionInfo{ActionName: "remove"}},     // precedence 30
+		{Handler: &PrependActionHandler{}, Info: ActionInfo{ActionName: "prepend"}}, // precedence 60
+		{Handler: &RefreshActionHandler{}, Info: ActionInfo{ActionName: "refresh"}}, // precedence 20
+		{Handler: &AppendActionHandler{}, Info: ActionInfo{ActionName: "append"}},   // precedence 50
+		{Handler: &RemoveActionHandler{}, Info: ActionInfo{ActionName: "remove"}},   // precedence 30
 	}
 
 	sortActionsByPrecedence(actions)
 
 	// Should be sorted by precedence (lowest first)
-	require.Equal(t, "refresh", actions[0].Info.ActionName)   // 20
-	require.Equal(t, "remove", actions[1].Info.ActionName)    // 30
-	require.Equal(t, "append", actions[2].Info.ActionName)    // 50
-	require.Equal(t, "prepend", actions[3].Info.ActionName)   // 60
+	require.Equal(t, "refresh", actions[0].Info.ActionName) // 20
+	require.Equal(t, "remove", actions[1].Info.ActionName)  // 30
+	require.Equal(t, "append", actions[2].Info.ActionName)  // 50
+	require.Equal(t, "prepend", actions[3].Info.ActionName) // 60
 }
 
 // TestParseTranslatedString tests the helper function for parsing translated strings

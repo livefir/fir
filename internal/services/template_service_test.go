@@ -47,19 +47,19 @@ func TestDefaultTemplateService_LoadTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpl, err := service.LoadTemplate(tt.config)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if tmpl == nil {
 				t.Errorf("expected template but got nil")
 			}
@@ -106,19 +106,19 @@ func TestDefaultTemplateService_ParseTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpl, err := service.ParseTemplate(tt.content, tt.layout, tt.partials, tt.funcMap)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if tmpl == nil {
 				t.Errorf("expected template but got nil")
 			}
@@ -213,19 +213,19 @@ func TestGoTemplateEngine_ParseContent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handle, err := engine.ParseContent(tt.content)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if handle == nil {
 				t.Errorf("expected template handle but got nil")
 			}
@@ -356,7 +356,7 @@ func TestInMemoryTemplateCache(t *testing.T) {
 	cache.Set("test-key-1", handle)
 	cache.Set("test-key-2", handle)
 	cache.Clear()
-	
+
 	_, found1 := cache.Get("test-key-1")
 	_, found2 := cache.Get("test-key-2")
 	if found1 || found2 {

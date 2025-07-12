@@ -16,7 +16,7 @@ func TestEventBridge_ProcessLegacyRouteEvent(t *testing.T) {
 	validator := NewDefaultEventValidator()
 	publisher := &NoOpEventPublisher{}
 	logger := NewDefaultEventLogger(false)
-	
+
 	eventService := NewDefaultEventService(registry, validator, publisher, logger)
 	bridge := NewEventBridge(eventService)
 
@@ -116,7 +116,7 @@ func TestEventBridge_ProcessLegacyRouteEvent_InvalidParams(t *testing.T) {
 
 	// Should handle gracefully by storing as raw string
 	_, err := bridge.ProcessLegacyRouteEvent(context.Background(), legacyEvent, req)
-	
+
 	// Should fail because no handler is registered, but not because of JSON parsing
 	if err == nil {
 		t.Error("Expected error for unregistered event")
@@ -130,7 +130,7 @@ func TestRouteEventServiceAdapter_ProcessRouteEvent(t *testing.T) {
 		&NoOpEventPublisher{},
 		NewDefaultEventLogger(false),
 	)
-	
+
 	adapter := NewRouteEventServiceAdapter(eventService)
 
 	// Register a test handler
@@ -152,7 +152,7 @@ func TestRouteEventServiceAdapter_ProcessRouteEvent(t *testing.T) {
 	// Create request
 	req, _ := http.NewRequest("POST", "/test?param1=value1", strings.NewReader(""))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	
+
 	target := "form1"
 	elementKey := "input1"
 	params := map[string]interface{}{
@@ -189,7 +189,7 @@ func TestConfigureEventService(t *testing.T) {
 		EnableDebugLogging: true,
 		EnableMetrics:      true,
 		ValidatorConfig: map[string][]string{
-			"login": {"username", "password"},
+			"login":  {"username", "password"},
 			"signup": {"email", "password", "name"},
 		},
 	}
@@ -245,7 +245,7 @@ func TestLegacyEventHandlerWrapper(t *testing.T) {
 func TestConvertPubSubEventsToResponse(t *testing.T) {
 	id1 := "event1"
 	id2 := "event2"
-	
+
 	events := []pubsub.Event{
 		{ID: &id1},
 		{ID: &id2},

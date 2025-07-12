@@ -16,18 +16,18 @@ func TestActionsIntegration_Refresh(t *testing.T) {
 		expectedInHTML []string
 	}{
 		{
-			name: "basic refresh on event",
-			template: `<div id="content" x-fir-refresh="update">Original content</div>`,
+			name:           "basic refresh on event",
+			template:       `<div id="content" x-fir-refresh="update">Original content</div>`,
 			expectedInHTML: []string{`@fir:update:ok="$fir.replace()"`},
 		},
 		{
-			name: "refresh with event state",
-			template: `<div id="content" x-fir-refresh="load:done">Loading...</div>`,
+			name:           "refresh with event state",
+			template:       `<div id="content" x-fir-refresh="load:done">Loading...</div>`,
 			expectedInHTML: []string{`@fir:load:done="$fir.replace()"`},
 		},
 		{
-			name: "refresh with multiple events",
-			template: `<div id="content" x-fir-refresh="create:ok,update:ok">Dynamic content</div>`,
+			name:           "refresh with multiple events",
+			template:       `<div id="content" x-fir-refresh="create:ok,update:ok">Dynamic content</div>`,
 			expectedInHTML: []string{`@fir:create:ok="$fir.replace()"`, `@fir:update:ok="$fir.replace()"`},
 		},
 	}
@@ -36,7 +36,7 @@ func TestActionsIntegration_Refresh(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create controller and route
 			ctrl := NewController("test-actions-refresh")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -51,7 +51,7 @@ func TestActionsIntegration_Refresh(t *testing.T) {
 
 			// Verify HTTP response
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			// Verify the translated action is in the HTML
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
@@ -86,7 +86,7 @@ func TestActionsIntegration_Remove(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-remove")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -99,7 +99,7 @@ func TestActionsIntegration_Remove(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -131,7 +131,7 @@ func TestActionsIntegration_Append(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-append")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -144,7 +144,7 @@ func TestActionsIntegration_Append(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -171,7 +171,7 @@ func TestActionsIntegration_Prepend(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-prepend")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -184,7 +184,7 @@ func TestActionsIntegration_Prepend(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -211,7 +211,7 @@ func TestActionsIntegration_Reset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-reset")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -224,7 +224,7 @@ func TestActionsIntegration_Reset(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -251,7 +251,7 @@ func TestActionsIntegration_ToggleDisabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-toggle-disabled")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -264,7 +264,7 @@ func TestActionsIntegration_ToggleDisabled(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -296,7 +296,7 @@ func TestActionsIntegration_ToggleClass(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-toggle-class")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -309,7 +309,7 @@ func TestActionsIntegration_ToggleClass(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -341,7 +341,7 @@ func TestActionsIntegration_Dispatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-dispatch")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -354,7 +354,7 @@ func TestActionsIntegration_Dispatch(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -395,7 +395,7 @@ func TestActionsIntegration_MultipleActions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-multiple")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -412,7 +412,7 @@ func TestActionsIntegration_MultipleActions(t *testing.T) {
 				require.NotEqual(t, http.StatusOK, resp.Code)
 			} else {
 				require.Equal(t, http.StatusOK, resp.Code)
-				
+
 				html := resp.Body.String()
 				for _, expected := range tt.expectedInHTML {
 					require.Contains(t, html, expected)
@@ -449,7 +449,7 @@ func TestActionsIntegration_EventStateHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-event-states")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),
@@ -462,7 +462,7 @@ func TestActionsIntegration_EventStateHandling(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code)
-			
+
 			html := resp.Body.String()
 			for _, expected := range tt.expectedInHTML {
 				require.Contains(t, html, expected)
@@ -503,7 +503,7 @@ func TestActionsIntegration_ParameterValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-actions-validation")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("test-route"),

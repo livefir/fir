@@ -31,7 +31,7 @@ func NewDefaultHandlerChain(logger HandlerLogger, metrics HandlerMetrics) *Defau
 // Handle processes a request through the handler chain
 func (c *DefaultHandlerChain) Handle(ctx context.Context, req *firHttp.RequestModel) (*firHttp.ResponseModel, error) {
 	startTime := time.Now()
-	
+
 	c.mutex.RLock()
 	handlers := make([]RequestHandler, len(c.handlers))
 	copy(handlers, c.handlers)
@@ -67,7 +67,7 @@ func (c *DefaultHandlerChain) Handle(ctx context.Context, req *firHttp.RequestMo
 
 	// Process the request
 	response, err := selectedHandler.Handle(ctx, req)
-	
+
 	duration := time.Since(startTime).Milliseconds()
 
 	// Log response or error
@@ -243,10 +243,10 @@ func (c *PriorityHandlerChain) sortHandlersByPriority() {
 // Handle override to respect enabled/disabled handlers
 func (c *PriorityHandlerChain) Handle(ctx context.Context, req *firHttp.RequestModel) (*firHttp.ResponseModel, error) {
 	startTime := time.Now()
-	
+
 	c.mutex.RLock()
 	handlers := make([]RequestHandler, 0, len(c.handlers))
-	
+
 	// Only include enabled handlers
 	for _, handler := range c.handlers {
 		if config, exists := c.handlerConfigs[handler.HandlerName()]; exists {
@@ -290,7 +290,7 @@ func (c *PriorityHandlerChain) Handle(ctx context.Context, req *firHttp.RequestM
 
 	// Process the request
 	response, err := selectedHandler.Handle(ctx, req)
-	
+
 	duration := time.Since(startTime).Milliseconds()
 
 	// Log response or error

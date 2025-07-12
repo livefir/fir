@@ -33,7 +33,7 @@ func (b *EventBridge) ProcessLegacyRouteEvent(
 ) (*EventResponse, error) {
 	// Extract event data using type assertion (to avoid import cycles)
 	eventData := extractEventData(legacyEvent)
-	
+
 	// Parse the HTTP request
 	requestModel, err := firHttp.NewRequestAdapter(nil).ParseRequest(request)
 	if err != nil {
@@ -79,10 +79,10 @@ func extractEventData(event interface{}) eventData {
 	// This is a simplified extraction - in a real implementation,
 	// we'd use type assertion or reflection to extract the fields
 	// For now, assuming the event follows the expected structure
-	
+
 	if eventMap, ok := event.(map[string]interface{}); ok {
 		data := eventData{}
-		
+
 		if id, ok := eventMap["ID"].(string); ok {
 			data.ID = id
 		}
@@ -98,7 +98,7 @@ func extractEventData(event interface{}) eventData {
 		if sessionID, ok := eventMap["SessionID"].(*string); ok {
 			data.SessionID = sessionID
 		}
-		
+
 		return data
 	}
 
@@ -129,10 +129,10 @@ func CreateEventServiceProvider(
 
 // LegacyEventHandlerWrapper wraps a legacy OnEventFunc to work with EventService
 type LegacyEventHandlerWrapper struct {
-	eventID  string
-	routeID  string
-	handler  interface{} // OnEventFunc
-	bridge   *EventBridge
+	eventID string
+	routeID string
+	handler interface{} // OnEventFunc
+	bridge  *EventBridge
 }
 
 // NewLegacyEventHandlerWrapper creates a wrapper for legacy event handlers
@@ -158,7 +158,7 @@ func (w *LegacyEventHandlerWrapper) GetEventID() string {
 	return w.eventID
 }
 
-// GetRouteID returns the route ID  
+// GetRouteID returns the route ID
 func (w *LegacyEventHandlerWrapper) GetRouteID() string {
 	return w.routeID
 }
@@ -170,7 +170,7 @@ var ErrLegacyHandlerRequiresRouteContext = fmt.Errorf("legacy handler requires R
 type EventServiceConfiguration struct {
 	EnableDebugLogging bool
 	EnableMetrics      bool
-	PubSubAdapter      interface{} // pubsub.Adapter
+	PubSubAdapter      interface{}         // pubsub.Adapter
 	ValidatorConfig    map[string][]string // eventID -> required fields
 }
 

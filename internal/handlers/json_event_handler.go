@@ -163,10 +163,10 @@ func (h *JSONEventHandler) looksLikeEventRequest(req *firHttp.RequestModel) bool
 		// If no URL available, default to true for JSON POST requests
 		return true
 	}
-	
+
 	// Check URL path patterns that typically indicate events
 	path := req.URL.Path
-	
+
 	// Common event endpoint patterns
 	eventPatterns := []string{
 		"/events",
@@ -203,11 +203,11 @@ func (h *JSONEventHandler) looksLikeEventRequest(req *firHttp.RequestModel) bool
 // ConfigurableJSONEventHandler extends JSONEventHandler with more configuration options
 type ConfigurableJSONEventHandler struct {
 	*JSONEventHandler
-	eventPatterns    []string
-	requiredHeaders  []string
-	optionalHeaders  []string
-	validateBody     bool
-	maxBodySize      int64
+	eventPatterns   []string
+	requiredHeaders []string
+	optionalHeaders []string
+	validateBody    bool
+	maxBodySize     int64
 }
 
 // NewConfigurableJSONEventHandler creates a configurable JSON event handler
@@ -219,7 +219,7 @@ func NewConfigurableJSONEventHandler(
 	config JSONEventHandlerConfig,
 ) *ConfigurableJSONEventHandler {
 	base := NewJSONEventHandler(eventService, renderService, responseBuilder, validator)
-	
+
 	return &ConfigurableJSONEventHandler{
 		JSONEventHandler: base,
 		eventPatterns:    config.EventPatterns,

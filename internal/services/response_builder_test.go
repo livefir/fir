@@ -74,23 +74,23 @@ func TestDefaultResponseBuilder_BuildEventResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			response, err := builder.BuildEventResponse(tt.result, tt.request)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if response.StatusCode != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, response.StatusCode)
 			}
-			
+
 			if tt.expectedType != "" {
 				if ct := response.Headers["Content-Type"]; ct != tt.expectedType {
 					t.Errorf("expected content type %s, got %s", tt.expectedType, ct)
@@ -129,23 +129,23 @@ func TestDefaultResponseBuilder_BuildTemplateResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			response, err := builder.BuildTemplateResponse(tt.render, tt.statusCode)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if response.StatusCode != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, response.StatusCode)
 			}
-			
+
 			if ct := response.Headers["Content-Type"]; ct != "text/html; charset=utf-8" {
 				t.Errorf("expected HTML content type, got %s", ct)
 			}
@@ -187,23 +187,23 @@ func TestDefaultResponseBuilder_BuildErrorResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			response, err := builder.BuildErrorResponse(tt.err, tt.statusCode)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if response.StatusCode != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, response.StatusCode)
 			}
-			
+
 			if ct := response.Headers["Content-Type"]; ct != "text/plain; charset=utf-8" {
 				t.Errorf("expected plain text content type, got %s", ct)
 			}
@@ -251,27 +251,27 @@ func TestDefaultResponseBuilder_BuildRedirectResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			response, err := builder.BuildRedirectResponse(tt.url, tt.statusCode)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if response.StatusCode != tt.expectedStatus {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, response.StatusCode)
 			}
-			
+
 			if location := response.Headers["Location"]; location != tt.url {
 				t.Errorf("expected location %s, got %s", tt.url, location)
 			}
-			
+
 			if response.Redirect == nil {
 				t.Errorf("expected redirect info but got nil")
 			} else {

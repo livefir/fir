@@ -12,11 +12,11 @@ import (
 
 // MockTemplateService is a mock implementation of TemplateService for testing
 type MockTemplateService struct {
-	loadTemplateFunc     func(TemplateConfig) (*template.Template, error)
-	parseTemplateFunc    func(string, string, []string, template.FuncMap) (*template.Template, error)
-	getTemplateFunc      func(string, TemplateType) (*template.Template, error)
-	clearCacheFunc       func() error
-	setCacheEnabledFunc  func(bool)
+	loadTemplateFunc    func(TemplateConfig) (*template.Template, error)
+	parseTemplateFunc   func(string, string, []string, template.FuncMap) (*template.Template, error)
+	getTemplateFunc     func(string, TemplateType) (*template.Template, error)
+	clearCacheFunc      func() error
+	setCacheEnabledFunc func(bool)
 }
 
 func (m *MockTemplateService) LoadTemplate(config TemplateConfig) (*template.Template, error) {
@@ -113,7 +113,7 @@ func TestDefaultRenderService_RenderTemplate(t *testing.T) {
 	templateService := &MockTemplateService{}
 	templateEngine := &MockTemplateEngine{}
 	responseBuilder := NewDefaultResponseBuilder()
-	
+
 	service := NewDefaultRenderService(templateService, templateEngine, responseBuilder)
 
 	tests := []struct {
@@ -146,28 +146,28 @@ func TestDefaultRenderService_RenderTemplate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := service.RenderTemplate(tt.ctx)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if result == nil {
 				t.Errorf("expected render result but got nil")
 				return
 			}
-			
+
 			if len(result.HTML) == 0 {
 				t.Errorf("expected HTML content but got empty")
 			}
-			
+
 			if result.TemplateUsed != tt.ctx.TemplatePath {
 				t.Errorf("expected template used %s, got %s", tt.ctx.TemplatePath, result.TemplateUsed)
 			}
@@ -183,7 +183,7 @@ func TestDefaultRenderService_RenderError(t *testing.T) {
 	}
 	templateEngine := &MockTemplateEngine{}
 	responseBuilder := NewDefaultResponseBuilder()
-	
+
 	service := NewDefaultRenderService(templateService, templateEngine, responseBuilder)
 
 	ctx := ErrorContext{
@@ -202,16 +202,16 @@ func TestDefaultRenderService_RenderError(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 		return
 	}
-	
+
 	if result == nil {
 		t.Errorf("expected render result but got nil")
 		return
 	}
-	
+
 	if len(result.HTML) == 0 {
 		t.Errorf("expected HTML content but got empty")
 	}
-	
+
 	// Should fall back to simple error rendering
 	if result.TemplateUsed != "internal-error" {
 		t.Errorf("expected fallback template 'internal-error', got %s", result.TemplateUsed)
@@ -222,7 +222,7 @@ func TestDefaultRenderService_RenderEvents(t *testing.T) {
 	templateService := &MockTemplateService{}
 	templateEngine := &MockTemplateEngine{}
 	responseBuilder := NewDefaultResponseBuilder()
-	
+
 	service := NewDefaultRenderService(templateService, templateEngine, responseBuilder)
 
 	tests := []struct {
@@ -275,19 +275,19 @@ func TestDefaultRenderService_RenderEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			domEvents, err := service.RenderEvents(tt.events, tt.routeID)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if len(domEvents) != tt.wantCount {
 				t.Errorf("expected %d DOM events, got %d", tt.wantCount, len(domEvents))
 			}
@@ -299,7 +299,7 @@ func TestDefaultRenderService_convertPubSubEventToDOMEvent(t *testing.T) {
 	templateService := &MockTemplateService{}
 	templateEngine := &MockTemplateEngine{}
 	responseBuilder := NewDefaultResponseBuilder()
-	
+
 	service := NewDefaultRenderService(templateService, templateEngine, responseBuilder)
 
 	tests := []struct {
@@ -358,32 +358,32 @@ func TestDefaultRenderService_convertPubSubEventToDOMEvent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			domEvent, err := service.convertPubSubEventToDOMEvent(tt.event, tt.routeID)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-			
+
 			if domEvent == nil {
 				t.Errorf("expected DOM event but got nil")
 				return
 			}
-			
+
 			if domEvent.Type != tt.expectedType {
 				t.Errorf("expected event type %s, got %s", tt.expectedType, domEvent.Type)
 			}
-			
+
 			if tt.event.Target != nil && domEvent.Target != *tt.event.Target {
 				t.Errorf("expected target %s, got %s", *tt.event.Target, domEvent.Target)
 			}
-			
+
 			if tt.event.ID != nil && domEvent.ID != *tt.event.ID {
 				t.Errorf("expected ID %s, got %s", *tt.event.ID, domEvent.ID)
 			}

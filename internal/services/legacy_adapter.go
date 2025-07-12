@@ -39,17 +39,17 @@ func (a *LegacyRenderAdapter) RenderRouteTemplateWithNewServices(
 	funcMap template.FuncMap,
 	requestModel *firHttp.RequestModel,
 ) (*RenderResult, error) {
-	
+
 	renderCtx := RenderContext{
-		RouteID:         routeID,
-		TemplateType:    StandardTemplate,
-		Data:            data,
-		TemplatePath:    templatePath,
-		LayoutPath:      layoutPath,
-		PartialPaths:    partialPaths,
-		FuncMap:         funcMap,
-		RequestModel:    requestModel,
-		Context:         ctx,
+		RouteID:      routeID,
+		TemplateType: StandardTemplate,
+		Data:         data,
+		TemplatePath: templatePath,
+		LayoutPath:   layoutPath,
+		PartialPaths: partialPaths,
+		FuncMap:      funcMap,
+		RequestModel: requestModel,
+		Context:      ctx,
 	}
 
 	return a.renderService.RenderTemplate(renderCtx)
@@ -67,19 +67,19 @@ func (a *LegacyRenderAdapter) RenderErrorTemplateWithNewServices(
 	funcMap template.FuncMap,
 	requestModel *firHttp.RequestModel,
 ) (*RenderResult, error) {
-	
+
 	errorCtx := ErrorContext{
 		Error:      err,
 		StatusCode: statusCode,
 		ErrorData:  errorData,
 		RenderContext: RenderContext{
-			RouteID:         routeID,
-			TemplateType:    ErrorTemplate,
-			TemplatePath:    templatePath,
-			LayoutPath:      layoutPath,
-			FuncMap:         funcMap,
-			RequestModel:    requestModel,
-			Context:         ctx,
+			RouteID:      routeID,
+			TemplateType: ErrorTemplate,
+			TemplatePath: templatePath,
+			LayoutPath:   layoutPath,
+			FuncMap:      funcMap,
+			RequestModel: requestModel,
+			Context:      ctx,
 		},
 	}
 

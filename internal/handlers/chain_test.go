@@ -11,17 +11,17 @@ import (
 // mockLogger implements HandlerLogger for testing
 type mockLogger struct{}
 
-func (m *mockLogger) LogRequest(handlerName string, req *firHttp.RequestModel)                       {}
-func (m *mockLogger) LogResponse(handlerName string, resp *firHttp.ResponseModel, duration int64)   {}
-func (m *mockLogger) LogError(handlerName string, err error, req *firHttp.RequestModel)             {}
-func (m *mockLogger) LogHandlerSelection(selectedHandler string, req *firHttp.RequestModel)         {}
+func (m *mockLogger) LogRequest(handlerName string, req *firHttp.RequestModel)                    {}
+func (m *mockLogger) LogResponse(handlerName string, resp *firHttp.ResponseModel, duration int64) {}
+func (m *mockLogger) LogError(handlerName string, err error, req *firHttp.RequestModel)           {}
+func (m *mockLogger) LogHandlerSelection(selectedHandler string, req *firHttp.RequestModel)       {}
 
 // mockMetrics implements HandlerMetrics for testing
 type mockMetrics struct{}
 
-func (m *mockMetrics) RecordRequest(handlerName string, method string)                {}
+func (m *mockMetrics) RecordRequest(handlerName string, method string)                   {}
 func (m *mockMetrics) RecordResponse(handlerName string, statusCode int, duration int64) {}
-func (m *mockMetrics) RecordError(handlerName string, err error)                      {}
+func (m *mockMetrics) RecordError(handlerName string, err error)                         {}
 
 // Helper function to create test URL
 func createTestURL(path string) *url.URL {
@@ -31,18 +31,18 @@ func createTestURL(path string) *url.URL {
 
 // mockHandler is a test helper that implements RequestHandler
 type mockHandler struct {
-	name             string
-	supportsRequest  bool
-	handleResponse   *firHttp.ResponseModel
-	handleError      error
-	priority         int
-	handledRequests  []*firHttp.RequestModel
+	name            string
+	supportsRequest bool
+	handleResponse  *firHttp.ResponseModel
+	handleError     error
+	priority        int
+	handledRequests []*firHttp.RequestModel
 }
 
 func newMockHandler(name string, priority int) *mockHandler {
 	return &mockHandler{
-		name:     name,
-		priority: priority,
+		name:            name,
+		priority:        priority,
 		supportsRequest: true,
 		handleResponse: &firHttp.ResponseModel{
 			StatusCode: 200,
@@ -136,7 +136,7 @@ func TestDefaultHandlerChain_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			chain := NewDefaultHandlerChain(&mockLogger{}, &mockMetrics{})
-			
+
 			// Add handlers to chain
 			for _, handler := range tt.handlers {
 				chain.AddHandler(handler)
@@ -244,8 +244,8 @@ func TestDefaultHandlerChain_ClearHandlers(t *testing.T) {
 
 func TestPriorityHandlerChain_Handle(t *testing.T) {
 	tests := []struct {
-		name         string
-		handlers     []RequestHandler
+		name          string
+		handlers      []RequestHandler
 		expectedOrder []string
 	}{
 		{
@@ -281,7 +281,7 @@ func TestPriorityHandlerChain_Handle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			chain := NewPriorityHandlerChain(&mockLogger{}, &mockMetrics{})
-			
+
 			// Add handlers to chain
 			for _, handler := range tt.handlers {
 				config := HandlerConfig{
@@ -318,7 +318,7 @@ func TestPriorityHandlerChain_Handle(t *testing.T) {
 					continue
 				}
 				if handlers[i].HandlerName() != expectedName {
-					t.Errorf("handler at position %d: expected %s, got %s", 
+					t.Errorf("handler at position %d: expected %s, got %s",
 						i, expectedName, handlers[i].HandlerName())
 				}
 			}

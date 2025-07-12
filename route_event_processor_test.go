@@ -27,10 +27,10 @@ func (m *MockEventService) ProcessEvent(ctx context.Context, req services.EventR
 		return m.processFunc(ctx, req)
 	}
 	return &services.EventResponse{
-		StatusCode: http.StatusOK,
-		Headers:    make(map[string]string),
-		Body:       []byte("test response"),
-		Events:     []firHttp.DOMEvent{},
+		StatusCode:   http.StatusOK,
+		Headers:      make(map[string]string),
+		Body:         []byte("test response"),
+		Events:       []firHttp.DOMEvent{},
 		PubSubEvents: []pubsub.Event{},
 	}, nil
 }
@@ -46,7 +46,7 @@ func (m *MockEventService) GetEventMetrics() services.EventMetrics {
 func TestRouteEventProcessor_ProcessEvent(t *testing.T) {
 	// Create a mock event service
 	mockService := &MockEventService{}
-	
+
 	// Create a simple route
 	route := createTestRoute("test-route")
 
@@ -56,7 +56,7 @@ func TestRouteEventProcessor_ProcessEvent(t *testing.T) {
 	sessionID := "test-session"
 	target := "test-target"
 	elementKey := "test-element"
-	
+
 	event := Event{
 		ID:         "test-event",
 		Target:     &target,
@@ -126,16 +126,16 @@ func TestLegacyEventHandler_ProcessEvent(t *testing.T) {
 	handlerCalled := false
 	legacyHandler := func(ctx RouteContext) error {
 		handlerCalled = true
-		
+
 		// Verify the event was properly converted
 		if ctx.event.ID != "test-event" {
 			t.Errorf("Expected event ID 'test-event', got '%s'", ctx.event.ID)
 		}
-		
+
 		if ctx.event.SessionID == nil || *ctx.event.SessionID != "test-session" {
 			t.Errorf("Expected session ID 'test-session', got %v", ctx.event.SessionID)
 		}
-		
+
 		return nil
 	}
 

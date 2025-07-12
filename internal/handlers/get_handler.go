@@ -65,17 +65,17 @@ func (h *GetHandler) Handle(ctx context.Context, req *firHttp.RequestModel) (*fi
 
 	// Try to find a template for this path
 	templatePath := h.resolveTemplatePath(path)
-	
+
 	// Extract query parameters and form data for template context
 	templateData := h.buildTemplateData(req)
 
 	// Build render context
 	renderCtx := services.RenderContext{
-		TemplatePath:  templatePath,
-		Data:          templateData,
-		RequestModel:  req,
-		Context:       ctx,
-		TemplateType:  services.StandardTemplate,
+		TemplatePath: templatePath,
+		Data:         templateData,
+		RequestModel: req,
+		Context:      ctx,
+		TemplateType: services.StandardTemplate,
 	}
 
 	// Render the template
@@ -160,7 +160,7 @@ func (h *GetHandler) buildTemplateData(req *firHttp.RequestModel) map[string]int
 func (h *GetHandler) isWebSocketUpgrade(req *firHttp.RequestModel) bool {
 	upgrade := req.Header.Get("Upgrade")
 	connection := req.Header.Get("Connection")
-	
+
 	return strings.ToLower(upgrade) == "websocket" &&
 		strings.Contains(strings.ToLower(connection), "upgrade")
 }
@@ -172,13 +172,13 @@ func (h *GetHandler) isStaticAsset(path string) bool {
 		".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
 		".woff", ".woff2", ".ttf", ".eot", ".map", ".json", ".xml",
 	}
-	
+
 	for _, staticExt := range staticExtensions {
 		if ext == staticExt {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -196,7 +196,7 @@ func NewConfigurableGetHandler(
 	config HandlerConfig,
 ) *ConfigurableGetHandler {
 	baseHandler := NewGetHandler(renderService, templateService, responseBuilder)
-	
+
 	// Override base config with custom config
 	if config.Name != "" {
 		baseHandler.config.Name = config.Name

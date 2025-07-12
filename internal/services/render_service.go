@@ -31,13 +31,13 @@ func (s *DefaultRenderService) RenderTemplate(ctx RenderContext) (*RenderResult,
 
 	// Build template configuration from context
 	config := TemplateConfig{
-		ContentPath:       ctx.TemplatePath,
-		LayoutPath:        ctx.LayoutPath,
-		PartialPaths:      ctx.PartialPaths,
-		Extensions:        ctx.Extensions,
-		FuncMap:           ctx.FuncMap,
-		CacheDisabled:     ctx.CacheDisabled,
-		RouteID:           ctx.RouteID,
+		ContentPath:   ctx.TemplatePath,
+		LayoutPath:    ctx.LayoutPath,
+		PartialPaths:  ctx.PartialPaths,
+		Extensions:    ctx.Extensions,
+		FuncMap:       ctx.FuncMap,
+		CacheDisabled: ctx.CacheDisabled,
+		RouteID:       ctx.RouteID,
 	}
 
 	// Load template
@@ -80,13 +80,13 @@ func (s *DefaultRenderService) RenderError(ctx ErrorContext) (*RenderResult, err
 
 	// Build template configuration for error template
 	config := TemplateConfig{
-		ContentPath:       ctx.TemplatePath,
-		LayoutPath:        ctx.LayoutPath,
-		PartialPaths:      ctx.PartialPaths,
-		Extensions:        ctx.Extensions,
-		FuncMap:           ctx.FuncMap,
-		CacheDisabled:     ctx.CacheDisabled,
-		RouteID:           ctx.RouteID,
+		ContentPath:   ctx.TemplatePath,
+		LayoutPath:    ctx.LayoutPath,
+		PartialPaths:  ctx.PartialPaths,
+		Extensions:    ctx.Extensions,
+		FuncMap:       ctx.FuncMap,
+		CacheDisabled: ctx.CacheDisabled,
+		RouteID:       ctx.RouteID,
 	}
 
 	// Load error template
@@ -131,7 +131,7 @@ func (s *DefaultRenderService) RenderEvents(events []pubsub.Event, routeID strin
 			}
 			return nil, fmt.Errorf("failed to convert event with target %s: %w", target, err)
 		}
-		
+
 		if domEvent != nil {
 			domEvents = append(domEvents, *domEvent)
 		}

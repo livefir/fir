@@ -400,20 +400,20 @@ func extractSessionID(t *testing.T, resp pageResponse) string {
 func sendEventWithSession(t *testing.T, serverURL, sessionID, eventName string, data map[string]string) pageResponse {
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar}
-	
+
 	// Add session cookie
 	u, _ := url.Parse(serverURL)
 	cookies := []*http.Cookie{
 		{Name: "_fir_session_", Value: sessionID, Path: "/"},
 	}
 	jar.SetCookies(u, cookies)
-	
+
 	// Prepare form data
 	formData := url.Values{}
 	for key, value := range data {
 		formData.Set(key, value)
 	}
-	
+
 	// Send POST request to the correct URL with event parameter
 	eventURL := serverURL + "/?event=" + eventName
 	resp, err := client.PostForm(eventURL, formData)
@@ -421,12 +421,12 @@ func sendEventWithSession(t *testing.T, serverURL, sessionID, eventName string, 
 		t.Fatalf("Failed to send event: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("Failed to read response body: %v", err)
 	}
-	
+
 	return pageResponse{
 		statusCode: resp.StatusCode,
 		body:       string(bodyBytes),

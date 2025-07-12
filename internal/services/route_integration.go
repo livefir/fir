@@ -12,14 +12,14 @@ import (
 
 // RouteEventServiceAdapter adapts the new EventService to work with the existing route system
 type RouteEventServiceAdapter struct {
-	eventService EventService
+	eventService   EventService
 	requestAdapter *firHttp.RequestAdapter
 }
 
 // NewRouteEventServiceAdapter creates a new adapter for integrating EventService with routes
 func NewRouteEventServiceAdapter(eventService EventService) *RouteEventServiceAdapter {
 	return &RouteEventServiceAdapter{
-		eventService: eventService,
+		eventService:   eventService,
 		requestAdapter: firHttp.NewRequestAdapter(nil), // PathParams extraction handled elsewhere
 	}
 }
@@ -57,8 +57,8 @@ func (a *RouteEventServiceAdapter) ProcessRouteEvent(
 
 // LegacyOnEventFuncAdapter adapts a legacy OnEventFunc to work with the new EventHandler interface
 type LegacyOnEventFuncAdapter struct {
-	eventID   string
-	routeID   string
+	eventID     string
+	routeID     string
 	onEventFunc interface{} // OnEventFunc - using interface{} to avoid import cycle
 }
 
@@ -106,7 +106,7 @@ func NewEventServiceIntegration(eventService EventService) *EventServiceIntegrat
 func (i *EventServiceIntegration) RegisterLegacyHandler(eventID, routeID string, onEventFunc interface{}) error {
 	// Create an adapter for the legacy handler
 	adapter := NewLegacyOnEventFuncAdapter(eventID, routeID, onEventFunc)
-	
+
 	// Register it with the event service
 	// Note: The actual handler execution will need to be handled specially
 	// since it requires RouteContext
@@ -134,7 +134,7 @@ func (i *EventServiceIntegration) ProcessLegacyEvent(
 	// This method would handle the legacy event processing
 	// It would call the OnEventFunc and convert the results to EventResponse
 	// Implementation would depend on having access to the route types
-	
+
 	// For now, return an error indicating this needs to be implemented in the route package
 	return nil, fmt.Errorf("legacy event processing not yet implemented - requires route package integration")
 }

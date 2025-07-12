@@ -121,7 +121,7 @@ func (h *FormHandler) parseFormData(req *firHttp.RequestModel) error {
 
 	// Parse form data based on content type
 	contentType := req.Header.Get("Content-Type")
-	
+
 	if strings.HasPrefix(strings.ToLower(contentType), "multipart/form-data") {
 		// Handle multipart form data
 		// Note: This would typically require the original *http.Request
@@ -239,7 +239,7 @@ func (h *FormHandler) handleFormEvent(ctx context.Context, req *firHttp.RequestM
 func (h *FormHandler) handleFormSubmit(ctx context.Context, req *firHttp.RequestModel, action *FormAction) (*firHttp.ResponseModel, error) {
 	// For now, we'll treat form submits as a special type of event
 	// In a more complex system, this might involve different processing
-	
+
 	eventReq := &services.EventRequest{
 		ID:           "form_submit",
 		Context:      ctx,

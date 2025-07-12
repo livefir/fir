@@ -13,19 +13,19 @@ import (
 
 // DefaultTemplateService is the default implementation of TemplateService
 type DefaultTemplateService struct {
-	cache         *cache.Cache
-	cacheEnabled  bool
+	cache          *cache.Cache
+	cacheEnabled   bool
 	defaultFuncMap template.FuncMap
-	mutex         sync.RWMutex
+	mutex          sync.RWMutex
 }
 
 // NewDefaultTemplateService creates a new default template service
 func NewDefaultTemplateService(cacheEnabled bool) *DefaultTemplateService {
 	return &DefaultTemplateService{
-		cache:        cache.New(5*time.Minute, 10*time.Minute),
-		cacheEnabled: cacheEnabled,
+		cache:          cache.New(5*time.Minute, 10*time.Minute),
+		cacheEnabled:   cacheEnabled,
 		defaultFuncMap: make(template.FuncMap),
-		mutex:        sync.RWMutex{},
+		mutex:          sync.RWMutex{},
 	}
 }
 
@@ -33,7 +33,7 @@ func NewDefaultTemplateService(cacheEnabled bool) *DefaultTemplateService {
 func (s *DefaultTemplateService) LoadTemplate(config TemplateConfig) (*template.Template, error) {
 	s.mutex.RLock()
 	cacheKey := s.buildCacheKey(config)
-	
+
 	// Check cache first if enabled
 	if s.cacheEnabled && !config.CacheDisabled {
 		if cached, found := s.cache.Get(cacheKey); found {
@@ -65,10 +65,10 @@ func (s *DefaultTemplateService) LoadTemplate(config TemplateConfig) (*template.
 func (s *DefaultTemplateService) ParseTemplate(content, layout string, partials []string, funcMap template.FuncMap) (*template.Template, error) {
 	// Merge function maps
 	mergedFuncMap := s.mergeFuncMaps(s.defaultFuncMap, funcMap)
-	
+
 	// Create new template
 	tmpl := template.New("content").Funcs(mergedFuncMap)
-	
+
 	// Parse layout first if provided
 	if layout != "" {
 		var err error
@@ -77,7 +77,7 @@ func (s *DefaultTemplateService) ParseTemplate(content, layout string, partials 
 			return nil, fmt.Errorf("failed to parse layout %s: %w", layout, err)
 		}
 	}
-	
+
 	// Parse partials
 	if len(partials) > 0 {
 		var err error
@@ -86,7 +86,7 @@ func (s *DefaultTemplateService) ParseTemplate(content, layout string, partials 
 			return nil, fmt.Errorf("failed to parse partials: %w", err)
 		}
 	}
-	
+
 	// Parse main content
 	if content != "" {
 		// Determine if content is a file path or inline content
@@ -105,7 +105,7 @@ func (s *DefaultTemplateService) ParseTemplate(content, layout string, partials 
 			}
 		}
 	}
-	
+
 	return tmpl, nil
 }
 
@@ -145,10 +145,10 @@ func (s *DefaultTemplateService) SetDefaultFuncMap(funcMap template.FuncMap) {
 func (s *DefaultTemplateService) parseTemplate(config TemplateConfig) (*template.Template, error) {
 	// Merge function maps
 	mergedFuncMap := s.mergeFuncMaps(s.defaultFuncMap, config.FuncMap)
-	
+
 	// Create base template
 	tmpl := template.New(s.getTemplateName(config.ContentPath)).Funcs(mergedFuncMap)
-	
+
 	// Parse layout first if provided
 	if config.LayoutPath != "" {
 		var err error
@@ -157,7 +157,7 @@ func (s *DefaultTemplateService) parseTemplate(config TemplateConfig) (*template
 			return nil, fmt.Errorf("failed to parse layout %s: %w", config.LayoutPath, err)
 		}
 	}
-	
+
 	// Parse partials
 	if len(config.PartialPaths) > 0 {
 		var err error
@@ -166,7 +166,7 @@ func (s *DefaultTemplateService) parseTemplate(config TemplateConfig) (*template
 			return nil, fmt.Errorf("failed to parse partials: %w", err)
 		}
 	}
-	
+
 	// Parse main content
 	if config.ContentPath != "" {
 		if s.isFilePath(config.ContentPath) {
@@ -184,21 +184,21 @@ func (s *DefaultTemplateService) parseTemplate(config TemplateConfig) (*template
 			}
 		}
 	}
-	
+
 	return tmpl, nil
 }
 
 // buildCacheKey builds a cache key for the template configuration
 func (s *DefaultTemplateService) buildCacheKey(config TemplateConfig) string {
 	var parts []string
-	
+
 	parts = append(parts, config.RouteID)
 	parts = append(parts, config.ContentPath)
 	parts = append(parts, config.LayoutPath)
 	parts = append(parts, strings.Join(config.PartialPaths, ","))
 	parts = append(parts, strings.Join(config.Extensions, ","))
 	parts = append(parts, config.LayoutContentName)
-	
+
 	return strings.Join(parts, "|")
 }
 
@@ -207,11 +207,11 @@ func (s *DefaultTemplateService) getTemplateName(path string) string {
 	if path == "" {
 		return "main"
 	}
-	
+
 	if s.isFilePath(path) {
 		return filepath.Base(path)
 	}
-	
+
 	// For inline content, use a default name
 	return "inline"
 }
@@ -222,12 +222,12 @@ func (s *DefaultTemplateService) isFilePath(content string) bool {
 	if strings.Contains(content, "<") || strings.Contains(content, "{{") {
 		return false
 	}
-	
+
 	// If it contains path separators, it's likely a file path
 	if strings.Contains(content, "/") || strings.Contains(content, "\\") {
 		return true
 	}
-	
+
 	// If it has a file extension and no spaces, it's likely a file path
 	if strings.Contains(content, ".") && !strings.Contains(content, " ") {
 		// Check if it looks like a filename (has extension at the end)
@@ -240,20 +240,20 @@ func (s *DefaultTemplateService) isFilePath(content string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
 // mergeFuncMaps merges multiple function maps, with later maps taking precedence
 func (s *DefaultTemplateService) mergeFuncMaps(maps ...template.FuncMap) template.FuncMap {
 	result := make(template.FuncMap)
-	
+
 	for _, m := range maps {
 		for k, v := range m {
 			result[k] = v
 		}
 	}
-	
+
 	return result
 }
 
@@ -345,7 +345,7 @@ func NewInMemoryTemplateCache(defaultExpiration, cleanupInterval time.Duration) 
 func (c *InMemoryTemplateCache) Get(key string) (TemplateHandle, bool) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	
+
 	if value, found := c.cache.Get(key); found {
 		c.stats.Hits++
 		c.updateHitRatio()
@@ -353,7 +353,7 @@ func (c *InMemoryTemplateCache) Get(key string) (TemplateHandle, bool) {
 			return tmpl, true
 		}
 	}
-	
+
 	c.stats.Misses++
 	c.updateHitRatio()
 	return nil, false

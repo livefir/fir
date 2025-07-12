@@ -109,7 +109,7 @@ func SetupDefaultHandlerChain(services *routeservices.RouteServices) HandlerChai
 	chain := NewPriorityHandlerChain(logger, metrics)
 
 	// Add handlers in priority order (lower number = higher priority)
-	
+
 	// 1. WebSocket handler (highest priority)
 	if services.EventService != nil && services.ResponseBuilder != nil {
 		wsHandler := NewWebSocketHandler(services.EventService, services.ResponseBuilder)

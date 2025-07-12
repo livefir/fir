@@ -20,7 +20,10 @@ import (
 	"github.com/livefir/fir/internal/dom"
 	firErrors "github.com/livefir/fir/internal/errors"
 	"github.com/livefir/fir/internal/eventstate"
+	"github.com/livefir/fir/internal/handlers"
+	firHttp "github.com/livefir/fir/internal/http"
 	"github.com/livefir/fir/internal/logger"
+	routeFactory "github.com/livefir/fir/internal/route"
 	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/internal/services"
 	"github.com/livefir/fir/pubsub"
@@ -283,6 +286,9 @@ type route struct {
 
 	services *routeservices.RouteServices
 
+	// Handler chain for processing requests
+	handlerChain handlers.HandlerChain
+
 	// Commonly accessed configuration fields
 	disableTemplateCache bool
 	disableWebsocket     bool
@@ -311,6 +317,12 @@ func getTemplateCacheDisabled(services *routeservices.RouteServices, routeOpt *r
 }
 
 func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route, error) {
+	// Create route service factory for dependency injection
+	factory := routeFactory.NewRouteServiceFactory(services)
+
+	// Create handler chain using factory
+	handlerChain := factory.CreateHandlerChain()
+
 	// Use the services' renderer if specified, otherwise use the default
 	var renderer Renderer
 	if services.Renderer != nil {
@@ -326,6 +338,7 @@ func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route
 	rt := &route{
 		routeOpt:             *routeOpt,
 		services:             services,
+		handlerChain:         handlerChain,
 		eventTemplates:       make(eventTemplates),
 		renderer:             renderer,
 		templateEngine:       getTemplateEngine(services, routeOpt),        // Use route-specific engine or fallback to services
@@ -433,7 +446,7 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timing := servertiming.FromContext(r.Context())
 	defer timing.NewMetric("route").Start().Stop()
 
-	// Handle special requests
+	// Handle special requests using legacy code for now
 	if !rt.handleSpecialRequests(w, r) {
 		return
 	}
@@ -441,6 +454,33 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Setup path parameters if needed
 	r = rt.setupPathParameters(r)
 
+	// Use handler chain for request processing
+	err := rt.handleRequestWithChain(w, r)
+	if err != nil {
+		// Fallback to legacy handling if handler chain fails
+		rt.handleRequestLegacy(w, r)
+	}
+}
+
+// handleRequestWithChain processes the request using the new handler chain
+func (rt *route) handleRequestWithChain(w http.ResponseWriter, r *http.Request) error {
+	// Create request/response pair using the HTTP adapter
+	pair, err := firHttp.NewRequestResponsePair(w, r, rt.pathParamsFunc)
+	if err != nil {
+		return err
+	}
+
+	// Process request through handler chain
+	_, err = rt.handlerChain.Handle(r.Context(), pair.Request)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// handleRequestLegacy provides fallback to the original request handling logic
+func (rt *route) handleRequestLegacy(w http.ResponseWriter, r *http.Request) {
 	// Route to appropriate handler based on request type
 	if websocket.IsWebSocketUpgrade(r) {
 		rt.handleWebSocketUpgrade(w, r)

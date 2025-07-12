@@ -155,7 +155,7 @@ func TestActionsFunctional_WorkflowScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-functional-" + tt.workflowType)
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("workflow-route"),
@@ -168,18 +168,18 @@ func TestActionsFunctional_WorkflowScenarios(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code, "Workflow should render successfully")
-			
+
 			html := resp.Body.String()
-			
+
 			// Verify all expected actions are present
 			for _, expectedAction := range tt.expectedActions {
-				require.Contains(t, html, expectedAction, 
+				require.Contains(t, html, expectedAction,
 					"Expected action missing in %s workflow: %s", tt.workflowType, expectedAction)
 			}
-			
+
 			// Verify no x-fir-* attributes remain in the output
 			require.NotContains(t, html, "x-fir-", "All x-fir attributes should be translated")
-			
+
 			t.Logf("Workflow '%s' successfully rendered %d actions", tt.workflowType, len(tt.expectedActions))
 		})
 	}
@@ -253,7 +253,7 @@ func TestActionsFunctional_EdgeCaseWorkflows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-edge-case")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("edge-case-route"),
@@ -266,14 +266,14 @@ func TestActionsFunctional_EdgeCaseWorkflows(t *testing.T) {
 			handler(resp, req)
 
 			if tt.shouldError {
-				require.NotEqual(t, http.StatusOK, resp.Code, 
+				require.NotEqual(t, http.StatusOK, resp.Code,
 					"Expected error for: %s", tt.description)
 			} else {
-				require.Equal(t, http.StatusOK, resp.Code, 
+				require.Equal(t, http.StatusOK, resp.Code,
 					"Unexpected error for: %s", tt.description)
-				
+
 				html := resp.Body.String()
-				require.NotContains(t, html, "x-fir-", 
+				require.NotContains(t, html, "x-fir-",
 					"All x-fir attributes should be translated for: %s", tt.description)
 			}
 		})
@@ -339,9 +339,9 @@ func TestActionsFunctional_PerformanceScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			template := tt.templateGenerator(tt.elementCount)
-			
+
 			ctrl := NewController("test-performance")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("performance-route"),
@@ -354,9 +354,9 @@ func TestActionsFunctional_PerformanceScenarios(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code, "Performance test should succeed")
-			
+
 			html := resp.Body.String()
-			
+
 			// Count @fir: occurrences as a proxy for action count
 			actionCount := 0
 			for i := 0; i < len(html); i++ {
@@ -364,15 +364,15 @@ func TestActionsFunctional_PerformanceScenarios(t *testing.T) {
 					actionCount++
 				}
 			}
-			
-			require.Equal(t, tt.expectedActionCount, actionCount, 
-				"Expected %d actions but found %d in %s", 
+
+			require.Equal(t, tt.expectedActionCount, actionCount,
+				"Expected %d actions but found %d in %s",
 				tt.expectedActionCount, actionCount, tt.description)
-			
+
 			// Verify no x-fir-* attributes remain
 			require.NotContains(t, html, "x-fir-", "All x-fir attributes should be processed")
-			
-			t.Logf("Performance test '%s' processed %d actions successfully", 
+
+			t.Logf("Performance test '%s' processed %d actions successfully",
 				tt.name, actionCount)
 		})
 	}
@@ -381,11 +381,11 @@ func TestActionsFunctional_PerformanceScenarios(t *testing.T) {
 // TestActionsFunctional_StateTransitions tests complex state-based action workflows
 func TestActionsFunctional_StateTransitions(t *testing.T) {
 	tests := []struct {
-		name            string
-		template        string
-		stateScenario   string
-		expectedStates  []string
-		description     string
+		name           string
+		template       string
+		stateScenario  string
+		expectedStates []string
+		description    string
 	}{
 		{
 			name: "loading to success transition",
@@ -461,7 +461,7 @@ func TestActionsFunctional_StateTransitions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := NewController("test-state-transitions")
-			
+
 			handler := ctrl.RouteFunc(func() RouteOptions {
 				return RouteOptions{
 					ID("state-route"),
@@ -474,19 +474,19 @@ func TestActionsFunctional_StateTransitions(t *testing.T) {
 			handler(resp, req)
 
 			require.Equal(t, http.StatusOK, resp.Code, "State transition test should succeed")
-			
+
 			html := resp.Body.String()
-			
+
 			// Verify all expected state transitions are present
 			for _, expectedState := range tt.expectedStates {
-				require.Contains(t, html, expectedState, 
+				require.Contains(t, html, expectedState,
 					"Expected state transition missing in %s: %s", tt.stateScenario, expectedState)
 			}
-			
+
 			// Verify no x-fir-* attributes remain
 			require.NotContains(t, html, "x-fir-", "All x-fir attributes should be translated")
-			
-			t.Logf("State scenario '%s' implemented %d state transitions", 
+
+			t.Logf("State scenario '%s' implemented %d state transitions",
 				tt.stateScenario, len(tt.expectedStates))
 		})
 	}

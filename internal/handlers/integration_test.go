@@ -188,11 +188,11 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 	integration := NewRouteHandlerIntegration(chain)
 
 	tests := []struct {
-		name         string
-		method       string
-		url          string
-		contentType  string
-		expectedCan  bool
+		name        string
+		method      string
+		url         string
+		contentType string
+		expectedCan bool
 	}{
 		{
 			name:        "can handle JSON POST",
@@ -203,7 +203,7 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 		},
 		{
 			name:        "cannot handle GET",
-			method:      "GET", 
+			method:      "GET",
 			url:         "/test",
 			contentType: "",
 			expectedCan: false,

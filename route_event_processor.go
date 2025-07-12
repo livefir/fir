@@ -28,7 +28,7 @@ func NewRouteEventProcessor(eventService services.EventService, route *route) *R
 func (p *RouteEventProcessor) ProcessEvent(ctx context.Context, event Event, r *http.Request, w http.ResponseWriter) (*services.EventResponse, error) {
 	// Create adapter for request parsing
 	adapter := firHttp.NewStandardHTTPAdapter(w, r, nil)
-	
+
 	// Parse request to our abstraction
 	requestModel, err := adapter.ParseRequest(r)
 	if err != nil {
@@ -43,12 +43,12 @@ func (p *RouteEventProcessor) ProcessEvent(ctx context.Context, event Event, r *
 
 	// Build event request
 	eventReq := services.EventRequest{
-		ID:         event.ID,
-		Target:     event.Target,
-		ElementKey: event.ElementKey,
-		SessionID:  sessionID,
-		Context:    ctx,
-		Params:     convertEventParams(event),
+		ID:           event.ID,
+		Target:       event.Target,
+		ElementKey:   event.ElementKey,
+		SessionID:    sessionID,
+		Context:      ctx,
+		Params:       convertEventParams(event),
 		RequestModel: requestModel,
 	}
 
@@ -108,11 +108,11 @@ func (h *LegacyEventHandler) ProcessEvent(ctx context.Context, req services.Even
 	// For now, create a minimal HTTP request from the request model
 	// In a real implementation, we might need more sophisticated conversion
 	httpReq := &http.Request{
-		Method: req.RequestModel.Method,
-		URL:    req.RequestModel.URL,
-		Header: req.RequestModel.Header,
-		Body:   req.RequestModel.Body,
-		Host:   req.RequestModel.Host,
+		Method:     req.RequestModel.Method,
+		URL:        req.RequestModel.URL,
+		Header:     req.RequestModel.Header,
+		Body:       req.RequestModel.Body,
+		Host:       req.RequestModel.Host,
 		RemoteAddr: req.RequestModel.RemoteAddr,
 		RequestURI: req.RequestModel.RequestURI,
 	}
@@ -134,12 +134,12 @@ func (h *LegacyEventHandler) ProcessEvent(ctx context.Context, req services.Even
 
 	// Call the legacy handler
 	err := h.handler(routeCtx)
-	
+
 	// Convert the result to our new response format
 	response := &services.EventResponse{
-		StatusCode: httpResp.statusCode,
-		Headers:    make(map[string]string),
-		Events:     []firHttp.DOMEvent{},
+		StatusCode:   httpResp.statusCode,
+		Headers:      make(map[string]string),
+		Events:       []firHttp.DOMEvent{},
 		PubSubEvents: []pubsub.Event{},
 	}
 

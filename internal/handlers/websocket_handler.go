@@ -143,7 +143,7 @@ func (h *WebSocketHandler) generateWebSocketAcceptKey(clientKey string) string {
 func (h *WebSocketHandler) isWebSocketUpgrade(req *firHttp.RequestModel) bool {
 	upgrade := req.Header.Get("Upgrade")
 	connection := req.Header.Get("Connection")
-	
+
 	return strings.ToLower(upgrade) == "websocket" &&
 		strings.Contains(strings.ToLower(connection), "upgrade")
 }
@@ -161,7 +161,7 @@ func NewConfigurableWebSocketHandler(
 	config HandlerConfig,
 ) *ConfigurableWebSocketHandler {
 	baseHandler := NewWebSocketHandler(eventService, responseBuilder)
-	
+
 	// Override base config with custom config
 	if config.Name != "" {
 		baseHandler.config.Name = config.Name

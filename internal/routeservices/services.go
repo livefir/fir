@@ -148,12 +148,12 @@ func NewRouteServicesWithWebSocketAndTemplateEngine(eventRegistry event.EventReg
 
 // NewRouteServicesWithHandlerChain creates a new RouteServices instance with handler chain and all new services
 func NewRouteServicesWithHandlerChain(
-	eventRegistry event.EventRegistry, 
+	eventRegistry event.EventRegistry,
 	eventService services.EventService,
-	pubsub pubsub.Adapter, 
-	renderer interface{}, 
-	renderService services.RenderService, 
-	templateService services.TemplateService, 
+	pubsub pubsub.Adapter,
+	renderer interface{},
+	renderService services.RenderService,
+	templateService services.TemplateService,
 	responseBuilder services.ResponseBuilder,
 	handlerChain interface{},
 	options *Options,
