@@ -2,7 +2,11 @@ package fir
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -346,5 +350,86 @@ func createSanityTodoRoute(db *bolthold.Store) RouteFunc {
 				return ctx.Data(map[string]any{"todos": todos})
 			}),
 		}
+	}
+}
+
+// Helper functions for HTTP testing
+
+// pageResponse represents an HTTP response with body content
+type pageResponse struct {
+	statusCode int
+	body       string
+	cookies    []*http.Cookie
+}
+
+// getPageWithSession makes an HTTP GET request and returns response with session handling
+func getPageWithSession(t *testing.T, serverURL string) pageResponse {
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Jar: jar}
+
+	resp, err := client.Get(serverURL)
+	if err != nil {
+		t.Fatalf("Failed to get page: %v", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	return pageResponse{
+		statusCode: resp.StatusCode,
+		body:       string(bodyBytes),
+		cookies:    resp.Cookies(),
+	}
+}
+
+// extractSessionID extracts session ID from response cookies
+func extractSessionID(t *testing.T, resp pageResponse) string {
+	for _, cookie := range resp.cookies {
+		if cookie.Name == "_fir_session_" {
+			return cookie.Value
+		}
+	}
+	t.Fatal("No session cookie found")
+	return ""
+}
+
+// sendEventWithSession sends an event request with session cookie
+func sendEventWithSession(t *testing.T, serverURL, sessionID, eventName string, data map[string]string) pageResponse {
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Jar: jar}
+	
+	// Add session cookie
+	u, _ := url.Parse(serverURL)
+	cookies := []*http.Cookie{
+		{Name: "_fir_session_", Value: sessionID, Path: "/"},
+	}
+	jar.SetCookies(u, cookies)
+	
+	// Prepare form data
+	formData := url.Values{}
+	for key, value := range data {
+		formData.Set(key, value)
+	}
+	
+	// Send POST request to the correct URL with event parameter
+	eventURL := serverURL + "/?event=" + eventName
+	resp, err := client.PostForm(eventURL, formData)
+	if err != nil {
+		t.Fatalf("Failed to send event: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+	
+	return pageResponse{
+		statusCode: resp.StatusCode,
+		body:       string(bodyBytes),
+		cookies:    resp.Cookies(),
 	}
 }
