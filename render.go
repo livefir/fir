@@ -54,12 +54,24 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 }
 
 // renderDOMEvents renders the DOM events generated from incoming pubsub event.
-// the associated templates for the event are rendered and the dom events are returned.
 func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
 	var templateNames []string
-	for k := range ctx.route.getEventTemplates()[eventIDWithState] {
-		templateNames = append(templateNames, k)
+
+	// Get event templates from RouteInterface
+	eventTemplatesIface := ctx.routeInterface.GetEventTemplates()
+	if eventTemplatesIface == nil {
+		return []dom.Event{}
+	}
+
+	// Type assert to the named type eventTemplates
+	if eventTemplatesMap, ok := eventTemplatesIface.(eventTemplates); ok {
+		for k := range eventTemplatesMap[eventIDWithState] {
+			templateNames = append(templateNames, k)
+		}
+	} else {
+		logger.Errorf("failed to type assert event templates, got type: %T", eventTemplatesIface)
+		return []dom.Event{}
 	}
 
 	resultPool := pool.NewWithResults[dom.Event]()
@@ -74,6 +86,7 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 		})
 	}
 	result := resultPool.Wait()
+
 	// filter out empty events
 	var events []dom.Event
 	for _, event := range result {
@@ -84,50 +97,7 @@ func renderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
 	return events
 }
 
-// renderDOMEventsWithRoute renders DOM events using a RouteInterface for WebSocketServices mode
-func renderDOMEventsWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, routeIface RouteInterface) []dom.Event {
-	eventIDWithState := fmt.Sprintf("%s:%s", *pubsubEvent.ID, pubsubEvent.State)
-
-	// Get event templates from RouteInterface
-	eventTemplatesIface := routeIface.GetEventTemplates()
-	if eventTemplatesIface == nil {
-		return []dom.Event{}
-	}
-
-	// Type assert to eventTemplates
-	eventTemplates, ok := eventTemplatesIface.(eventTemplates)
-	if !ok {
-		logger.Errorf("failed to type assert event templates")
-		return []dom.Event{}
-	}
-
-	var templateNames []string
-	for k := range eventTemplates[eventIDWithState] {
-		templateNames = append(templateNames, k)
-	}
-
-	resultPool := pool.NewWithResults[dom.Event]()
-	for _, templateName := range templateNames {
-		templateName := templateName
-		resultPool.Go(func() dom.Event {
-			ev := buildDOMEventFromTemplateWithRoute(ctx, pubsubEvent, eventIDWithState, templateName, routeIface)
-			if ev == nil {
-				return dom.Event{}
-			}
-			return *ev
-		})
-	}
-	result := resultPool.Wait()
-	// filter out empty events
-	var events []dom.Event
-	for _, event := range result {
-		if !isEmptyEvent(event) {
-			events = append(events, event)
-		}
-	}
-	return events
-}
-
+// targetOrClassName returns the target or className based on the parameters
 func targetOrClassName(target *string, className string) *string {
 	return renderer.TargetOrClassName(target, className)
 }
@@ -154,80 +124,17 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 		templateData = pubsubEvent.Detail.Data
 	}
 
-	routeTemplate := ctx.route.getTemplate().Funcs(newFirFuncMap(ctx, nil))
-	if pubsubEvent.State == eventstate.Error && pubsubEvent.Detail != nil {
-		errs, ok := pubsubEvent.Detail.Data.(map[string]any)
-		if !ok {
-			logger.Errorf("error: %s", "pubsubEvent.Detail is not a map[string]any")
-			return nil
-		}
-		templateData = nil
-		routeTemplate = routeTemplate.Funcs(newFirFuncMap(ctx, errs))
-	}
-	value, err := buildTemplateValue(routeTemplate, templateName, templateData)
-	if err != nil {
-		logger.Errorf("error for eventType: %v, err: %v", *eventType, err)
-		return nil
-	}
-	if pubsubEvent.State == eventstate.Error && value == "" {
-		return nil
-	}
-
-	if pubsubEvent.State == eventstate.OK && templateData == nil {
-		value = ""
-	}
-
-	detail := &dom.Detail{}
-	if pubsubEvent.Detail != nil {
-		detail.State = pubsubEvent.Detail.State
-		detail.Data = pubsubEvent.Detail.Data
-	}
-	detail.HTML = value
-	return &dom.Event{
-		ID:     *pubsubEvent.ID,
-		State:  pubsubEvent.State,
-		Type:   eventType,
-		Key:    pubsubEvent.ElementKey,
-		Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
-		Detail: detail,
-	}
-}
-
-// buildDOMEventFromTemplateWithRoute builds a DOM event using a RouteInterface for WebSocketServices mode
-func buildDOMEventFromTemplateWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, eventIDWithState, templateName string, routeIface RouteInterface) *dom.Event {
-	if templateName == "-" {
-		eventType := fir(eventIDWithState)
-		detail := &dom.Detail{}
-		if pubsubEvent.Detail != nil {
-			detail.State = pubsubEvent.Detail.State
-		}
-		return &dom.Event{
-			ID:     *pubsubEvent.ID,
-			State:  pubsubEvent.State,
-			Type:   eventType,
-			Key:    pubsubEvent.ElementKey,
-			Target: targetOrClassName(pubsubEvent.Target, firattr.GetClassName(*eventType)),
-			Detail: detail,
-		}
-	}
-
-	eventType := fir(eventIDWithState, templateName)
-	var templateData any
-	if pubsubEvent.Detail != nil {
-		templateData = pubsubEvent.Detail.Data
-	}
-
 	// Get template from RouteInterface
-	templateIface := routeIface.GetTemplate()
+	templateIface := ctx.routeInterface.GetTemplate()
 	if templateIface == nil {
-		logger.Errorf("template not found for route: %s", routeIface.ID())
+		logger.Errorf("template not found for route: %s", ctx.routeInterface.ID())
 		return nil
 	}
 
 	// Type assert to *template.Template
 	routeTemplate, ok := templateIface.(*template.Template)
 	if !ok {
-		logger.Errorf("template is not of type *template.Template for route: %s", routeIface.ID())
+		logger.Errorf("template is not of type *template.Template for route: %s", ctx.routeInterface.ID())
 		return nil
 	}
 
@@ -241,7 +148,6 @@ func buildDOMEventFromTemplateWithRoute(ctx RouteContext, pubsubEvent pubsub.Eve
 		templateData = nil
 		routeTemplate = routeTemplate.Funcs(newFirFuncMap(ctx, errs))
 	}
-
 	value, err := buildTemplateValue(routeTemplate, templateName, templateData)
 	if err != nil {
 		logger.Errorf("error for eventType: %v, err: %v", *eventType, err)

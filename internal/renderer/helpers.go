@@ -1,15 +1,15 @@
 package renderer
 
 import (
-"fmt"
-"html/template"
+	"fmt"
+	"html/template"
 
-"github.com/livefir/fir/internal/dom"
-"github.com/livefir/fir/internal/eventstate"
-"github.com/patrickmn/go-cache"
-"github.com/tdewolff/minify"
-"github.com/tdewolff/minify/html"
-"github.com/valyala/bytebufferpool"
+	"github.com/livefir/fir/internal/dom"
+	"github.com/livefir/fir/internal/eventstate"
+	"github.com/patrickmn/go-cache"
+	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/html"
+	"github.com/valyala/bytebufferpool"
 )
 
 func TargetOrClassName(target *string, className string) *string {
@@ -103,8 +103,8 @@ func GetUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 			continue
 		}
 		newErrorEvents = append(newErrorEvents, dom.Event{
-Type:   eventType,
-Target: &target,
+			Type:   eventType,
+			Target: &target,
 		})
 	}
 

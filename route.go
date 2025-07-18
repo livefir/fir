@@ -437,11 +437,6 @@ func (rt *route) setEventTemplates(templates eventTemplates) {
 	rt.eventTemplates = templates
 }
 
-// get event templates concurrency safe
-func (rt *route) getEventTemplates() eventTemplates {
-	return rt.eventTemplates
-}
-
 func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timing := servertiming.FromContext(r.Context())
 	defer timing.NewMetric("route").Start().Stop()
@@ -916,7 +911,8 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 		event:            event,
 		request:          r,
 		response:         w,
-		route:            rt,
+		route:            rt, // Keep legacy route for backward compatibility
+		routeInterface:   rt, // Use route as RouteInterface for modern rendering
 		accumulatedData:  &map[string]any{},
 		accumulatedState: &map[string]any{},
 	}

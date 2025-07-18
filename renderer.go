@@ -31,10 +31,5 @@ func (tr *TemplateRenderer) RenderRoute(ctx RouteContext, data routeData, useErr
 // RenderDOMEvents implements the Renderer interface for DOM event rendering
 // It can handle both legacy routes and WebSocketServices mode
 func (tr *TemplateRenderer) RenderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
-	// Check if we have a routeInterface (WebSocketServices mode)
-	if ctx.routeInterface != nil {
-		return renderDOMEventsWithRoute(ctx, pubsubEvent, ctx.routeInterface)
-	}
-	// Otherwise use legacy route mode
 	return renderDOMEvents(ctx, pubsubEvent)
 }

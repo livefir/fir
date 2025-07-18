@@ -585,7 +585,7 @@ func (c *Connection) renderAndWriteEvent(channel string, ctx RouteContext, pubsu
 	if !ok {
 		return fmt.Errorf("renderer is not of type Renderer for route: %s", c.routeID)
 	}
-	
+
 	// Use unified RenderDOMEvents method
 	// The RouteContext already contains the routeInterface for WebSocketServices mode
 	events = renderer.RenderDOMEvents(ctx, pubsubEvent)
