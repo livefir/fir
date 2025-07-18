@@ -1,16 +1,16 @@
 package renderer
 
 import (
-	"fmt"
-	"html/template"
+"fmt"
+"html/template"
 
-	"github.com/livefir/fir/internal/dom"
-	"github.com/tdewolff/minify"
-	"github.com/tdewolff/minify/html"
-	"github.com/valyala/bytebufferpool"
+"github.com/livefir/fir/internal/dom"
+"github.com/livefir/fir/internal/eventstate"
+"github.com/patrickmn/go-cache"
+"github.com/tdewolff/minify"
+"github.com/tdewolff/minify/html"
+"github.com/valyala/bytebufferpool"
 )
-
-// Helper functions moved from render.go
 
 func TargetOrClassName(target *string, className string) *string {
 	if target != nil && *target != "" {
@@ -54,7 +54,6 @@ func IsEmptyEvent(event dom.Event) bool {
 	return event.Type == nil && event.Target == nil && event.Key == nil
 }
 
-// Fir creates a fir event type from parts
 func Fir(parts ...string) *string {
 	if len(parts) == 0 {
 		return nil
@@ -64,4 +63,50 @@ func Fir(parts ...string) *string {
 	}
 	result := fmt.Sprintf("%s:%s", parts[0], parts[1])
 	return &result
+}
+
+func GetUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event) []dom.Event {
+	if sessionID == nil || cch == nil {
+		return nil
+	}
+
+	prevErrors := make(map[string]string)
+
+	v, ok := cch.Get(*sessionID)
+	if ok {
+		prevErrors, ok = v.(map[string]string)
+		if !ok {
+			panic("fir: cache value is not a map[string]string")
+		}
+	}
+
+	currErrors := make(map[string]string)
+	for _, event := range events {
+		if event.Type == nil {
+			continue
+		}
+		if event.State != eventstate.Error {
+			continue
+		}
+		currErrors[*event.Type] = *event.Target
+	}
+
+	cch.Set(*sessionID, currErrors, cache.DefaultExpiration)
+
+	var newErrorEvents []dom.Event
+	for k, v := range prevErrors {
+		k := k
+		v := v
+		eventType := &k
+		target := v
+		if _, ok := currErrors[*eventType]; ok {
+			continue
+		}
+		newErrorEvents = append(newErrorEvents, dom.Event{
+Type:   eventType,
+Target: &target,
+		})
+	}
+
+	return newErrorEvents
 }

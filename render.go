@@ -272,55 +272,7 @@ func buildDOMEventFromTemplateWithRoute(ctx RouteContext, pubsubEvent pubsub.Eve
 }
 
 func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event) []dom.Event {
-	if sessionID == nil || cch == nil {
-		return nil
-	}
-
-	// get previously set errors from cache
-	prevErrors := make(map[string]string)
-
-	v, ok := cch.Get(*sessionID)
-	if ok {
-		prevErrors, ok = v.(map[string]string)
-		if !ok {
-			panic("fir: cache value is not a map[string]string")
-		}
-	}
-
-	// filter new errors
-	currErrors := make(map[string]string)
-	for _, event := range events {
-		if event.Type == nil {
-			continue
-		}
-		if event.State != eventstate.Error {
-			continue
-		}
-		currErrors[*event.Type] = *event.Target
-	}
-	// set new errors in cache
-
-	cch.Set(*sessionID, currErrors, cache.DefaultExpiration)
-
-	// explicitly unset previously set errors that are not in new errors
-	// this means generating an event with empty detail
-	var newErrorEvents []dom.Event
-	for k, v := range prevErrors {
-		k := k
-		v := v
-		eventType := &k
-		target := v
-		// if the error is not in curr errors, generate an event with empty detail
-		if _, ok := currErrors[*eventType]; ok {
-			continue
-		}
-		newErrorEvents = append(newErrorEvents, dom.Event{
-			Type:   eventType,
-			Target: &target,
-		})
-	}
-
-	return newErrorEvents
+	return renderer.GetUnsetErrorEvents(cch, sessionID, events)
 }
 
 func buildTemplateValue(t *template.Template, templateName string, data any) (string, error) {
