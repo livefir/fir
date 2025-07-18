@@ -2,7 +2,6 @@ package fir
 
 import (
 	"github.com/livefir/fir/internal/dom"
-	"github.com/livefir/fir/internal/routeservices"
 	"github.com/livefir/fir/pubsub"
 )
 
@@ -12,6 +11,7 @@ type Renderer interface {
 	RenderRoute(ctx RouteContext, data routeData, useErrorTemplate bool) error
 
 	// RenderDOMEvents renders DOM events from a pubsub event
+	// The RouteContext contains either a route or routeInterface to get event templates
 	RenderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event
 }
 
@@ -29,11 +29,12 @@ func (tr *TemplateRenderer) RenderRoute(ctx RouteContext, data routeData, useErr
 }
 
 // RenderDOMEvents implements the Renderer interface for DOM event rendering
+// It can handle both legacy routes and WebSocketServices mode
 func (tr *TemplateRenderer) RenderDOMEvents(ctx RouteContext, pubsubEvent pubsub.Event) []dom.Event {
+	// Check if we have a routeInterface (WebSocketServices mode)
+	if ctx.routeInterface != nil {
+		return renderDOMEventsWithRoute(ctx, pubsubEvent, ctx.routeInterface)
+	}
+	// Otherwise use legacy route mode
 	return renderDOMEvents(ctx, pubsubEvent)
-}
-
-// RenderDOMEventsWithRoute renders DOM events using a RouteInterface for WebSocketServices mode
-func (tr *TemplateRenderer) RenderDOMEventsWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, routeIface routeservices.RouteInterface) []dom.Event {
-	return renderDOMEventsWithRoute(ctx, pubsubEvent, routeIface)
 }

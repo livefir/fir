@@ -585,13 +585,10 @@ func (c *Connection) renderAndWriteEvent(channel string, ctx RouteContext, pubsu
 	if !ok {
 		return fmt.Errorf("renderer is not of type Renderer for route: %s", c.routeID)
 	}
-	// Use the renderer with route interface
-	if tr, ok := renderer.(*TemplateRenderer); ok {
-		events = tr.RenderDOMEventsWithRoute(ctx, pubsubEvent, routeIface)
-	} else {
-		// Fallback to regular method if not TemplateRenderer
-		events = renderer.RenderDOMEvents(ctx, pubsubEvent)
-	}
+	
+	// Use unified RenderDOMEvents method
+	// The RouteContext already contains the routeInterface for WebSocketServices mode
+	events = renderer.RenderDOMEvents(ctx, pubsubEvent)
 
 	eventsData, err := json.Marshal(events)
 	if err != nil {
