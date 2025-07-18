@@ -3,6 +3,7 @@ package fir
 import (
 	"testing"
 
+	"github.com/livefir/fir/internal/actions"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +44,7 @@ func TestRedirectAction(t *testing.T) {
 
 // TestRedirectActionHandler tests the RedirectActionHandler implementation
 func TestRedirectActionHandler(t *testing.T) {
-	handler := &RedirectActionHandler{}
+	handler := &actions.RedirectActionHandler{}
 
 	// Test basic properties
 	require.Equal(t, "redirect", handler.Name())
@@ -131,7 +132,7 @@ func TestRedirectActionHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			info := ActionInfo{
+			info := actions.ActionInfo{
 				AttrName:   "x-fir-redirect",
 				ActionName: "redirect",
 				Params:     tt.params,

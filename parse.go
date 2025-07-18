@@ -11,6 +11,7 @@ import (
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/icholy/replace"
+	"github.com/livefir/fir/internal/actions"
 	"github.com/livefir/fir/internal/firattr"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/sourcegraph/conc/pool"
@@ -387,7 +388,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 		}
 
 		if n.Type == html.ElementNode {
-			var collectedActions []collectedAction  // Store parsed x-fir-* info + handler
+			var collectedActions []actions.CollectedAction  // Store parsed x-fir-* info + handler
 			attrsToRemove := make(map[int]struct{}) // Indices of attributes to remove
 			var finalAttrs []html.Attribute         // Attributes to keep/add
 			actionsMap := make(map[string]string)   // For x-fir-action-* values
@@ -424,7 +425,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 					return // Stop traversal immediately
 				}
 
-				var handler ActionHandler
+				var handler actions.ActionHandler
 				var found bool
 
 				// Check for exact match first (e.g., "refresh")
@@ -456,13 +457,13 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				}
 
 				// Store handler and parsed info
-				info := ActionInfo{
+				info := actions.ActionInfo{
 					AttrName:   attr.Key,
 					ActionName: actionName, // Store the specific parsed name (e.g., "refresh", "action-doSave")
 					Params:     params,
 					Value:      attr.Val,
 				}
-				collectedActions = append(collectedActions, collectedAction{Handler: handler, Info: info})
+				collectedActions = append(collectedActions, actions.CollectedAction{Handler: handler, Info: info})
 			}
 
 			// Keep attributes that are not being removed initially
@@ -477,14 +478,14 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 				modified = true // Mark node as modified since x-fir-* attrs were present
 
 				// Sort collected actions by precedence (lowest number first)
-				sortActionsByPrecedence(collectedActions)
+				actions.SortActionsByPrecedence(collectedActions)
 
 				// Process all actions and check for duplicate translated expressions
 				var processedTranslations []string
 
 				for _, action := range collectedActions {
 					// Skip the placeholder ActionPrefixHandler for translation purposes
-					if _, ok := action.Handler.(*ActionPrefixHandler); ok {
+					if _, ok := action.Handler.(*actions.ActionPrefixHandler); ok {
 						continue
 					}
 
@@ -512,7 +513,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 					// If not duplicate, process this action
 					if !isDuplicate {
-						translatedAttrs := parseTranslatedString(translated) // Use helper from actions.go
+						translatedAttrs := actions.ParseTranslatedString(translated) // Use helper from actions.go
 						finalAttrs = append(finalAttrs, translatedAttrs...)
 						processedTranslations = append(processedTranslations, translated)
 					}
