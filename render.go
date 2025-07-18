@@ -8,11 +8,10 @@ import (
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/firattr"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/renderer"
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 	"github.com/sourcegraph/conc/pool"
-	"github.com/tdewolff/minify"
-	"github.com/tdewolff/minify/html"
 	"github.com/valyala/bytebufferpool"
 )
 
@@ -130,11 +129,7 @@ func renderDOMEventsWithRoute(ctx RouteContext, pubsubEvent pubsub.Event, routeI
 }
 
 func targetOrClassName(target *string, className string) *string {
-	if target != nil && *target != "" {
-		return target
-	}
-	cls := fmt.Sprintf(".%s", className)
-	return &cls
+	return renderer.TargetOrClassName(target, className)
 }
 
 func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, eventIDWithState, templateName string) *dom.Event {
@@ -329,35 +324,9 @@ func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event
 }
 
 func buildTemplateValue(t *template.Template, templateName string, data any) (string, error) {
-	if t == nil {
-		return "", nil
-	}
-	if templateName == "" {
-		return "", nil
-	}
-	dataBuf := bytebufferpool.Get()
-	defer bytebufferpool.Put(dataBuf)
-	if templateName == "_fir_html" {
-		dataBuf.WriteString(data.(string))
-	} else {
-		err := t.ExecuteTemplate(dataBuf, templateName, data)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	m := minify.New()
-	m.Add("text/html", &html.Minifier{
-		KeepDefaultAttrVals: true,
-	})
-	rd, err := m.Bytes("text/html", addAttributes(dataBuf.Bytes()))
-	if err != nil {
-		panic(err)
-	}
-
-	return string(rd), nil
+	return renderer.BuildTemplateValue(t, templateName, data, addAttributes)
 }
 
 func isEmptyEvent(event dom.Event) bool {
-	return event.Type == nil && event.Target == nil && event.Key == nil
+	return renderer.IsEmptyEvent(event)
 }
