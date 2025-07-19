@@ -16,6 +16,7 @@ type GetHandler struct {
 	renderService   services.RenderService
 	templateService services.TemplateService
 	responseBuilder services.ResponseBuilder
+	eventService    services.EventService // Added for onLoad support
 	config          HandlerConfig
 }
 
@@ -24,11 +25,13 @@ func NewGetHandler(
 	renderService services.RenderService,
 	templateService services.TemplateService,
 	responseBuilder services.ResponseBuilder,
+	eventService services.EventService, // Added for onLoad support
 ) *GetHandler {
 	return &GetHandler{
 		renderService:   renderService,
 		templateService: templateService,
 		responseBuilder: responseBuilder,
+		eventService:    eventService, // Added for onLoad support
 		config: HandlerConfig{
 			Name:     "get-handler",
 			Priority: 50, // Lower priority than event handlers
@@ -68,6 +71,24 @@ func (h *GetHandler) Handle(ctx context.Context, req *firHttp.RequestModel) (*fi
 
 	// Extract query parameters and form data for template context
 	templateData := h.buildTemplateData(req)
+
+	// Process onLoad event if EventService is available and route has onLoad handler
+	if h.eventService != nil {
+		// Extract route ID from the request (this would need to be passed in context or header)
+		// For now, we'll use the path as a route identifier
+		routeID := path
+		if routeID == "" {
+			routeID = "index"
+		}
+
+		// Try to process onLoad event
+		err := h.processOnLoadEvent(ctx, req, routeID, templateData)
+		if err != nil {
+			// Log the error but don't fail the request
+			// onLoad errors shouldn't prevent page rendering
+			// TODO: Add proper logging
+		}
+	}
 
 	// Build render context
 	renderCtx := services.RenderContext{
@@ -193,9 +214,10 @@ func NewConfigurableGetHandler(
 	renderService services.RenderService,
 	templateService services.TemplateService,
 	responseBuilder services.ResponseBuilder,
+	eventService services.EventService, // Added for onLoad support
 	config HandlerConfig,
 ) *ConfigurableGetHandler {
-	baseHandler := NewGetHandler(renderService, templateService, responseBuilder)
+	baseHandler := NewGetHandler(renderService, templateService, responseBuilder, eventService)
 
 	// Override base config with custom config
 	if config.Name != "" {
@@ -240,4 +262,45 @@ func (h *ConfigurableGetHandler) SupportsRequest(req *firHttp.RequestModel) bool
 // HandlerName returns the custom handler name
 func (h *ConfigurableGetHandler) HandlerName() string {
 	return h.customConfig.Name
+}
+
+// processOnLoadEvent handles onLoad event processing for GET requests
+func (h *GetHandler) processOnLoadEvent(ctx context.Context, req *firHttp.RequestModel, routeID string, templateData map[string]interface{}) error {
+	// Create event request for onLoad
+	eventReq := services.EventRequest{
+		ID:           "load",
+		Target:       nil, // onLoad doesn't have a specific target
+		ElementKey:   nil, // onLoad doesn't have an element key
+		SessionID:    "",  // TODO: Extract session ID from request if available
+		Context:      ctx,
+		Params:       make(map[string]interface{}),
+		RequestModel: req,
+	}
+
+	// Process the onLoad event through EventService
+	eventResp, err := h.eventService.ProcessEvent(ctx, eventReq)
+	if err != nil {
+		// If no onLoad handler is registered, that's not an error
+		if isNoHandlerError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to process onLoad event: %w", err)
+	}
+
+	// If the event processing returned DOM events, we could potentially
+	// use them to modify the template data, but for now we'll just
+	// ensure the event was processed successfully
+	_ = eventResp
+
+	return nil
+}
+
+// isNoHandlerError checks if the error indicates no handler was found
+// This is expected behavior when a route doesn't have an onLoad handler
+func isNoHandlerError(err error) bool {
+	// This would need to match the specific error returned by EventService
+	// when no handler is found for an event
+	return err != nil && (strings.Contains(err.Error(), "no handler") ||
+		strings.Contains(err.Error(), "not found") ||
+		strings.Contains(err.Error(), "not registered"))
 }

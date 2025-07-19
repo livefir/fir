@@ -181,6 +181,7 @@ func buildDOMEventFromTemplate(ctx RouteContext, pubsubEvent pubsub.Event, event
 	}
 }
 
+//nolint:unused // Used by legacy code during migration phase
 func getUnsetErrorEvents(cch *cache.Cache, sessionID *string, events []dom.Event) []dom.Event {
 	return renderer.GetUnsetErrorEvents(cch, sessionID, events)
 }

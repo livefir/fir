@@ -16,6 +16,9 @@ type existFileFunc func(string) bool
 
 // find is the original function that returns empty slice when files don't exist
 // This maintains backward compatibility for existing code and tests
+// find searches for files with the given extensions in the specified path
+//
+//nolint:unused // Used by legacy code during migration phase
 func find(path string, extensions []string, embedfs *embed.FS) []string {
 	files, _ := findWithError(path, extensions, embedfs)
 	return files

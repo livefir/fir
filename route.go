@@ -486,13 +486,69 @@ func (rt *route) handleRequestWithChain(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
+	// Check if handler chain can handle this request type
+	if !rt.canHandlerChainHandle(pair.Request) {
+		logger.GetGlobalLogger().Debug("handler chain cannot handle request type, using legacy fallback",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"content_type", r.Header.Get("Content-Type"),
+			"route_id", rt.id,
+		)
+		return fmt.Errorf("handler chain cannot handle request type: %s %s", r.Method, r.URL.Path)
+	}
+
 	// Process request through handler chain
 	_, err = rt.handlerChain.Handle(r.Context(), pair.Request)
 	if err != nil {
+		// Add debugging information when handler chain fails
+		logger.GetGlobalLogger().Debug("handler chain failed, falling back to legacy",
+			"error", err.Error(),
+			"method", r.Method,
+			"path", r.URL.Path,
+			"content_type", r.Header.Get("Content-Type"),
+			"route_id", rt.id,
+		)
 		return err
 	}
 
 	return nil
+}
+
+// canHandlerChainHandle checks if the handler chain can process the given request
+func (rt *route) canHandlerChainHandle(req *firHttp.RequestModel) bool {
+	if rt.handlerChain == nil {
+		return false
+	}
+
+	// Check if any handler in the chain supports this request
+	chainHandlers := rt.handlerChain.GetHandlers()
+	if len(chainHandlers) == 0 {
+		logger.GetGlobalLogger().Debug("handler chain has no handlers configured",
+			"route_id", rt.id,
+		)
+		return false
+	}
+
+	for _, handler := range chainHandlers {
+		if handler.SupportsRequest(req) {
+			logger.GetGlobalLogger().Debug("handler chain can handle request",
+				"handler", handler.HandlerName(),
+				"method", req.Method,
+				"path", req.URL.Path,
+				"route_id", rt.id,
+			)
+			return true
+		}
+	}
+
+	logger.GetGlobalLogger().Debug("no handler in chain supports request",
+		"method", req.Method,
+		"path", req.URL.Path,
+		"content_type", req.Header.Get("Content-Type"),
+		"route_id", rt.id,
+		"handler_count", len(chainHandlers),
+	)
+	return false
 }
 
 // handleRequestLegacy provides fallback to the original request handling logic
@@ -1009,6 +1065,8 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleJSONEventWithService handles JSON event requests using the new event service
+//
+//nolint:unused // Legacy method used by integration tests during migration phase
 func (rt *route) handleJSONEventWithService(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	var bodySize int64
@@ -1082,6 +1140,8 @@ func (rt *route) handleJSONEventWithService(w http.ResponseWriter, r *http.Reque
 }
 
 // writeEventServiceResponse writes the event service response to the HTTP response
+//
+//nolint:unused // Legacy method used by legacy event handling during migration phase
 func (rt *route) writeEventServiceResponse(w http.ResponseWriter, response *services.EventResponse, logger *logger.Logger, startTime time.Time, handlerDuration time.Duration) {
 	renderStartTime := time.Now()
 

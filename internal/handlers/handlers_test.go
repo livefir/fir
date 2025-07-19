@@ -217,6 +217,7 @@ func TestGetHandler_SupportsRequest(t *testing.T) {
 		&mockRenderService{},
 		&mockTemplateService{},
 		&mockResponseBuilder{},
+		&mockEventService{}, // Added for onLoad support
 	)
 
 	tests := []struct {
@@ -306,6 +307,7 @@ func TestGetHandler_Handle(t *testing.T) {
 		mockRender,
 		&mockTemplateService{},
 		mockBuilder,
+		&mockEventService{}, // Added for onLoad support
 	)
 
 	request := &firHttp.RequestModel{
@@ -328,6 +330,7 @@ func TestGetHandler_HandlerName(t *testing.T) {
 		&mockRenderService{},
 		&mockTemplateService{},
 		&mockResponseBuilder{},
+		&mockEventService{}, // Added for onLoad support
 	)
 
 	name := handler.HandlerName()

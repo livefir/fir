@@ -156,6 +156,7 @@ func SetupDefaultHandlerChain(services *routeservices.RouteServices) HandlerChai
 			services.RenderService,
 			services.TemplateService,
 			services.ResponseBuilder,
+			services.EventService, // Added for onLoad support
 		)
 		chain.AddHandlerWithConfig(getHandler, HandlerConfig{
 			Name:     getHandler.HandlerName(), // Use actual handler name

@@ -1153,6 +1153,186 @@ sequenceDiagram
     Renderer-->>Connection: DOM events array
 ```
 
+### 6.5 Modern Handler Chain Architecture
+
+The Fir framework implements a modern handler chain architecture for request processing, providing extensibility and clear separation of concerns.
+
+#### 6.5.1 Handler Chain Request Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Route
+    participant HandlerChain
+    participant WebSocketHandler
+    participant JSONEventHandler
+    participant FormHandler
+    participant GetHandler
+    participant EventService
+    participant LegacyFallback
+    
+    Client->>Route: HTTP Request
+    Route->>Route: canHandlerChainHandle(request)?
+    
+    alt Handler Chain Supported
+        Route->>HandlerChain: handleRequest()
+        HandlerChain->>HandlerChain: Sort by priority
+        
+        alt WebSocket Upgrade (Priority 5)
+            HandlerChain->>WebSocketHandler: canHandle()?
+            WebSocketHandler-->>HandlerChain: true
+            HandlerChain->>WebSocketHandler: handle()
+            WebSocketHandler-->>Client: WebSocket Connection
+        else JSON Event (Priority 10)
+            HandlerChain->>JSONEventHandler: canHandle()?
+            JSONEventHandler-->>HandlerChain: true
+            HandlerChain->>JSONEventHandler: handle()
+            JSONEventHandler->>EventService: processEvent()
+            EventService-->>JSONEventHandler: EventResponse
+            JSONEventHandler-->>Client: JSON Response
+        else Form Submission (Priority 20)
+            HandlerChain->>FormHandler: canHandle()?
+            FormHandler-->>HandlerChain: true
+            HandlerChain->>FormHandler: handle()
+            FormHandler->>EventService: processEvent()
+            EventService-->>FormHandler: EventResponse
+            FormHandler-->>Client: Redirect/Response
+        else GET Request with onLoad (Priority 50)
+            HandlerChain->>GetHandler: canHandle()?
+            GetHandler-->>HandlerChain: true
+            HandlerChain->>GetHandler: handle()
+            GetHandler->>EventService: processOnLoadEvent()
+            EventService-->>GetHandler: EventResponse
+            GetHandler-->>Client: HTML Response
+        end
+        
+    else Handler Chain Not Supported
+        Route->>LegacyFallback: handleRequestLegacy()
+        LegacyFallback-->>Client: Legacy Response
+    end
+```
+
+#### 6.5.2 Handler Priority System
+
+The handler chain uses a priority-based routing system to ensure correct request processing order:
+
+| Handler | Priority | Request Types | Service Dependencies |
+|---------|----------|---------------|---------------------|
+| **WebSocketHandler** | 5 (Highest) | WebSocket upgrades | Connection management |
+| **JSONEventHandler** | 10 | `application/json` POST | EventService, ResponseBuilder |
+| **FormHandler** | 20 | `application/x-www-form-urlencoded` POST | EventService, ResponseBuilder |
+| **GetHandler** | 50 (Lowest) | GET with onLoad handlers | EventService, RenderService, TemplateService |
+
+#### 6.5.3 Handler Chain Coverage Checking
+
+The system includes comprehensive coverage diagnostics to determine when the handler chain can process requests:
+
+```mermaid
+flowchart TD
+    A[Request Received] --> B{Is WebSocket Upgrade?}
+    B -->|Yes| C[WebSocketHandler Available?]
+    B -->|No| D{Is POST Request?}
+    
+    C -->|Yes| E[Handler Chain: WebSocket]
+    C -->|No| F[Legacy Fallback]
+    
+    D -->|Yes| G{Content-Type?}
+    D -->|No| H{Is GET Request?}
+    
+    G -->|application/json| I[Has OnEvent Handlers?]
+    G -->|form-urlencoded| J[Has OnEvent Handlers?]
+    G -->|Other| F
+    
+    I -->|Yes| K[Handler Chain: JSON]
+    I -->|No| F
+    
+    J -->|Yes| L[Handler Chain: Form]
+    J -->|No| F
+    
+    H -->|Yes| M[Has OnLoad Handler?]
+    H -->|No| F
+    
+    M -->|Yes| N[Handler Chain: GET]
+    M -->|No| F
+    
+    E --> O[Modern Processing]
+    K --> O
+    L --> O
+    N --> O
+    F --> P[Legacy Processing]
+```
+
+#### 6.5.4 Service Dependencies
+
+Modern handlers require specific services to function properly:
+
+```mermaid
+graph TB
+    subgraph "Handler Chain"
+        WSH[WebSocketHandler]
+        JEH[JSONEventHandler]
+        FH[FormHandler]
+        GH[GetHandler]
+    end
+    
+    subgraph "Service Layer"
+        ES[EventService]
+        RS[RenderService]
+        TS[TemplateService]
+        RB[ResponseBuilder]
+    end
+    
+    subgraph "Infrastructure"
+        CM[Connection Manager]
+        EV[Event Validator]
+        TC[Template Cache]
+    end
+    
+    WSH --> CM
+    
+    JEH --> ES
+    JEH --> RB
+    
+    FH --> ES
+    FH --> RB
+    
+    GH --> ES
+    GH --> RS
+    GH --> TS
+    GH --> RB
+    
+    ES --> EV
+    RS --> TS
+    TS --> TC
+```
+
+#### 6.5.5 Dual Architecture Benefits
+
+The framework maintains both modern and legacy systems during transition:
+
+**Modern Handler Chain Benefits:**
+
+- Clear separation of concerns
+- Extensible architecture
+- Better testability
+- Service dependency injection
+- Priority-based routing
+
+**Legacy Fallback Benefits:**
+
+- Zero regression guarantee
+- Gradual migration support
+- Compatibility maintenance
+- Risk mitigation
+
+**Migration Path:**
+
+1. **Phase 1**: Dual architecture implementation ✅
+2. **Phase 2**: Handler chain enhancement ✅
+3. **Phase 3**: Test modernization ✅
+4. **Phase 4**: Documentation updates (Current)
+5. **Phase 5**: Legacy removal (Future)
+
 ---
 
 ## 7. Deployment View
