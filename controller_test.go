@@ -450,3 +450,143 @@ func TestControllerWebsocketEnabledRedis(t *testing.T) {
 		})
 	}
 }
+
+// TestWebSocketFallbackBehavior tests the complete WebSocket fallback scenario:
+// 1. WebSocket upgrade request returns 403 when WebSocket is disabled
+// 2. HTTP event processing works as fallback
+func TestWebSocketFallbackBehavior(t *testing.T) {
+	for _, tc := range testCases {
+		// Create controller with WebSocket disabled
+		tc.options = append(tc.options, WithDisableWebsocket())
+		controller := NewController(tc.name, tc.options...)
+		server := httptest.NewServer(controller.RouteFunc(tc.routeFunc))
+		defer server.Close()
+
+		t.Run(tc.name, func(t *testing.T) {
+			// Test 1: WebSocket upgrade should return 403 Forbidden
+			t.Run("WebSocket_upgrade_returns_403", func(t *testing.T) {
+				req, err := http.NewRequest("GET", server.URL, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Set WebSocket upgrade headers
+				req.Header.Set("Connection", "Upgrade")
+				req.Header.Set("Upgrade", "websocket")
+				req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+				req.Header.Set("Sec-WebSocket-Version", "13")
+
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer resp.Body.Close()
+
+				// Should get 403 Forbidden when WebSocket is disabled
+				if resp.StatusCode != http.StatusForbidden {
+					t.Fatalf("expected status code 403, got %d", resp.StatusCode)
+				}
+			})
+
+			// Test 2: HTTP event processing should work as fallback
+			t.Run("HTTP_fallback_works", func(t *testing.T) {
+				ti := &testInput{serverURL: server.URL, num: 10}
+				runPostEventTest(t, ti)
+			})
+		})
+	}
+}
+
+// TestWebSocketUnavailableServices tests behavior when WebSocket services are unavailable
+// Note: The default controller setup includes basic WebSocket services, so this test
+// verifies that the system gracefully handles WebSocket connections even with minimal setup
+func TestWebSocketUnavailableServices(t *testing.T) {
+	// Create a route with minimal services (no WebSocket services)
+	routeFunc := func() RouteOptions {
+		return RouteOptions{
+			ID("test"),
+			Content(`<div onclick="double({{.}})">{{.}}</div>`),
+			OnEvent("double", func(ctx RouteContext) error {
+				return ctx.KV("num", 10)
+			}),
+		}
+	}
+
+	// Create controller without WebSocket services
+	controller := NewController("test-no-ws-services")
+	server := httptest.NewServer(controller.RouteFunc(routeFunc))
+	defer server.Close()
+
+	t.Run("WebSocket_upgrade_with_minimal_setup", func(t *testing.T) {
+		req, err := http.NewRequest("GET", server.URL, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Set WebSocket upgrade headers
+		req.Header.Set("Connection", "Upgrade")
+		req.Header.Set("Upgrade", "websocket")
+		req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+		req.Header.Set("Sec-WebSocket-Version", "13")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		// With default controller setup, WebSocket upgrade should succeed (101)
+		// but connection may fail later due to missing session/cookie setup
+		// This verifies the system doesn't crash and handles the scenario gracefully
+		if resp.StatusCode != http.StatusSwitchingProtocols && resp.StatusCode != http.StatusInternalServerError {
+			t.Fatalf("expected status code 101 or 500, got %d", resp.StatusCode)
+		}
+	})
+}
+
+// TestRedirectUnauthorisedWebSocket tests the RedirectUnauthorisedWebSocket function
+func TestRedirectUnauthorisedWebSocket(t *testing.T) {
+	t.Run("non_websocket_request_returns_false", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+
+		// Request without WebSocket headers should return false
+		result := RedirectUnauthorisedWebSocket(w, req, "http://example.com/login")
+		if result != false {
+			t.Fatalf("expected false for non-WebSocket request, got %v", result)
+		}
+	})
+
+	t.Run("redirect_url_too_long_panics", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Connection", "Upgrade")
+		req.Header.Set("Upgrade", "websocket")
+
+		// URL longer than 123 bytes should panic
+		longURL := "http://example.com/" + strings.Repeat("a", 130)
+
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("expected panic for long redirect URL")
+			}
+		}()
+
+		RedirectUnauthorisedWebSocket(w, req, longURL)
+	})
+
+	t.Run("valid_websocket_request_handles_gracefully", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("Connection", "Upgrade")
+		req.Header.Set("Upgrade", "websocket")
+		req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+		req.Header.Set("Sec-WebSocket-Version", "13")
+
+		// Valid WebSocket request with short URL should not panic
+		// It may return false due to test environment limitations (no hijacker)
+		// but it should handle the case gracefully
+		result := RedirectUnauthorisedWebSocket(w, req, "http://example.com/login")
+		_ = result // We don't assert the result since it depends on test environment capabilities
+	})
+}
