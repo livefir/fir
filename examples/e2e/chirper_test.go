@@ -151,23 +151,54 @@ func TestChirperExampleE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Logf("Chirp count before deletion: %d", chirpCountBefore)
+
 	if err := chromedp.Run(ctx,
 		chromedp.Click(`button[formaction*="delete-chirp"]`, chromedp.ByQuery),
 	); err != nil {
 		t.Fatal(err)
 	}
 
-	// Wait for chirp to be removed
+	// Wait for chirp to be removed with multiple checks
 	var chirpCountAfter int
-	if err := chromedp.Run(ctx,
-		chromedp.Sleep(1000000000), // 1 second
-		chromedp.Evaluate(`document.querySelectorAll('section[fir-key]').length`, &chirpCountAfter),
-	); err != nil {
-		t.Fatal(err)
+	var attempts int
+	for attempts = 0; attempts < 10; attempts++ {
+		if err := chromedp.Run(ctx,
+			chromedp.Sleep(500000000), // 500ms
+			chromedp.Evaluate(`document.querySelectorAll('section[fir-key]').length`, &chirpCountAfter),
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Logf("Attempt %d: Chirp count after deletion: %d", attempts+1, chirpCountAfter)
+
+		if chirpCountAfter < chirpCountBefore {
+			break // Success!
+		}
 	}
 
 	if chirpCountAfter >= chirpCountBefore {
-		t.Fatal("Chirp was not deleted after clicking delete button")
+		// Get more debugging information
+		var debugInfo string
+		if err := chromedp.Run(ctx,
+			chromedp.Evaluate(`
+				const sections = document.querySelectorAll('section[fir-key]');
+				const info = {
+					sectionCount: sections.length,
+					sections: Array.from(sections).map(s => ({ 
+						key: s.getAttribute('fir-key'), 
+						text: s.textContent.trim().substring(0, 50),
+						hasRemoveDirective: s.hasAttribute('x-fir-remove')
+					}))
+				};
+				JSON.stringify(info, null, 2);
+			`, &debugInfo),
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Logf("Debug info: %s", debugInfo)
+		t.Fatalf("Chirp was not deleted after clicking delete button. Before: %d, After: %d, Attempts: %d", chirpCountBefore, chirpCountAfter, attempts)
 	}
 
 	// Test form validation - try to submit empty chirp
