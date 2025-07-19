@@ -30,6 +30,23 @@ import (
 	servertiming "github.com/mitchellh/go-server-timing"
 )
 
+// Helper functions to access route components through RouteInterface
+
+// getRenderer returns the renderer from the route interface
+func getRenderer(ctx RouteContext) Renderer {
+	return ctx.routeInterface.GetRenderer().(Renderer)
+}
+
+// getServices returns the services from the route interface
+func getServices(ctx RouteContext) *routeservices.RouteServices {
+	return ctx.routeInterface.Services()
+}
+
+// getRoute returns the underlying route from the route interface
+func getRoute(ctx RouteContext) *route {
+	return ctx.routeInterface.(*route)
+}
+
 // RouteOption is a function that sets route options
 type RouteOption func(*routeOpt)
 
@@ -385,13 +402,15 @@ func publishEventsWithServices(ctx context.Context, pubsubAdapter pubsub.Adapter
 
 func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 	return func(pubsubEvent pubsub.Event) error {
-		channel := ctx.route.services.ChannelFunc(ctx.request, ctx.route.id)
+		// Get route interface services and channel function
+		services := ctx.routeInterface.Services()
+		channel := services.ChannelFunc(ctx.request, ctx.routeInterface.ID())
 		if channel == nil {
 			logger.Errorf("error: channel is empty")
 			http.Error(ctx.response, "channel is empty", http.StatusUnauthorized)
 			return nil
 		}
-		err := ctx.route.services.PubSub.Publish(ctx.request.Context(), *channel, pubsubEvent)
+		err := services.PubSub.Publish(ctx.request.Context(), *channel, pubsubEvent)
 		if err != nil {
 			logger.Debugf("error publishing patch: %v", err)
 		}
@@ -401,7 +420,9 @@ func writeAndPublishEvents(ctx RouteContext) eventPublisher {
 }
 
 func writeEventHTTP(ctx RouteContext, event pubsub.Event) error {
-	events := ctx.route.renderer.RenderDOMEvents(ctx, event)
+	// Get renderer from route interface
+	renderer := ctx.routeInterface.GetRenderer().(Renderer)
+	events := renderer.RenderDOMEvents(ctx, event)
 	eventsData, err := json.Marshal(events)
 	if err != nil {
 		logger.Errorf("error marshaling patch: %v", err)
@@ -592,16 +613,16 @@ func handlePostFormResult(err error, ctx RouteContext) {
 	switch errVal := err.(type) {
 	case *routeData:
 		// Render template with the data
-		ctx.route.renderer.RenderRoute(ctx, *errVal, false)
+		getRenderer(ctx).RenderRoute(ctx, *errVal, false)
 	case *stateData:
 		// For state data, render the template
-		ctx.route.renderer.RenderRoute(ctx, routeData(*errVal), false)
+		getRenderer(ctx).RenderRoute(ctx, routeData(*errVal), false)
 	case *routeDataWithState:
 		// Render template with route data
-		ctx.route.renderer.RenderRoute(ctx, *errVal.routeData, false)
+		getRenderer(ctx).RenderRoute(ctx, *errVal.routeData, false)
 	default:
 		// Get onLoad handler from EventRegistry
-		handlerInterface, ok := ctx.route.services.EventRegistry.Get(ctx.route.id, "load")
+		handlerInterface, ok := getServices(ctx).EventRegistry.Get(ctx.routeInterface.ID(), "load")
 		if ok {
 			if onLoadFunc, ok := handlerInterface.(OnEventFunc); ok {
 				// Create a new context for onLoad with initialized pointers
@@ -609,7 +630,7 @@ func handlePostFormResult(err error, ctx RouteContext) {
 					event:            ctx.event,
 					request:          ctx.request,
 					response:         ctx.response,
-					route:            ctx.route,
+					routeInterface:   ctx.routeInterface,
 					urlValues:        ctx.urlValues,
 					isOnLoad:         true,
 					accumulatedData:  &map[string]any{},
@@ -629,7 +650,7 @@ func handlePostFormResult(err error, ctx RouteContext) {
 			}
 		} else {
 			// Fallback to legacy onLoad
-			handleOnLoadResult(ctx.route.onLoad(ctx), err, ctx)
+			handleOnLoadResult(getRoute(ctx).onLoad(ctx), err, ctx)
 		}
 	}
 }
@@ -650,7 +671,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, false)
+		getRenderer(ctx).RenderRoute(ctx, routeData{"errors": errs}, false)
 		return
 	}
 
@@ -671,7 +692,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 		onLoadData["errors"] = errs
-		ctx.route.renderer.RenderRoute(ctx, onLoadData, false)
+		getRenderer(ctx).RenderRoute(ctx, onLoadData, false)
 
 	case *routeDataWithState:
 		onLoadData := *errVal.routeData
@@ -689,7 +710,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 		onLoadData["errors"] = errs
-		ctx.route.renderer.RenderRoute(ctx, onLoadData, false)
+		getRenderer(ctx).RenderRoute(ctx, onLoadData, false)
 
 	case firErrors.Status:
 		errs := make(map[string]any)
@@ -707,7 +728,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, true)
+		getRenderer(ctx).RenderRoute(ctx, routeData{"errors": errs}, true)
 	case firErrors.Fields:
 		errs := make(map[string]any)
 		if onFormErr != nil {
@@ -724,7 +745,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			}
 		}
 
-		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, false)
+		getRenderer(ctx).RenderRoute(ctx, routeData{"errors": errs}, false)
 	default:
 		var errs map[string]any
 		if onFormErr != nil {
@@ -747,7 +768,7 @@ func handleOnLoadResult(err, onFormErr error, ctx RouteContext) {
 			errs = map[string]any{
 				"onload": err.Error()}
 		}
-		ctx.route.renderer.RenderRoute(ctx, routeData{"errors": errs}, false)
+		getRenderer(ctx).RenderRoute(ctx, routeData{"errors": errs}, false)
 	}
 
 }
@@ -911,8 +932,7 @@ func (rt *route) handleJSONEvent(w http.ResponseWriter, r *http.Request) {
 		event:            event,
 		request:          r,
 		response:         w,
-		route:            rt, // Keep legacy route for backward compatibility
-		routeInterface:   rt, // Use route as RouteInterface for modern rendering
+		routeInterface:   rt, // Use route as RouteInterface for both WebSocket and HTTP modes
 		accumulatedData:  &map[string]any{},
 		accumulatedState: &map[string]any{},
 	}
@@ -1123,7 +1143,7 @@ func (rt *route) handleFormPost(w http.ResponseWriter, r *http.Request) {
 		event:            event,
 		request:          r,
 		response:         w,
-		route:            rt,
+		routeInterface:   rt,
 		urlValues:        r.PostForm,
 		accumulatedData:  &map[string]any{},
 		accumulatedState: &map[string]any{},
@@ -1193,7 +1213,7 @@ func (rt *route) handleGetRequest(w http.ResponseWriter, r *http.Request) {
 		event:            event,
 		request:          r,
 		response:         w,
-		route:            rt,
+		routeInterface:   rt,
 		isOnLoad:         true,
 		accumulatedData:  &map[string]any{},
 		accumulatedState: &map[string]any{},
@@ -1284,6 +1304,16 @@ func (rt *route) GetTemplate() interface{} {
 // GetAppName returns the app name
 func (rt *route) GetAppName() string {
 	return rt.appName
+}
+
+// GetCookieName returns the session cookie name
+func (rt *route) GetCookieName() string {
+	return rt.cookieName
+}
+
+// GetSecureCookie returns the secure cookie instance
+func (rt *route) GetSecureCookie() interface{} {
+	return rt.secureCookie
 }
 
 // buildTemplateConfig creates a template configuration from route options

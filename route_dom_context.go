@@ -26,19 +26,9 @@ func newRouteDOMContext(ctx RouteContext, errs map[string]any) *RouteDOMContext 
 		urlPath = ctx.request.URL.Path
 	}
 
-	if ctx.route != nil {
-		// Legacy mode
-		name = ctx.route.appName
-		developmentMode = ctx.route.developmentMode
-	} else if ctx.routeInterface != nil {
-		// WebSocketServices mode
-		name = ctx.routeInterface.GetAppName()
-		developmentMode = ctx.routeInterface.DevelopmentMode()
-	} else {
-		// Fallback - this shouldn't happen but handle gracefully
-		name = ""
-		developmentMode = false
-	}
+	// Use routeInterface for both legacy and WebSocketServices modes
+	name = ctx.routeInterface.GetAppName()
+	developmentMode = ctx.routeInterface.DevelopmentMode()
 
 	if errs == nil {
 		errs = make(map[string]any)

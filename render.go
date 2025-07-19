@@ -17,13 +17,17 @@ import (
 
 func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	return func(data routeData) error {
-		ctx.route.parseTemplatesWithEngine()
+		// Get route interface and parse templates
+		route := ctx.routeInterface.(*route)
+		route.parseTemplatesWithEngine()
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
 
-		tmpl := ctx.route.getTemplate()
+		var tmpl *template.Template
 		if errorRouteTemplate {
-			tmpl = ctx.route.getErrorTemplate()
+			tmpl = route.getErrorTemplate()
+		} else {
+			tmpl = route.getTemplate()
 		}
 		var errs map[string]any
 		errMap, ok := data["errors"]
@@ -38,7 +42,7 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			return err
 		}
 
-		err = encodeSession(ctx.route.routeOpt, ctx.response, ctx.request)
+		err = encodeSession(route.routeOpt, ctx.response, ctx.request)
 		if err != nil {
 			logger.Errorf("error encoding session: %v", err)
 			return err

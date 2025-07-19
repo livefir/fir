@@ -49,6 +49,8 @@ type RouteInterface interface {
 	GetEventTemplates() interface{} // Returns eventTemplates but using interface{} to avoid circular import
 	GetTemplate() interface{}       // Returns *template.Template but using interface{} to avoid circular import
 	GetAppName() string             // Returns the app name for template context
+	GetCookieName() string          // Returns the session cookie name
+	GetSecureCookie() interface{}   // Returns *securecookie.SecureCookie but using interface{} to avoid circular import
 }
 
 // MockWebSocketServices provides a test implementation of WebSocketServices
@@ -149,6 +151,8 @@ type MockRoute struct {
 	EventTemplates     interface{} // eventTemplates but using interface{} to avoid circular import
 	Template           interface{} // *template.Template but using interface{} to avoid circular import
 	AppName            string      // App name for template context
+	CookieName         string      // Session cookie name
+	SecureCookie       interface{} // *securecookie.SecureCookie but using interface{} to avoid circular import
 }
 
 // ID returns the route ID
@@ -220,4 +224,17 @@ func (m *MockRoute) GetTemplate() interface{} {
 // GetAppName returns the app name
 func (m *MockRoute) GetAppName() string {
 	return m.AppName
+}
+
+// GetCookieName returns the session cookie name
+func (m *MockRoute) GetCookieName() string {
+	if m.CookieName == "" {
+		return "_session"
+	}
+	return m.CookieName
+}
+
+// GetSecureCookie returns the secure cookie instance
+func (m *MockRoute) GetSecureCookie() interface{} {
+	return m.SecureCookie
 }

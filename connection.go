@@ -172,7 +172,6 @@ func (c *Connection) startPubSubListenersWithServices() error {
 				routeCtx := RouteContext{
 					request:        c.request,
 					response:       c.response,
-					route:          nil,        // No legacy route object in WebSocketServices mode
 					routeInterface: routeIface, // Provide RouteInterface for WebSocketServices mode
 				}
 				go c.renderAndWriteEvent(*routeChannel, routeCtx, pubsubEvent)
@@ -220,8 +219,7 @@ func (c *Connection) handleServerEventWithServices(routeInterface RouteInterface
 		event:            event,
 		request:          c.request,
 		response:         c.response,
-		route:            nil,                          // No legacy route in WebSocketServices mode
-		formDecoder:      routeInterface.FormDecoder(), // Provide form decoder for binding
+		routeInterface:   routeInterface, // Provide RouteInterface for WebSocketServices mode
 		accumulatedData:  &accumulatedData,
 		accumulatedState: &accumulatedState,
 	}
@@ -458,11 +456,9 @@ func (c *Connection) processEventWithServices(event Event, eventRouteID string) 
 		event:            event,
 		request:          c.request,
 		response:         c.response,
-		route:            nil,                          // No legacy route object in WebSocketServices mode
-		formDecoder:      routeInterface.FormDecoder(), // Provide form decoder for binding
-		routeInterface:   routeInterface,               // Provide RouteInterface for WebSocketServices mode
-		accumulatedData:  &accumulatedData,             // Initialize accumulated data
-		accumulatedState: &accumulatedState,            // Initialize accumulated state
+		routeInterface:   routeInterface,    // Provide RouteInterface for WebSocketServices mode
+		accumulatedData:  &accumulatedData,  // Initialize accumulated data
+		accumulatedState: &accumulatedState, // Initialize accumulated state
 	}
 
 	withEventLogger := logger.GetGlobalLogger().WithFields(map[string]any{

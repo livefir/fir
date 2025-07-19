@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
 
 	"github.com/fatih/structs"
 	"github.com/goccy/go-json"
-	"github.com/gorilla/schema"
+	"github.com/gorilla/securecookie"
 
 	firErrors "github.com/livefir/fir/internal/errors"
 )
@@ -40,9 +39,7 @@ type RouteContext struct {
 	request          *http.Request
 	response         http.ResponseWriter
 	urlValues        url.Values
-	route            *route
-	formDecoder      *schema.Decoder // Form decoder for WebSocketServices mode when route is nil
-	routeInterface   RouteInterface  // RouteInterface for WebSocketServices mode when route is nil
+	routeInterface   RouteInterface // RouteInterface for both WebSocket and HTTP modes
 	isOnLoad         bool
 	accumulatedData  *map[string]any // Pointer to accumulated data from KV/Data calls
 	accumulatedState *map[string]any // Pointer to accumulated state data from StateKV/State calls
@@ -119,14 +116,7 @@ func (c RouteContext) BindPathParams(v any) error {
 }
 
 func (c RouteContext) BindQueryParams(v any) error {
-	var decoder *schema.Decoder
-	if c.route != nil {
-		decoder = c.route.formDecoder
-	} else if c.formDecoder != nil {
-		decoder = c.formDecoder
-	} else {
-		return errors.New("no form decoder available")
-	}
+	decoder := c.routeInterface.FormDecoder()
 	return decoder.Decode(v, c.request.URL.Query())
 }
 
@@ -142,17 +132,7 @@ func (c RouteContext) BindEventParams(v any) error {
 			}
 			c.urlValues = urlValues
 		}
-		// Handle both WebSocketServices mode and legacy mode
-		var decoder *schema.Decoder
-		if c.route != nil {
-			// Legacy mode
-			decoder = c.route.formDecoder
-		} else if c.formDecoder != nil {
-			// WebSocketServices mode
-			decoder = c.formDecoder
-		} else {
-			return fmt.Errorf("no form decoder available")
-		}
+		decoder := c.routeInterface.FormDecoder()
 		return decoder.Decode(v, c.urlValues)
 	}
 
@@ -295,16 +275,13 @@ func getUserFromRequestContext(r *http.Request) string {
 
 // GetSessionID extracts the session ID from the request cookie
 func (c RouteContext) GetSessionID() string {
-	if c.route == nil {
-		return ""
-	}
-
-	cookie, err := c.request.Cookie(c.route.cookieName)
+	cookie, err := c.request.Cookie(c.routeInterface.GetCookieName())
 	if err != nil {
 		return ""
 	}
 
-	sessionID, _, err := decodeSession(*c.route.secureCookie, c.route.cookieName, cookie.Value)
+	secureCookie := c.routeInterface.GetSecureCookie().(*securecookie.SecureCookie)
+	sessionID, _, err := decodeSession(*secureCookie, c.routeInterface.GetCookieName(), cookie.Value)
 	if err != nil {
 		return ""
 	}

@@ -12,15 +12,15 @@ import (
 
 // RouteEventProcessor integrates the new event service with route event handling
 type RouteEventProcessor struct {
-	eventService services.EventService
-	route        *route
+	eventService   services.EventService
+	routeInterface RouteInterface
 }
 
 // NewRouteEventProcessor creates a new route event processor
-func NewRouteEventProcessor(eventService services.EventService, route *route) *RouteEventProcessor {
+func NewRouteEventProcessor(eventService services.EventService, routeInterface RouteInterface) *RouteEventProcessor {
 	return &RouteEventProcessor{
-		eventService: eventService,
-		route:        route,
+		eventService:   eventService,
+		routeInterface: routeInterface,
 	}
 }
 
@@ -75,15 +75,15 @@ func convertEventParams(event Event) map[string]interface{} {
 
 // LegacyEventHandler wraps the existing OnEventFunc to work with the new service layer
 type LegacyEventHandler struct {
-	handler OnEventFunc
-	route   *route
+	handler        OnEventFunc
+	routeInterface RouteInterface
 }
 
 // NewLegacyEventHandler creates a new legacy event handler wrapper
-func NewLegacyEventHandler(handler OnEventFunc, route *route) *LegacyEventHandler {
+func NewLegacyEventHandler(handler OnEventFunc, routeInterface RouteInterface) *LegacyEventHandler {
 	return &LegacyEventHandler{
-		handler: handler,
-		route:   route,
+		handler:        handler,
+		routeInterface: routeInterface,
 	}
 }
 
@@ -126,10 +126,10 @@ func (h *LegacyEventHandler) ProcessEvent(ctx context.Context, req services.Even
 
 	// Create route context
 	routeCtx := RouteContext{
-		event:    event,
-		request:  httpReq,
-		response: httpResp,
-		route:    h.route,
+		event:          event,
+		request:        httpReq,
+		response:       httpResp,
+		routeInterface: h.routeInterface,
 	}
 
 	// Call the legacy handler
