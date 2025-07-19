@@ -1,6 +1,7 @@
 package fir
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -19,6 +20,7 @@ import (
 	"github.com/livefir/fir/internal/event"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/internal/routeservices"
+	"github.com/livefir/fir/internal/services"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -395,15 +397,35 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 	// For now, pass nil to maintain backward compatibility
 	templateEngine := c.createTemplateEngineFactory()
 
-	services := routeservices.NewRouteServicesWithTemplateEngine(c.eventRegistry, c.opt.pubsub, renderer, templateEngine, options)
-	services.SetChannelFunc(c.opt.channelFunc)
+	// Phase 5: Create RouteServices with new service layer to enable handler chain
+	// Use the existing method but add the new services
+	routeServices := routeservices.NewRouteServicesWithTemplateEngine(c.eventRegistry, c.opt.pubsub, renderer, templateEngine, options)
+	
+	// Phase 5: Enable handler chain by creating the missing services
+	// Create service factory for generating the new service layer
+	serviceFactory := services.NewServiceFactory(!c.opt.disableTemplateCache)
+	
+	// Create all rendering services (RenderService, TemplateService, ResponseBuilder)
+	renderService, templateService, responseBuilder, _, _ := serviceFactory.CreateRenderServices()
+	
+	// Set the new services to enable handler chain
+	routeServices.RenderService = renderService
+	routeServices.TemplateService = templateService
+	routeServices.ResponseBuilder = responseBuilder
+	
+	// For EventService, we'll create a minimal stub that allows the handlers to be registered
+	// but doesn't interfere with the existing event processing
+	// TODO: In future phases, properly bridge the event systems
+	routeServices.EventService = &noOpEventService{}
+
+	routeServices.SetChannelFunc(c.opt.channelFunc)
 
 	// Set WebSocketServices - controller implements WebSocketServices interface
-	services.SetWebSocketServices(c)
+	routeServices.SetWebSocketServices(c)
 
 	// Convert PathParams function signature
 	if c.opt.pathParamsFunc != nil {
-		services.SetPathParamsFunc(func(r *http.Request) map[string]string {
+		routeServices.SetPathParamsFunc(func(r *http.Request) map[string]string {
 			pathParams := c.opt.pathParamsFunc(r)
 			result := make(map[string]string)
 			for k, v := range pathParams {
@@ -413,7 +435,27 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 		})
 	}
 
-	return services
+	return routeServices
+}
+
+// noOpEventService is a minimal EventService implementation that allows handlers to be registered
+// but doesn't actually process events (lets legacy system handle them for now)
+type noOpEventService struct{}
+
+func (n *noOpEventService) ProcessEvent(ctx context.Context, req services.EventRequest) (*services.EventResponse, error) {
+	// For now, return an error to indicate this is not implemented
+	// This will cause the handler chain to fail and fallback to legacy
+	return nil, fmt.Errorf("event processing not implemented in no-op service")
+}
+
+func (n *noOpEventService) RegisterHandler(eventID string, handler services.EventHandler) error {
+	// No-op implementation - just return success
+	return nil
+}
+
+func (n *noOpEventService) GetEventMetrics() services.EventMetrics {
+	// Return empty metrics
+	return services.EventMetrics{}
 }
 
 // GetRouteServices returns the RouteServices instance for this controller

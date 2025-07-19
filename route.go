@@ -473,8 +473,32 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Use handler chain for request processing
 	err := rt.handleRequestWithChain(w, r)
 	if err != nil {
+		// Add logging to track fallback usage during Phase 5 migration
+		if rt.debugLog {
+			fmt.Printf("[PHASE 5 DEBUG] LEGACY FALLBACK USED: %s %s (content-type: %s, error: %v)\n", 
+				r.Method, r.URL.Path, r.Header.Get("Content-Type"), err)
+			logger.GetGlobalLogger().Debug("handler chain failed, using legacy fallback",
+				"error", err,
+				"method", r.Method,
+				"path", r.URL.Path,
+				"content_type", r.Header.Get("Content-Type"),
+				"route_id", rt.id,
+			)
+		}
 		// Fallback to legacy handling if handler chain fails
 		rt.handleRequestLegacy(w, r)
+	} else {
+		// Track successful handler chain usage
+		if rt.debugLog {
+			fmt.Printf("[PHASE 5 DEBUG] HANDLER CHAIN SUCCESS: %s %s (content-type: %s)\n", 
+				r.Method, r.URL.Path, r.Header.Get("Content-Type"))
+			logger.GetGlobalLogger().Debug("handler chain successfully processed request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"content_type", r.Header.Get("Content-Type"),
+				"route_id", rt.id,
+			)
+		}
 	}
 }
 
