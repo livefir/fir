@@ -163,6 +163,15 @@ func (h *FormHandler) determineFormAction(req *firHttp.RequestModel) (*FormActio
 		}
 	}
 
+	// Check URL query parameters for event parameter first
+	if eventID := req.QueryParams.Get("event"); eventID != "" {
+		action.Type = "event"
+		action.EventID = eventID
+		action.Target = req.QueryParams.Get("target")
+		action.ElementKey = req.QueryParams.Get("element_key")
+		return action, nil
+	}
+
 	// Check for event-related form fields
 	if eventID := req.Form.Get("_event"); eventID != "" {
 		action.Type = "event"
@@ -225,10 +234,9 @@ func (h *FormHandler) handleFormEvent(ctx context.Context, req *firHttp.RequestM
 	// Process the event through the event service
 	eventResp, err := h.eventService.ProcessEvent(ctx, *eventReq)
 	if err != nil {
-		return h.responseBuilder.BuildErrorResponse(
-			fmt.Errorf("failed to process form event: %w", err),
-			http.StatusInternalServerError,
-		)
+		// For Phase 5: If the event service is not implemented (like our noOpEventService),
+		// propagate the error to cause handler chain failure and fallback to legacy
+		return nil, fmt.Errorf("failed to process form event: %w", err)
 	}
 
 	// Build HTTP response from event response

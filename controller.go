@@ -415,7 +415,7 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 	
 	// For EventService, we'll create a minimal stub that allows the handlers to be registered
 	// but doesn't interfere with the existing event processing
-	// TODO: In future phases, properly bridge the event systems
+	// This will cause handler chain to fail and fallback to legacy for event processing
 	routeServices.EventService = &noOpEventService{}
 
 	routeServices.SetChannelFunc(c.opt.channelFunc)
