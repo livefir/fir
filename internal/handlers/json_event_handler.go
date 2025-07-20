@@ -66,10 +66,9 @@ func (h *JSONEventHandler) Handle(ctx context.Context, req *firHttp.RequestModel
 	// Process the event through the event service
 	eventResp, err := h.eventService.ProcessEvent(ctx, *eventReq)
 	if err != nil {
-		return h.responseBuilder.BuildErrorResponse(
-			fmt.Errorf("failed to process event: %w", err),
-			http.StatusInternalServerError,
-		)
+		// For Phase 5: If the event service is not implemented (like our noOpEventService),
+		// propagate the error to cause handler chain failure and fallback to legacy
+		return nil, fmt.Errorf("failed to process JSON event: %w", err)
 	}
 
 	// Build HTTP response from event response
@@ -126,31 +125,62 @@ func (h *JSONEventHandler) parseJSONEvent(req *firHttp.RequestModel) (*services.
 	eventReq := &services.EventRequest{
 		Context:      req.Context,
 		RequestModel: req,
-		Params:       eventData,
+		Params:       make(map[string]interface{}), // Will be populated after extracting control fields
 	}
 
-	// Extract event ID (required)
-	if id, ok := eventData["id"].(string); ok {
+	// Extract event ID (required) - accept both "event_id" (legacy/Alpine.js) and "id" (modern)
+	if id, ok := eventData["event_id"].(string); ok {
 		eventReq.ID = id
+		delete(eventData, "event_id") // Remove from params
+	} else if id, ok := eventData["id"].(string); ok {
+		eventReq.ID = id
+		delete(eventData, "id") // Remove from params
 	} else {
 		return nil, fmt.Errorf("event ID is required")
+	}
+
+	// Handle legacy Event format where params are nested under "params" field
+	if params, ok := eventData["params"]; ok {
+		// Use the nested params as the actual parameters
+		if paramsMap, ok := params.(map[string]interface{}); ok {
+			eventReq.Params = paramsMap
+		} else {
+			eventReq.Params = map[string]interface{}{"params": params}
+		}
+		delete(eventData, "params") // Remove from eventData
 	}
 
 	// Extract target (optional)
 	if target, ok := eventData["target"].(string); ok {
 		eventReq.Target = &target
+		delete(eventData, "target") // Remove from params
 	}
 
 	// Extract element key (optional)
 	if elementKey, ok := eventData["element_key"].(string); ok {
 		eventReq.ElementKey = &elementKey
+		delete(eventData, "element_key") // Remove from params
 	}
 
 	// Extract session ID (optional, could come from params or headers)
 	if sessionID, ok := eventData["session_id"].(string); ok {
 		eventReq.SessionID = sessionID
-	} else if sessionID := req.Header.Get("X-Session-ID"); sessionID != "" {
-		eventReq.SessionID = sessionID
+		delete(eventData, "session_id") // Remove from params
+	}
+
+	// Extract timestamp (optional, remove from params)
+	delete(eventData, "ts") // Remove from params (safe even if key doesn't exist)
+
+	// If params weren't nested (modern format), use remaining eventData as params
+	if eventReq.Params == nil {
+		eventReq.Params = eventData
+	}
+
+	// If session ID wasn't in the JSON, try to get it from headers
+	if eventReq.SessionID == "" {
+		if sessionID := req.Header.Get("X-Session-ID"); sessionID != "" {
+			eventReq.SessionID = sessionID
+		}
 	}
 
 	return eventReq, nil

@@ -1,7 +1,6 @@
 package fir
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -400,23 +399,30 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 	// Phase 5: Create RouteServices with new service layer to enable handler chain
 	// Use the existing method but add the new services
 	routeServices := routeservices.NewRouteServicesWithTemplateEngine(c.eventRegistry, c.opt.pubsub, renderer, templateEngine, options)
-	
+
 	// Phase 5: Enable handler chain by creating the missing services
 	// Create service factory for generating the new service layer
 	serviceFactory := services.NewServiceFactory(!c.opt.disableTemplateCache)
-	
+
 	// Create all rendering services (RenderService, TemplateService, ResponseBuilder)
 	renderService, templateService, responseBuilder, _, _ := serviceFactory.CreateRenderServices()
-	
+
 	// Set the new services to enable handler chain
 	routeServices.RenderService = renderService
 	routeServices.TemplateService = templateService
 	routeServices.ResponseBuilder = responseBuilder
-	
+
+	// Create SessionService for session management in handler chain
+	if c.opt.cookieName != "" && c.opt.secureCookie != nil {
+		routeServices.SessionService = services.NewSessionService(c.opt.cookieName, c.opt.secureCookie)
+	}
+
 	// For EventService, we'll create a minimal stub that allows the handlers to be registered
 	// but doesn't interfere with the existing event processing
 	// This will cause handler chain to fail and fallback to legacy for event processing
-	routeServices.EventService = &noOpEventService{}
+	// Create proper EventService instead of no-op
+	eventService := createEventService()
+	routeServices.EventService = eventService
 
 	routeServices.SetChannelFunc(c.opt.channelFunc)
 
@@ -438,24 +444,22 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 	return routeServices
 }
 
-// noOpEventService is a minimal EventService implementation that allows handlers to be registered
-// but doesn't actually process events (lets legacy system handle them for now)
-type noOpEventService struct{}
+// createEventService creates a proper EventService implementation
+func createEventService() services.EventService {
+	// Create event registry
+	registry := services.NewInMemoryEventRegistry()
 
-func (n *noOpEventService) ProcessEvent(ctx context.Context, req services.EventRequest) (*services.EventResponse, error) {
-	// For now, return an error to indicate this is not implemented
-	// This will cause the handler chain to fail and fallback to legacy
-	return nil, fmt.Errorf("event processing not implemented in no-op service")
-}
+	// Create validator with basic configuration
+	validator := services.NewDefaultEventValidator()
 
-func (n *noOpEventService) RegisterHandler(eventID string, handler services.EventHandler) error {
-	// No-op implementation - just return success
-	return nil
-}
+	// Create logger with debug logging enabled in development mode
+	logger := services.NewDefaultEventLogger(true)
 
-func (n *noOpEventService) GetEventMetrics() services.EventMetrics {
-	// Return empty metrics
-	return services.EventMetrics{}
+	// Create publisher (no-op for now, can be enhanced later)
+	publisher := &services.NoOpEventPublisher{}
+
+	// Create and return the full EventService
+	return services.NewDefaultEventService(registry, validator, publisher, logger)
 }
 
 // GetRouteServices returns the RouteServices instance for this controller

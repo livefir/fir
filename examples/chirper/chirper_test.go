@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -14,15 +15,22 @@ import (
 
 func TestChirperIntegration(t *testing.T) {
 	// Create a temporary database for testing
-	db, err := bolthold.Open("test_chirper.db", 0666, nil)
+	tempFile, err := os.CreateTemp("", "test_chirper_*.db")
 	if err != nil {
 		t.Fatal(err)
 	}
+	tempFile.Close() // Close the file so bolthold can open it
+	dbPath := tempFile.Name()
+
 	defer func() {
-		db.Close()
-		// Clean up test database file
-		// Note: In a real test, you might want to use a temp file
+		os.Remove(dbPath) // Clean up test database file
 	}()
+
+	db, err := bolthold.Open(dbPath, 0666, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
 
 	// Set up the controller and route
 	controller := fir.NewController("chirper_test")
@@ -37,6 +45,17 @@ func TestChirperIntegration(t *testing.T) {
 		}
 	}))
 	defer server.Close()
+
+	// Helper function to clean the database
+	cleanDB := func() {
+		var chirps []Chirp
+		if err := db.Find(&chirps, &bolthold.Query{}); err != nil {
+			return // Ignore errors during cleanup
+		}
+		for _, chirp := range chirps {
+			db.Delete(chirp.ID, &Chirp{}) // Ignore errors during cleanup
+		}
+	}
 
 	// Helper function to get session cookie
 	getSessionCookie := func() string {
@@ -61,6 +80,9 @@ func TestChirperIntegration(t *testing.T) {
 
 	// Test 1: Create a chirp
 	t.Run("create_chirp", func(t *testing.T) {
+		// Clean database before test
+		cleanDB()
+
 		chirp := Chirp{
 			Body: "Test chirp for deletion",
 		}
@@ -104,6 +126,19 @@ func TestChirperIntegration(t *testing.T) {
 
 	// Test 2: Delete the chirp
 	t.Run("delete_chirp", func(t *testing.T) {
+		// Clean database and create a chirp for deletion
+		cleanDB()
+
+		// First create a chirp to delete
+		chirp := Chirp{
+			Body: "Test chirp for deletion",
+		}
+
+		// Insert directly into database for this test
+		if err := db.Insert(bolthold.NextSequence(), &chirp); err != nil {
+			t.Fatal(err)
+		}
+
 		// Get the chirp ID from database
 		var chirps []Chirp
 		if err := db.Find(&chirps, &bolthold.Query{}); err != nil {
@@ -158,6 +193,9 @@ func TestChirperIntegration(t *testing.T) {
 
 	// Test 3: Like a chirp
 	t.Run("like_chirp", func(t *testing.T) {
+		// Clean database before test
+		cleanDB()
+
 		// First create a chirp to like
 		chirp := Chirp{
 			Body: "Test chirp for liking",
