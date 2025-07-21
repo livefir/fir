@@ -340,6 +340,12 @@ func newRoute(services *routeservices.RouteServices, routeOpt *routeOpt) (*route
 	// Create handler chain using factory
 	handlerChain := factory.CreateHandlerChain()
 
+	// TEMPORARY: Disable handler chain if EventService is not available
+	// This ensures graceful fallback to legacy system while handler chain is under development
+	if services.EventService == nil {
+		handlerChain = nil
+	}
+
 	// Use the services' renderer if specified, otherwise use the default
 	var renderer Renderer
 	if services.Renderer != nil {

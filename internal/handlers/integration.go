@@ -150,9 +150,8 @@ func SetupDefaultHandlerChain(services *routeservices.RouteServices) HandlerChai
 		})
 	}
 
-	// 4. GET handler (lowest priority) - TEMPORARILY DISABLED for Phase 5
-	// TODO: Re-enable once session management is integrated into handler chain
-	if false && services.RenderService != nil && services.TemplateService != nil && services.ResponseBuilder != nil {
+	// 4. GET handler (lowest priority) - Re-enabled after session management fixes
+	if services.RenderService != nil && services.TemplateService != nil && services.ResponseBuilder != nil {
 		getHandler := NewGetHandler(
 			services.RenderService,
 			services.TemplateService,

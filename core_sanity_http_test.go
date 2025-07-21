@@ -192,11 +192,14 @@ func TestCoreSanity_ConcurrentOperations(t *testing.T) {
 					"text": fmt.Sprintf("Concurrent todo %d", index),
 				})
 
-				// All operations should succeed
-				if strings.Contains(eventResp.body, "error") ||
+				// Check for actual errors, not HTML template classes
+				hasActualError := strings.Contains(eventResp.body, "Internal Server Error") ||
 					strings.Contains(eventResp.body, "500") ||
-					strings.Contains(eventResp.body, "Internal Server Error") ||
-					eventResp.statusCode != 200 {
+					strings.Contains(eventResp.body, "Error:") ||
+					strings.Contains(eventResp.body, "error occurred") ||
+					strings.Contains(eventResp.body, "validation error")
+
+				if hasActualError || eventResp.statusCode != 200 {
 					done <- fmt.Errorf("failed to create todo %d (status: %d)", index, eventResp.statusCode)
 				} else {
 					done <- nil

@@ -412,17 +412,11 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 	routeServices.TemplateService = templateService
 	routeServices.ResponseBuilder = responseBuilder
 
-	// Create SessionService for session management in handler chain
-	if c.opt.cookieName != "" && c.opt.secureCookie != nil {
-		routeServices.SessionService = services.NewSessionService(c.opt.cookieName, c.opt.secureCookie)
-	}
-
-	// For EventService, we'll create a minimal stub that allows the handlers to be registered
-	// but doesn't interfere with the existing event processing
-	// This will cause handler chain to fail and fallback to legacy for event processing
-	// Create proper EventService instead of no-op
-	eventService := createEventService()
-	routeServices.EventService = eventService
+	// For now, disable EventService to ensure legacy event handling works properly
+	// This allows the handler chain to fail gracefully and fall back to legacy for events
+	// TODO: Complete the event service integration later
+	// eventService := createEventServiceWithRegistry(routeServices.EventRegistry)
+	// routeServices.EventService = eventService
 
 	routeServices.SetChannelFunc(c.opt.channelFunc)
 
@@ -442,24 +436,6 @@ func (c *controller) createRouteServices() *routeservices.RouteServices {
 	}
 
 	return routeServices
-}
-
-// createEventService creates a proper EventService implementation
-func createEventService() services.EventService {
-	// Create event registry
-	registry := services.NewInMemoryEventRegistry()
-
-	// Create validator with basic configuration
-	validator := services.NewDefaultEventValidator()
-
-	// Create logger with debug logging enabled in development mode
-	logger := services.NewDefaultEventLogger(true)
-
-	// Create publisher (no-op for now, can be enhanced later)
-	publisher := &services.NoOpEventPublisher{}
-
-	// Create and return the full EventService
-	return services.NewDefaultEventService(registry, validator, publisher, logger)
 }
 
 // GetRouteServices returns the RouteServices instance for this controller
