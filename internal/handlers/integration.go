@@ -165,6 +165,15 @@ func SetupDefaultHandlerChain(services *routeservices.RouteServices) HandlerChai
 		})
 	}
 
+	// 5. POC handler - Proof of concept handler with no service dependencies
+	// This ensures the chain always has at least one handler for testing
+	pocHandler := NewPOCHandler()
+	chain.AddHandlerWithConfig(pocHandler, HandlerConfig{
+		Name:     pocHandler.HandlerName(),
+		Priority: 100, // Lowest priority - only handles /poc requests
+		Enabled:  true,
+	})
+
 	return chain
 }
 

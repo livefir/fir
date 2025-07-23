@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>HANDLER_CHAIN_MIGRATION_PLAN.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="handler-chain-migration-plan-make-handlerequestwithchain-work-like-handlerequestlegacy">Handler Chain Migration Plan: Make handleRequestWithChain Work Like handleRequestLegacy</h1>
+<h2 id="overview">Overview</h2>
+<p>This document outlines the plan to make <code>handleRequestWithChain</code> work exactly like <code>handleRequestLegacy</code>, ensuring complete feature parity and eliminating the need for legacy fallback.</p>
+<h2 id="current-state-analysis">Current State Analysis</h2>
+<h3 id="legacy-method-handlerequestlegacy">Legacy Method (<code>handleRequestLegacy</code>)</h3>
+<pre class="hljs"><code><div><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(rt *route)</span> <span class="hljs-title">handleRequestLegacy</span><span class="hljs-params">(w http.ResponseWriter, r *http.Request)</span></span> {
+    <span class="hljs-keyword">if</span> websocket.IsWebSocketUpgrade(r) {
+        rt.handleWebSocketUpgrade(w, r)
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> rt.isJSONEventRequest(r) {
+        rt.handleJSONEvent(w, r)
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> r.Method == http.MethodPost {
+        rt.handleFormPost(w, r)
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> r.Method == http.MethodGet {
+        rt.handleGetRequest(w, r)
+    } <span class="hljs-keyword">else</span> {
+        http.Error(w, <span class="hljs-string">"method not allowed"</span>, http.StatusMethodNotAllowed)
+    }
+}
+</div></code></pre>
+<h3 id="current-chain-method-handlerequestwithchain">Current Chain Method (<code>handleRequestWithChain</code>)</h3>
+<pre class="hljs"><code><div><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(rt *route)</span> <span class="hljs-title">handleRequestWithChain</span><span class="hljs-params">(w http.ResponseWriter, r *http.Request)</span> <span class="hljs-title">error</span></span> {
+    <span class="hljs-comment">// Creates request/response pair</span>
+    <span class="hljs-comment">// Checks if handler chain can handle request type</span>
+    <span class="hljs-comment">// Processes through handler chain</span>
+    <span class="hljs-comment">// Returns error if fails (triggering legacy fallback)</span>
+}
+</div></code></pre>
+<h3 id="identified-issues">Identified Issues</h3>
+<ol>
+<li><strong>Handler Chain Setup</strong>: Missing or incomplete handler registration</li>
+<li><strong>Request Type Detection</strong>: Chain handlers may not properly detect request types</li>
+<li><strong>Response Handling</strong>: Chain may not write responses to HTTP correctly</li>
+<li><strong>WebSocket Handling</strong>: WebSocket upgrade requests need special handling</li>
+<li><strong>Error Handling</strong>: Chain errors trigger fallback instead of proper error responses</li>
+</ol>
+<h3 id="test-failures">Test Failures</h3>
+<ul>
+<li><code>TestSetupDefaultHandlerChain</code>: Expected &quot;get-handler&quot; not found in chain</li>
+<li><code>TestRouteHandlerIntegration_HandleRequest/handles_GET_request</code>: CanHandleRequest() = false, HandleRequest() = false</li>
+</ul>
+<h2 id="migration-tasks">Migration Tasks</h2>
+<h3 id="phase-1-handler-chain-foundation">Phase 1: Handler Chain Foundation</h3>
+<p><strong>Context</strong>: Ensure all required handlers are properly created and registered in the chain.</p>
+<h4 id="task-11-verify-handler-registration">Task 1.1: Verify Handler Registration</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/integration.go</code></li>
+<li><strong>Goal</strong>: Ensure <code>SetupDefaultHandlerChain</code> creates all expected handlers</li>
+<li><strong>Validation</strong>: Test should pass: <code>TestSetupDefaultHandlerChain</code></li>
+<li><strong>Details</strong>:
+<ul>
+<li>Check if all handlers (websocket-handler, json-event-handler, form-handler, get-handler) are created</li>
+<li>Verify each handler's <code>HandlerName()</code> method returns correct name</li>
+<li>Ensure handlers are added to chain with proper configuration</li>
+</ul>
+</li>
+<li><strong>Dependencies</strong>: Handler implementations must exist and be functional</li>
+</ul>
+<h4 id="task-12-fix-handler-naming-consistency">Task 1.2: Fix Handler Naming Consistency</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/get_handler.go</code>, <code>form_handler.go</code>, <code>json_event_handler.go</code>, <code>websocket_handler.go</code></li>
+<li><strong>Goal</strong>: Ensure each handler's <code>HandlerName()</code> returns expected string</li>
+<li><strong>Validation</strong>: Handler names match test expectations exactly</li>
+<li><strong>Details</strong>:
+<ul>
+<li>GetHandler should return &quot;get-handler&quot;</li>
+<li>FormHandler should return &quot;form-handler&quot;</li>
+<li>JSONEventHandler should return &quot;json-event-handler&quot;</li>
+<li>WebSocketHandler should return &quot;websocket-handler&quot;</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-13-verify-chain-assembly">Task 1.3: Verify Chain Assembly</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/route/factory.go</code>, route constructor</li>
+<li><strong>Goal</strong>: Ensure handler chain is properly created when route is instantiated</li>
+<li><strong>Validation</strong>: Route should have non-nil handlerChain with all handlers</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Check if EventService requirement is properly handled</li>
+<li>Verify chain creation doesn't fail due to missing dependencies</li>
+<li>Add debugging to see which handlers are actually added</li>
+</ul>
+</li>
+</ul>
+<h3 id="phase-2-request-type-detection-and-routing">Phase 2: Request Type Detection and Routing</h3>
+<p><strong>Context</strong>: Ensure handler chain can properly identify and route different request types exactly like legacy method.</p>
+<h4 id="task-21-websocket-request-detection">Task 2.1: WebSocket Request Detection</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/websocket_handler.go</code></li>
+<li><strong>Goal</strong>: WebSocket handler properly detects upgrade requests</li>
+<li><strong>Validation</strong>: <code>websocket.IsWebSocketUpgrade(r)</code> equivalent logic in handler</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Implement <code>SupportsRequest()</code> to check for WebSocket upgrade headers</li>
+<li>Ensure handler processes WebSocket connections correctly</li>
+<li>Verify no interference with other request types</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-22-json-event-request-detection">Task 2.2: JSON Event Request Detection</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/json_event_handler.go</code></li>
+<li><strong>Goal</strong>: JSON event handler detects requests with <code>X-FIR-MODE: event</code> header</li>
+<li><strong>Validation</strong>: <code>rt.isJSONEventRequest(r)</code> equivalent logic in handler</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Check for <code>X-FIR-MODE == &quot;event&quot;</code> and <code>POST</code> method</li>
+<li>Ensure handler processes JSON event payloads correctly</li>
+<li>Maintain exact same event processing logic as legacy</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-23-form-post-request-detection">Task 2.3: Form POST Request Detection</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/form_handler.go</code></li>
+<li><strong>Goal</strong>: Form handler detects regular POST requests (non-JSON events)</li>
+<li><strong>Validation</strong>: POST requests without event header are handled</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Should handle POST requests that are NOT JSON events</li>
+<li>Process form data and form actions exactly like legacy</li>
+<li>Maintain same error handling and validation</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-24-get-request-detection">Task 2.4: GET Request Detection</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/get_handler.go</code></li>
+<li><strong>Goal</strong>: GET handler detects GET and HEAD requests</li>
+<li><strong>Validation</strong>: Test <code>TestRouteHandlerIntegration_HandleRequest/handles_GET_request</code> passes</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Handle GET requests for page rendering (onLoad processing)</li>
+<li>Handle HEAD requests for WebSocket capability detection</li>
+<li>Render templates with Fir actions processing exactly like legacy</li>
+</ul>
+</li>
+</ul>
+<h3 id="phase-3-response-processing-and-http-integration">Phase 3: Response Processing and HTTP Integration</h3>
+<p><strong>Context</strong>: Ensure handler chain properly writes responses to HTTP and handles all response scenarios.</p>
+<h4 id="task-31-http-response-writing">Task 3.1: HTTP Response Writing</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/chain.go</code>, individual handlers</li>
+<li><strong>Goal</strong>: Ensure handler responses are properly written to HTTP response writer</li>
+<li><strong>Validation</strong>: Responses reach client with correct status codes and content</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Verify <code>firHttp.ResponseModel</code> is correctly converted to HTTP response</li>
+<li>Check headers are properly set</li>
+<li>Ensure response body is written correctly</li>
+<li>Maintain same response format as legacy handlers</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-32-error-response-handling">Task 3.2: Error Response Handling</h4>
+<ul>
+<li><strong>File</strong>: Handler chain and individual handlers</li>
+<li><strong>Goal</strong>: Errors should result in proper HTTP error responses, not fallback</li>
+<li><strong>Validation</strong>: Error conditions return appropriate HTTP errors instead of triggering legacy fallback</li>
+<li><strong>Details</strong>:
+<ul>
+<li>400 Bad Request for malformed requests</li>
+<li>404 Not Found for invalid routes/events</li>
+<li>500 Internal Server Error for processing failures</li>
+<li>Maintain exact same error response format as legacy</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-33-websocket-connection-handling">Task 3.3: WebSocket Connection Handling</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/websocket_handler.go</code></li>
+<li><strong>Goal</strong>: WebSocket handler properly upgrades connections without interfering with HTTP flow</li>
+<li><strong>Validation</strong>: WebSocket connections work exactly like legacy method</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Handle connection upgrade process</li>
+<li>Ensure proper hijacking of HTTP connection</li>
+<li>Maintain same WebSocket message processing logic</li>
+</ul>
+</li>
+</ul>
+<h3 id="phase-4-feature-parity-and-edge-cases">Phase 4: Feature Parity and Edge Cases</h3>
+<p><strong>Context</strong>: Ensure all edge cases and special behaviors from legacy method are replicated.</p>
+<h4 id="task-41-method-not-allowed-handling">Task 4.1: Method Not Allowed Handling</h4>
+<ul>
+<li><strong>File</strong>: Handler chain logic</li>
+<li><strong>Goal</strong>: Unsupported HTTP methods return 405 Method Not Allowed</li>
+<li><strong>Validation</strong>: Same behavior as legacy <code>http.Error(w, &quot;method not allowed&quot;, http.StatusMethodNotAllowed)</code></li>
+<li><strong>Details</strong>:
+<ul>
+<li>When no handler supports a request type, return 405</li>
+<li>Don't trigger legacy fallback for unsupported methods</li>
+<li>Maintain exact same error message and status code</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-42-template-and-fir-actions-processing">Task 4.2: Template and Fir Actions Processing</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/get_handler.go</code></li>
+<li><strong>Goal</strong>: GET handler processes templates with Fir actions exactly like legacy</li>
+<li><strong>Validation</strong>: Template rendering includes proper Fir action attributes and processing</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Use same template parsing and rendering pipeline</li>
+<li>Apply <code>addAttributes</code> function for Fir action processing</li>
+<li>Maintain same data binding and state management</li>
+<li>Ensure onLoad handlers work identically</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-43-event-processing-pipeline">Task 4.3: Event Processing Pipeline</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/json_event_handler.go</code>, <code>form_handler.go</code></li>
+<li><strong>Goal</strong>: Event processing matches legacy behavior exactly</li>
+<li><strong>Validation</strong>: Event handling, validation, and response generation identical</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Same event parsing and validation</li>
+<li>Identical error handling and field validation</li>
+<li>Same success/error response formats</li>
+<li>Maintain exact same state management and data accumulation</li>
+</ul>
+</li>
+</ul>
+<h3 id="phase-5-legacy-fallback-elimination">Phase 5: Legacy Fallback Elimination</h3>
+<p><strong>Context</strong>: Remove legacy fallback mechanism and ensure chain handles all scenarios.</p>
+<h4 id="task-51-remove-fallback-trigger-conditions">Task 5.1: Remove Fallback Trigger Conditions</h4>
+<ul>
+<li><strong>File</strong>: <code>route.go</code> - <code>handleRequestWithChain</code>, <code>canHandlerChainHandle</code></li>
+<li><strong>Goal</strong>: Chain never returns errors that trigger legacy fallback</li>
+<li><strong>Validation</strong>: All request types are handled by chain, no legacy calls</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Modify error handling to return proper HTTP responses instead of errors</li>
+<li>Ensure <code>canHandlerChainHandle</code> always returns true for valid requests</li>
+<li>Handle unsupported requests with proper HTTP error responses</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-52-update-servehttp-method">Task 5.2: Update ServeHTTP Method</h4>
+<ul>
+<li><strong>File</strong>: <code>route.go</code> - <code>ServeHTTP</code></li>
+<li><strong>Goal</strong>: Remove legacy fallback call entirely</li>
+<li><strong>Validation</strong>: Only chain method is called, no legacy fallback</li>
+<li><strong>Details</strong>:<pre class="hljs"><code><div><span class="hljs-comment">// Current:</span>
+err := rt.handleRequestWithChain(w, r)
+<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> {
+    rt.handleRequestLegacy(w, r)
+}
+
+<span class="hljs-comment">// Target:</span>
+rt.handleRequestWithChain(w, r)
+</div></code></pre>
+</li>
+</ul>
+<h4 id="task-53-remove-legacy-methods-optional">Task 5.3: Remove Legacy Methods (Optional)</h4>
+<ul>
+<li><strong>File</strong>: <code>route.go</code></li>
+<li><strong>Goal</strong>: Clean up legacy handler methods if no longer needed</li>
+<li><strong>Validation</strong>: All tests pass without legacy methods</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Can remove <code>handleRequestLegacy</code>, <code>handleJSONEvent</code>, <code>handleFormPost</code>, <code>handleGetRequest</code></li>
+<li>Keep for reference during transition or remove if confident in chain implementation</li>
+<li>Ensure no other code depends on these methods</li>
+</ul>
+</li>
+</ul>
+<h3 id="phase-6-testing-and-validation">Phase 6: Testing and Validation</h3>
+<p><strong>Context</strong>: Comprehensive testing to ensure complete feature parity.</p>
+<h4 id="task-61-fix-integration-tests">Task 6.1: Fix Integration Tests</h4>
+<ul>
+<li><strong>File</strong>: <code>internal/handlers/integration_test.go</code></li>
+<li><strong>Goal</strong>: All handler integration tests pass</li>
+<li><strong>Validation</strong>:
+<ul>
+<li><code>TestSetupDefaultHandlerChain</code> passes</li>
+<li><code>TestRouteHandlerIntegration_HandleRequest</code> all subtests pass</li>
+</ul>
+</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Verify handler creation and naming</li>
+<li>Test request handling for all supported types</li>
+<li>Validate response generation</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-62-end-to-end-testing">Task 6.2: End-to-End Testing</h4>
+<ul>
+<li><strong>File</strong>: Core framework tests</li>
+<li><strong>Goal</strong>: All existing functionality works through handler chain</li>
+<li><strong>Validation</strong>: No regression in existing test suite</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Run full test suite to ensure no regressions</li>
+<li>Test WebSocket functionality</li>
+<li>Test template rendering and Fir actions</li>
+<li>Test event processing and form handling</li>
+</ul>
+</li>
+</ul>
+<h4 id="task-63-performance-validation">Task 6.3: Performance Validation</h4>
+<ul>
+<li><strong>File</strong>: Performance tests</li>
+<li><strong>Goal</strong>: Handler chain performance matches or exceeds legacy</li>
+<li><strong>Validation</strong>: No significant performance regression</li>
+<li><strong>Details</strong>:
+<ul>
+<li>Compare response times between chain and legacy</li>
+<li>Monitor memory usage and allocation patterns</li>
+<li>Ensure handler chain doesn't add significant overhead</li>
+</ul>
+</li>
+</ul>
+<h2 id="implementation-order">Implementation Order</h2>
+<ol>
+<li><strong>Start with Phase 1</strong> - Foundation must be solid</li>
+<li><strong>Phase 2</strong> can be done in parallel for different request types</li>
+<li><strong>Phase 3</strong> depends on Phase 2 completion</li>
+<li><strong>Phase 4</strong> requires Phases 2 and 3 to be complete</li>
+<li><strong>Phase 5</strong> should only be done after Phases 1-4 are fully validated</li>
+<li><strong>Phase 6</strong> should be ongoing throughout all phases</li>
+</ol>
+<h2 id="recovery-and-rollback-plan">Recovery and Rollback Plan</h2>
+<p>If migration causes issues:</p>
+<ol>
+<li><strong>Immediate</strong>: Keep legacy fallback mechanism during development</li>
+<li><strong>Debugging</strong>: Add extensive logging to compare chain vs legacy behavior</li>
+<li><strong>Rollback</strong>: Can disable handler chain creation to force legacy usage</li>
+<li><strong>Testing</strong>: Implement feature flags to enable/disable chain per route</li>
+</ol>
+<h2 id="success-criteria">Success Criteria</h2>
+<p>✅ All handler integration tests pass<br>
+✅ Handler chain handles all request types without fallback<br>
+✅ Template rendering with Fir actions works identically<br>
+✅ WebSocket functionality unchanged<br>
+✅ Event processing behavior identical<br>
+✅ Error handling and status codes match exactly<br>
+✅ Performance within 10% of legacy implementation<br>
+✅ No test regressions in full suite</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li><strong>Backward Compatibility</strong>: Legacy methods may need to be kept for gradual migration</li>
+<li><strong>Debugging</strong>: Add comprehensive logging during migration to compare behaviors</li>
+<li><strong>Testing</strong>: Consider implementing A/B testing between chain and legacy during transition</li>
+<li><strong>Documentation</strong>: Update API documentation once migration is complete</li>
+</ul>
+
+</body>
+</html>

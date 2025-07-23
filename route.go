@@ -504,7 +504,7 @@ func (rt *route) handleRequestWithChain(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Process request through handler chain
-	_, err = rt.handlerChain.Handle(r.Context(), pair.Request)
+	response, err := rt.handlerChain.Handle(r.Context(), pair.Request)
 	if err != nil {
 		// Add debugging information when handler chain fails
 		logger.GetGlobalLogger().Debug("handler chain failed, falling back to legacy",
@@ -515,6 +515,20 @@ func (rt *route) handleRequestWithChain(w http.ResponseWriter, r *http.Request) 
 			"route_id", rt.id,
 		)
 		return err
+	}
+
+	// Write the response from handler chain to HTTP response writer
+	if response != nil {
+		err = pair.Response.WriteResponse(*response)
+		if err != nil {
+			logger.GetGlobalLogger().Debug("failed to write handler chain response",
+				"error", err.Error(),
+				"method", r.Method,
+				"path", r.URL.Path,
+				"route_id", rt.id,
+			)
+			return err
+		}
 	}
 
 	return nil
