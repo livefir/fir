@@ -135,22 +135,24 @@ func TestJSONEventHandler_SupportsRequest(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "supports JSON POST request",
+			name: "supports JSON POST request with X-FIR-MODE event header",
 			request: &firHttp.RequestModel{
 				Method: http.MethodPost,
 				Header: http.Header{
 					"Content-Type": []string{"application/json"},
+					"X-Fir-Mode":   []string{"event"},
 				},
 				Body: newMockReadCloser(`{"event": "test"}`),
 			},
 			expected: true,
 		},
 		{
-			name: "supports JSON POST with charset",
+			name: "supports JSON POST with charset and X-FIR-MODE event header",
 			request: &firHttp.RequestModel{
 				Method: http.MethodPost,
 				Header: http.Header{
 					"Content-Type": []string{"application/json; charset=utf-8"},
+					"X-Fir-Mode":   []string{"event"},
 				},
 				Body: newMockReadCloser(`{"event": "test"}`),
 			},
@@ -162,6 +164,7 @@ func TestJSONEventHandler_SupportsRequest(t *testing.T) {
 				Method: http.MethodGet,
 				Header: http.Header{
 					"Content-Type": []string{"application/json"},
+					"X-Fir-Mode":   []string{"event"},
 				},
 			},
 			expected: false,
@@ -172,6 +175,7 @@ func TestJSONEventHandler_SupportsRequest(t *testing.T) {
 				Method: http.MethodPost,
 				Header: http.Header{
 					"Content-Type": []string{"text/html"},
+					"X-Fir-Mode":   []string{"event"},
 				},
 			},
 			expected: false,
@@ -180,7 +184,32 @@ func TestJSONEventHandler_SupportsRequest(t *testing.T) {
 			name: "does not support missing content type",
 			request: &firHttp.RequestModel{
 				Method: http.MethodPost,
-				Header: http.Header{},
+				Header: http.Header{
+					"X-Fir-Mode": []string{"event"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "does not support POST without X-FIR-MODE header",
+			request: &firHttp.RequestModel{
+				Method: http.MethodPost,
+				Header: http.Header{
+					"Content-Type": []string{"application/json"},
+				},
+				Body: newMockReadCloser(`{"event": "test"}`),
+			},
+			expected: false,
+		},
+		{
+			name: "does not support POST with wrong X-FIR-MODE value",
+			request: &firHttp.RequestModel{
+				Method: http.MethodPost,
+				Header: http.Header{
+					"Content-Type": []string{"application/json"},
+					"X-Fir-Mode":   []string{"other"},
+				},
+				Body: newMockReadCloser(`{"event": "test"}`),
 			},
 			expected: false,
 		},
@@ -478,6 +507,17 @@ func TestFormHandler_SupportsRequest(t *testing.T) {
 				Method: http.MethodPost,
 				Header: http.Header{
 					"Content-Type": []string{"application/json"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "does not support form POST with X-FIR-MODE event header (should be handled by JSON event handler)",
+			request: &firHttp.RequestModel{
+				Method: http.MethodPost,
+				Header: http.Header{
+					"Content-Type": []string{"application/x-www-form-urlencoded"},
+					"X-Fir-Mode":   []string{"event"},
 				},
 			},
 			expected: false,

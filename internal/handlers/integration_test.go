@@ -54,15 +54,19 @@ func TestRouteHandlerIntegration_HandleRequest(t *testing.T) {
 		method         string
 		url            string
 		contentType    string
+		headers        map[string]string
 		body           string
 		expectedStatus int
 		shouldHandle   bool
 	}{
 		{
-			name:           "handles JSON event request",
-			method:         "POST",
-			url:            "/events",
-			contentType:    "application/json",
+			name:        "handles JSON event request",
+			method:      "POST",
+			url:         "/events",
+			contentType: "application/json",
+			headers: map[string]string{
+				"X-FIR-MODE": "event",
+			},
 			body:           `{"id": "test", "data": "value"}`,
 			expectedStatus: 200,
 			shouldHandle:   true,
@@ -72,6 +76,7 @@ func TestRouteHandlerIntegration_HandleRequest(t *testing.T) {
 			method:         "GET",
 			url:            "/test",
 			contentType:    "",
+			headers:        nil,
 			body:           "",
 			expectedStatus: 200,
 			shouldHandle:   true,
@@ -81,6 +86,7 @@ func TestRouteHandlerIntegration_HandleRequest(t *testing.T) {
 			method:         "POST",
 			url:            "/form",
 			contentType:    "application/x-www-form-urlencoded",
+			headers:        nil,
 			body:           "name=test&value=123",
 			expectedStatus: 200,
 			shouldHandle:   true,
@@ -100,6 +106,10 @@ func TestRouteHandlerIntegration_HandleRequest(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.url, bodyReader)
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
+			}
+			// Set additional headers
+			for key, value := range tt.headers {
+				req.Header.Set(key, value)
 			}
 
 			// Create response recorder
@@ -192,6 +202,7 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 		method      string
 		url         string
 		contentType string
+		headers     map[string]string
 		expectedCan bool
 	}{
 		{
@@ -199,6 +210,9 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 			method:      "POST",
 			url:         "/test",
 			contentType: "application/json",
+			headers: map[string]string{
+				"X-FIR-MODE": "event",
+			},
 			expectedCan: true,
 		},
 		{
@@ -206,6 +220,7 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 			method:      "GET",
 			url:         "/test",
 			contentType: "",
+			headers:     nil,
 			expectedCan: false,
 		},
 		{
@@ -213,6 +228,7 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 			method:      "POST",
 			url:         "/test",
 			contentType: "application/x-www-form-urlencoded",
+			headers:     nil,
 			expectedCan: false,
 		},
 	}
@@ -222,6 +238,10 @@ func TestRouteHandlerIntegration_CanHandleRequest(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.url, strings.NewReader(""))
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
+			}
+			// Set additional headers
+			for key, value := range tt.headers {
+				req.Header.Set(key, value)
 			}
 
 			canHandle := integration.CanHandleRequest(req)

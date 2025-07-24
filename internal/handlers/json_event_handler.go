@@ -82,15 +82,15 @@ func (h *JSONEventHandler) SupportsRequest(req *firHttp.RequestModel) bool {
 		return false
 	}
 
-	// Check Content-Type header
-	contentType := req.Header.Get("Content-Type")
-	if !strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+	// Check for the X-FIR-MODE header with value "event" (matches legacy logic)
+	// Legacy: r.Header.Get("X-FIR-MODE") == "event" && r.Method == http.MethodPost
+	if req.Header.Get("X-FIR-MODE") != "event" {
 		return false
 	}
 
-	// Check if this looks like an event request
-	// This could be enhanced with more sophisticated detection
-	return h.looksLikeEventRequest(req)
+	// Check Content-Type header for JSON
+	contentType := req.Header.Get("Content-Type")
+	return strings.HasPrefix(strings.ToLower(contentType), "application/json")
 }
 
 // HandlerName returns the name of this handler
@@ -184,50 +184,6 @@ func (h *JSONEventHandler) parseJSONEvent(req *firHttp.RequestModel) (*services.
 	}
 
 	return eventReq, nil
-}
-
-// looksLikeEventRequest uses heuristics to determine if this looks like an event request
-func (h *JSONEventHandler) looksLikeEventRequest(req *firHttp.RequestModel) bool {
-	// Check if URL is available
-	if req.URL == nil {
-		// If no URL available, default to true for JSON POST requests
-		return true
-	}
-
-	// Check URL path patterns that typically indicate events
-	path := req.URL.Path
-
-	// Common event endpoint patterns
-	eventPatterns := []string{
-		"/events",
-		"/event",
-		"/_event",
-		"/_events",
-	}
-
-	for _, pattern := range eventPatterns {
-		if strings.Contains(path, pattern) {
-			return true
-		}
-	}
-
-	// Check for event-related headers
-	if req.Header.Get("X-Event-ID") != "" {
-		return true
-	}
-
-	if req.Header.Get("X-FIR-Event") != "" {
-		return true
-	}
-
-	// Check if the path ends with an event-like suffix
-	if strings.HasSuffix(path, "/fire") || strings.HasSuffix(path, "/trigger") {
-		return true
-	}
-
-	// Default to true for JSON POST requests if no other patterns match
-	// This can be made more restrictive based on the application's needs
-	return true
 }
 
 // ConfigurableJSONEventHandler extends JSONEventHandler with more configuration options

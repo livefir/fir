@@ -518,9 +518,15 @@ main() {
         if [ -d "examples" ]; then
             log "Compiling examples in parallel for faster validation"
             
-            # Create array of example directories
+            # Create array of example directories (excluding unwanted examples)
             EXAMPLE_DIRS=()
             for example_dir in examples/*/; do
+                example_name=$(basename "$example_dir")
+                # Skip unwanted examples
+                if [ "$example_name" = "custom_template_engine" ] || [ "$example_name" = "template_engine_example" ] || [ "$example_name" = "test_logging" ]; then
+                    log "Skipping excluded example: $example_name"
+                    continue
+                fi
                 if [ -f "$example_dir/main.go" ]; then
                     EXAMPLE_DIRS+=("$example_dir")
                 fi

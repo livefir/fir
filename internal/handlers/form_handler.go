@@ -81,7 +81,13 @@ func (h *FormHandler) SupportsRequest(req *firHttp.RequestModel) bool {
 		return false
 	}
 
-	// Check Content-Type header
+	// Exclude requests that are JSON events (should be handled by JSONEventHandler)
+	// This ensures proper handler separation according to the legacy logic
+	if req.Header.Get("X-FIR-MODE") == "event" {
+		return false
+	}
+
+	// Check Content-Type header for form data
 	contentType := req.Header.Get("Content-Type")
 	return strings.HasPrefix(strings.ToLower(contentType), "application/x-www-form-urlencoded") ||
 		strings.HasPrefix(strings.ToLower(contentType), "multipart/form-data")
