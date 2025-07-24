@@ -12,7 +12,7 @@ import (
 func TestEndToEndPOC_HandlerChainWorksWithoutEventService(t *testing.T) {
 	// This test verifies that our POC proves the handler chain can work
 	// even in scenarios where EventService is nil (the condition that was disabling the chain)
-	
+
 	// Create route services without EventService - the problematic scenario
 	services := &routeservices.RouteServices{
 		// EventService: nil - this was causing chain to be disabled
@@ -86,7 +86,7 @@ func TestEndToEndPOC_HandlerChainWorksWithoutEventService(t *testing.T) {
 func TestEndToEndPOC_NoLegacyFallbackTriggered(t *testing.T) {
 	// This test documents that successful handler chain processing means
 	// no legacy fallback should be triggered
-	
+
 	services := &routeservices.RouteServices{
 		Options: &routeservices.Options{
 			DisableTemplateCache: false,

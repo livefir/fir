@@ -150,7 +150,17 @@ func SetupDefaultHandlerChain(services *routeservices.RouteServices) HandlerChai
 		})
 	}
 
-	// 4. GET handler (lowest priority) - Re-enabled after session management fixes
+	// 4. POC handler - Proof of concept handler with no service dependencies
+	// This ensures the chain always has at least one handler for testing
+	// HIGH PRIORITY: Must come before GET handler to handle /poc requests specifically
+	pocHandler := NewPOCHandler()
+	chain.AddHandlerWithConfig(pocHandler, HandlerConfig{
+		Name:     pocHandler.HandlerName(),
+		Priority: 40, // Higher priority than GET handler to handle /poc specifically
+		Enabled:  true,
+	})
+
+	// 5. GET handler (lowest priority) - Re-enabled after session management fixes
 	if services.RenderService != nil && services.TemplateService != nil && services.ResponseBuilder != nil {
 		getHandler := NewGetHandler(
 			services.RenderService,
@@ -164,15 +174,6 @@ func SetupDefaultHandlerChain(services *routeservices.RouteServices) HandlerChai
 			Enabled:  true,
 		})
 	}
-
-	// 5. POC handler - Proof of concept handler with no service dependencies
-	// This ensures the chain always has at least one handler for testing
-	pocHandler := NewPOCHandler()
-	chain.AddHandlerWithConfig(pocHandler, HandlerConfig{
-		Name:     pocHandler.HandlerName(),
-		Priority: 100, // Lowest priority - only handles /poc requests
-		Enabled:  true,
-	})
 
 	return chain
 }

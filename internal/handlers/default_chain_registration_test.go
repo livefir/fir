@@ -24,7 +24,7 @@ func TestDefaultChainRegistration_POCHandler(t *testing.T) {
 
 	// Get all handlers from the chain
 	handlers := chain.GetHandlers()
-	
+
 	// Check if POC handler is registered
 	var foundPOCHandler bool
 	for _, handler := range handlers {
