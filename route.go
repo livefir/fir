@@ -470,10 +470,16 @@ func (rt *route) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Setup path parameters if needed
 	r = rt.setupPathParameters(r)
 
-	// Use handler chain for request processing
-	err := rt.handleRequestWithChain(w, r)
-	if err != nil {
-		// Fallback to legacy handling if handler chain fails
+	// Phase 1: Only use handler chain for POC route (/poc)
+	// All other routes use legacy handling for now
+	if r.Method == "GET" && r.URL.Path == "/poc" {
+		err := rt.handleRequestWithChain(w, r)
+		if err != nil {
+			// Fallback to legacy handling if handler chain fails
+			rt.handleRequestLegacy(w, r)
+		}
+	} else {
+		// Use legacy handling for all non-POC routes
 		rt.handleRequestLegacy(w, r)
 	}
 }
