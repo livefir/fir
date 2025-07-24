@@ -43,18 +43,26 @@ show_help() {
     echo "  --fast      Enable fast mode - skips coverage analysis and example builds"
     echo ""
     echo "DESCRIPTION:"
-    echo "  This script runs comprehensive validation including:"
-    echo "  - Build compilation (go build ./...)"
-    echo "  - Parallel tests with smart caching (go test -parallel N -count=1 ./...)"
+    echo "  This script runs comprehensive validation with aggressive performance optimizations:"
+    echo "  - Parallel build compilation with caching and memory optimization"
+    echo "  - Ultra-parallel tests (up to 90% CPU utilization) with selective running"
+    echo "  - Parallel static analysis (Go Vet + StaticCheck simultaneously)"
     echo "  - Docker environment tests (DOCKER=1) - if Docker is available"
-    echo "  - Static analysis (go vet, staticcheck)"
     echo "  - Go modules validation"
     echo "  - Alpine.js plugin testing (if changes detected, with smart dependency caching)"
-    echo "  - Example compilation check (skipped in --fast mode)"
-    echo "  - Test coverage analysis (skipped in --fast mode)"
-    echo "  - Cleanup of temporary files"
+    echo "  - Parallel example compilation (skipped in --fast mode)"
+    echo "  - Smart test coverage analysis (skipped in --fast mode)"
+    echo "  - Aggressive cleanup of temporary files"
     echo ""
-    echo "  Tests run in parallel using 75% of available CPU cores for faster execution."
+    echo "  PERFORMANCE OPTIMIZATIONS:"
+    echo "  - Uses up to 90% of CPU cores for maximum parallel execution"
+    echo "  - Intelligent selective testing based on changed files (fast mode)"
+    echo "  - Build caching and memory optimization flags"
+    echo "  - Parallel static analysis execution"
+    echo "  - Reduced timeouts and aggressive garbage collection"
+    echo "  - Parallel example compilation with batching"
+    echo ""
+    echo "  Tests run in parallel using up to 90% of available CPU cores for maximum speed."
     echo "  Docker tests are automatically skipped if Docker is not installed or running."
     echo "  Returns exit code 0 if all quality gates pass, non-zero otherwise."
     echo ""
@@ -197,55 +205,117 @@ main() {
     
     FAILED_TESTS=0
     
-    # 1. Build Validation
+    # 1. Build Validation (with parallel compilation, caching, and memory optimization)
     header "🔨 Build Validation"
-    if ! run_test "Go Build" \
-                  "go build ./..." \
-                  "Build completed successfully" \
-                  "Build failed - check for compilation errors"; then
+    
+    # Use parallel compilation for faster builds with optimizations
+    CPU_COUNT_BUILD=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    BUILD_PARALLELISM=$((CPU_COUNT_BUILD))
+    
+    # Enable build cache and memory optimizations
+    export GOCACHE=$(go env GOCACHE 2>/dev/null || echo "$HOME/.cache/go-build")
+    
+    if [ "$FAST_MODE" = true ]; then
+        # Fast mode: aggressive caching, no race detection, optimized flags
+        BUILD_FLAGS="-p $BUILD_PARALLELISM -ldflags='-s -w' -trimpath"
+        BUILD_LABEL="Go Build (Fast & Cached)"
+        log "Fast mode: Using aggressive build optimizations with caching"
+    else
+        # Normal mode: balanced approach with caching
+        BUILD_FLAGS="-p $BUILD_PARALLELISM -trimpath"
+        BUILD_LABEL="Go Build (Parallel & Cached)"
+        log "Using parallel build with caching and optimization"
+    fi
+    
+    if ! run_test "$BUILD_LABEL" \
+                  "go build $BUILD_FLAGS ./..." \
+                  "Optimized build completed successfully (using $BUILD_PARALLELISM processes)" \
+                  "Optimized build failed - check for compilation errors"; then
         ((FAILED_TESTS++))
     fi
     
-    # 2. Tests (with optional coverage)
+    # 2. Tests (with enhanced parallelism and selective running)
     header "🧪 Tests"
     
-    # Determine number of parallel processes
+    # Determine number of parallel processes - use up to 90% of CPU cores for speed
     CPU_COUNT=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
     
-    if [ "$FAST_MODE" = true ]; then
-        # In fast mode, enable caching and use moderate parallelism
-        PARALLEL_JOBS=$((CPU_COUNT / 2))
-        if [ $PARALLEL_JOBS -lt 2 ]; then
-            PARALLEL_JOBS=2
+    # Check if we can do selective testing based on changed files
+    CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || echo "")
+    STAGED_FILES=$(git diff --staged --name-only 2>/dev/null || echo "")
+    ALL_CHANGED="$CHANGED_FILES $STAGED_FILES"
+    
+    # Determine if we need full test suite or can run selective tests
+    NEEDS_FULL_TESTS=true
+    if [ -n "$ALL_CHANGED" ] && [ "$FAST_MODE" = true ]; then
+        # Check if changes are only in specific packages
+        GO_CHANGES=$(echo "$ALL_CHANGED" | grep -E '\.(go|mod|sum)$' || true)
+        if [ -n "$GO_CHANGES" ]; then
+            # Extract package directories from changed files
+            CHANGED_PACKAGES=$(echo "$GO_CHANGES" | grep '\.go$' | xargs -I {} dirname {} | sort -u | grep -v '^examples/e2e' || true)
+            if [ -n "$CHANGED_PACKAGES" ] && [ $(echo "$CHANGED_PACKAGES" | wc -l) -le 3 ]; then
+                NEEDS_FULL_TESTS=false
+                log "Detected changes in limited packages: $(echo $CHANGED_PACKAGES | tr '\n' ' ')"
+            fi
         fi
-        TEST_FLAGS="-parallel $PARALLEL_JOBS -short"
-        log "Fast mode: Using $PARALLEL_JOBS parallel processes with caching enabled and -short flag"
+    fi
+    
+    if [ "$FAST_MODE" = true ]; then
+        # In fast mode, use very aggressive parallelism for maximum speed
+        PARALLEL_JOBS=$((CPU_COUNT * 9 / 10))
+        if [ $PARALLEL_JOBS -lt 4 ]; then
+            PARALLEL_JOBS=4
+        fi
+        # Cap at higher maximum for fast mode
+        if [ $PARALLEL_JOBS -gt 20 ]; then
+            PARALLEL_JOBS=20
+        fi
+        TEST_FLAGS="-parallel $PARALLEL_JOBS -short -timeout=20s -count=1"
+        log "Fast mode: Using $PARALLEL_JOBS parallel processes with 20s timeout (out of $CPU_COUNT CPUs)"
         COVERAGE_ANALYSIS=false
     else
-        # In normal mode, use moderate parallelism and include coverage
-        PARALLEL_JOBS=$((CPU_COUNT / 2))
-        if [ $PARALLEL_JOBS -lt 2 ]; then
-            PARALLEL_JOBS=2
+        # In normal mode, use aggressive parallelism but leave room for coverage processing
+        PARALLEL_JOBS=$((CPU_COUNT * 4 / 5))
+        if [ $PARALLEL_JOBS -lt 3 ]; then
+            PARALLEL_JOBS=3
         fi
-        TEST_FLAGS="-parallel $PARALLEL_JOBS -count=1 -coverprofile=coverage.out"
-        log "Using $PARALLEL_JOBS parallel test processes with coverage (out of $CPU_COUNT CPUs)"
+        # Cap at reasonable maximum for coverage mode
+        if [ $PARALLEL_JOBS -gt 16 ]; then
+            PARALLEL_JOBS=16
+        fi
+        TEST_FLAGS="-parallel $PARALLEL_JOBS -count=1 -coverprofile=coverage.out -timeout=45s"
+        log "Using $PARALLEL_JOBS parallel test processes with coverage and 45s timeout (out of $CPU_COUNT CPUs)"
         COVERAGE_ANALYSIS=true
     fi
     
-    # Optimize test command based on environment
+    # Set memory optimizations for tests
+    export GOMAXPROCS=$PARALLEL_JOBS
+    export GOGC=100  # More aggressive garbage collection
+    
+    # Optimize test command based on environment and changes
     if [ "$FAST_MODE" = true ]; then
-        # In fast mode, skip slow e2e tests and use simple command with caching
-        TEST_LABEL="Tests (Fast Mode - excluding e2e)"
-        TEST_CMD="go test $TEST_FLAGS \$(go list ./... | grep -v \"examples/e2e\")"
-        log "Fast mode: Excluding slow e2e tests for maximum speed"
+        if [ "$NEEDS_FULL_TESTS" = false ] && [ -n "$CHANGED_PACKAGES" ]; then
+            # Selective testing for fast mode
+            TEST_LABEL="Tests (Selective - Fast Mode)"
+            PACKAGE_LIST=$(echo "$CHANGED_PACKAGES" | sed 's|^|./|' | tr '\n' ' ')
+            TEST_CMD="go test $TEST_FLAGS $PACKAGE_LIST"
+            log "Fast mode: Running selective tests for changed packages only"
+        else
+            # Full fast mode excluding slow tests
+            TEST_LABEL="Tests (Fast Mode - Ultra High Parallelism)"
+            TEST_CMD="go test $TEST_FLAGS \$(go list ./... | grep -v -E \"examples/e2e|integration_test\")"
+            log "Fast mode: Excluding slow e2e and integration tests, using $PARALLEL_JOBS parallel processes"
+        fi
     else
         # Check if Docker is running and use appropriate test command
         if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-            TEST_LABEL="Tests with Docker (Parallel & Optimized)"
+            TEST_LABEL="Tests with Docker (Ultra High Parallelism)"
             TEST_CMD="DOCKER=1 go test $TEST_FLAGS ./..."
+            log "Docker available: Running full test suite with $PARALLEL_JOBS parallel processes"
         else
-            TEST_LABEL="Tests (Parallel & Optimized)"
+            TEST_LABEL="Tests (Ultra High Parallelism & Optimized)"
             TEST_CMD="go test $TEST_FLAGS ./..."
+            log "Running full test suite with $PARALLEL_JOBS parallel processes"
         fi
     fi
     
@@ -268,26 +338,73 @@ main() {
         fi
     fi
     
-    # 3. Static Analysis - Go Vet
-    header "🔍 Static Analysis - Go Vet"
-    if ! run_test "Go Vet" \
-                  "go vet ./..." \
-                  "Go vet analysis passed" \
-                  "Go vet found issues"; then
-        ((FAILED_TESTS++))
+    # 3. Parallel Static Analysis (Go Vet + StaticCheck)
+    header "🔍 Static Analysis (Parallel)"
+    
+    # Run static analysis tools in parallel for speed
+    VET_RESULT=0
+    STATICCHECK_RESULT=0
+    
+    # Create temporary files for parallel execution
+    VET_LOG=$(mktemp)
+    STATICCHECK_LOG=$(mktemp)
+    
+    log "Running Go Vet and StaticCheck in parallel for faster analysis"
+    
+    # Run go vet in background
+    (
+        if go vet ./... > "$VET_LOG" 2>&1; then
+            echo "SUCCESS" >> "$VET_LOG"
+        else
+            echo "FAILED" >> "$VET_LOG"
+        fi
+    ) &
+    VET_PID=$!
+    
+    # Run staticcheck in background (if available)
+    if command -v staticcheck >/dev/null 2>&1; then
+        (
+            if staticcheck ./... > "$STATICCHECK_LOG" 2>&1; then
+                echo "SUCCESS" >> "$STATICCHECK_LOG"
+            else
+                echo "FAILED" >> "$STATICCHECK_LOG"
+            fi
+        ) &
+        STATICCHECK_PID=$!
+        STATICCHECK_AVAILABLE=true
+    else
+        STATICCHECK_AVAILABLE=false
+        warning "StaticCheck not installed - install with: go install honnef.co/go/tools/cmd/staticcheck@latest"
     fi
     
-    # 4. Static Analysis - StaticCheck (if available)
-    header "🔍 Static Analysis - StaticCheck"
-    if command -v staticcheck >/dev/null 2>&1; then
-        if ! run_test "StaticCheck" \
-                      "staticcheck ./..." \
-                      "StaticCheck analysis passed" \
-                      "StaticCheck found issues"; then
+    # Wait for go vet to complete
+    wait $VET_PID
+    if grep -q "SUCCESS" "$VET_LOG"; then
+        success "Go vet analysis passed"
+        # Add output to log, excluding SUCCESS marker (use sed instead of head -n -1 for portability)
+        sed '$d' "$VET_LOG" >> "$LOG_FILE"
+    else
+        error "Go vet found issues"
+        # Add output to log, excluding FAILED marker (use sed instead of head -n -1 for portability)
+        sed '$d' "$VET_LOG" >> "$LOG_FILE"
+        ((FAILED_TESTS++))
+    fi
+    rm "$VET_LOG"
+    
+    # Wait for staticcheck to complete (if running)
+    if [ "$STATICCHECK_AVAILABLE" = true ]; then
+        wait $STATICCHECK_PID
+        if grep -q "SUCCESS" "$STATICCHECK_LOG"; then
+            success "StaticCheck analysis passed"
+            # Add output to log, excluding SUCCESS marker (use sed instead of head -n -1 for portability)
+            sed '$d' "$STATICCHECK_LOG" >> "$LOG_FILE"
+        else
+            error "StaticCheck found issues"
+            # Add output to log, excluding FAILED marker (use sed instead of head -n -1 for portability)
+            sed '$d' "$STATICCHECK_LOG" >> "$LOG_FILE"
             ((FAILED_TESTS++))
         fi
-    else
-        warning "StaticCheck not installed - install with: go install honnef.co/go/tools/cmd/staticcheck@latest"
+        rm "$STATICCHECK_LOG"
     fi
     
     # 5. Go Mod Tidy Check
@@ -395,28 +512,94 @@ main() {
         log "Alpine.js plugin directory not found - skipping plugin tests"
     fi
     
-    # 7. Example Compilation Check (skip in fast mode)
+    # 7. Parallel Example Compilation Check (skip in fast mode)
     if [ "$FAST_MODE" != true ]; then
-        header "📚 Example Compilation Check"
+        header "📚 Example Compilation Check (Parallel)"
         if [ -d "examples" ]; then
-            EXAMPLE_FAILED=0
+            log "Compiling examples in parallel for faster validation"
+            
+            # Create array of example directories
+            EXAMPLE_DIRS=()
             for example_dir in examples/*/; do
                 if [ -f "$example_dir/main.go" ]; then
-                    example_name=$(basename "$example_dir")
-                    if ! run_test "Example: $example_name" \
-                                  "cd $example_dir && go build ." \
-                                  "Example $example_name builds successfully" \
-                                  "Example $example_name failed to build"; then
-                        ((EXAMPLE_FAILED++))
-                    fi
+                    EXAMPLE_DIRS+=("$example_dir")
                 fi
             done
             
-            if [ $EXAMPLE_FAILED -eq 0 ]; then
-                success "All examples compile successfully"
+            if [ ${#EXAMPLE_DIRS[@]} -gt 0 ]; then
+                # Determine parallelism for examples (use fewer processes than tests)
+                EXAMPLE_PARALLELISM=$((CPU_COUNT / 2))
+                if [ $EXAMPLE_PARALLELISM -lt 1 ]; then
+                    EXAMPLE_PARALLELISM=1
+                fi
+                if [ $EXAMPLE_PARALLELISM -gt 6 ]; then
+                    EXAMPLE_PARALLELISM=6  # Cap to avoid too many processes
+                fi
+                
+                log "Building ${#EXAMPLE_DIRS[@]} examples using $EXAMPLE_PARALLELISM parallel processes"
+                
+                # Build examples in parallel batches
+                EXAMPLE_FAILED=0
+                PIDS=()
+                TEMP_RESULTS=()
+                
+                for ((i=0; i<${#EXAMPLE_DIRS[@]}; i++)); do
+                    example_dir="${EXAMPLE_DIRS[$i]}"
+                    example_name=$(basename "$example_dir")
+                    result_file=$(mktemp)
+                    TEMP_RESULTS+=("$result_file")
+                    
+                    # Start build in background
+                    (
+                        if (cd "$example_dir" && go build . > "$result_file.out" 2>&1); then
+                            echo "SUCCESS:$example_name" > "$result_file"
+                        else
+                            echo "FAILED:$example_name" > "$result_file"
+                            cat "$result_file.out" >> "$result_file"
+                        fi
+                        rm -f "$result_file.out"
+                    ) &
+                    
+                    PIDS+=($!)
+                    
+                    # If we've started max parallel processes, wait for one to complete
+                    if [ ${#PIDS[@]} -ge $EXAMPLE_PARALLELISM ]; then
+                        wait ${PIDS[0]}
+                        PIDS=("${PIDS[@]:1}")  # Remove first PID
+                    fi
+                done
+                
+                # Wait for all remaining processes
+                for pid in "${PIDS[@]}"; do
+                    wait $pid
+                done
+                
+                # Collect results
+                for result_file in "${TEMP_RESULTS[@]}"; do
+                    if [ -f "$result_file" ]; then
+                        result_line=$(head -n 1 "$result_file")
+                        example_name=$(echo "$result_line" | cut -d: -f2)
+                        
+                        if echo "$result_line" | grep -q "SUCCESS"; then
+                            success "Example $example_name builds successfully"
+                        else
+                            error "Example $example_name failed to build"
+                            # Add error details to log
+                            tail -n +2 "$result_file" >> "$LOG_FILE"
+                            ((EXAMPLE_FAILED++))
+                        fi
+                        rm -f "$result_file"
+                    fi
+                done
+                
+                if [ $EXAMPLE_FAILED -eq 0 ]; then
+                    success "All ${#EXAMPLE_DIRS[@]} examples compiled successfully in parallel"
+                else
+                    error "$EXAMPLE_FAILED out of ${#EXAMPLE_DIRS[@]} examples failed to compile"
+                    ((FAILED_TESTS++))
+                fi
             else
-                error "$EXAMPLE_FAILED examples failed to compile"
-                ((FAILED_TESTS++))
+                log "No example directories with main.go found"
             fi
         fi
     else

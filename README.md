@@ -67,3 +67,4 @@ go run github.com/livefir/cli gen route -n index // generates a new route
 
     - https://dailydrop.hrbrmstr.dev/2024/01/29/drop-410-2024-01-29-your-real-time-app-stack/
 
+# test
