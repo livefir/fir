@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	firHttp "github.com/livefir/fir/internal/http"
@@ -65,23 +66,17 @@ func (i *RouteHandlerIntegration) CanHandleRequest(r *http.Request) bool {
 
 // adaptRequest converts http.Request to RequestModel
 func (i *RouteHandlerIntegration) adaptRequest(r *http.Request) (*firHttp.RequestModel, error) {
-	// Use the existing request adapter or create inline conversion
-	return &firHttp.RequestModel{
-		Method:      r.Method,
-		URL:         r.URL,
-		Proto:       r.Proto,
-		Header:      r.Header,
-		Body:        r.Body,
-		Host:        r.Host,
-		RemoteAddr:  r.RemoteAddr,
-		RequestURI:  r.RequestURI,
-		Context:     r.Context(),
-		QueryParams: r.URL.Query(),
-	}, nil
+	// Use the proper HTTP adapter to parse the request correctly
+	adapter := firHttp.NewRequestAdapter(nil) // Use nil path param extractor for now
+	return adapter.ParseRequest(r)
 }
 
 // adaptResponse converts ResponseModel to http.Response
 func (i *RouteHandlerIntegration) adaptResponse(w http.ResponseWriter, resp *firHttp.ResponseModel) error {
+	if resp == nil {
+		return fmt.Errorf("response model is nil")
+	}
+
 	// Set headers
 	for key, value := range resp.Headers {
 		w.Header().Set(key, value)

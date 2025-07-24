@@ -240,9 +240,11 @@ func (h *FormHandler) handleFormEvent(ctx context.Context, req *firHttp.RequestM
 	// Process the event through the event service
 	eventResp, err := h.eventService.ProcessEvent(ctx, *eventReq)
 	if err != nil {
-		// For Phase 5: If the event service is not implemented (like our noOpEventService),
-		// propagate the error to cause handler chain failure and fallback to legacy
-		return nil, fmt.Errorf("failed to process form event: %w", err)
+		// For Phase 3: Return proper error response instead of causing fallback
+		return h.responseBuilder.BuildErrorResponse(
+			fmt.Errorf("failed to process form event: %w", err),
+			http.StatusInternalServerError,
+		)
 	}
 
 	// Build HTTP response from event response
@@ -285,9 +287,19 @@ func (h *FormHandler) handleRegularFormSubmit(ctx context.Context, req *firHttp.
 	}
 
 	// Return a simple success response
-	return h.responseBuilder.BuildTemplateResponse(&services.RenderResult{
+	resp, err := h.responseBuilder.BuildTemplateResponse(&services.RenderResult{
 		HTML: []byte("<p>Form submitted successfully</p>"),
 	}, http.StatusOK)
+
+	if err != nil {
+		// For Phase 3: Return proper error response instead of bubbling up error
+		return h.responseBuilder.BuildErrorResponse(
+			fmt.Errorf("failed to build form submit response: %w", err),
+			http.StatusInternalServerError,
+		)
+	}
+
+	return resp, nil
 }
 
 // extractSessionID extracts session ID from request

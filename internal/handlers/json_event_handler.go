@@ -66,9 +66,11 @@ func (h *JSONEventHandler) Handle(ctx context.Context, req *firHttp.RequestModel
 	// Process the event through the event service
 	eventResp, err := h.eventService.ProcessEvent(ctx, *eventReq)
 	if err != nil {
-		// For Phase 5: If the event service is not implemented (like our noOpEventService),
-		// propagate the error to cause handler chain failure and fallback to legacy
-		return nil, fmt.Errorf("failed to process JSON event: %w", err)
+		// For Phase 3: Return proper error response instead of causing fallback
+		return h.responseBuilder.BuildErrorResponse(
+			fmt.Errorf("failed to process JSON event: %w", err),
+			http.StatusInternalServerError,
+		)
 	}
 
 	// Build HTTP response from event response
