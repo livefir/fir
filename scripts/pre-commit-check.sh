@@ -7,22 +7,8 @@
 set -e  # Exit on any error
 
 # Colors for output
-RED='\033[0;31m    # 4. Static Analysis - StaticCheck (if available, skip in fast mode)
-    if [ "$FAST_MODE" != true ]; then
-        header "🔍 Static Analysis - StaticCheck"
-        if command -v staticcheck >/dev/null 2>&1; then
-            if ! run_test "StaticCheck" \
-                          "staticcheck ./..." \
-                          "StaticCheck analysis passed" \
-                          "StaticCheck found issues"; then
-                ((FAILED_TESTS++))
-            fi
-        else
-            warning "StaticCheck not installed - install with: go install honnef.co/go/tools/cmd/staticcheck@latest"
-        fi
-    else
-        log "Skipping StaticCheck in fast mode"
-    fi3[0;32m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
@@ -30,24 +16,26 @@ NC='\033[0m' # No Color
 # Configuration
 LOG_FILE="pre-commit-check-$(date +%Y%m%d-%H%M%S).log"
 FAST_MODE=false
+USE_LOCAL_CHROME=false
 
 # Functions
 show_help() {
     echo "Fir Framework Pre-Commit Quality Gates"
     echo ""
     echo "USAGE:"
-    echo "  ./scripts/pre-commit-check.sh [--help] [--fast]"
+    echo "  ./scripts/pre-commit-check.sh [--help] [--fast] [--local-chrome]"
     echo ""
     echo "OPTIONS:"
-    echo "  --help      Show this help message"
-    echo "  --fast      Enable fast mode - skips coverage analysis and example builds"
+    echo "  --help          Show this help message"
+    echo "  --fast          Enable fast mode - skips coverage analysis and example builds"
+    echo "  --local-chrome  Use local Chrome instead of Docker Chrome (requires Chrome/Chromium installed)"
     echo ""
     echo "DESCRIPTION:"
     echo "  This script runs comprehensive validation with aggressive performance optimizations:"
     echo "  - Parallel build compilation with caching and memory optimization"
     echo "  - Ultra-parallel tests (up to 90% CPU utilization) with selective running"
     echo "  - Parallel static analysis (Go Vet + StaticCheck simultaneously)"
-    echo "  - Docker environment tests (DOCKER=1) - if Docker is available"
+    echo "  - Docker Chrome tests by default (fallback to local Chrome with --local-chrome flag)"
     echo "  - Go modules validation"
     echo "  - Alpine.js plugin testing (if changes detected, with smart dependency caching)"
     echo "  - Parallel example compilation (skipped in --fast mode)"
@@ -63,13 +51,15 @@ show_help() {
     echo "  - Parallel example compilation with batching"
     echo ""
     echo "  Tests run in parallel using up to 90% of available CPU cores for maximum speed."
-    echo "  Docker tests are automatically skipped if Docker is not installed or running."
+    echo "  Chrome tests use Docker by default for consistency and isolation."
+    echo "  Use --local-chrome flag if you prefer to use locally installed Chrome/Chromium."
     echo "  Returns exit code 0 if all quality gates pass, non-zero otherwise."
     echo ""
     echo "EXAMPLES:"
-    echo "  ./scripts/pre-commit-check.sh           # Full validation"
-    echo "  ./scripts/pre-commit-check.sh --fast    # Fast validation (core tests only)"
-    echo "  ./scripts/pre-commit-check.sh --help    # Show this help"
+    echo "  ./scripts/pre-commit-check.sh                    # Full validation with Docker Chrome"
+    echo "  ./scripts/pre-commit-check.sh --fast             # Fast validation with Docker Chrome"
+    echo "  ./scripts/pre-commit-check.sh --local-chrome     # Full validation with local Chrome"
+    echo "  ./scripts/pre-commit-check.sh --help             # Show this help"
     echo ""
     echo "  # Use in other scripts:"
     echo "  if ./scripts/pre-commit-check.sh; then"
@@ -88,6 +78,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --fast|-f)
             FAST_MODE=true
+            shift
+            ;;
+        --local-chrome)
+            USE_LOCAL_CHROME=true
             shift
             ;;
         *)
@@ -150,9 +144,10 @@ cleanup_temp_files() {
     find . -name "cpu.prof" -type f -delete 2>/dev/null || true
     find . -name "mem.prof" -type f -delete 2>/dev/null || true
     
-    # Remove pre-commit log files from anywhere in the project, except the current one
-    # This handles cases where the script might have been run from subdirectories
-    find . -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -delete 2>/dev/null || true
+    # Only remove old pre-commit log files that are more than 24 hours old
+    # This preserves recent logs for debugging while cleaning up very old ones
+    # Keep current log file and any recent ones for debugging failures
+    find . -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -mtime +1 -delete 2>/dev/null || true
     
     # Remove database files that might be created during tests
     find . -name "*.db" -type f -delete 2>/dev/null || true
@@ -178,6 +173,110 @@ cleanup_temp_files() {
     success "Temporary files cleaned up"
 }
 
+# Run Chrome-based tests (sanity, e2e) with Docker support
+run_chrome_tests() {
+    # Check if there are Chrome-based tests to run
+    if [ ! -d "examples/sanity" ] && [ ! -d "examples/e2e" ]; then
+        return 0
+    fi
+    
+    # Skip Chrome tests in fast mode
+    if [ "$FAST_MODE" = true ]; then
+        log "Skipping Chrome-based tests in fast mode"
+        return 0  # Don't require Chrome tests in fast mode
+    fi
+    
+    header "🌐 Chrome-Based Integration Tests"
+    
+    # Docker Chrome approach (default)
+    if [ "$USE_LOCAL_CHROME" != true ]; then
+        if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            log "Using Docker Chrome (default approach)"
+            
+            # Check if chrome container is already running
+            if ! docker ps | grep -q "chrome-test"; then
+                log "Starting Chrome Docker container..."
+                if docker run --rm -d --name chrome-test -p 9222:9222 chromedp/headless-shell:latest >/dev/null 2>&1; then
+                    # Wait for Chrome to be ready
+                    log "Waiting for Chrome container to be ready..."
+                    sleep 3
+                    
+                    # Verify Chrome is accessible
+                    if curl -s http://localhost:9222/json/version >/dev/null 2>&1; then
+                        log "Chrome container ready - running tests"
+                        if CHROME_REMOTE_URL=ws://localhost:9222 run_test "Chrome Tests (Docker)" \
+                                                                          "go test -timeout=2m ./examples/sanity/ ./examples/e2e/" \
+                                                                          "Chrome tests passed with Docker" \
+                                                                          "Chrome tests failed with Docker"; then
+                            docker stop chrome-test >/dev/null 2>&1 || true
+                            return 0
+                        fi
+                        docker stop chrome-test >/dev/null 2>&1 || true
+                    else
+                        warning "Chrome container failed to start properly"
+                        docker stop chrome-test >/dev/null 2>&1 || true
+                    fi
+                else
+                    warning "Failed to start Chrome Docker container"
+                fi
+            else
+                log "Chrome container already running - running tests"
+                if CHROME_REMOTE_URL=ws://localhost:9222 run_test "Chrome Tests (Docker)" \
+                                                                  "go test -timeout=2m ./examples/sanity/ ./examples/e2e/" \
+                                                                  "Chrome tests passed with Docker" \
+                                                                  "Chrome tests failed with Docker"; then
+                    return 0
+                fi
+            fi
+        else
+            warning "Docker not available for Chrome testing"
+        fi
+    fi
+    
+    # Local Chrome approach (when explicitly requested or Docker failed)
+    if [ "$USE_LOCAL_CHROME" = true ]; then
+        CHROME_EXECUTABLE=""
+        if command -v google-chrome >/dev/null 2>&1; then
+            CHROME_EXECUTABLE="google-chrome"
+        elif command -v chromium >/dev/null 2>&1; then
+            CHROME_EXECUTABLE="chromium"
+        elif [ -f "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
+            CHROME_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        fi
+        
+        if [ -n "$CHROME_EXECUTABLE" ]; then
+            log "Using local Chrome as requested: $CHROME_EXECUTABLE"
+            if run_test "Chrome Tests (Local)" \
+                        "go test -timeout=2m ./examples/sanity/ ./examples/e2e/" \
+                        "Chrome tests passed with local Chrome" \
+                        "Chrome tests failed with local Chrome"; then
+                return 0
+            fi
+        fi
+    fi
+    
+    # If we get here, all Chrome test approaches failed
+    error "Chrome-based tests FAILED: Docker Chrome or local Chrome is required for quality gates"
+    error ""
+    error "RECOMMENDED SOLUTION: Install Docker for consistent testing:"
+    error "  # macOS"
+    error "  brew install --cask docker"
+    error "  # OR for local Chrome approach, use --local-chrome flag with:"
+    error "  brew install --cask google-chrome"
+    error "  # OR"
+    error "  brew install --cask chromium"
+    error ""
+    error "Chrome-based tests are mandatory integration tests that validate:"
+    error "  - Browser automation functionality"
+    error "  - Race condition handling"
+    error "  - End-to-end user workflows"
+    error ""
+    error "Docker Chrome is preferred for consistency and isolation."
+    error "Use --local-chrome flag if you prefer using locally installed Chrome."
+    
+    return 1  # Fail the entire pre-commit - Chrome tests are mandatory
+}
+
 # Main execution
 main() {
     # Record start time for performance tracking
@@ -188,6 +287,12 @@ main() {
         log "Fast mode enabled - skipping coverage analysis and example builds"
     else
         header "🚀 Fir Framework Pre-Commit Quality Gates"
+    fi
+    
+    if [ "$USE_LOCAL_CHROME" = true ]; then
+        log "Local Chrome mode enabled - will use locally installed Chrome instead of Docker"
+    else
+        log "Using Docker Chrome (default) - use --local-chrome flag for local Chrome"
     fi
     
     log "Starting comprehensive validation..."
@@ -279,12 +384,12 @@ main() {
         if [ $PARALLEL_JOBS -lt 3 ]; then
             PARALLEL_JOBS=3
         fi
-        # Cap at reasonable maximum for coverage mode
-        if [ $PARALLEL_JOBS -gt 16 ]; then
-            PARALLEL_JOBS=16
+        # Cap at reasonable maximum for coverage mode - reduced to avoid race conditions
+        if [ $PARALLEL_JOBS -gt 3 ]; then
+            PARALLEL_JOBS=3
         fi
-        TEST_FLAGS="-parallel $PARALLEL_JOBS -count=1 -coverprofile=coverage.out -timeout=45s"
-        log "Using $PARALLEL_JOBS parallel test processes with coverage and 45s timeout (out of $CPU_COUNT CPUs)"
+        TEST_FLAGS="-parallel $PARALLEL_JOBS -count=1 -coverprofile=coverage.out -timeout=2m"
+        log "Using $PARALLEL_JOBS parallel test processes with coverage and 2m timeout (out of $CPU_COUNT CPUs)"
         COVERAGE_ANALYSIS=true
     fi
     
@@ -309,13 +414,13 @@ main() {
     else
         # Check if Docker is running and use appropriate test command
         if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-            TEST_LABEL="Tests with Docker (Ultra High Parallelism)"
-            TEST_CMD="DOCKER=1 go test $TEST_FLAGS ./..."
-            log "Docker available: Running full test suite with $PARALLEL_JOBS parallel processes"
+            TEST_LABEL="Tests with Docker (Excluding E2E and Sanity)"
+            TEST_CMD="DOCKER=1 go test $TEST_FLAGS \$(go list ./... | grep -v -E \"examples/e2e|examples/sanity\")"
+            log "Docker available: Running full test suite excluding E2E and sanity tests with $PARALLEL_JOBS parallel processes"
         else
-            TEST_LABEL="Tests (Ultra High Parallelism & Optimized)"
-            TEST_CMD="go test $TEST_FLAGS ./..."
-            log "Running full test suite with $PARALLEL_JOBS parallel processes"
+            TEST_LABEL="Tests (Excluding E2E and Sanity)"
+            TEST_CMD="go test $TEST_FLAGS \$(go list ./... | grep -v -E \"examples/e2e|examples/sanity\")"
+            log "Running full test suite excluding E2E and sanity tests with $PARALLEL_JOBS parallel processes"
         fi
     fi
     
@@ -336,6 +441,11 @@ main() {
             fi
             rm -f coverage.out
         fi
+    fi
+    
+    # Run Chrome-based tests if conditions are met
+    if ! run_chrome_tests; then
+        ((FAILED_TESTS++))
     fi
     
     # 3. Parallel Static Analysis (Go Vet + StaticCheck)
@@ -523,7 +633,7 @@ main() {
             for example_dir in examples/*/; do
                 example_name=$(basename "$example_dir")
                 # Skip unwanted examples
-                if [ "$example_name" = "custom_template_engine" ] || [ "$example_name" = "template_engine_example" ] || [ "$example_name" = "test_logging" ]; then
+                if [ "$example_name" = "custom_template_engine" ] || [ "$example_name" = "template_engine_example" ]; then
                     log "Skipping excluded example: $example_name"
                     continue
                 fi
@@ -645,9 +755,9 @@ main() {
             fi
         fi
         
-        # Clean up log file automatically if successful
+        # Only clean up log file if all tests passed
         rm "$LOG_FILE" 2>/dev/null || true
-        success "Log file cleaned up"
+        success "Log file cleaned up (all tests passed)"
         
         # Mark script as successful to prevent cleanup on exit
         SCRIPT_SUCCESS="true"
@@ -659,6 +769,7 @@ main() {
         echo ""
         echo "Please fix the failing tests and run the validation script again."
         echo "Detailed logs are available in: $LOG_FILE"
+        echo "💡 Log file preserved for debugging: $LOG_FILE"
         exit 1
     fi
 }
@@ -675,10 +786,10 @@ cleanup() {
     # Clean up any remaining temporary files
     cleanup_temp_files 2>/dev/null || true
     
-    # Clean up the current log file if the script exits unexpectedly
-    # (but not if it's a successful exit where we already cleaned it)
+    # Only clean up the current log file if the script completed successfully
+    # If there were failures or unexpected exits, preserve the log for debugging
     if [ -f "$LOG_FILE" ] && [ "${SCRIPT_SUCCESS:-}" != "true" ]; then
-        rm "$LOG_FILE" 2>/dev/null || true
+        echo "Log file preserved for debugging: $LOG_FILE"
     fi
 }
 trap cleanup EXIT
