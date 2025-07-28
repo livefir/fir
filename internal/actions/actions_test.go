@@ -1,4 +1,4 @@
-package fir
+package actions
 
 import (
 	"testing"
@@ -638,15 +638,15 @@ func TestActionsConflict(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create collectedAction structs for testing
-			action1 := collectedAction{
+			// Create CollectedAction structs for testing
+			action1 := CollectedAction{
 				Handler: &RefreshActionHandler{}, // Use a dummy handler
 				Info: ActionInfo{
 					ActionName: tt.action1,
 					Value:      tt.value1,
 				},
 			}
-			action2 := collectedAction{
+			action2 := CollectedAction{
 				Handler: &RefreshActionHandler{}, // Use a dummy handler
 				Info: ActionInfo{
 					ActionName: tt.action2,
@@ -654,8 +654,8 @@ func TestActionsConflict(t *testing.T) {
 				},
 			}
 
-			result := actionsConflict(action1, action2)
-			require.Equal(t, tt.expected, result, "actionsConflict(%s, %s, %s, %s) = %v, expected %v",
+			result := ActionsConflict(action1, action2)
+			require.Equal(t, tt.expected, result, "ActionsConflict(%s, %s, %s, %s) = %v, expected %v",
 				tt.action1, tt.value1, tt.action2, tt.value2, result, tt.expected)
 		})
 	}
@@ -737,8 +737,8 @@ func TestParseEventExpression(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseEventExpression(tt.expr)
-			require.Equal(t, tt.expected, result, "parseEventExpression(%s) = %v, expected %v",
+			result := ParseEventExpression(tt.expr)
+			require.Equal(t, tt.expected, result, "ParseEventExpression(%s) = %v, expected %v",
 				tt.expr, result, tt.expected)
 		})
 	}
@@ -816,8 +816,8 @@ func TestHasCommonEvents(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := hasCommonEvents(tt.events1, tt.events2)
-			require.Equal(t, tt.expected, result, "hasCommonEvents(%v, %v) = %v, expected %v",
+			result := HasCommonEvents(tt.events1, tt.events2)
+			require.Equal(t, tt.expected, result, "HasCommonEvents(%v, %v) = %v, expected %v",
 				tt.events1, tt.events2, result, tt.expected)
 		})
 	}
@@ -869,15 +869,15 @@ func TestActionsConflictIntegration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create collectedAction structs
-			action1 := collectedAction{
+			// Create CollectedAction structs
+			action1 := CollectedAction{
 				Handler: &RefreshActionHandler{},
 				Info: ActionInfo{
 					ActionName: tt.action1,
 					Value:      tt.value1,
 				},
 			}
-			action2 := collectedAction{
+			action2 := CollectedAction{
 				Handler: &RefreshActionHandler{},
 				Info: ActionInfo{
 					ActionName: tt.action2,
@@ -886,16 +886,16 @@ func TestActionsConflictIntegration(t *testing.T) {
 			}
 
 			// Test the conflict resolution
-			result := actionsConflict(action1, action2)
+			result := ActionsConflict(action1, action2)
 
-			// Verify parseEventExpression works
-			events1 := parseEventExpression(tt.value1)
-			events2 := parseEventExpression(tt.value2)
+			// Verify ParseEventExpression works
+			events1 := ParseEventExpression(tt.value1)
+			events2 := ParseEventExpression(tt.value2)
 			require.NotNil(t, events1)
 			require.NotNil(t, events2)
 
-			// Verify hasCommonEvents works
-			hasCommon := hasCommonEvents(events1, events2)
+			// Verify HasCommonEvents works
+			hasCommon := HasCommonEvents(events1, events2)
 
 			// Log for debugging
 			t.Logf("Action1: %s=%s, Action2: %s=%s", tt.action1, tt.value1, tt.action2, tt.value2)
@@ -1439,4 +1439,113 @@ func TestActionPrefixHandler(t *testing.T) {
 	result, err := handler.Translate(info, nil)
 	require.NoError(t, err)
 	require.Empty(t, result)
+}
+
+// TestRedirectActionHandler tests the RedirectActionHandler implementation
+func TestRedirectActionHandler(t *testing.T) {
+	handler := &RedirectActionHandler{}
+
+	// Test basic properties
+	require.Equal(t, "redirect", handler.Name())
+	require.Equal(t, 90, handler.Precedence())
+
+	// Test translation
+	tests := []struct {
+		name     string
+		params   []string
+		value    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Default redirect (no params)",
+			params:   []string{},
+			value:    "delete",
+			expected: `@fir:delete:ok="$fir.redirect('/')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Redirect with URL parameter",
+			params:   []string{"home"},
+			value:    "delete",
+			expected: `@fir:delete:ok="$fir.redirect('/home')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Redirect with absolute path",
+			params:   []string{"/dashboard"},
+			value:    "submit",
+			expected: `@fir:submit:ok="$fir.redirect('/dashboard')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with state",
+			params:   []string{"success"},
+			value:    "save:ok",
+			expected: `@fir:save:ok="$fir.redirect('/success')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with modifier",
+			params:   []string{"login"},
+			value:    "auth.prevent",
+			expected: `@fir:auth:ok.prevent="$fir.redirect('/login')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Multiple events",
+			params:   []string{"complete"},
+			value:    "save:ok,update:done",
+			expected: `@fir:[save:ok,update:done]="$fir.redirect('/complete')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Empty parameter (fallback to default)",
+			params:   []string{""},
+			value:    "click",
+			expected: `@fir:click:ok="$fir.redirect('/')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Whitespace parameter (fallback to default)",
+			params:   []string{"  "},
+			value:    "click",
+			expected: `@fir:click:ok="$fir.redirect('/')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Event with target and action (ignored)",
+			params:   []string{"profile"},
+			value:    "update->form=>doUpdate",
+			expected: `@fir:update:ok="$fir.redirect('/profile')"`,
+			wantErr:  false,
+		},
+		{
+			name:     "Empty value",
+			params:   []string{"home"},
+			value:    "",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := ActionInfo{
+				AttrName:   "x-fir-redirect",
+				ActionName: "redirect",
+				Params:     tt.params,
+				Value:      tt.value,
+			}
+
+			result, err := handler.Translate(info, nil)
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
 }

@@ -1,4 +1,4 @@
-package fir
+package actions
 
 import (
 	"fmt"
@@ -44,6 +44,11 @@ func RegisterActionHandler(handler ActionHandler) {
 		panic(fmt.Sprintf("action handler already registered for name: %s", name))
 	}
 	actionRegistry[name] = handler
+}
+
+// GetActionRegistry returns the action registry for external access.
+func GetActionRegistry() map[string]ActionHandler {
+	return actionRegistry
 }
 
 // --- Concrete Handler Implementations ---
@@ -313,14 +318,14 @@ func init() {
 	RegisterActionHandler(&ActionPrefixHandler{})      // Register the prefix handler
 }
 
-// Helper struct for processing within processRenderAttributes
-type collectedAction struct {
+// CollectedAction is a helper struct for processing within processRenderAttributes
+type CollectedAction struct {
 	Handler ActionHandler
 	Info    ActionInfo
 }
 
-// Helper to parse the multi-line string potentially returned by translators.
-func parseTranslatedString(translated string) []html.Attribute {
+// ParseTranslatedString is a helper to parse the multi-line string potentially returned by translators.
+func ParseTranslatedString(translated string) []html.Attribute {
 	var attrs []html.Attribute
 	lines := strings.Split(translated, "\n")
 	for _, line := range lines {
@@ -342,16 +347,16 @@ func parseTranslatedString(translated string) []html.Attribute {
 	return attrs
 }
 
-// Sorts collected actions by precedence
-func sortActionsByPrecedence(actions []collectedAction) {
+// SortActionsByPrecedence sorts collected actions by precedence
+func SortActionsByPrecedence(actions []CollectedAction) {
 	sort.Slice(actions, func(i, j int) bool {
 		return actions[i].Handler.Precedence() < actions[j].Handler.Precedence()
 	})
 }
 
-// actionsConflict determines if two actions would conflict with each other
+// ActionsConflict determines if two actions would conflict with each other
 // Actions conflict if they are mutually exclusive DOM operations
-func actionsConflict(action1, action2 collectedAction) bool {
+func ActionsConflict(action1, action2 CollectedAction) bool {
 	// Get action names
 	name1 := action1.Info.ActionName
 	name2 := action2.Info.ActionName
@@ -386,11 +391,11 @@ func actionsConflict(action1, action2 collectedAction) bool {
 	// Actions that target different events don't conflict
 	// e.g., x-fir-refresh="query:ok" and x-fir-append="create:ok" can coexist
 	// Parse the event expressions to check if they handle the same events
-	events1 := parseEventExpression(action1.Info.Value)
-	events2 := parseEventExpression(action2.Info.Value)
+	events1 := ParseEventExpression(action1.Info.Value)
+	events2 := ParseEventExpression(action2.Info.Value)
 
 	// If they don't share any events, they don't conflict
-	if !hasCommonEvents(events1, events2) {
+	if !HasCommonEvents(events1, events2) {
 		return false
 	}
 
@@ -421,8 +426,8 @@ func actionsConflict(action1, action2 collectedAction) bool {
 	return true
 }
 
-// parseEventExpression extracts event expressions from an event expression string
-func parseEventExpression(expr string) []string {
+// ParseEventExpression extracts event expressions from an event expression string
+func ParseEventExpression(expr string) []string {
 	// Handle expressions like "create:ok", "query:ok", "create:ok,update:error"
 	events := make([]string, 0)
 
@@ -465,8 +470,8 @@ func parseEventExpression(expr string) []string {
 	return events
 }
 
-// hasCommonEvents checks if two event lists share any common events
-func hasCommonEvents(events1, events2 []string) bool {
+// HasCommonEvents checks if two event lists share any common events
+func HasCommonEvents(events1, events2 []string) bool {
 	for _, event1 := range events1 {
 		for _, event2 := range events2 {
 			if event1 == event2 {
