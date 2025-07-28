@@ -10,6 +10,7 @@ import (
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/examples/fira/ent"
 	projects "github.com/livefir/fir/examples/fira/routes/projects"
+	"github.com/livefir/fir/internal/dev"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -32,6 +33,9 @@ func NewRoute() fir.RouteOptions {
 }
 
 func Run(port int) error {
+	// Setup static file server for Alpine.js plugin
+	dev.SetupAlpinePluginServer()
+
 	// For standalone running, use persistent database
 	db, err := ent.Open("sqlite3", "file:fira.db?cache=shared&_fk=1")
 	if err != nil {
@@ -53,6 +57,7 @@ func Run(port int) error {
 
 	controller := fir.NewController("fira", fir.DevelopmentMode(true), pathParamsOpt)
 	r := chi.NewRouter()
+
 	r.Handle("/", controller.RouteFunc(projects.Index(db)))
 	r.Handle("/{id}/show", controller.RouteFunc(projects.Show(db)))
 	log.Printf("Fira example listening on http://localhost:%d", port)

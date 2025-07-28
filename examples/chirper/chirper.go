@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/livefir/fir"
+	"github.com/livefir/fir/internal/dev"
 	"github.com/timshannon/bolthold"
 )
 
@@ -125,6 +126,7 @@ func NoJSIndex() fir.RouteOptions {
 }
 
 func Run(port int) error {
+	dev.SetupAlpinePluginServer()
 	db, err := bolthold.Open("chirper.db", 0666, nil)
 	if err != nil {
 		return err

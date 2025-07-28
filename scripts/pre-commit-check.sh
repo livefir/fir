@@ -144,10 +144,10 @@ cleanup_temp_files() {
     find . -name "cpu.prof" -type f -delete 2>/dev/null || true
     find . -name "mem.prof" -type f -delete 2>/dev/null || true
     
-    # Only remove old pre-commit log files that are more than 24 hours old
-    # This preserves recent logs for debugging while cleaning up very old ones
+    # Only remove old pre-commit log files that are more than 1 hour old
+    # This preserves recent logs for debugging while cleaning up old ones
     # Keep current log file and any recent ones for debugging failures
-    find . -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -mtime +1 -delete 2>/dev/null || true
+    find . -name "pre-commit-check-*.log" ! -name "$LOG_FILE" -type f -mmin +60 -delete 2>/dev/null || true
     
     # Remove database files that might be created during tests
     find . -name "*.db" -type f -delete 2>/dev/null || true

@@ -18,6 +18,12 @@ func TestCounterExampleE2E(t *testing.T) {
 	controller := fir.NewController("counter_example_e2e_"+strings.ReplaceAll(t.Name(), "/", "_"), fir.DevelopmentMode(true))
 	// Create a new http.ServeMux for each test to avoid conflicts if running tests in parallel
 	mux := http.NewServeMux()
+
+	// Add static file server for Alpine.js plugin to solve Docker networking issues
+	if err := SetupStaticFileServer(mux); err != nil {
+		t.Fatalf("Failed to setup static file server: %v", err)
+	}
+
 	// Use counter.Index from the imported package
 	mux.Handle("/", controller.RouteFunc(counter.Index))
 	ts := httptest.NewServer(mux)

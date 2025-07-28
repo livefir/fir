@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/livefir/fir"
+	"github.com/livefir/fir/internal/dev"
 	"github.com/livefir/fir/pubsub"
 )
 
@@ -146,7 +147,9 @@ func NewRoute(pubsubAdapter pubsub.Adapter) fir.Route {
 }
 
 // Run starts the counter-ticker example server.
+
 func Run(httpPort int) error {
+	dev.SetupAlpinePluginServer()
 	pubsubAdapter := pubsub.NewInmem()
 	controller := fir.NewController("counter_app",
 		fir.DevelopmentMode(true),

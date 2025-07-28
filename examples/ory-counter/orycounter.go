@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/livefir/fir"
+	"github.com/livefir/fir/internal/dev"
 	ory "github.com/ory/client-go"
 )
 
@@ -92,6 +93,7 @@ func Run(port int) error {
 		ory: ory.NewAPIClient(c),
 	}
 
+	dev.SetupAlpinePluginServer()
 	controller := fir.NewController("fir-ory-counter", fir.DevelopmentMode(true))
 	http.Handle("/", app.sessionMiddleware(controller.Route(&index{})))
 	log.Printf("Ory Counter example listening on http://localhost:%d", port)

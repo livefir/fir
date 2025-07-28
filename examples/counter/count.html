@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script
-            defer
-            src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        {{ if fir.Development }}
+            <script defer src="/cdn.js"></script>
+        {{ else }}
+            <script
+                defer
+                src="https://unpkg.com/@livefir/fir@latest/dist/fir.min.js"></script>
+        {{ end }}
+
 
         <script
             defer

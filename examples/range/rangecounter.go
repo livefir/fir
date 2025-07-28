@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/livefir/fir/internal/dev"
+
 	"github.com/livefir/fir"
 )
 
@@ -38,6 +40,7 @@ func NewRoute() fir.RouteOptions {
 }
 
 func Run(port int) error {
+	dev.SetupAlpinePluginServer()
 	c := fir.NewController("fir-range", fir.DevelopmentMode(true))
 	http.Handle("/", c.RouteFunc(Index))
 	log.Printf("Range example listening on http://localhost:%d", port)

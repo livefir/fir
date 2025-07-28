@@ -17,6 +17,11 @@ import (
 func TestTodo(t *testing.T) {
 	controller := fir.NewController("todo_example_e2e_"+strings.ReplaceAll(t.Name(), "/", "_"), fir.DevelopmentMode(true))
 	mux := http.NewServeMux()
+
+// Add static file server for Alpine.js plugin to solve Docker networking issues
+if err := SetupStaticFileServer(mux); err != nil {
+t.Fatalf("Failed to setup static file server: %v", err)
+}
 	mux.Handle("/", controller.RouteFunc(todo.NewRoute))
 	ts := httptest.NewServer(mux)
 	defer ts.Close()

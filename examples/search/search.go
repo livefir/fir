@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/livefir/fir/internal/dev"
+
 	"github.com/livefir/fir"
 )
 
@@ -59,6 +61,7 @@ func NewRoute() fir.RouteOptions {
 }
 
 func Run(port int) error {
+	dev.SetupAlpinePluginServer()
 	c := fir.NewController("fir-search", fir.DevelopmentMode(true))
 	http.Handle("/", c.RouteFunc(Index))
 	log.Printf("Search example listening on http://localhost:%d", port)

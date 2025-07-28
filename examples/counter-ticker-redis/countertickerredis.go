@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/livefir/fir/internal/dev"
+
 	"github.com/livefir/fir"
 	"github.com/livefir/fir/pubsub"
 	"github.com/redis/go-redis/v9"
@@ -159,6 +161,7 @@ func Run(httpPort int) error {
 			DB:       0,  // use default DB
 		}),
 	)
+	dev.SetupAlpinePluginServer()
 	controller := fir.NewController("counter_app",
 		fir.DevelopmentMode(true),
 		fir.WithPubsubAdapter(pubsubAdapter),

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	"github.com/livefir/fir/internal/dev"
+
 	"github.com/livefir/fir"
 )
 
@@ -28,6 +30,8 @@ func Index() fir.RouteOptions {
 
 // Run starts the counter example server.
 func Run(httpPort int) error { // Changed from main
+	dev.SetupAlpinePluginServer()
+
 	controller := fir.NewController("counter_app", fir.DevelopmentMode(true))
 	http.Handle("/", controller.RouteFunc(Index))
 	log.Printf("Starting counter server on port %d\n", httpPort)

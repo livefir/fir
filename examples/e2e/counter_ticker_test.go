@@ -54,6 +54,12 @@ func TestCounterTickerExampleE2E(t *testing.T) {
 	)
 
 	mux := http.NewServeMux()
+
+	// Add static file server for Alpine.js plugin to solve Docker networking issues
+	if err := SetupStaticFileServer(mux); err != nil {
+		t.Fatalf("Failed to setup static file server: %v", err)
+	}
+
 	// Update the call to pass pubsubAdapter
 	routeFunc := func() fir.RouteOptions { return counterTickerRouteForTest(t, pubsubAdapter) }
 	mux.Handle("/", controller.RouteFunc(routeFunc))

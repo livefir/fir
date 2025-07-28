@@ -18,6 +18,12 @@ import (
 func TestFiraExampleE2E(t *testing.T) {
 	controller := fir.NewController("fira_example_e2e_"+strings.ReplaceAll(t.Name(), "/", "_"), fir.DevelopmentMode(true))
 	mux := http.NewServeMux()
+
+	// Add static file server for Alpine.js plugin to solve Docker networking issues
+	if err := SetupStaticFileServer(mux); err != nil {
+		t.Fatalf("Failed to setup static file server: %v", err)
+	}
+
 	mux.Handle("/", controller.RouteFunc(fira.NewRoute))
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
@@ -433,6 +439,12 @@ func TestFiraExampleE2E(t *testing.T) {
 func TestFiraXFirAttributeProcessing(t *testing.T) {
 	controller := fir.NewController("fira_xfir_test_"+strings.ReplaceAll(t.Name(), "/", "_"), fir.DevelopmentMode(true))
 	mux := http.NewServeMux()
+
+	// Add static file server for Alpine.js plugin to solve Docker networking issues
+	if err := SetupStaticFileServer(mux); err != nil {
+		t.Fatalf("Failed to setup static file server: %v", err)
+	}
+
 	mux.Handle("/", controller.RouteFunc(fira.NewRoute))
 	ts := httptest.NewServer(mux)
 	defer ts.Close()

@@ -85,6 +85,11 @@ func TestCounterTickerRedisE2E(t *testing.T) {
 	)
 
 	mux := http.NewServeMux()
+
+	// Add static file server for Alpine.js plugin to solve Docker networking issues
+	if err := SetupStaticFileServer(mux); err != nil {
+		t.Fatalf("Failed to setup static file server: %v", err)
+	}
 	routeFunc := func() fir.RouteOptions { return counterTickerRedisRouteForTest(t, redisPubsubAdapter) }
 	mux.Handle("/", controller.RouteFunc(routeFunc))
 	ts := httptest.NewServer(mux)

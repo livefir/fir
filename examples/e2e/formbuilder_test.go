@@ -51,6 +51,12 @@ func listenForConsoleMessages(ctx context.Context, t *testing.T) context.CancelF
 func TestFormBuilderExampleE2E(t *testing.T) {
 	controller := fir.NewController("formbuilder_e2e_"+strings.ReplaceAll(t.Name(), "/", "_"), fir.DevelopmentMode(true))
 	mux := http.NewServeMux()
+
+	// Add static file server for Alpine.js plugin to solve Docker networking issues
+	if err := SetupStaticFileServer(mux); err != nil {
+		t.Fatalf("Failed to setup static file server: %v", err)
+	}
+
 	// Use the NewRoute function from the imported formbuilder package
 	// Wrap the call in a function literal to match RouteFunc signature
 	mux.Handle("/", controller.RouteFunc(func() fir.RouteOptions {

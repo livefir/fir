@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/livefir/fir"
+	"github.com/livefir/fir/internal/dev"
 	"github.com/timshannon/bolthold"
 )
 
@@ -59,28 +60,6 @@ func createTodo(db *bolthold.Store) fir.OnEventFunc {
 	return func(ctx fir.RouteContext) error {
 		todo, err := insertTodo(ctx, db)
 		if err != nil {
-			return err
-		}
-		return ctx.Data(todo)
-	}
-}
-
-func updateTodo(db *bolthold.Store) fir.OnEventFunc {
-	type updateReq struct {
-		TodoID uint64 `json:"todoID"`
-		Text   string `json:"text"`
-	}
-	return func(ctx fir.RouteContext) error {
-		req := new(updateReq)
-		if err := ctx.Bind(req); err != nil {
-			return err
-		}
-		var todo Todo
-		if err := db.Get(req.TodoID, &todo); err != nil {
-			return err
-		}
-		todo.Text = req.Text
-		if err := db.Update(req.TodoID, &todo); err != nil {
 			return err
 		}
 		return ctx.Data(todo)
@@ -156,6 +135,7 @@ func NewRoute() fir.RouteOptions {
 
 func Run(port int) error {
 
+	dev.SetupAlpinePluginServer()
 	c := fir.NewController("fir-todo", fir.DevelopmentMode(true))
 	http.Handle("/", c.RouteFunc(Index(db())))
 	log.Printf("Todo example listening on http://localhost:%d", port)

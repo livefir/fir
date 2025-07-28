@@ -566,7 +566,7 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 	}
 
 	// Render children if rendering body/doc, or the node itself if it's the root fragment
-	startNode := renderNode.FirstChild
+	var startNode *html.Node
 	if renderNode == doc {
 		startNode = doc.FirstChild // Render from the first actual node in the fragment
 	} else if renderNode != nil && renderNode.Data == "body" {
