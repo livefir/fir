@@ -17,6 +17,7 @@ import (
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/livefir/fir/internal/file"
 	"github.com/livefir/fir/internal/logger"
+	internalMarkdown "github.com/livefir/fir/internal/markdown"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -274,7 +275,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 		c.existFile = file.ExistFileOS
 	}
 
-	md := markdown(c.readFile, c.existFile)
+	md := internalMarkdown.New(c.readFile, c.existFile)
 	c.funcMap["markdown"] = md
 	c.funcMap["md"] = md
 	c.opt.channelFunc = c.defaultChannelFunc

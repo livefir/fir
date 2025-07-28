@@ -1,4 +1,4 @@
-package fir
+package markdown
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 func TestMarkdownTemplate(t *testing.T) {
 	tmpl := `{{ markdown "./testdata/snippet_input.md" "marker" }}`
 	expected := `<p>Snippet Content</p>`
-	md := Markdown(file.ReadFileOS, file.ExistFileOS)
+	md := New(file.ReadFileOS, file.ExistFileOS)
 	var buf bytes.Buffer
 	template.Must(template.New("test").Funcs(template.FuncMap{
 		"markdown": md,
@@ -109,7 +109,7 @@ func TestMarkdown(t *testing.T) {
 				inputData = []byte(tc.input)
 			}
 
-			md := Markdown(file.ReadFileOS, file.ExistFileOS)
+			md := New(file.ReadFileOS, file.ExistFileOS)
 			actual := md(string(inputData), tc.markers...)
 
 			if tc.expectError {
@@ -133,3 +133,90 @@ func TestMarkdown(t *testing.T) {
 	}
 }
 
+func TestSnippets(t *testing.T) {
+	testCases := []struct {
+		description string
+		in          []byte
+		markers     []string
+		expected    []byte
+	}{
+		// Test case 1: Single marker with snippet content
+		{
+			description: "Single marker with snippet content",
+			in:          []byte("Line 1\n<!-- start marker -->\nSnippet content\n<!-- end marker -->\nLine 4"),
+			markers:     []string{"marker"},
+			expected:    []byte("Snippet content"),
+		},
+
+		// Test case 2: Multiple markers with snippets
+		{
+			description: "Multiple markers with snippets",
+			in:          []byte("Line 1\n<!-- start marker1 -->\nSnippet 1\n<!-- end marker1 -->\nLine 4\n<!-- start marker2 -->\nSnippet 2\n<!-- end marker2 -->\nLine 7"),
+			markers:     []string{"marker1", "marker2"},
+			expected:    []byte("Snippet 1\nSnippet 2"),
+		},
+
+		// Test case 3: No markers present, return original input
+		{
+			description: "No markers present, return original input",
+			in:          []byte("No markers here"),
+			markers:     []string{"marker"},
+			expected:    []byte("No markers here"),
+		},
+
+		// Test case 4: Empty snippet content between markers, return empty byte slice
+		{
+			description: "Empty snippet content between markers, return empty byte slice",
+			in:          []byte("Line 1\n<!-- start marker -->\n\n<!-- end marker -->\nLine 4"),
+			markers:     []string{"marker"},
+			expected:    []byte{},
+		},
+
+		// Test case 5: Start marker with no end marker, return until end of input
+		{
+			description: "Start marker with no end marker, return until end of input",
+			in:          []byte("Line 1\n<!-- start marker -->\nSnippet\nLine 4"),
+			markers:     []string{"marker"},
+			expected:    []byte("Snippet\nLine 4"),
+		},
+
+		// Test case 6: Invalid input - empty input byte slice, return original input
+		{
+			description: "Invalid input - empty input byte slice, return original input",
+			in:          []byte{},
+			markers:     []string{"marker"},
+			expected:    []byte{},
+		},
+
+		// Test case 7: Invalid input - empty markers slice, return original input
+		{
+			description: "Invalid input - empty markers slice, return original input",
+			in:          []byte("Line 1\n<!-- start marker -->\nSnippet\n"),
+			markers:     []string{},
+			expected:    []byte("Line 1\n<!-- start marker -->\nSnippet\n"),
+		},
+
+		// Test case 8: Invalid input - no start marker, return original input
+		{
+			description: "Invalid input - no start marker, return original input",
+			in:          []byte("Line 1\nSnippet\n<!-- end marker -->\nLine 4"),
+			markers:     []string{"marker"},
+			expected:    []byte("Line 1\nSnippet\n<!-- end marker -->\nLine 4"),
+		},
+
+		// Test case 9: Invalid input - start and end markers swapped, return original input
+		{
+			description: "Invalid input - start and end markers swapped, return original input",
+			in:          []byte("Line 1\n<!-- end marker -->\nSnippet\n<!-- start marker -->\nLine 4"),
+			markers:     []string{"marker"},
+			expected:    []byte("Line 1\n<!-- end marker -->\nSnippet\n<!-- start marker -->\nLine 4"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		result := snippets(testCase.in, testCase.markers)
+		if !bytes.Equal(result, testCase.expected) {
+			t.Errorf("Test Case: %s\nInput: %s\nMarkers: %v\nExpected: %s\nGot: %s", testCase.description, testCase.in, testCase.markers, testCase.expected, result)
+		}
+	}
+}

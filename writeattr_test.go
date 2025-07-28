@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/livefir/fir/internal/helper"
 	"github.com/yosssi/gohtml"
 	"golang.org/x/net/html"
 )
@@ -272,8 +273,8 @@ func Test_addAttributes(t *testing.T) {
 				t.Fatalf("failed to parse HTML: %v", err)
 			}
 
-			if err := areNodesDeepEqual(got, want); err != nil {
-				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(htmlNodeToBytes(got))), gohtml.Format(string(htmlNodeToBytes(want))))
+			if err := helper.AreNodesDeepEqual(got, want); err != nil {
+				t.Fatalf("\nerr: %v \ngot \n %v \n want \n %v", err, gohtml.Format(string(helper.HtmlNodeToBytes(got))), gohtml.Format(string(helper.HtmlNodeToBytes(want))))
 			}
 		})
 	}
