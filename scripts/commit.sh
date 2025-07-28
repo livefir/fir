@@ -35,8 +35,8 @@ show_help() {
     echo "  ./scripts/commit.sh --amend"
     echo ""
     echo "DESCRIPTION:"
-    echo "  This script runs pre-commit quality gates and creates validated commits."
-    echo "  It uses ./scripts/pre-commit-check.sh to validate:"
+    echo "  This script creates validated commits by ensuring git pre-commit hooks are installed."
+    echo "  The actual validation is handled by the git pre-commit hook which runs:"
     echo "  - Build compilation (go build ./...)"
     echo "  - Docker environment tests (DOCKER=1 go test ./...)"
     echo "  - Static analysis (go vet, staticcheck)"
@@ -45,7 +45,7 @@ show_help() {
     echo "  - Example compilation check"
     echo "  - Cleanup of temporary files"
     echo ""
-    echo "  All quality gates must pass before creating/amending commits."
+    echo "  The git hook must be installed for commits to be validated."
 }
 
 log() {
@@ -120,17 +120,16 @@ main() {
         fi
     fi
     
-    # Run pre-commit quality gates
-    log "Running pre-commit quality gates..."
-    if ! "$SCRIPT_DIR/pre-commit-check.sh"; then
-        error "Pre-commit quality gates failed"
-        echo "Please fix the issues and try again."
+    # Check if pre-commit hook is installed
+    if [ ! -f ".git/hooks/pre-commit" ]; then
+        error "Git pre-commit hook is not installed"
+        echo "Please run './scripts/install-git-hook.sh' to install the pre-commit hook"
         exit 1
     fi
     
-    success "All quality gates passed! ✨"
+    log "Git pre-commit hook is installed ✓"
     
-    # Create the commit
+    # Create the commit (validation will be handled by the git hook)
     if [ "$AMEND_MODE" = true ]; then
         log "Amending previous commit..."
         if [ -n "$COMMIT_MESSAGE" ]; then
@@ -152,7 +151,7 @@ main() {
     
     echo ""
     success "🎉 Commit process completed successfully!"
-    echo "Your changes have been committed with validation."
+    echo "Your changes have been committed with validation handled by the git pre-commit hook."
 }
 
 # Run main function
