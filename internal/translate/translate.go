@@ -1,4 +1,4 @@
-package fir
+package translate
 
 import (
 	"fmt"
@@ -36,11 +36,11 @@ func TranslateRenderExpression(input string, actions ...map[string]string) (stri
 		}
 	}
 
-	parser, err := getRenderExpressionParser()
+	parser, err := GetRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("failed to create parser: %w", err)
 	}
-	parsed, err := parseRenderExpression(parser, input)
+	parsed, err := ParseRenderExpression(parser, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse input: %w", err)
 	}
@@ -165,12 +165,12 @@ func TranslateEventExpression(input string, actionValue string, templateValue st
 		template = templateValue
 	}
 
-	parser, err := getRenderExpressionParser()
+	parser, err := GetRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("error creating parser: %w", err)
 	}
 
-	parsed, err := parseRenderExpression(parser, input)
+	parsed, err := ParseRenderExpression(parser, input)
 	if err != nil {
 		return "", fmt.Errorf("error parsing render expression: %w", err)
 	}
@@ -240,11 +240,4 @@ func TranslateEventExpression(input string, actionValue string, templateValue st
 	return strings.Join(results, "\n"), nil
 }
 
-// Assume parseRenderExpression, struct definitions, and getRenderExpressionParser are correctly defined.
-// func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) { ... }
-// type Expressions struct { Expressions []*Expression `@(@@ (";" @@)*)? ';' ?` } // Example grammar
-// type Expression struct { Bindings []*Binding `@@ ("," @@)*` }
-// type Binding struct { Eventexpressions []*Eventexpression `@@+` Target *Target `@@?` }
-// type Eventexpression struct { Name string `@Ident`; State string `(":" @("ok" | "error" | "pending" | "done"))?`; Modifier string `("." @Ident)?` }
-// type Target struct { Template string `("->" @Ident)?`; Action string `("=>" @Ident)?` }
-// func getRenderExpressionParser() (*participle.Parser[Expressions], error) { ... }
+// Note: The parser functions and struct definitions are now located in the internal/translate package.

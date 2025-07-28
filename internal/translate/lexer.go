@@ -1,4 +1,4 @@
-package fir
+package translate
 
 import (
 	"fmt" // Import regexp
@@ -55,8 +55,8 @@ type Target struct {
 	Action   string `parser:"( \"=>\" ( @Ident | @FirAction ) )?"`
 }
 
-// getRenderExpressionParser parser function to parse the input string
-func getRenderExpressionParser() (*participle.Parser[Expressions], error) {
+// GetRenderExpressionParser parser function to parse the input string
+func GetRenderExpressionParser() (*participle.Parser[Expressions], error) {
 	parser, err := participle.Build[Expressions](
 		participle.Lexer(renderExpressionlexerRules),
 		participle.Elide("Whitespace"), // Ignore standalone whitespace globally
@@ -79,7 +79,7 @@ func preProcessExpression(input string) string {
 }
 
 // Call this function before passing to the parser
-func parseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) {
+func ParseRenderExpression(parser *participle.Parser[Expressions], input string) (*Expressions, error) {
 	if input == "" {
 		return nil, fmt.Errorf("render expression cannot be empty")
 	}
@@ -134,7 +134,7 @@ var (
 
 // getActionExpressionParser builds and returns the parser for action expressions,
 // caching the result for efficiency.
-func getActionExpressionParser() (*participle.Parser[ActionExpression], error) {
+func GetActionExpressionParser() (*participle.Parser[ActionExpression], error) {
 	actionParserOnce.Do(func() {
 		actionParser, actionParserErr = participle.Build[ActionExpression](
 			participle.Lexer(actionExpressionLexerRules),
@@ -146,8 +146,8 @@ func getActionExpressionParser() (*participle.Parser[ActionExpression], error) {
 
 // parseActionExpression parses an attribute key string like "x-fir-actionName:[param1,param2]" or "x-fir-actionName:param1".
 // It returns the parsed action name and parameters.
-func parseActionExpression(key string) (actionName string, params []string, err error) {
-	parser, buildErr := getActionExpressionParser()
+func ParseActionExpression(key string) (actionName string, params []string, err error) {
+	parser, buildErr := GetActionExpressionParser()
 	if buildErr != nil {
 		return "", nil, fmt.Errorf("error building action key parser: %w", buildErr)
 	}

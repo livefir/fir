@@ -1,4 +1,4 @@
-package fir
+package translate
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 
 // Assume Expressions, Binding, Eventexpression, Target structs are defined correctly
 // matching the grammar, including Target using "=>" for Action.
-// Assume getRenderExpressionParser() and parseRenderExpression() exist and work correctly.
+// Note: The parser functions and struct definitions are now located in the internal/translate package.
 
 func TestTranslateRenderExpression(t *testing.T) {
 

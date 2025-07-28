@@ -12,6 +12,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/icholy/replace"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/translate"
 	"github.com/sourcegraph/conc/pool"
 	"github.com/teris-io/shortid"
 	"golang.org/x/net/html"
@@ -415,8 +416,8 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 
 				attrsToRemove[i] = struct{}{} // Mark original attribute for removal
 
-				// Use parseActionExpression from lexer.go to parse the base key
-				actionName, params, err := parseActionExpression(baseAttrKey)
+				// Use ParseActionExpression from translate package to parse the base key
+				actionName, params, err := translate.ParseActionExpression(baseAttrKey)
 				if err != nil {
 					// Instead of logging and continuing, return the error
 					traverseErr = fmt.Errorf("attribute key '%s' has invalid format: %w", attr.Key, err)

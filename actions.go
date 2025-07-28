@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/translate"
 	"golang.org/x/net/html"
 )
 
@@ -54,7 +55,7 @@ func (h *RefreshActionHandler) Name() string    { return "refresh" }
 func (h *RefreshActionHandler) Precedence() int { return 20 }
 func (h *RefreshActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("refresh")
-	return TranslateEventExpression(info.Value, "$fir.replace()", "")
+	return translate.TranslateEventExpression(info.Value, "$fir.replace()", "")
 }
 
 // RemoveActionHandler handles x-fir-remove
@@ -64,7 +65,7 @@ func (h *RemoveActionHandler) Name() string    { return "remove" }
 func (h *RemoveActionHandler) Precedence() int { return 30 }
 func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove")
-	return TranslateEventExpression(info.Value, "$fir.removeEl()", "")
+	return translate.TranslateEventExpression(info.Value, "$fir.removeEl()", "")
 }
 
 // AppendActionHandler handles x-fir-append:target
@@ -80,7 +81,7 @@ func (h *AppendActionHandler) Translate(info ActionInfo, actionsMap map[string]s
 	}
 
 	// TranslateEventExpression needs the value, the JS action, and the templateValue
-	return TranslateEventExpression(info.Value, "$fir.appendEl()", templateValue)
+	return translate.TranslateEventExpression(info.Value, "$fir.appendEl()", templateValue)
 }
 
 // PrependActionHandler handles x-fir-prepend:target
@@ -96,7 +97,7 @@ func (h *PrependActionHandler) Translate(info ActionInfo, actionsMap map[string]
 	}
 
 	// TranslateEventExpression needs the value, the JS action, and the templateValue
-	return TranslateEventExpression(info.Value, "$fir.prependEl()", templateValue)
+	return translate.TranslateEventExpression(info.Value, "$fir.prependEl()", templateValue)
 }
 
 // RemoveParentActionHandler handles x-fir-remove-parent
@@ -107,7 +108,7 @@ func (h *RemoveParentActionHandler) Precedence() int { return 40 }
 func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove-parent")
 	// Assuming the JS function is $fir.removeParentEl()
-	return TranslateEventExpression(info.Value, "$fir.removeParentEl()", "")
+	return translate.TranslateEventExpression(info.Value, "$fir.removeParentEl()", "")
 }
 
 // ResetActionHandler handles x-fir-reset
@@ -118,7 +119,7 @@ func (h *ResetActionHandler) Precedence() int { return 35 }
 func (h *ResetActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action
 	// For reset, we use $el.reset()
-	return TranslateEventExpression(info.Value, "$el.reset()", "")
+	return translate.TranslateEventExpression(info.Value, "$el.reset()", "")
 }
 
 // ToggleDisabledActionHandler handles x-fir-toggle-disabled
@@ -129,7 +130,7 @@ func (h *ToggleDisabledActionHandler) Precedence() int { return 34 }
 func (h *ToggleDisabledActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// For toggle-disabled, we use $fir.toggleDisabled()
 	// The toggleDisabled function automatically handles enabling/disabling based on event state
-	return TranslateEventExpression(info.Value, "$fir.toggleDisabled()", "")
+	return translate.TranslateEventExpression(info.Value, "$fir.toggleDisabled()", "")
 }
 
 // ToggleClassActionHandler handles x-fir-toggleClass:class or x-fir-toggleClass:[class1,class2]
@@ -157,7 +158,7 @@ func (h *ToggleClassActionHandler) Translate(info ActionInfo, actionsMap map[str
 	jsAction := fmt.Sprintf("$fir.toggleClass(%s)", strings.Join(jsArgs, ","))
 
 	// TranslateEventExpression since we're just toggling classes
-	return TranslateEventExpression(info.Value, jsAction, "")
+	return translate.TranslateEventExpression(info.Value, jsAction, "")
 }
 
 // DispatchActionHandler handles x-fir-dispatch:[param1,param2,...]
@@ -188,7 +189,7 @@ func (h *DispatchActionHandler) Translate(info ActionInfo, actionsMap map[string
 	}
 
 	// For dispatch, we use the built dispatch call
-	return TranslateEventExpression(info.Value, dispatchCall, template)
+	return translate.TranslateEventExpression(info.Value, dispatchCall, template)
 }
 
 // buildDispatchCall creates the $dispatch() function call with quoted parameters
@@ -202,12 +203,12 @@ func (h *DispatchActionHandler) buildDispatchCall(params []string) string {
 
 // extractTemplate parses the expression and extracts the template from the binding target
 func (h *DispatchActionHandler) extractTemplate(input string) (string, error) {
-	parser, err := getRenderExpressionParser()
+	parser, err := translate.GetRenderExpressionParser()
 	if err != nil {
 		return "", fmt.Errorf("error creating parser: %w", err)
 	}
 
-	parsed, err := parseRenderExpression(parser, input)
+	parsed, err := translate.ParseRenderExpression(parser, input)
 	if err != nil {
 		return "", fmt.Errorf("error parsing render expression: %w", err)
 	}
@@ -254,7 +255,7 @@ func (h *TriggerActionHandler) Translate(info ActionInfo, actionsMap map[string]
 	}
 
 	// Use TranslateEventExpression to translate the events
-	return TranslateEventExpression(info.Value, actionValue, "")
+	return translate.TranslateEventExpression(info.Value, actionValue, "")
 }
 
 // ActionPrefixHandler handles x-fir-js:* (doesn't translate directly, just used for collection)
@@ -293,7 +294,7 @@ func (h *RedirectActionHandler) Translate(info ActionInfo, actionsMap map[string
 	jsAction := fmt.Sprintf("$fir.redirect(%s)", url)
 
 	// Use TranslateEventExpression to translate the events
-	return TranslateEventExpression(info.Value, jsAction, "")
+	return translate.TranslateEventExpression(info.Value, jsAction, "")
 }
 
 // Register default handlers
