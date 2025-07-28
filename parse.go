@@ -12,6 +12,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/icholy/replace"
 	"github.com/livefir/fir/internal/actions"
+	"github.com/livefir/fir/internal/file"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/internal/translate"
 	"github.com/sourcegraph/conc/pool"
@@ -79,7 +80,7 @@ func layoutEmptyContentSet(opt routeOpt, content, layoutContentName string) (*te
 			content)
 	}
 	// content must be  a file or directory
-	pageFiles := getPartials(opt, findOrExit(pageContentPath, opt.extensions, opt.embedfs))
+	pageFiles := getPartials(opt, file.FindOrExit(pageContentPath, opt.extensions, opt.embedfs))
 	contentTemplate := template.New(filepath.Base(pageContentPath)).Funcs(opt.getFuncMap())
 
 	return parseFiles(contentTemplate, opt.getFuncMap(), opt.readFile, pageFiles...)
@@ -94,7 +95,7 @@ func layoutSetContentEmpty(opt routeOpt, layout string) (*template.Template, eve
 	}
 
 	// layout must be  a file
-	if isDirWithExistFile(pageLayoutPath, opt.existFile, opt.embedfs) {
+	if file.IsDirWithExistFile(pageLayoutPath, opt.existFile, opt.embedfs) {
 		return nil, evt, fmt.Errorf("layout %s is a directory but must be a file", pageLayoutPath)
 	}
 
@@ -132,7 +133,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 		}
 		return pageTemplate, evt, nil
 	} else {
-		pageFiles := getPartials(opt, findOrExit(pageContentPath, opt.extensions, opt.embedfs))
+		pageFiles := getPartials(opt, file.FindOrExit(pageContentPath, opt.extensions, opt.embedfs))
 		pageTemplate, currEvt, err := parseFiles(layoutTemplate.Funcs(opt.getFuncMap()), opt.getFuncMap(), opt.readFile, pageFiles...)
 		if err != nil {
 			panic(err)
@@ -148,7 +149,7 @@ func layoutSetContentSet(opt routeOpt, content, layout, layoutContentName string
 
 func getPartials(opt routeOpt, files []string) []string {
 	for _, partial := range opt.partials {
-		files = append(files, findOrExit(filepath.Join(opt.publicDir, partial), opt.extensions, opt.embedfs)...)
+		files = append(files, file.FindOrExit(filepath.Join(opt.publicDir, partial), opt.extensions, opt.embedfs)...)
 	}
 	return files
 }

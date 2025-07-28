@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/livefir/fir/internal/file"
+
 	embed "github.com/13rac1/goldmark-embed"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/livefir/fir/internal/logger"
@@ -167,7 +169,7 @@ func isValidURL(input string) bool {
 	return u.Scheme == "http" || u.Scheme == "https"
 }
 
-func markdown(readFile readFileFunc, existFile existFileFunc) func(in string, markers ...string) string {
+func markdown(readFile file.ReadFileFunc, existFile file.ExistFileFunc) func(in string, markers ...string) string {
 	cachemd := &mdcache{
 		values: make(map[string]string),
 	}

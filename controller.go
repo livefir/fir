@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/livefir/fir/internal/file"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
@@ -43,8 +44,8 @@ type opt struct {
 	publicDir             string
 	developmentMode       bool
 	embedfs               *embed.FS
-	readFile              readFileFunc
-	existFile             existFileFunc
+	readFile              file.ReadFileFunc
+	existFile             file.ExistFileFunc
 	pubsub                pubsub.Adapter
 	appName               string
 	formDecoder           *schema.Decoder
@@ -266,11 +267,11 @@ func NewController(name string, options ...ControllerOption) Controller {
 	}
 
 	if c.embedfs != nil {
-		c.readFile = readFileFS(*c.embedfs)
-		c.existFile = existFileFS(*c.embedfs)
+		c.readFile = file.ReadFileFS(*c.embedfs)
+		c.existFile = file.ExistFileFS(*c.embedfs)
 	} else {
-		c.readFile = readFileOS
-		c.existFile = existFileOS
+		c.readFile = file.ReadFileOS
+		c.existFile = file.ExistFileOS
 	}
 
 	md := markdown(c.readFile, c.existFile)

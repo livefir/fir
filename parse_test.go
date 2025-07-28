@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/livefir/fir/internal/file"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom" // Import atom package
@@ -742,8 +743,8 @@ func TestLayoutSetContentEmptyWithFileExistence(t *testing.T) {
 	t.Run("OS filesystem - directory layout should error", func(t *testing.T) {
 		opt := routeOpt{}
 		opt.publicDir = tempDir
-		opt.existFile = existFileOS
-		opt.readFile = readFileOS
+		opt.existFile = file.ExistFileOS
+		opt.readFile = file.ReadFileOS
 		opt.embedfs = nil
 		opt.funcMapMutex = &sync.RWMutex{}
 		opt.funcMap = make(template.FuncMap)
@@ -760,8 +761,8 @@ func TestLayoutSetContentEmptyWithFileExistence(t *testing.T) {
 	t.Run("OS filesystem - file layout should work", func(t *testing.T) {
 		opt := routeOpt{}
 		opt.publicDir = tempDir
-		opt.existFile = existFileOS
-		opt.readFile = readFileOS
+		opt.existFile = file.ExistFileOS
+		opt.readFile = file.ReadFileOS
 		opt.embedfs = nil
 		opt.funcMapMutex = &sync.RWMutex{}
 		opt.funcMap = make(template.FuncMap)
@@ -775,8 +776,8 @@ func TestLayoutSetContentEmptyWithFileExistence(t *testing.T) {
 	t.Run("OS filesystem - non-existent layout should treat as content", func(t *testing.T) {
 		opt := routeOpt{}
 		opt.publicDir = tempDir
-		opt.existFile = existFileOS
-		opt.readFile = readFileOS
+		opt.existFile = file.ExistFileOS
+		opt.readFile = file.ReadFileOS
 		opt.embedfs = nil
 		opt.funcMapMutex = &sync.RWMutex{}
 		opt.funcMap = make(template.FuncMap)
@@ -797,8 +798,8 @@ func TestLayoutSetContentEmptyWithEmbeddedFS(t *testing.T) {
 	t.Run("Embedded filesystem - existing file should work", func(t *testing.T) {
 		opt := routeOpt{}
 		opt.publicDir = "testdata/public"
-		opt.existFile = existFileFS(testFS)
-		opt.readFile = readFileFS(testFS)
+		opt.existFile = file.ExistFileFS(testFS)
+		opt.readFile = file.ReadFileFS(testFS)
 		opt.embedfs = &testFS
 		opt.funcMapMutex = &sync.RWMutex{}
 		opt.funcMap = make(template.FuncMap)
@@ -813,8 +814,8 @@ func TestLayoutSetContentEmptyWithEmbeddedFS(t *testing.T) {
 	t.Run("Embedded filesystem - directory should error", func(t *testing.T) {
 		opt := routeOpt{}
 		opt.publicDir = "testdata"
-		opt.existFile = existFileFS(testFS)
-		opt.readFile = readFileFS(testFS)
+		opt.existFile = file.ExistFileFS(testFS)
+		opt.readFile = file.ReadFileFS(testFS)
 		opt.embedfs = &testFS
 		opt.funcMapMutex = &sync.RWMutex{}
 		opt.funcMap = make(template.FuncMap)
@@ -832,8 +833,8 @@ func TestLayoutSetContentEmptyWithEmbeddedFS(t *testing.T) {
 	t.Run("Embedded filesystem - non-existent file should treat as content", func(t *testing.T) {
 		opt := routeOpt{}
 		opt.publicDir = "testdata/public"
-		opt.existFile = existFileFS(testFS)
-		opt.readFile = readFileFS(testFS)
+		opt.existFile = file.ExistFileFS(testFS)
+		opt.readFile = file.ReadFileFS(testFS)
 		opt.embedfs = &testFS
 		opt.funcMapMutex = &sync.RWMutex{}
 		opt.funcMap = make(template.FuncMap)

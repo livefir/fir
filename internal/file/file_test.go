@@ -1,4 +1,4 @@
-package fir
+package file
 
 import (
 	"embed"
@@ -53,17 +53,17 @@ func TestIsDir(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// Use isDirWithExistFile with appropriate existFile function
-			var existFile existFileFunc
+			// Use IsDirWithExistFile with appropriate existFile function
+			var existFile ExistFileFunc
 			if test.embedfs != nil {
-				existFile = existFileFS(*test.embedfs)
+				existFile = ExistFileFS(*test.embedfs)
 			} else {
-				existFile = existFileOS
+				existFile = ExistFileOS
 			}
 
-			actual := isDirWithExistFile(test.path, existFile, test.embedfs)
+			actual := IsDirWithExistFile(test.path, existFile, test.embedfs)
 			if actual != test.expected {
-				t.Errorf("isDirWithExistFile(%s, existFunc, %v) = %v, expected %v", test.path, test.embedfs, actual, test.expected)
+				t.Errorf("IsDirWithExistFile(%s, existFunc, %v) = %v, expected %v", test.path, test.embedfs, actual, test.expected)
 			}
 		})
 	}
@@ -74,86 +74,86 @@ func TestIsDirWithExistFile(t *testing.T) {
 		name      string
 		path      string
 		embedfs   *embed.FS
-		existFile existFileFunc
+		existFile ExistFileFunc
 		expected  bool
 	}{
 		{
 			name:      "Embedded Directory - exists",
 			path:      "testdata/public",
 			embedfs:   &testdata,
-			existFile: existFileFS(testdata),
+			existFile: ExistFileFS(testdata),
 			expected:  true,
 		},
 		{
 			name:      "Embedded Directory - does not exist",
 			path:      "testdata/nonexistent",
 			embedfs:   &testdata,
-			existFile: existFileFS(testdata),
+			existFile: ExistFileFS(testdata),
 			expected:  false,
 		},
 		{
 			name:      "Embedded File - exists but not directory",
 			path:      "testdata/public/index.html",
 			embedfs:   &testdata,
-			existFile: existFileFS(testdata),
+			existFile: ExistFileFS(testdata),
 			expected:  false,
 		},
 		{
 			name:      "Embedded File - does not exist",
 			path:      "testdata/public/nonexistent.html",
 			embedfs:   &testdata,
-			existFile: existFileFS(testdata),
+			existFile: ExistFileFS(testdata),
 			expected:  false,
 		},
 		{
 			name:      "OS Directory - exists",
 			path:      "testdata/public",
 			embedfs:   nil,
-			existFile: existFileOS,
+			existFile: ExistFileOS,
 			expected:  true,
 		},
 		{
 			name:      "OS Directory - does not exist",
 			path:      "/path/to/non-existing/directory",
 			embedfs:   nil,
-			existFile: existFileOS,
+			existFile: ExistFileOS,
 			expected:  false,
 		},
 		{
 			name:      "OS File - exists but not directory",
 			path:      "testdata/public/index.html",
 			embedfs:   nil,
-			existFile: existFileOS,
+			existFile: ExistFileOS,
 			expected:  false,
 		},
 		{
 			name:      "OS File - does not exist",
 			path:      "/path/to/nonexistent.html",
 			embedfs:   nil,
-			existFile: existFileOS,
+			existFile: ExistFileOS,
 			expected:  false,
 		},
 		{
 			name:      "Subdirectory in embedded filesystem",
 			path:      "testdata/public/partials",
 			embedfs:   &testdata,
-			existFile: existFileFS(testdata),
+			existFile: ExistFileFS(testdata),
 			expected:  true,
 		},
 		{
 			name:      "Subdirectory on OS filesystem",
 			path:      "testdata/public/partials",
 			embedfs:   nil,
-			existFile: existFileOS,
+			existFile: ExistFileOS,
 			expected:  true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := isDirWithExistFile(test.path, test.existFile, test.embedfs)
+			actual := IsDirWithExistFile(test.path, test.existFile, test.embedfs)
 			if actual != test.expected {
-				t.Errorf("isDirWithExistFile(%s, existFunc, %v) = %v, expected %v", test.path, test.embedfs, actual, test.expected)
+				t.Errorf("IsDirWithExistFile(%s, existFunc, %v) = %v, expected %v", test.path, test.embedfs, actual, test.expected)
 			}
 		})
 	}
@@ -189,16 +189,16 @@ func TestExistFileOS(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := existFileOS(test.path)
+			actual := ExistFileOS(test.path)
 			if actual != test.expected {
-				t.Errorf("existFileOS(%s) = %v, expected %v", test.path, actual, test.expected)
+				t.Errorf("ExistFileOS(%s) = %v, expected %v", test.path, actual, test.expected)
 			}
 		})
 	}
 }
 
 func TestExistFileFS(t *testing.T) {
-	existFunc := existFileFS(testdata)
+	existFunc := ExistFileFS(testdata)
 
 	tests := []struct {
 		name     string
@@ -241,7 +241,7 @@ func TestExistFileFS(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			actual := existFunc(test.path)
 			if actual != test.expected {
-				t.Errorf("existFileFS(%s) = %v, expected %v", test.path, actual, test.expected)
+				t.Errorf("ExistFileFS(%s) = %v, expected %v", test.path, actual, test.expected)
 			}
 		})
 	}
@@ -315,13 +315,13 @@ func TestFind(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			actual := find(test.path, test.extensions, test.embedfs)
+			actual := Find(test.path, test.extensions, test.embedfs)
 			if len(actual) != len(test.expected) {
-				t.Errorf("find(%s, %v, %v) returned %v files, expected %v files", test.path, test.extensions, test.embedfs, len(actual), len(test.expected))
+				t.Errorf("Find(%s, %v, %v) returned %v files, expected %v files", test.path, test.extensions, test.embedfs, len(actual), len(test.expected))
 			} else {
 				for i := range actual {
 					if actual[i] != test.expected[i] {
-						t.Errorf("find(%s, %v, %v) returned %s, expected %s", test.path, test.extensions, test.embedfs, actual[i], test.expected[i])
+						t.Errorf("Find(%s, %v, %v) returned %s, expected %s", test.path, test.extensions, test.embedfs, actual[i], test.expected[i])
 					}
 				}
 			}
@@ -350,47 +350,47 @@ func TestFileExistenceIntegration(t *testing.T) {
 
 	// Test with OS filesystem
 	t.Run("OS filesystem", func(t *testing.T) {
-		existFile := existFileOS
+		existFile := ExistFileOS
 
 		// Test existing directory
-		if !isDirWithExistFile(testDir, existFile, nil) {
+		if !IsDirWithExistFile(testDir, existFile, nil) {
 			t.Errorf("Expected %s to be detected as directory", testDir)
 		}
 
 		// Test existing file (should not be directory)
-		if isDirWithExistFile(testFile, existFile, nil) {
+		if IsDirWithExistFile(testFile, existFile, nil) {
 			t.Errorf("Expected %s to not be detected as directory", testFile)
 		}
 
 		// Test non-existing path
 		nonExistentPath := filepath.Join(tempDir, "nonexistent")
-		if isDirWithExistFile(nonExistentPath, existFile, nil) {
+		if IsDirWithExistFile(nonExistentPath, existFile, nil) {
 			t.Errorf("Expected %s to not be detected as directory", nonExistentPath)
 		}
 	})
 
 	// Test with embedded filesystem
 	t.Run("Embedded filesystem", func(t *testing.T) {
-		existFile := existFileFS(testdata)
+		existFile := ExistFileFS(testdata)
 
 		// Test existing directory in embed
-		if !isDirWithExistFile("testdata/public", existFile, &testdata) {
+		if !IsDirWithExistFile("testdata/public", existFile, &testdata) {
 			t.Error("Expected testdata/public to be detected as directory in embedded fs")
 		}
 
 		// Test existing file in embed (should not be directory)
-		if isDirWithExistFile("testdata/public/index.html", existFile, &testdata) {
+		if IsDirWithExistFile("testdata/public/index.html", existFile, &testdata) {
 			t.Error("Expected testdata/public/index.html to not be detected as directory in embedded fs")
 		}
 
 		// Test non-existing path in embed
-		if isDirWithExistFile("testdata/nonexistent", existFile, &testdata) {
+		if IsDirWithExistFile("testdata/nonexistent", existFile, &testdata) {
 			t.Error("Expected testdata/nonexistent to not be detected as directory in embedded fs")
 		}
 	})
 }
 
-// TestFindWithError tests the findWithError function for proper error handling
+// TestFindWithError tests the FindWithError function for proper error handling
 func TestFindWithError(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -464,7 +464,7 @@ func TestFindWithError(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			files, err := findWithError(test.path, test.extensions, test.embedfs)
+			files, err := FindWithError(test.path, test.extensions, test.embedfs)
 
 			if test.expectError {
 				if err == nil {
@@ -484,17 +484,17 @@ func TestFindWithError(t *testing.T) {
 	}
 }
 
-// TestFindOrExitWithExitCode tests that findOrExit actually calls os.Exit(1) when files don't exist
+// TestFindOrExitWithExitCode tests that FindOrExit actually calls os.Exit(1) when files don't exist
 // This test uses a subprocess approach to test the exit behavior
 func TestFindOrExitWithExitCode(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") == "1" {
-		// This is the subprocess that will call findOrExit
+		// This is the subprocess that will call FindOrExit
 		// It should exit with code 1 when files don't exist
-		findOrExit("/nonexistent/path", []string{".html"}, nil)
+		FindOrExit("/nonexistent/path", []string{".html"}, nil)
 		return
 	}
 
-	// Test that findOrExit calls os.Exit(1) for non-existing files
+	// Test that FindOrExit calls os.Exit(1) for non-existing files
 	t.Run("Non-existing file should exit with code 1", func(t *testing.T) {
 		cmd := exec.Command(os.Args[0], "-test.run=TestFindOrExitWithExitCode")
 		cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
@@ -514,10 +514,10 @@ func TestFindOrExitWithExitCode(t *testing.T) {
 		}
 	})
 
-	// Test that findOrExit succeeds for existing files
+	// Test that FindOrExit succeeds for existing files
 	t.Run("Existing file should not exit", func(t *testing.T) {
 		// This should not exit
-		files := findOrExit("testdata/public", []string{".html"}, nil)
+		files := FindOrExit("testdata/public", []string{".html"}, nil)
 		if len(files) == 0 {
 			t.Error("Expected to find files, but got empty slice")
 		}
@@ -525,7 +525,7 @@ func TestFindOrExitWithExitCode(t *testing.T) {
 
 	// Test with embedded filesystem
 	t.Run("Existing file in embedded fs should not exit", func(t *testing.T) {
-		files := findOrExit("testdata/public", []string{".html"}, &testdata)
+		files := FindOrExit("testdata/public", []string{".html"}, &testdata)
 		if len(files) == 0 {
 			t.Error("Expected to find files in embedded fs, but got empty slice")
 		}
@@ -538,13 +538,13 @@ func TestFindOrExitNonExistingContent(t *testing.T) {
 		// Test different content file scenarios that should cause exit
 		switch os.Getenv("TEST_SCENARIO") {
 		case "missing_content":
-			findOrExit("missing-content.html", []string{".html"}, nil)
+			FindOrExit("missing-content.html", []string{".html"}, nil)
 		case "missing_layout":
-			findOrExit("layouts/missing-layout.html", []string{".html"}, nil)
+			FindOrExit("layouts/missing-layout.html", []string{".html"}, nil)
 		case "missing_directory":
-			findOrExit("missing-directory", []string{".html"}, nil)
+			FindOrExit("missing-directory", []string{".html"}, nil)
 		case "missing_embedded_content":
-			findOrExit("missing-embedded.html", []string{".html"}, &testdata)
+			FindOrExit("missing-embedded.html", []string{".html"}, &testdata)
 		}
 		return
 	}
@@ -601,10 +601,10 @@ func TestFindOrExitNonExistingContent(t *testing.T) {
 	}
 }
 
-// TestFindOrExitErrorOutput tests that findOrExit writes error messages to stderr
+// TestFindOrExitErrorOutput tests that FindOrExit writes error messages to stderr
 func TestFindOrExitErrorOutput(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") == "1" {
-		findOrExit("/completely/nonexistent/path/file.html", []string{".html"}, nil)
+		FindOrExit("/completely/nonexistent/path/file.html", []string{".html"}, nil)
 		return
 	}
 
