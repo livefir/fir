@@ -6,3 +6,4 @@ Provide project context and coding guidelines that AI should follow when generat
 - Always run pre-commit hooks before committing code.
 - Never commit code that fails tests.
 - No unstaged or staged changes should be present after committing code.
+- Use commit.sh script to commit code.
