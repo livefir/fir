@@ -8,3 +8,5 @@ __debug_bin
 *.log
 *.test
 *.txt
+examples/examples
+1go
