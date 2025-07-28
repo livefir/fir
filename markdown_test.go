@@ -6,13 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/livefir/fir/internal/file"
 	"golang.org/x/net/html"
 )
 
 func TestMarkdownTemplate(t *testing.T) {
 	tmpl := `{{ markdown "./testdata/snippet_input.md" "marker" }}`
 	expected := `<p>Snippet Content</p>`
-	md := markdown(readFileOS, existFileOS)
+	md := markdown(file.ReadFileOS, file.ExistFileOS)
 	var buf bytes.Buffer
 	template.Must(template.New("test").Funcs(template.FuncMap{
 		"markdown": md,
@@ -98,8 +99,8 @@ func TestMarkdown(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var inputData []byte
 			var err error
-			if existFileOS(tc.input) {
-				_, inputData, err = readFileOS(tc.input)
+			if file.ExistFileOS(tc.input) {
+				_, inputData, err = file.ReadFileOS(tc.input)
 				if err != nil && !tc.expectError {
 					t.Errorf("%v: \n Error reading input file: %s: %s", tc.name, tc.input, err)
 				}
@@ -107,7 +108,7 @@ func TestMarkdown(t *testing.T) {
 				inputData = []byte(tc.input)
 			}
 
-			md := markdown(readFileOS, existFileOS)
+			md := markdown(file.ReadFileOS, file.ExistFileOS)
 			actual := md(string(inputData), tc.markers...)
 
 			if tc.expectError {
