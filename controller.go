@@ -15,9 +15,11 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/lithammer/shortuuid/v4"
+	"github.com/livefir/fir/internal/dev"
 	"github.com/livefir/fir/internal/file"
 	"github.com/livefir/fir/internal/logger"
 	internalMarkdown "github.com/livefir/fir/internal/markdown"
+	internalTemplate "github.com/livefir/fir/internal/template"
 	"github.com/livefir/fir/pubsub"
 	servertiming "github.com/mitchellh/go-server-timing"
 	"github.com/patrickmn/go-cache"
@@ -232,7 +234,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 			// WriteBufferSize: 4096,
 			// WriteBufferPool: &sync.Pool{},
 		},
-		watchExts:   defaultWatchExtensions,
+		watchExts:   dev.DefaultWatchExtensions,
 		pubsub:      pubsub.NewInmem(),
 		appName:     name,
 		formDecoder: formDecoder,
@@ -242,7 +244,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 			securecookie.GenerateRandomKey(32),
 		),
 		cache:                 cache.New(5*time.Minute, 10*time.Minute),
-		funcMap:               defaultFuncMap(),
+		funcMap:               internalTemplate.DefaultFuncMap(),
 		dropDuplicateInterval: 250 * time.Millisecond,
 		publicDir:             ".",
 	}
@@ -264,7 +266,7 @@ func NewController(name string, options ...ControllerOption) Controller {
 	}
 
 	if c.enableWatch {
-		go watchTemplates(c)
+		go dev.WatchTemplates(c)
 	}
 
 	if c.embedfs != nil {
@@ -346,4 +348,17 @@ func (c *controller) RouteFunc(opts RouteFunc) http.HandlerFunc {
 	c.routes[r.id] = r
 
 	return servertiming.Middleware(r, nil).ServeHTTP
+}
+
+// Interface methods for dev.Controller compatibility
+func (c *controller) GetPubsub() pubsub.Adapter {
+	return c.pubsub
+}
+
+func (c *controller) GetPublicDir() string {
+	return c.publicDir
+}
+
+func (c *controller) GetWatchExts() []string {
+	return c.watchExts
 }

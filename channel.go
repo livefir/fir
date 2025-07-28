@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/session"
 )
 
 func (cntrl *controller) defaultChannelFunc(r *http.Request, viewID string) *string {
@@ -23,7 +24,7 @@ func (cntrl *controller) defaultChannelFunc(r *http.Request, viewID string) *str
 			logger.Errorf("decode session err: %v, can't join channel", err)
 			return nil
 		}
-		sessionID, _, err := decodeSession(*cntrl.opt.secureCookie, cntrl.opt.cookieName, cookie.Value)
+		sessionID, _, err := session.DecodeSession(*cntrl.opt.secureCookie, cntrl.opt.cookieName, cookie.Value)
 		if err != nil {
 			logger.Errorf("decode session err: %v, can't join channel", err)
 			return nil

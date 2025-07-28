@@ -12,8 +12,10 @@ import (
 	"github.com/goccy/go-json"
 
 	"github.com/gorilla/websocket"
+	"github.com/livefir/fir/internal/dev"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/session"
 	"github.com/livefir/fir/pubsub"
 	"github.com/minio/sha256-simd"
 )
@@ -83,7 +85,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 		RedirectUnauthorisedWebSocket(w, r, "/")
 		return
 	}
-	sessionID, routeID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
+	sessionID, routeID, err := session.DecodeSession(*cntrl.secureCookie, cntrl.cookieName, cookie.Value)
 	if err != nil {
 		logger.Errorf("decode session err: %v", err)
 		RedirectUnauthorisedWebSocket(w, r, "/")
@@ -185,7 +187,7 @@ func onWebsocket(w http.ResponseWriter, r *http.Request, cntrl *controller) {
 
 		if route.developmentMode {
 			// subscriber for reload operations in development mode. see watch.go
-			reloadSubscriber, err := route.pubsub.Subscribe(ctx, devReloadChannel)
+			reloadSubscriber, err := route.pubsub.Subscribe(ctx, dev.DevReloadChannel)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -328,7 +330,7 @@ loop:
 
 		lastEvent = event
 
-		eventSessionID, eventRouteID, err := decodeSession(*cntrl.secureCookie, cntrl.cookieName, *event.SessionID)
+		eventSessionID, eventRouteID, err := session.DecodeSession(*cntrl.secureCookie, cntrl.cookieName, *event.SessionID)
 		if err != nil {
 			logger.Errorf("err: %v,  decoding session, closing connection", err)
 			break loop

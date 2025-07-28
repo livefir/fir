@@ -1,4 +1,4 @@
-package fir
+package template
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 )
 
-func defaultFuncMap() template.FuncMap {
+func DefaultFuncMap() template.FuncMap {
 	allFuncs := make(template.FuncMap)
 	for k, v := range sprig.FuncMap() {
 		allFuncs[k] = v

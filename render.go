@@ -7,6 +7,7 @@ import (
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/internal/eventstate"
 	"github.com/livefir/fir/internal/logger"
+	"github.com/livefir/fir/internal/session"
 	"github.com/livefir/fir/pubsub"
 	"github.com/patrickmn/go-cache"
 	"github.com/sourcegraph/conc/pool"
@@ -38,7 +39,11 @@ func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 			return err
 		}
 
-		err = encodeSession(ctx.route.routeOpt, ctx.response, ctx.request)
+		err = session.EncodeSession(session.RouteOpt{
+			SecureCookie: ctx.route.routeOpt.secureCookie,
+			CookieName:   ctx.route.routeOpt.cookieName,
+			ID:           ctx.route.routeOpt.id,
+		}, ctx.response, ctx.request)
 		if err != nil {
 			logger.Errorf("error encoding session: %v", err)
 			return err

@@ -1,4 +1,4 @@
-package fir
+package dev
 
 import (
 	"context"
@@ -6,22 +6,33 @@ import (
 	"io/fs"
 	"log"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
-
-	"slices"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/livefir/fir/internal/logger"
 	"github.com/livefir/fir/pubsub"
 )
 
-// defaultWatchExtensions is an array of default extensions to watch for changes.
-var defaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
+// DefaultWatchExtensions is an array of default extensions to watch for changes.
+var DefaultWatchExtensions = []string{".gohtml", ".gotmpl", ".html", ".tmpl"}
 
-const devReloadChannel = "dev_reload"
+const DevReloadChannel = "dev_reload"
 
-func watchTemplates(wc *controller) {
+// stringPtr returns a pointer to the given string
+func stringPtr(s string) *string {
+	return &s
+}
+
+// Controller interface for type compatibility
+type Controller interface {
+	GetPubsub() pubsub.Adapter
+	GetPublicDir() string
+	GetWatchExts() []string
+}
+
+func WatchTemplates(wc Controller) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -40,7 +51,7 @@ func watchTemplates(wc *controller) {
 					event.Op&fsnotify.Remove == fsnotify.Remove ||
 					event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("[watcher]==> file changed: %v, reloading ... \n", event.Name)
-					wc.pubsub.Publish(context.Background(), devReloadChannel, pubsub.Event{ID: fir("reload")})
+					wc.GetPubsub().Publish(context.Background(), DevReloadChannel, pubsub.Event{ID: stringPtr("reload")})
 					time.Sleep(1000 * time.Millisecond)
 				}
 			case err, ok := <-watcher.Errors:
@@ -53,9 +64,9 @@ func watchTemplates(wc *controller) {
 	}()
 
 	// watch extensions
-	filepath.WalkDir(wc.publicDir, func(path string, d fs.DirEntry, err error) error {
+	filepath.WalkDir(wc.GetPublicDir(), func(path string, d fs.DirEntry, err error) error {
 		if d != nil && !d.IsDir() {
-			if slices.Contains(wc.watchExts, filepath.Ext(path)) {
+			if slices.Contains(wc.GetWatchExts(), filepath.Ext(path)) {
 				if strings.Contains(path, "node_modules") {
 					return nil
 				}
