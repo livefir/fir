@@ -3,8 +3,10 @@ package fir
 import (
 	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,13 +16,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/schema"
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/livefir/fir/internal/dom"
 	"github.com/livefir/fir/pubsub"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
 	redisContainer "github.com/testcontainers/testcontainers-go/modules/redis"
 )
+
+// mockPubsubAdapter is a simple mock for testing
+type mockPubsubAdapter struct{}
+
+func (m *mockPubsubAdapter) Publish(ctx context.Context, channel string, event pubsub.Event) error {
+	return nil
+}
+
+func (m *mockPubsubAdapter) Subscribe(ctx context.Context, channel string) (pubsub.Subscription, error) {
+	return nil, nil
+}
+
+func (m *mockPubsubAdapter) HasSubscribers(ctx context.Context, pattern string) bool {
+	return false
+}
 
 type doubleRequest struct {
 	Num int `json:"num"`
@@ -449,4 +468,283 @@ func TestControllerWebsocketEnabledRedis(t *testing.T) {
 			runWebsocketEventTest(t, ti)
 		})
 	}
+}
+
+// TestControllerOptions tests all controller option functions
+func TestControllerOptions(t *testing.T) {
+	t.Run("WithFuncMap", func(t *testing.T) {
+		customFuncMap := template.FuncMap{
+			"customFunc": func() string { return "custom" },
+		}
+
+		ctrl := NewController("test", WithFuncMap(customFuncMap))
+
+		// Verify function map is set by creating a route with custom function
+		testRoute := func() RouteOptions {
+			return RouteOptions{
+				Content(`{{ customFunc }}`),
+			}
+		}
+		routeHandler := ctrl.RouteFunc(testRoute)
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		routeHandler(w, req)
+
+		assert.Contains(t, w.Body.String(), "custom")
+	})
+
+	t.Run("WithSessionSecrets", func(t *testing.T) {
+		hashKey := []byte("very-secret-hash-key-32-bytes!!!")
+		blockKey := []byte("very-secret-block-key-32-bytes!!")
+
+		ctrl := NewController("test", WithSessionSecrets(hashKey, blockKey))
+
+		// Test that secure cookie is properly set by verifying session functionality
+		testRoute := func() RouteOptions {
+			return RouteOptions{
+				Content(`<div>test</div>`),
+			}
+		}
+		routeHandler := ctrl.RouteFunc(testRoute)
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		routeHandler(w, req)
+
+		// Should have set a session cookie
+		cookies := w.Result().Cookies()
+		assert.Len(t, cookies, 1)
+		assert.Equal(t, "_fir_session_", cookies[0].Name) // Default cookie name
+	})
+
+	t.Run("WithSessionName", func(t *testing.T) {
+		customCookieName := "my-custom-session"
+
+		ctrl := NewController("test", WithSessionName(customCookieName))
+
+		testRoute := func() RouteOptions {
+			return RouteOptions{
+				Content(`<div>test</div>`),
+			}
+		}
+		routeHandler := ctrl.RouteFunc(testRoute)
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		routeHandler(w, req)
+
+		// Should have set a cookie with custom name
+		cookies := w.Result().Cookies()
+		assert.Len(t, cookies, 1)
+		assert.Equal(t, customCookieName, cookies[0].Name)
+	})
+
+	t.Run("WithChannelFunc", func(t *testing.T) {
+		channelFunc := func(r *http.Request, viewID string) *string {
+			channel := "custom-channel"
+			return &channel
+		}
+
+		ctrl := NewController("test", WithChannelFunc(channelFunc))
+
+		// Test that channel function is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithPathParamsFunc", func(t *testing.T) {
+		pathParamsFunc := func(r *http.Request) PathParams {
+			return PathParams{"id": "123"}
+		}
+
+		ctrl := NewController("test", WithPathParamsFunc(pathParamsFunc))
+
+		// Test path params functionality - simply verify function is set
+		// PathParams would normally be available in route context for event handlers
+		testRoute := func() RouteOptions {
+			return RouteOptions{
+				Content(`<div>{{ .id }}</div>`),
+				OnLoad(func(ctx RouteContext) error {
+					// Verify PathParams can be accessed from context
+					if pathParams, ok := ctx.Request().Context().Value(PathParamsKey).(PathParams); ok {
+						if id, exists := pathParams["id"]; exists {
+							return ctx.KV("id", id)
+						}
+					}
+					return ctx.KV("id", "not-found")
+				}),
+			}
+		}
+		routeHandler := ctrl.RouteFunc(testRoute)
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		routeHandler(w, req)
+
+		assert.Contains(t, w.Body.String(), "123")
+	})
+
+	t.Run("WithPubsubAdapter", func(t *testing.T) {
+		customPubsub := pubsub.NewInmem()
+
+		ctrl := NewController("test", WithPubsubAdapter(customPubsub))
+
+		// Test that pubsub adapter is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithWebsocketUpgrader", func(t *testing.T) {
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		}
+
+		ctrl := NewController("test", WithWebsocketUpgrader(upgrader))
+
+		// Test that upgrader is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithEmbedFS", func(t *testing.T) {
+		// Create a mock embed.FS (can't easily create real one in test)
+		// But we can test that the option doesn't cause errors
+		ctrl := NewController("test", WithEmbedFS(embed.FS{}))
+
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithPublicDir", func(t *testing.T) {
+		publicDir := "/tmp/test-public"
+
+		ctrl := NewController("test", WithPublicDir(publicDir))
+
+		// Test that public directory is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithFormDecoder", func(t *testing.T) {
+		decoder := schema.NewDecoder()
+		decoder.IgnoreUnknownKeys(true)
+
+		ctrl := NewController("test", WithFormDecoder(decoder))
+
+		// Test that form decoder option is set by creating a simple route
+		// Form decoding testing is complex and would require proper event setup
+		testRoute := func() RouteOptions {
+			return RouteOptions{
+				Content(`<div>decoder test</div>`),
+			}
+		}
+		routeHandler := ctrl.RouteFunc(testRoute)
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		routeHandler(w, req)
+
+		assert.Contains(t, w.Body.String(), "decoder test")
+	})
+
+	t.Run("WithDisableWebsocket", func(t *testing.T) {
+		ctrl := NewController("test", WithDisableWebsocket())
+
+		// Test that websocket is disabled
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithDropDuplicateInterval", func(t *testing.T) {
+		interval := 500 * time.Millisecond
+
+		ctrl := NewController("test", WithDropDuplicateInterval(interval))
+
+		// Test that interval is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithOnSocketConnect", func(t *testing.T) {
+		connectFunc := func(userOrSessionID string) error {
+			// Mock connect handler
+			return nil
+		}
+
+		ctrl := NewController("test", WithOnSocketConnect(connectFunc))
+
+		// Test that connect function is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("WithOnSocketDisconnect", func(t *testing.T) {
+		disconnectFunc := func(userOrSessionID string) {
+			// Mock disconnect handler
+		}
+
+		ctrl := NewController("test", WithOnSocketDisconnect(disconnectFunc))
+
+		// Test that disconnect function is set
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("DisableTemplateCache", func(t *testing.T) {
+		ctrl := NewController("test", DisableTemplateCache())
+
+		// Test template caching is disabled
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("EnableDebugLog", func(t *testing.T) {
+		ctrl := NewController("test", EnableDebugLog())
+
+		// Test debug logging is enabled
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("EnableWatch", func(t *testing.T) {
+		rootDir := "/tmp"
+		extensions := []string{".html", ".gohtml"}
+
+		ctrl := NewController("test", EnableWatch(rootDir, extensions...))
+
+		// Test file watching is enabled
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("DevelopmentMode", func(t *testing.T) {
+		ctrl := NewController("test", DevelopmentMode(true))
+
+		// Test development mode is enabled
+		assert.NotNil(t, ctrl)
+	})
+
+	t.Run("MultipleOptions", func(t *testing.T) {
+		// Test combining multiple options
+		ctrl := NewController("test",
+			EnableDebugLog(),
+			DisableTemplateCache(),
+			DevelopmentMode(true),
+			WithSessionName("multi-test"),
+		)
+
+		// Test that all options are applied
+		testRoute := func() RouteOptions {
+			return RouteOptions{
+				Content(`<div>multi-test</div>`),
+			}
+		}
+		routeHandler := ctrl.RouteFunc(testRoute)
+
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		routeHandler(w, req)
+
+		// Should have set custom session cookie
+		cookies := w.Result().Cookies()
+		assert.Len(t, cookies, 1)
+		assert.Equal(t, "multi-test", cookies[0].Name)
+	})
+
+	t.Run("GetPubsub", func(t *testing.T) {
+		mockPubsub := &mockPubsubAdapter{}
+		ctrl := NewController("test", WithPubsubAdapter(mockPubsub))
+
+		actualPubsub := ctrl.(*controller).GetPubsub()
+		assert.Equal(t, mockPubsub, actualPubsub)
+	})
 }

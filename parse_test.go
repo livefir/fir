@@ -3,6 +3,7 @@ package fir
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
@@ -847,5 +848,215 @@ func TestLayoutSetContentEmptyWithEmbeddedFS(t *testing.T) {
 		if tmpl == nil {
 			t.Error("Expected template to be created for non-existent layout")
 		}
+	})
+}
+
+func TestFixCorruptedGoTemplateSyntax(t *testing.T) {
+	t.Run("BasicCorruptedSyntax", func(t *testing.T) {
+		input := `{{="" if="" eq="" .field="" "value"="" }}=""`
+		expected := `{{ if eq .field "value" }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix basic corrupted template syntax")
+	})
+
+	t.Run("MultipleCorruptedPatterns", func(t *testing.T) {
+		input := `<div>{{="" if="" eq="" .user.name="" "john"="" }}="" Hello {{="" .user.name="" }}=""</div>`
+		expected := `<div>{{ if eq .user.name "john" }} Hello {{ .user.name }}</div>`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix multiple corrupted patterns in same content")
+	})
+
+	t.Run("ComplexExpression", func(t *testing.T) {
+		input := `{{="" range="" $i,="" $item="" :="" .items="" }}="" {{="" $item.name="" }}="" {{="" end="" }}=""`
+		expected := `{{ range $i, $item : .items }} {{ $item.name }} {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix complex range expressions")
+	})
+
+	t.Run("NestedConditions", func(t *testing.T) {
+		input := `{{="" if="" and="" (eq="" .status="" "active")="" (gt="" .count="" 0)="" }}="" Active {{="" else="" }}="" Inactive {{="" end="" }}=""`
+		expected := `{{ if and (eq .status "active") (gt .count 0) }} Active {{ else }} Inactive {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix nested conditional expressions")
+	})
+
+	t.Run("EmptyString", func(t *testing.T) {
+		input := ""
+		expected := ""
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should handle empty string input")
+	})
+
+	t.Run("NoCorruptedSyntax", func(t *testing.T) {
+		input := `<div>{{ if eq .name "test" }}Hello {{ .name }}{{ end }}</div>`
+		expected := `<div>{{ if eq .name "test" }}Hello {{ .name }}{{ end }}</div>`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should leave valid template syntax unchanged")
+	})
+
+	t.Run("MixedValidAndCorrupted", func(t *testing.T) {
+		input := `<div>{{ .validField }}{{="" corrupted="" field="" }}="" more content</div>`
+		expected := `<div>{{ .validField }}{{ corrupted field }} more content</div>`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should only fix corrupted parts while leaving valid syntax alone")
+	})
+
+	t.Run("CorruptedWithSpecialCharacters", func(t *testing.T) {
+		input := `{{="" printf="" "%s=%d"="" .key="" .value="" }}=""`
+		expected := `{{ printf "%s=%d" .key .value }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should handle special characters in corrupted syntax")
+	})
+
+	t.Run("MultilineCorrupted", func(t *testing.T) {
+		input := `{{="" if="" 
+		eq="" 
+		.multiline="" 
+		"test"="" }}=""`
+		expected := `{{ if eq .multiline "test" }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should handle multiline corrupted syntax")
+	})
+
+	t.Run("CorruptedWithExtraSpaces", func(t *testing.T) {
+		input := `{{=""   if=""    eq=""   .field=""   "value"=""   }}=""`
+		expected := `{{ if eq .field "value" }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should handle extra spaces in corrupted syntax")
+	})
+
+	t.Run("EmptyCorruptedPattern", func(t *testing.T) {
+		input := `{{="" empty="" }}=""`
+		expected := `{{ empty }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should handle minimal corrupted pattern")
+	})
+
+	t.Run("PartiallyCorrupted", func(t *testing.T) {
+		input := `{{="" partial="" corruption with normal text`
+		expected := `{{="" partial="" corruption with normal text`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should not modify partially corrupted patterns that don't match full pattern")
+	})
+
+	t.Run("NonMatchingPattern", func(t *testing.T) {
+		input := `{{="" }}=""`    // This doesn't match because there's nothing between the quotes
+		expected := `{{="" }}=""` // Should remain unchanged
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should leave patterns that don't match regex unchanged")
+	})
+
+	t.Run("CorruptedFunctionCalls", func(t *testing.T) {
+		input := `{{="" call="" .method="" "arg1"="" "arg2"="" }}=""`
+		expected := `{{ call .method "arg1" "arg2" }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted function calls")
+	})
+
+	t.Run("CorruptedPipeOperations", func(t *testing.T) {
+		input := `{{="" .value="" |="" upper="" |="" printf="" "Value:="" %s"="" }}=""`
+		expected := `{{ .value | upper | printf "Value: %s" }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted pipe operations")
+	})
+
+	t.Run("CorruptedVariableAssignment", func(t *testing.T) {
+		input := `{{="" $var="" :="" .field="" }}="" {{="" $var="" }}=""`
+		expected := `{{ $var : .field }} {{ $var }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted variable assignment")
+	})
+
+	t.Run("ComplexRealWorldExample", func(t *testing.T) {
+		input := `<div class="user-card">
+		{{="" if="" .user="" }}=""
+			<h2>{{="" .user.name="" }}=""</h2>
+			<p>Email: {{="" .user.email="" }}=""</p>
+			{{="" if="" gt="" .user.age="" 18="" }}=""
+				<span class="adult">Adult</span>
+			{{="" else="" }}=""
+				<span class="minor">Minor</span>
+			{{="" end="" }}=""
+		{{="" end="" }}=""
+	</div>`
+		expected := `<div class="user-card">
+		{{ if .user }}
+			<h2>{{ .user.name }}</h2>
+			<p>Email: {{ .user.email }}</p>
+			{{ if gt .user.age 18 }}
+				<span class="adult">Adult</span>
+			{{ else }}
+				<span class="minor">Minor</span>
+			{{ end }}
+		{{ end }}
+	</div>`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix complex real-world corrupted template")
+	})
+
+	t.Run("CorruptedWithRange", func(t *testing.T) {
+		input := `{{="" range="" .items="" }}="" <li>{{="" .name="" }}=""</li> {{="" end="" }}=""`
+		expected := `{{ range .items }} <li>{{ .name }}</li> {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted range loops")
+	})
+
+	t.Run("CorruptedWithWith", func(t *testing.T) {
+		input := `{{="" with="" .user="" }}="" Hello {{="" .name="" }}=""! {{="" end="" }}=""`
+		expected := `{{ with .user }} Hello {{ .name }}! {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted with statements")
+	})
+
+	t.Run("LargeContent", func(t *testing.T) {
+		// Test performance with larger content - using regular syntax
+		var input strings.Builder
+		var expected strings.Builder
+
+		// Generate content with regular Go template syntax
+		for i := 0; i < 100; i++ {
+			line := fmt.Sprintf("<div>{{ if eq .field%d \"value\" }} Content {{ end }}</div>\n", i)
+			input.WriteString(line)
+			expected.WriteString(line) // Should remain unchanged
+		}
+
+		result := fixCorruptedGoTemplateSyntax(input.String())
+		require.Equal(t, expected.String(), result, "Should handle large content efficiently")
+	})
+
+	t.Run("CorruptedWithComments", func(t *testing.T) {
+		input := `{{="" /*="" comment="" */="" if="" .field="" }}="" content {{="" end="" }}=""`
+		expected := `{{ /* comment */ if .field }} content {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted syntax with comments")
+	})
+
+	t.Run("EdgeCaseEmptyParts", func(t *testing.T) {
+		// Test with content that doesn't match the regex pattern
+		input := `{{=""=""=""=""}}=""`
+		expected := `{{=""=""=""=""}}=""` // Should remain unchanged since it doesn't match the regex
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should leave non-matching patterns unchanged")
+	})
+
+	t.Run("CorruptedWithDefine", func(t *testing.T) {
+		input := `{{="" define="" "template-name"="" }}="" content {{="" end="" }}=""`
+		expected := `{{ define "template-name" }} content {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted define statements")
+	})
+
+	t.Run("CorruptedWithTemplate", func(t *testing.T) {
+		input := `{{="" template="" "partial"="" .data="" }}=""`
+		expected := `{{ template "partial" .data }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted template includes")
+	})
+
+	t.Run("CorruptedWithBlock", func(t *testing.T) {
+		input := `{{="" block="" "main"="" .="" }}="" default content {{="" end="" }}=""`
+		expected := `{{ block "main" . }} default content {{ end }}`
+		result := fixCorruptedGoTemplateSyntax(input)
+		require.Equal(t, expected, result, "Should fix corrupted block statements")
 	})
 }

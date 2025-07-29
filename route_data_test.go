@@ -3,6 +3,8 @@ package fir
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestData struct {
@@ -61,4 +63,155 @@ func TestBuildData(t *testing.T) {
 		t.Errorf("Expected error value %v, got: %v", data, *rs.stateData)
 	}
 
+}
+
+func TestRouteData_Error(t *testing.T) {
+	testCases := []struct {
+		name     string
+		data     routeData
+		expected string
+	}{
+		{
+			name:     "empty route data",
+			data:     routeData{},
+			expected: "{}",
+		},
+		{
+			name: "simple route data",
+			data: routeData{
+				"message": "Hello World",
+				"count":   42,
+			},
+			expected: `{"count":42,"message":"Hello World"}`,
+		},
+		{
+			name: "route data with nil values",
+			data: routeData{
+				"nullable": nil,
+				"value":    "not null",
+			},
+			expected: `{"nullable":null,"value":"not null"}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.data.Error()
+			assert.NotEmpty(t, result)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestStateData_Error(t *testing.T) {
+	testCases := []struct {
+		name     string
+		data     stateData
+		expected string
+	}{
+		{
+			name:     "empty state data",
+			data:     stateData{},
+			expected: "{}",
+		},
+		{
+			name: "simple state data",
+			data: stateData{
+				"status":  "active",
+				"counter": 10,
+			},
+			expected: `{"counter":10,"status":"active"}`,
+		},
+		{
+			name: "state data with mixed types",
+			data: stateData{
+				"string":  "value",
+				"number":  123,
+				"boolean": false,
+			},
+			expected: `{"boolean":false,"number":123,"string":"value"}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.data.Error()
+			assert.NotEmpty(t, result)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestRouteDataWithState_ErrorMethods(t *testing.T) {
+	// Test the routeDataWithState struct creation and usage
+	routeData := &routeData{
+		"page":  "home",
+		"title": "Welcome",
+	}
+
+	stateData := &stateData{
+		"loading": true,
+		"user_id": 123,
+	}
+
+	combined := routeDataWithState{
+		routeData: routeData,
+		stateData: stateData,
+	}
+
+	// Test that both data structures are accessible
+	assert.NotNil(t, combined.routeData)
+	assert.NotNil(t, combined.stateData)
+
+	// Test that Error methods work on both
+	routeError := combined.routeData.Error()
+	stateError := combined.stateData.Error()
+
+	assert.Contains(t, routeError, "page")
+	assert.Contains(t, routeError, "title")
+	assert.Contains(t, stateError, "loading")
+	assert.Contains(t, stateError, "user_id")
+
+	// Test the combined Error method
+	combinedError := combined.Error()
+	assert.Contains(t, combinedError, "routeData:")
+	assert.Contains(t, combinedError, "stateData:")
+	assert.Contains(t, combinedError, "page")
+	assert.Contains(t, combinedError, "loading")
+}
+
+func TestRouteDataWithState_Error(t *testing.T) {
+	routeData := &routeData{
+		"status": "success",
+		"count":  42,
+	}
+
+	stateData := &stateData{
+		"active": true,
+		"mode":   "test",
+	}
+
+	combined := routeDataWithState{
+		routeData: routeData,
+		stateData: stateData,
+	}
+
+	result := combined.Error()
+
+	// Should contain the formatted string with both parts
+	assert.Contains(t, result, "routeData:")
+	assert.Contains(t, result, "stateData:")
+
+	// Should contain data from both routeData and stateData
+	assert.Contains(t, result, "status")
+	assert.Contains(t, result, "success")
+	assert.Contains(t, result, "count")
+	assert.Contains(t, result, "42")
+	assert.Contains(t, result, "active")
+	assert.Contains(t, result, "true")
+	assert.Contains(t, result, "mode")
+	assert.Contains(t, result, "test")
+
+	// Should have the specific format with newline separator
+	assert.Contains(t, result, "\n")
 }

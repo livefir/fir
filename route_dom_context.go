@@ -20,11 +20,13 @@ func newFirFuncMap(ctx RouteContext, errs map[string]any) template.FuncMap {
 func newRouteDOMContext(ctx RouteContext, errs map[string]any) *RouteDOMContext {
 	var urlPath string
 	var name string
+	var development bool
 	if ctx.request != nil {
 		urlPath = ctx.request.URL.Path
 	}
 	if ctx.route != nil {
 		name = ctx.route.appName
+		development = ctx.route.developmentMode
 	}
 	if errs == nil {
 		errs = make(map[string]any)
@@ -32,7 +34,7 @@ func newRouteDOMContext(ctx RouteContext, errs map[string]any) *RouteDOMContext 
 	return &RouteDOMContext{
 		URLPath:     urlPath,
 		Name:        name,
-		Development: ctx.route.developmentMode,
+		Development: development,
 		errors:      errs,
 	}
 }

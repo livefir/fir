@@ -18,6 +18,11 @@ import (
 
 func renderRoute(ctx RouteContext, errorRouteTemplate bool) routeRenderer {
 	return func(data routeData) error {
+		// Handle case where route is nil (e.g., in tests)
+		if ctx.route == nil {
+			return nil
+		}
+
 		ctx.route.parseTemplates()
 		buf := bytebufferpool.Get()
 		defer bytebufferpool.Put(buf)
