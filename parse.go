@@ -416,8 +416,6 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 					continue // Let this pass through to Alpine.js
 				}
 
-				attrsToRemove[i] = struct{}{} // Mark original attribute for removal
-
 				// Use ParseActionExpression from translate package to parse the base key
 				actionName, params, err := translate.ParseActionExpression(baseAttrKey)
 				if err != nil {
@@ -443,29 +441,41 @@ func processRenderAttributes(content []byte) ([]byte, error) {
 					}
 				}
 
-				if found {
-					// If this is a js handler, collect the JavaScript value
-					if actionName == "js" && len(params) > 0 {
-						actionKey := params[0]
-						if actionKey != "" {
-							actionsMap[actionKey] = attr.Val
-						}
-					}
-				}
-
 				if !found {
 					traverseErr = fmt.Errorf("no registered handler found for action name: '%s' (from key %s)", actionName, attr.Key)
 					return // Stop processing this node on error
 				}
 
-				// Store handler and parsed info
-				info := actions.ActionInfo{
-					AttrName:   attr.Key,
-					ActionName: actionName, // Store the specific parsed name (e.g., "refresh", "action-doSave")
-					Params:     params,
-					Value:      attr.Val,
+				// Check if auto-extraction is enabled for this action
+				shouldAutoExtract := true
+				if autoExtractEnabled, ok := handler.(actions.AutoExtractTemplateEnabled); ok {
+					shouldAutoExtract = autoExtractEnabled.AutoExtractTemplateEnabled()
 				}
-				collectedActions = append(collectedActions, actions.CollectedAction{Handler: handler, Info: info})
+
+				// Only mark for removal and processing if auto-extraction is enabled
+				if shouldAutoExtract {
+					attrsToRemove[i] = struct{}{} // Mark original attribute for removal
+
+					if found {
+						// If this is a js handler, collect the JavaScript value
+						if actionName == "js" && len(params) > 0 {
+							actionKey := params[0]
+							if actionKey != "" {
+								actionsMap[actionKey] = attr.Val
+							}
+						}
+					}
+
+					// Store handler and parsed info
+					info := actions.ActionInfo{
+						AttrName:   attr.Key,
+						ActionName: actionName, // Store the specific parsed name (e.g., "refresh", "action-doSave")
+						Params:     params,
+						Value:      attr.Val,
+					}
+					collectedActions = append(collectedActions, actions.CollectedAction{Handler: handler, Info: info})
+				}
+				// If shouldAutoExtract is false, the attribute remains in its original form
 			}
 
 			// Keep attributes that are not being removed initially
