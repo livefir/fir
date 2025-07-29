@@ -581,19 +581,19 @@ func TestProcessRenderAttributes(t *testing.T) {
 		{
 			name:         "Multiple actions with different expressions (3)",
 			inputHTML:    `<div x-fir-remove="c" x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove</div>`,
-			expectedHTML: `<div @fir:c:ok="$fir.removeEl()" @fir:d:ok="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove</div>`, // All actions auto-extracted
+			expectedHTML: `<div @fir:c:ok="$fir.removeEl()" @fir:d:ok="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions with different expressions (4)",
 			inputHTML:    `<div x-fir-remove-parent="d" x-fir-append:t1="e" x-fir-prepend:t2="f">Remove Parent</div>`,
-			expectedHTML: `<div @fir:d:ok="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove Parent</div>`, // All actions auto-extracted
+			expectedHTML: `<div @fir:d:ok="$fir.removeParentEl()" @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Remove Parent</div>`, // All actions processed
 			wantErr:      false,
 		},
 		{
 			name:         "Multiple actions with different expressions (5)",
 			inputHTML:    `<div x-fir-append:t1="e" x-fir-prepend:t2="f">Append</div>`,
-			expectedHTML: `<div @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Append</div>`, // Both actions auto-extracted
+			expectedHTML: `<div @fir:e:ok::t1="$fir.appendEl()" @fir:f:ok::t2="$fir.prependEl()">Append</div>`, // Both actions processed
 			wantErr:      false,
 		},
 		// --- Duplicate translated expression filtering test ---

@@ -29,12 +29,6 @@ type ActionHandler interface {
 	Translate(info ActionInfo, actionsMap map[string]string) (string, error)
 }
 
-// AutoExtractTemplateEnabled interface allows action handlers to control whether
-// they should trigger automatic template extraction when no explicit template is provided.
-type AutoExtractTemplateEnabled interface {
-	AutoExtractTemplateEnabled() bool
-}
-
 // actionRegistry holds registered action handlers.
 var actionRegistry = make(map[string]ActionHandler)
 
@@ -62,9 +56,8 @@ func GetActionRegistry() map[string]ActionHandler {
 // RefreshActionHandler handles x-fir-refresh
 type RefreshActionHandler struct{}
 
-func (h *RefreshActionHandler) Name() string                     { return "refresh" }
-func (h *RefreshActionHandler) Precedence() int                  { return 20 }
-func (h *RefreshActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *RefreshActionHandler) Name() string    { return "refresh" }
+func (h *RefreshActionHandler) Precedence() int { return 20 }
 func (h *RefreshActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("refresh")
 	return translate.TranslateEventExpression(info.Value, "$fir.replace()", "")
@@ -73,9 +66,8 @@ func (h *RefreshActionHandler) Translate(info ActionInfo, actionsMap map[string]
 // RemoveActionHandler handles x-fir-remove
 type RemoveActionHandler struct{}
 
-func (h *RemoveActionHandler) Name() string                     { return "remove" }
-func (h *RemoveActionHandler) Precedence() int                  { return 30 }
-func (h *RemoveActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *RemoveActionHandler) Name() string    { return "remove" }
+func (h *RemoveActionHandler) Precedence() int { return 30 }
 func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove")
 	return translate.TranslateEventExpression(info.Value, "$fir.removeEl()", "")
@@ -84,9 +76,8 @@ func (h *RemoveActionHandler) Translate(info ActionInfo, actionsMap map[string]s
 // AppendActionHandler handles x-fir-append:target
 type AppendActionHandler struct{}
 
-func (h *AppendActionHandler) Name() string                     { return "append" } // Base name
-func (h *AppendActionHandler) Precedence() int                  { return 50 }
-func (h *AppendActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *AppendActionHandler) Name() string    { return "append" } // Base name
+func (h *AppendActionHandler) Precedence() int { return 50 }
 func (h *AppendActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// Use the first parameter as template if provided, otherwise use empty string to allow extracted template
 	templateValue := ""
@@ -101,9 +92,8 @@ func (h *AppendActionHandler) Translate(info ActionInfo, actionsMap map[string]s
 // PrependActionHandler handles x-fir-prepend:target
 type PrependActionHandler struct{}
 
-func (h *PrependActionHandler) Name() string                     { return "prepend" } // Base name
-func (h *PrependActionHandler) Precedence() int                  { return 60 }
-func (h *PrependActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *PrependActionHandler) Name() string    { return "prepend" } // Base name
+func (h *PrependActionHandler) Precedence() int { return 60 }
 func (h *PrependActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// Use the first parameter as template if provided, otherwise use empty string to allow extracted template
 	templateValue := ""
@@ -118,9 +108,8 @@ func (h *PrependActionHandler) Translate(info ActionInfo, actionsMap map[string]
 // RemoveParentActionHandler handles x-fir-remove-parent
 type RemoveParentActionHandler struct{}
 
-func (h *RemoveParentActionHandler) Name() string                     { return "remove-parent" }
-func (h *RemoveParentActionHandler) Precedence() int                  { return 40 }
-func (h *RemoveParentActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *RemoveParentActionHandler) Name() string    { return "remove-parent" }
+func (h *RemoveParentActionHandler) Precedence() int { return 40 }
 func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action name ("remove-parent")
 	// Assuming the JS function is $fir.removeParentEl()
@@ -130,9 +119,8 @@ func (h *RemoveParentActionHandler) Translate(info ActionInfo, actionsMap map[st
 // ResetActionHandler handles x-fir-reset
 type ResetActionHandler struct{}
 
-func (h *ResetActionHandler) Name() string                     { return "reset" }
-func (h *ResetActionHandler) Precedence() int                  { return 35 }
-func (h *ResetActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *ResetActionHandler) Name() string    { return "reset" }
+func (h *ResetActionHandler) Precedence() int { return 35 }
 func (h *ResetActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// TranslateEventExpression needs the value and the action
 	// For reset, we use $el.reset()
@@ -142,9 +130,8 @@ func (h *ResetActionHandler) Translate(info ActionInfo, actionsMap map[string]st
 // ToggleDisabledActionHandler handles x-fir-toggle-disabled
 type ToggleDisabledActionHandler struct{}
 
-func (h *ToggleDisabledActionHandler) Name() string                     { return "toggle-disabled" }
-func (h *ToggleDisabledActionHandler) Precedence() int                  { return 34 }
-func (h *ToggleDisabledActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *ToggleDisabledActionHandler) Name() string    { return "toggle-disabled" }
+func (h *ToggleDisabledActionHandler) Precedence() int { return 34 }
 func (h *ToggleDisabledActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// For toggle-disabled, we use $fir.toggleDisabled()
 	// The toggleDisabled function automatically handles enabling/disabling based on event state
@@ -154,9 +141,8 @@ func (h *ToggleDisabledActionHandler) Translate(info ActionInfo, actionsMap map[
 // ToggleClassActionHandler handles x-fir-toggleClass:class or x-fir-toggleClass:[class1,class2]
 type ToggleClassActionHandler struct{}
 
-func (h *ToggleClassActionHandler) Name() string                     { return "toggleClass" }
-func (h *ToggleClassActionHandler) Precedence() int                  { return 33 }
-func (h *ToggleClassActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *ToggleClassActionHandler) Name() string    { return "toggleClass" }
+func (h *ToggleClassActionHandler) Precedence() int { return 33 }
 func (h *ToggleClassActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	var classNames []string
 
@@ -183,9 +169,8 @@ func (h *ToggleClassActionHandler) Translate(info ActionInfo, actionsMap map[str
 // DispatchActionHandler handles x-fir-dispatch:[param1,param2,...]
 type DispatchActionHandler struct{}
 
-func (h *DispatchActionHandler) Name() string                     { return "dispatch" }
-func (h *DispatchActionHandler) Precedence() int                  { return 33 }
-func (h *DispatchActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *DispatchActionHandler) Name() string    { return "dispatch" }
+func (h *DispatchActionHandler) Precedence() int { return 33 }
 func (h *DispatchActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// Check that we have parameters for dispatch
 	if len(info.Params) == 0 {
@@ -248,9 +233,8 @@ func (h *DispatchActionHandler) extractTemplate(input string) (string, error) {
 // TriggerActionHandler handles x-fir-runjs:actionName
 type TriggerActionHandler struct{}
 
-func (h *TriggerActionHandler) Name() string                     { return "runjs" }
-func (h *TriggerActionHandler) Precedence() int                  { return 32 }
-func (h *TriggerActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *TriggerActionHandler) Name() string    { return "runjs" }
+func (h *TriggerActionHandler) Precedence() int { return 32 }
 func (h *TriggerActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// Check that we have parameters for runjs (the action name)
 	if len(info.Params) == 0 {
@@ -293,9 +277,8 @@ func (h *ActionPrefixHandler) Translate(info ActionInfo, actionsMap map[string]s
 // RedirectActionHandler handles x-fir-redirect
 type RedirectActionHandler struct{}
 
-func (h *RedirectActionHandler) Name() string                     { return "redirect" }
-func (h *RedirectActionHandler) Precedence() int                  { return 90 } // Higher precedence than js actions
-func (h *RedirectActionHandler) AutoExtractTemplateEnabled() bool { return true }
+func (h *RedirectActionHandler) Name() string    { return "redirect" }
+func (h *RedirectActionHandler) Precedence() int { return 90 } // Higher precedence than js actions
 func (h *RedirectActionHandler) Translate(info ActionInfo, actionsMap map[string]string) (string, error) {
 	// Extract URL from first parameter, default to '/' if not provided
 	var url = "'/'"
