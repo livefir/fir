@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Actions Test</title>
+        <script defer src="/cdn.js"></script>
+        <script
+            defer
+            src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <style>
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+            }
+            .section {
+                margin: 20px 0;
+                padding: 15px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+            .button {
+                padding: 8px 16px;
+                margin: 5px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+            }
+            .button:hover {
+                background: #0056b3;
+            }
+            .button:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+            }
+            .item {
+                padding: 5px;
+                margin: 2px 0;
+                background: #f8f9fa;
+                border-radius: 3px;
+            }
+            .prepended {
+                background: #d4edda;
+            }
+            .highlight {
+                background: #fff3cd;
+            }
+            .remove-target {
+                padding: 10px;
+                background: #f8d7da;
+                margin: 5px 0;
+            }
+            .input {
+                padding: 8px;
+                margin: 5px;
+                border: 1px solid #ddd;
+                border-radius: 3px;
+            }
+            .message {
+                padding: 10px;
+                background: #d1ecf1;
+                border-radius: 3px;
+                margin: 10px 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div x-data class="container">
+            <h1>Fir Actions Test Suite</h1>
+
+            <!-- Connection Status Indicator -->
+            <div id="connection-status" class="section">
+                <h3>Connection Status</h3>
+                <span
+                    x-text="window.$fir && window.$fir.ws && window.$fir.ws.readyState === 1 ? 'WebSocket Connected' : 'HTTP Mode'"></span>
+            </div>
+
+            <div id="main-content">
+                <!-- Message Display -->
+                <div
+                    id="message-display"
+                    class="message"
+                    x-fir-refresh="dispatch-event,js-action,form-submit">
+                    {{ .message }}
+                </div>
+
+                <!-- Counter Section (refresh action) -->
+                <div class="section">
+                    <h2>Counter (Refresh Action)</h2>
+                    <div
+                        id="counter-display"
+                        x-fir-refresh="increment,decrement,reset">
+                        Count:
+                        {{ .counter }}
+                    </div>
+                    <form method="post" @submit.prevent="$fir.submit()">
+                        <button
+                            class="button"
+                            formaction="/?event=increment"
+                            type="submit">
+                            Increment
+                        </button>
+                        <button
+                            class="button"
+                            formaction="/?event=decrement"
+                            type="submit">
+                            Decrement
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Reset Action -->
+                <div class="section">
+                    <h2>Reset Action</h2>
+                    <form
+                        method="post"
+                        x-fir-reset="reset"
+                        @submit.prevent="$fir.submit()">
+                        <input
+                            class="input"
+                            name="test_input"
+                            placeholder="Type something..." />
+
+                        <button
+                            class="button"
+                            formaction="/?event=reset"
+                            type="submit">
+                            Trigger Reset Action
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Toggle Disabled Action -->
+                <div class="section" id="form-section">
+                    <h2>Toggle Disabled Action</h2>
+                    <p>
+                        This tests toggling the disabled state of form elements
+                    </p>
+                    <form method="post" @submit.prevent="$fir.submit()">
+                        <input
+                            class="input"
+                            id="toggle-input"
+                            placeholder="This input gets toggled"
+                            {{if .isDisabled}}disabled{{end}}
+                            x-fir-refresh="toggle-disabled" />
+                        <button
+                            class="button"
+                            formaction="/?event=toggle-disabled"
+                            type="submit">
+                            Toggle Input Disabled State
+                        </button>
+                    </form>
+                    <p>
+                        Click the button to toggle the input's disabled state.
+                        Current state:
+                        {{if .isDisabled}}Disabled{{else}}Enabled{{end}}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Append Action -->
+            <div class="section">
+                <h2>Append Action</h2>
+                <ul id="append-items-list" x-fir-append:item1="add-item">
+                    {{ range .appendItems }}
+                        {{ block "item1" . }}
+                            <li class="item">{{ . }}</li>
+                        {{ end }}
+                    {{ end }}
+                </ul>
+                <form method="post" @submit.prevent="$fir.submit()">
+                    <button
+                        class="button"
+                        formaction="/?event=add-item"
+                        type="submit">
+                        Add Item (Append)
+                    </button>
+                </form>
+            </div>
+
+            <!-- Prepend Action -->
+            <div class="section">
+                <h2>Prepend Action</h2>
+                <ul id="prepend-items-list" x-fir-prepend:item2="prepend-item">
+                    {{ range .prependItems }}
+                        {{ block "item2" . }}
+                            <li class="item prepended">{{ . }}</li>
+                        {{ end }}
+                    {{ end }}
+                </ul>
+                <form method="post" @submit.prevent="$fir.submit()">
+                    <button
+                        class="button"
+                        formaction="/?event=prepend-item"
+                        type="submit">
+                        Add Item (Prepend)
+                    </button>
+                </form>
+            </div>
+            <!-- Remove Actions -->
+            <div class="section">
+                <h2>Remove Actions</h2>
+                <div class="remove-target">
+                    <p>Click the button below to remove this element</p>
+                    <form method="post" @submit.prevent="$fir.submit()">
+                        <button
+                            class="button"
+                            formaction="/?event=remove-item"
+                            type="submit"
+                            x-fir-remove="remove-item">
+                            Remove This Element
+                        </button>
+                    </form>
+                </div>
+
+                <div class="remove-target">
+                    <p>
+                        This element will be removed when its child button is
+                        clicked (remove-parent)
+                    </p>
+                    <div id="removed-element">
+                        <form method="post" @submit.prevent="$fir.submit()">
+                            <button
+                                class="button"
+                                formaction="/?event=remove-parent"
+                                type="submit"
+                                x-fir-remove-parent="remove-parent">
+                                Remove Parent Element
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggle Class Action -->
+            <div class="section">
+                <h2>Toggle Class Action</h2>
+                <div
+                    id="toggle-target"
+                    class="{{if .highlightActive}}highlight{{end}}"
+                    x-fir-toggleClass:[highlight]="toggle-highlight">
+                    <p>This text should toggle highlight class</p>
+                    <form method="post" @submit.prevent="$fir.submit()">
+                        <button
+                            class="button"
+                            formaction="/?event=toggle-highlight"
+                            type="submit">
+                            Toggle Highlight
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- Dispatch Action -->
+            <div class="section">
+                <h2>Dispatch Action</h2>
+                <form method="post" @submit.prevent="$fir.submit()">
+                    <button
+                        class="button"
+                        formaction="/?event=dispatch-event"
+                        type="submit"
+                        x-fir-dispatch:[custom-event,test-data]="dispatch-event"
+                        @custom-event="console.log('Received custom event:', $event.detail); window.lastDispatchEvent = $event;">
+                        Dispatch Custom Event
+                    </button>
+                </form>
+                <p>Check browser console for dispatched event details</p>
+            </div>
+
+            <!-- JavaScript Action -->
+            <div class="section">
+                <h2>JavaScript Action</h2>
+                <form method="post" @submit.prevent="$fir.submit()">
+                    <button
+                        class="button"
+                        formaction="/?event=js-action"
+                        type="submit"
+                        x-fir-js:jsTest="console.log('JS Action executed')"
+                        x-fir-runjs:jsTest="js-action">
+                        Run JavaScript Action
+                    </button>
+                </form>
+            </div>
+
+            <!-- Redirect Action -->
+            <div class="section">
+                <h2>Redirect Action</h2>
+                <form method="post" @submit.prevent="$fir.submit()">
+                    <button
+                        class="button"
+                        formaction="/?event=redirect-action"
+                        type="submit"
+                        x-fir-redirect:[redirected]="redirect-action">
+                        Redirect to /redirected
+                    </button>
+                </form>
+                <p>
+                    Note: This will redirect to a non-existent page for testing
+                    purposes
+                </p>
+            </div>
+        </div>
+    </body>
+</html>

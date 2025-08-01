@@ -25,6 +25,9 @@ import { createFirMagicFunctions } from './magicFunctions'
 
 // Main Alpine Plugin Function
 const Plugin = (Alpine) => {
+    // Initialize global $fir object
+    window.$fir = window.$fir || {}
+
     // Initialize WebSocket connection asynchronously
     let socket = null
     setupWebSocketConnection(
@@ -35,12 +38,15 @@ const Plugin = (Alpine) => {
     )
         .then((wsInstance) => {
             socket = wsInstance
+            // Expose WebSocket instance globally for connection status checking
+            window.$fir.ws = socket
             if (socket) {
                 console.log('WebSocket connection established.')
             }
         })
         .catch((err) => {
             console.error('WebSocket setup failed:', err)
+            window.$fir.ws = null
         })
 
     // Global event listener for reloads

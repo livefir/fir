@@ -74,6 +74,15 @@ Here Fir automatically extracts a template out of the content of `p`tag. Under t
 - pending: client-only for loader states. triggered before the Event is sent to the server.
 - done: client-only for loader states. triggered on both ok and error response from the server.
 
+#### Transport Layer
+
+The Fir plugin supports two transport mechanisms with automatic fallback:
+
+- **WebSocket Mode (Enhanced)**: Events are sent via WebSocket connection when available, providing real-time bidirectional communication
+- **HTTP Mode (Fallback)**: Events are sent via Ajax/fetch requests with `X-FIR-MODE: 'event'` header when WebSocket is unavailable
+
+Both modes prevent traditional form submission when using `@submit.prevent="$fir.submit()"` and result in DOM updates without page reloads. The same `x-fir-*` attributes and server-side event handlers work identically in both modes.
+
 
 ### Directives
 
@@ -81,6 +90,7 @@ Here Fir automatically extracts a template out of the content of `p`tag. Under t
 alpine directive. It allows you to observe changes to the DOM and react to them.
 
 **Available modifiers:**
+
 - `.child-list` - Monitor for addition/removal of child nodes
 - `.attributes` - Monitor for attribute value changes  
 - `.subtree` - Extend monitoring to entire subtree

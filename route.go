@@ -305,6 +305,7 @@ func writeEventHTTP(ctx RouteContext, event pubsub.Event) error {
 		logger.Errorf("error marshaling patch: %v", err)
 		return err
 	}
+	ctx.response.Header().Set("Content-Type", "application/json")
 	ctx.response.Write(eventsData)
 	return nil
 }

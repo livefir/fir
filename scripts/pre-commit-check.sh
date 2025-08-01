@@ -193,10 +193,16 @@ run_chrome_tests() {
         if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
             log "Using Docker Chrome (default approach)"
             
-            # Check if chrome container is already running
-            if ! docker ps | grep -q "chrome-test"; then
-                log "Starting Chrome Docker container..."
-                if docker run --rm -d --name chrome-test -p 9222:9222 chromedp/headless-shell:latest >/dev/null 2>&1; then
+            # Clean up any existing chrome-test container (running or stopped)
+            if docker ps -a | grep -q "chrome-test"; then
+                log "Cleaning up existing chrome-test container..."
+                docker stop chrome-test >/dev/null 2>&1 || true
+                docker rm chrome-test >/dev/null 2>&1 || true
+            fi
+            
+            # Start fresh Chrome Docker container
+            log "Starting Chrome Docker container..."
+            if docker run --rm -d --name chrome-test -p 9222:9222 chromedp/headless-shell:latest >/dev/null 2>&1; then
                     # Wait for Chrome to be ready
                     log "Waiting for Chrome container to be ready..."
                     sleep 3
@@ -219,15 +225,6 @@ run_chrome_tests() {
                 else
                     warning "Failed to start Chrome Docker container"
                 fi
-            else
-                log "Chrome container already running - running tests"
-                if CHROME_REMOTE_URL=ws://localhost:9222 run_test "Chrome Tests (Docker)" \
-                                                                  "go test -timeout=2m ./examples/e2e/" \
-                                                                  "Chrome tests passed with Docker" \
-                                                                  "Chrome tests failed with Docker"; then
-                    return 0
-                fi
-            fi
         else
             warning "Docker not available for Chrome testing"
         fi
@@ -630,6 +627,14 @@ main() {
             
             # Create array of example directories (excluding unwanted examples)
             EXAMPLE_DIRS=()
+            
+            # Check the main examples directory first (central runner)
+            if [ -f "examples/main.go" ]; then
+                EXAMPLE_DIRS+=("examples/")
+                log "Found central examples runner: examples/main.go"
+            fi
+            
+            # Check individual example directories  
             for example_dir in examples/*/; do
                 example_name=$(basename "$example_dir")
                 # Skip unwanted examples

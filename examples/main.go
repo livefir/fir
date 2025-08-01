@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	actionstest "github.com/livefir/fir/examples/actions-test"
 	"github.com/livefir/fir/examples/autocomplete"
 	"github.com/livefir/fir/examples/chirper"
 	"github.com/livefir/fir/examples/counter"
@@ -41,6 +42,8 @@ func main() {
 		11: {"Routing", routing.Run},
 		12: {"Search", search.Run},
 		13: {"Todo", todo.Run},
+		14: {"Actions Test (WebSocket Enabled)", actionstest.Run},
+		15: {"Actions Test (HTTP-Only Mode)", actionstest.RunHTTPOnly},
 	}
 
 	fmt.Println("Available Fir Examples:")

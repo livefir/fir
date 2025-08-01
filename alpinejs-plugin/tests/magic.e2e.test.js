@@ -369,18 +369,25 @@ describe('Alpine.js $fir Magic E2E Tests', () => {
             <div x-data>
                 <button id="myBtn"
                     @click="$fir.emit('process')"
-                    @fir:process:pending.window="$fir.toggleDisabled()"
-                    @fir:process:done.window="$fir.toggleDisabled()">
+                    @fir:process:start.window="$fir.toggleDisabled()"
+                    @fir:process:complete.window="$fir.toggleDisabled()">
                     Process
                 </button>
             </div>
         `
         await Alpine.nextTick()
         const button = document.getElementById('myBtn')
-        dispatch('fir:process:pending', {})
+
+        // Initially enabled
+        expect(button.hasAttribute('disabled')).toBe(false)
+
+        // First toggle - should disable
+        dispatch('fir:process:start', {})
         await Alpine.nextTick()
         expect(button.hasAttribute('disabled')).toBe(true)
-        dispatch('fir:process:done', {})
+
+        // Second toggle - should enable
+        dispatch('fir:process:complete', {})
         await Alpine.nextTick()
         expect(button.hasAttribute('disabled')).toBe(false)
     })

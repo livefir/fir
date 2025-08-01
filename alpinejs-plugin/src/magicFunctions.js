@@ -104,21 +104,13 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
                 return
             }
 
-            // Extract state from the event type
-            const eventParts = event.type.split(':')
-            const state = eventParts.length >= 3 ? eventParts[2] : ''
-
-            // Determine if we should disable based on the state
-            // Disable on 'pending', enable on 'ok', 'error', 'done'
-            const shouldDisable = state === 'pending'
-
-            // Apply the disabled state
-            if (shouldDisable) {
-                el.setAttribute('disabled', '')
-                el.setAttribute('aria-disabled', 'true')
-            } else {
+            // Toggle the disabled state
+            if (el.disabled) {
                 el.removeAttribute('disabled')
                 el.removeAttribute('aria-disabled')
+            } else {
+                el.setAttribute('disabled', '')
+                el.setAttribute('aria-disabled', 'true')
             }
         }
     }
@@ -132,14 +124,6 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
                 return
             }
 
-            // Extract state from the event type
-            const eventParts = event.type.split(':')
-            const state = eventParts.length >= 3 ? eventParts[2] : ''
-
-            // Toggle classes based on the state
-            // Add classes on 'pending', remove on 'ok', 'error', 'done'
-            const shouldAddClasses = state === 'pending'
-
             classNames.forEach((className) => {
                 if (typeof className !== 'string') {
                     console.error(
@@ -148,11 +132,8 @@ export const createFirMagicFunctions = (el, Alpine, postFn) => {
                     return
                 }
 
-                if (shouldAddClasses) {
-                    el.classList.add(className)
-                } else {
-                    el.classList.remove(className)
-                }
+                // Always toggle the class regardless of event state
+                el.classList.toggle(className)
             })
         }
     }

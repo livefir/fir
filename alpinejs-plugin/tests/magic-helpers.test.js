@@ -86,7 +86,7 @@ describe('Fir Magic Helpers', () => {
     })
 
     describe('toggleDisabled() helper', () => {
-        test('should disable element on pending state event', () => {
+        test('should toggle disabled state from enabled to disabled', () => {
             // Setup
             const button = document.createElement('button')
             document.body.appendChild(button)
@@ -99,15 +99,18 @@ describe('Fir Magic Helpers', () => {
             )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
-            // Call the function with a pending event
-            toggleDisabledFn({ type: 'fir:action:pending' })
+            // Initial state should be enabled
+            expect(button.hasAttribute('disabled')).toBe(false)
 
-            // Assert
+            // Call the function to toggle to disabled
+            toggleDisabledFn({ type: 'fir:action:any' })
+
+            // Assert it's now disabled
             expect(button.hasAttribute('disabled')).toBe(true)
             expect(button.getAttribute('aria-disabled')).toBe('true')
         })
 
-        test('should enable element on ok state event', () => {
+        test('should toggle disabled state from disabled to enabled', () => {
             // Setup
             const button = document.createElement('button')
             button.setAttribute('disabled', '')
@@ -122,10 +125,13 @@ describe('Fir Magic Helpers', () => {
             )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
-            // Call the function with an ok event
-            toggleDisabledFn({ type: 'fir:action:ok' })
+            // Initial state should be disabled
+            expect(button.hasAttribute('disabled')).toBe(true)
 
-            // Assert
+            // Call the function to toggle to enabled
+            toggleDisabledFn({ type: 'fir:action:any' })
+
+            // Assert it's now enabled
             expect(button.hasAttribute('disabled')).toBe(false)
             expect(button.hasAttribute('aria-disabled')).toBe(false)
         })
@@ -208,7 +214,7 @@ describe('Fir Magic Helpers', () => {
     })
 
     describe('toggleDisabled() edge cases', () => {
-        test('should not change state for non-standard event states', () => {
+        test('should always toggle regardless of event type', () => {
             const button = document.createElement('button')
             document.body.appendChild(button)
             const magicFunctions = createFirMagicFunctions(
@@ -218,19 +224,18 @@ describe('Fir Magic Helpers', () => {
             )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
-            // Call with an unknown state
-            toggleDisabledFn({ type: 'fir:action:unknown' })
+            // Initially enabled, should toggle to disabled
             expect(button.hasAttribute('disabled')).toBe(false)
+            toggleDisabledFn({ type: 'fir:action:unknown' })
+            expect(button.hasAttribute('disabled')).toBe(true)
 
-            // Call with 'done' state (should enable)
-            button.setAttribute('disabled', '')
+            // Now disabled, should toggle to enabled regardless of event type
             toggleDisabledFn({ type: 'fir:action:done' })
             expect(button.hasAttribute('disabled')).toBe(false)
 
-            // Call with 'error' state (should enable)
-            button.setAttribute('disabled', '')
+            // Toggle again with different event type
             toggleDisabledFn({ type: 'fir:action:error' })
-            expect(button.hasAttribute('disabled')).toBe(false)
+            expect(button.hasAttribute('disabled')).toBe(true)
         })
     })
 
@@ -497,7 +502,7 @@ describe('Fir Magic Helpers', () => {
     })
 
     describe('toggleClass() helper', () => {
-        test('should add classes on pending state', () => {
+        test('should toggle classes when element does not have them', () => {
             // Setup
             const div = document.createElement('div')
             document.body.appendChild(div)
@@ -513,15 +518,19 @@ describe('Fir Magic Helpers', () => {
                 'active'
             )
 
-            // Call with pending event
-            toggleClassFn({ type: 'fir:action:pending' })
+            // Initial state - no classes
+            expect(div.classList.contains('loading')).toBe(false)
+            expect(div.classList.contains('active')).toBe(false)
+
+            // Call toggle function
+            toggleClassFn({ type: 'fir:action:any' })
 
             // Assert classes were added
             expect(div.classList.contains('loading')).toBe(true)
             expect(div.classList.contains('active')).toBe(true)
         })
 
-        test('should remove classes on ok state', () => {
+        test('should toggle classes when element already has them', () => {
             // Setup
             const div = document.createElement('div')
             div.classList.add('loading', 'active')
@@ -538,17 +547,21 @@ describe('Fir Magic Helpers', () => {
                 'active'
             )
 
-            // Call with ok event
-            toggleClassFn({ type: 'fir:action:ok' })
+            // Initial state - has classes
+            expect(div.classList.contains('loading')).toBe(true)
+            expect(div.classList.contains('active')).toBe(true)
+
+            // Call toggle function
+            toggleClassFn({ type: 'fir:action:any' })
 
             // Assert classes were removed
             expect(div.classList.contains('loading')).toBe(false)
             expect(div.classList.contains('active')).toBe(false)
         })
 
-        test('should remove classes on error state', () => {
+        test('should toggle mixed class states individually', () => {
             const div = document.createElement('div')
-            div.classList.add('loading')
+            div.classList.add('loading') // Has 'loading', doesn't have 'active'
             document.body.appendChild(div)
 
             const magicFunctions = createFirMagicFunctions(
@@ -556,28 +569,20 @@ describe('Fir Magic Helpers', () => {
                 Alpine,
                 window.post
             )
-            const toggleClassFn = magicFunctions.toggleClass('loading')
-
-            toggleClassFn({ type: 'fir:action:error' })
-
-            expect(div.classList.contains('loading')).toBe(false)
-        })
-
-        test('should remove classes on done state', () => {
-            const div = document.createElement('div')
-            div.classList.add('loading')
-            document.body.appendChild(div)
-
-            const magicFunctions = createFirMagicFunctions(
-                div,
-                Alpine,
-                window.post
+            const toggleClassFn = magicFunctions.toggleClass(
+                'loading',
+                'active'
             )
-            const toggleClassFn = magicFunctions.toggleClass('loading')
 
-            toggleClassFn({ type: 'fir:action:done' })
+            // Initial state
+            expect(div.classList.contains('loading')).toBe(true)
+            expect(div.classList.contains('active')).toBe(false)
 
+            toggleClassFn({ type: 'fir:action:any' })
+
+            // 'loading' should be removed (was present), 'active' should be added (was absent)
             expect(div.classList.contains('loading')).toBe(false)
+            expect(div.classList.contains('active')).toBe(true)
         })
 
         test('should handle no class names with error', () => {
@@ -595,7 +600,7 @@ describe('Fir Magic Helpers', () => {
             )
             const toggleClassFn = magicFunctions.toggleClass()
 
-            toggleClassFn({ type: 'fir:action:pending' })
+            toggleClassFn({ type: 'fir:action:any' })
 
             expect(consoleSpy).toHaveBeenCalledWith(
                 '$fir.toggleClass() requires at least one class name'
@@ -623,7 +628,7 @@ describe('Fir Magic Helpers', () => {
                 'another'
             )
 
-            toggleClassFn({ type: 'fir:action:pending' })
+            toggleClassFn({ type: 'fir:action:any' })
 
             expect(consoleSpy).toHaveBeenCalledWith(
                 'Class name must be a string, got: number'

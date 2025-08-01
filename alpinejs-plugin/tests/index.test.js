@@ -346,7 +346,7 @@ describe('Direct Tests for createFirMagicFunctions', () => {
     })
 
     describe('toggleDisabled()', () => {
-        test('should disable element on pending state event', () => {
+        test('should toggle disabled state from enabled to disabled', () => {
             // Setup
             const button = document.createElement('button')
             document.body.appendChild(button)
@@ -359,15 +359,18 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
-            // Act
-            toggleDisabledFn({ type: 'fir:action:pending' })
+            // Initial state should be enabled
+            expect(button.hasAttribute('disabled')).toBe(false)
 
-            // Assert
+            // Act
+            toggleDisabledFn({ type: 'fir:action:any' })
+
+            // Assert it's now disabled
             expect(button.hasAttribute('disabled')).toBe(true)
             expect(button.getAttribute('aria-disabled')).toBe('true')
         })
 
-        test('should enable element on ok state event', () => {
+        test('should toggle disabled state from disabled to enabled', () => {
             // Setup
             const button = document.createElement('button')
             button.setAttribute('disabled', '')
@@ -382,10 +385,13 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             )
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
-            // Act
-            toggleDisabledFn({ type: 'fir:action:ok' })
+            // Initial state should be disabled
+            expect(button.hasAttribute('disabled')).toBe(true)
 
-            // Assert
+            // Act
+            toggleDisabledFn({ type: 'fir:action:any' })
+
+            // Assert it's now enabled
             expect(button.hasAttribute('disabled')).toBe(false)
             expect(button.hasAttribute('aria-disabled')).toBe(false)
         })
@@ -406,7 +412,7 @@ describe('Direct Tests for createFirMagicFunctions', () => {
             const toggleDisabledFn = magicFunctions.toggleDisabled()
 
             // Act
-            toggleDisabledFn({ type: 'fir:action:pending' })
+            toggleDisabledFn({ type: 'fir:action:any' })
 
             // Assert
             expect(console.error).toHaveBeenCalledWith(

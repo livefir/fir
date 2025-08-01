@@ -26,9 +26,9 @@ Fir sits somewhere between [Phoenix Liveview](https://github.com/phoenixframewo
 
 - **Server rendered**: Render HTML on the server using Go’s standard html templating library.
 - **DOM Patching:** React to user or server events to update only the changed parts of a web page.
-- **Progressive enhancement**: Begin with a JavaScript-free HTML file and Fir's Go server API for quick setup. Gradually improve to avoid page reloads, using Fir's Alpine.js plugin for DOM updates.
+- **Progressive enhancement**: Begin with a JavaScript-free HTML file and Fir's Go server API for quick setup. Gradually improve to avoid page reloads, using Fir's Alpine.js plugin for DOM updates via Ajax/fetch or WebSocket.
 - **Publish over websocket**: Broadcast html fragments over websocket in response to both client and server events.
-- **Interactivity over standard HTTP**: Fir possesses a built-in pubsub over websocket capability to broadcast UI diff changes to connected clients. However, it doesn't solely rely on websockets. It's still possible to disable websockets and benefit from UI diffs sent over standard HTTP.
+- **Interactivity over standard HTTP**: Fir possesses a built-in pubsub over websocket capability to broadcast UI diff changes to connected clients. However, it doesn't solely rely on websockets. It's still possible to disable websockets and benefit from UI diffs sent over Ajax/fetch requests with the same DOM update behavior.
 - **Broadcast from server**: Broadcast page changes to specific connected clients.
 - **Error tracking**: Show and hide user specific errors on the page by simply returning an error or nil.
 - **Development live reload**: HTML pages reload automatically on edits if development mode is enabled
