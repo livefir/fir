@@ -36,8 +36,6 @@ Fir sits somewhere between [Phoenix Liveview](https://github.com/phoenixframewo
 
 ## Usage
 
-[Demo & Quickstart](https://livefir.fly.dev/)
-
 [Examples](./examples/)
 
 [How it works](https://adnaan.notion.site/Fir-2358531aced84bf1b0b1a687760fff3b)
