@@ -1,3 +1,5 @@
+# DEVELOPMENT STOPPED ON FIR: Pivoted to working on [livetemplate](https://github.com/livetemplate/livetemplate) which is a [Phoenix Liveview](https://hexdocs.pm/phoenix_live_view/welcome.html) inspired web framework. 
+
 # Fir
 
 [![Go API Reference](https://pkg.go.dev/badge/github.com/livefir/fir.svg)](https://pkg.go.dev/github.com/livefir/fir)
