@@ -24,7 +24,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.14.54",
+    "esbuild": "^0.25.0",
     "esbuild-serve": "^1.0.1",
     "jsdoc-to-markdown": "^8.0.1"
   },
